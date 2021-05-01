@@ -181,16 +181,16 @@ static int IspProcess(RKADK_S32 s32CamID) {
   // LDCH
   rk_aiq_ldch_attrib_t attr;
   ret = SAMPLE_COMM_ISP_GetLdchAttrib(s32CamID, &attr);
-  if(ret) {
+  if (ret) {
     RKADK_LOGE("SAMPLE_COMM_ISP_GetLdchAttrib failed");
   } else {
     RKADK_LOGD("LDC attr.en = %d", attr.en);
     RKADK_LOGD("LDC attr.correct_level = %d", attr.correct_level);
   }
 
-  //WDR
+  // WDR
   ret = SAMPLE_COMM_ISP_GetDarkAreaBoostStrth(s32CamID, &wdrLevel);
-  if(ret)
+  if (ret)
     RKADK_LOGE("SAMPLE_COMM_ISP_GetDarkAreaBoostStrth failed");
   else
     RKADK_LOGD("WDR wdrLevel = %d", wdrLevel);
@@ -256,6 +256,11 @@ record:
                         fps);
 
   IspProcess(stRecAttr.s32CamID);
+
+  ret = RKADK_PARAM_GetCamParam(
+      stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &stRecAttr.enRecType);
+  if (ret)
+    RKADK_LOGW("RKADK_PARAM_GetCamParam record type failed");
 #endif
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
@@ -304,13 +309,22 @@ record:
       // must destroy recorder before switching the resolution
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RES, &enRes);
       goto record;
-    } else if (strstr(cmd, "flip")) {
+    } else if (strstr(cmd, "flip-")) {
+      bool flip = false;
+      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FLIP, &flip);
+    } else if (strstr(cmd, "flip+")) {
       bool flip = true;
       SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FLIP, &flip);
-    } else if (strstr(cmd, "mirror")) {
+    } else if (strstr(cmd, "mirror-")) {
+      bool mirror = false;
+      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_MIRROR,
+                              &mirror);
+    } else if (strstr(cmd, "mirror+")) {
       bool mirror = true;
-      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, true);
+      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_MIRROR,
                               &mirror);
     } else if (strstr(cmd, "mic_volume")) {
@@ -324,13 +338,29 @@ record:
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_PHOTO_RES,
                               &enRes);
     } else if (strstr(cmd, "wdr+")) {
-      RKADK_U32 wdr = 10;
+      RKADK_U32 wdr = 9;
       SAMPLE_COMM_ISP_SetDarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_WDR, &wdr);
     } else if (strstr(cmd, "wdr-")) {
       RKADK_U32 wdr = 0;
       SAMPLE_COMM_ISP_SetDarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_WDR, &wdr);
+    } else if (strstr(cmd, "ldc+")) {
+      RKADK_U32 ldc = 200;
+      SAMPLE_COMM_ISP_EnableLdch(stRecAttr.s32CamID, true, ldc);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_LDC, &ldc);
+    } else if (strstr(cmd, "ldc-")) {
+      RKADK_U32 ldc = 0;
+      SAMPLE_COMM_ISP_EnableLdch(stRecAttr.s32CamID, false, ldc);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_LDC, &ldc);
+    } else if (strstr(cmd, "antifog+")) {
+      int antifog = 9;
+      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, true, OP_MANUAL, antifog);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG, &antifog);
+    } else if (strstr(cmd, "antifog-")) {
+      int antifog = 0;
+      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL, antifog);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG, &antifog);
     }
 
     if (is_quit)

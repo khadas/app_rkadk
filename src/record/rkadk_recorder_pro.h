@@ -37,6 +37,7 @@ typedef struct {
 
 typedef struct {
   RKADK_S32 s32CamId;
+  RKADK_REC_TYPE_E enRecType;
   RKADK_U32 u32StreamCnt;
   RKADK_RECORDER_STREAM_ATTR_S stStreamAttr[RKADK_REC_STREAM_MAX_CNT];
 } RKADK_RECORDER_HANDLE_S;

@@ -501,6 +501,11 @@ int main(int argc, char *argv[]) {
   SAMPLE_COMM_ISP_Start(g_u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
 
   IspProcess(g_u32CamID);
+
+  ret = RKADK_PARAM_GetCamParam(
+      stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &enRecType);
+  if (ret)
+    RKADK_LOGW("RKADK_PARAM_GetCamParam record type failed");
 #endif
 
   // set default value
