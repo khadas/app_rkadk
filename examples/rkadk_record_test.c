@@ -53,6 +53,9 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
 
   RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
+  if (u32FileIdx > 5)
+    u32FileIdx = 0;
+
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
     sprintf(paszFilename[i], "/userdata/RecordTest_%u.mp4", u32FileIdx);
     u32FileIdx++;
@@ -287,8 +290,14 @@ record:
       break;
     } else if (strstr(cmd, "ms")) { // manual-split
       RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
+
       stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
-      stSplitAttr.stPreSplitAttr.u32DurationSec = 20;
+
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_SPLITTIME,
+         &stSplitAttr.stPreSplitAttr.u32DurationSec);
+      if(stSplitAttr.stPreSplitAttr.u32DurationSec <= 0)
+        stSplitAttr.stPreSplitAttr.u32DurationSec = 30;
+
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
     } else if (strstr(cmd, "switch")) {
       RKADK_PARAM_RES_E enRes;

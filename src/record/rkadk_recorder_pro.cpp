@@ -145,12 +145,7 @@ static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_U32 u32PreRecTimeSec,
                  u32PreRecTimeSec, RKADK_PRE_RECORD_TIME_MAX);
       u32PreRecTimeSec = RKADK_PRE_RECORD_TIME_MAX;
     }
-#if 0
     stMuxerAttr.u32PreRecCacheTime = u32PreRecTimeSec + RKADK_PRE_RECORD_CACHE_TIME;
-#else
-    stMuxerAttr.u32PreRecCacheTime = 0;
-    RKADK_LOGD("Nonsupport pre record");
-#endif
   }
 
   stMuxerAttr.enMode = stRecSplitAttr.enMode;
