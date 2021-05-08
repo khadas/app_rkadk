@@ -25,29 +25,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
 static std::deque<char *> g_fileNameDeque[RKADK_REC_STREAM_MAX_CNT];
+static pthread_mutex_t g_fileNameMutexLock = PTHREAD_MUTEX_INITIALIZER;
 
 static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
                              RKADK_U32 muxerId) {
   int i, ret;
   RKADK_RECORDER_HANDLE_S *pstRecorder;
 
+  RKADK_MUTEX_LOCK(g_fileNameMutexLock);
+
   if (muxerId >= RKADK_REC_STREAM_MAX_CNT) {
     RKADK_LOGE("Incorrect file index: %d", muxerId);
+    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
   }
 
   pstRecorder = (RKADK_RECORDER_HANDLE_S *)pHandle;
   if (!pstRecorder) {
     RKADK_LOGE("pstRecorder is null");
+    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
   }
 
   if (!g_pfnRequestFileNames[pstRecorder->s32CamId]) {
     RKADK_LOGE("Not Registered request name callback");
+    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
   }
 
@@ -59,6 +66,7 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
         pHandle, pstRecorder->u32StreamCnt, fileName);
     if (ret) {
       RKADK_LOGE("get file name failed(%d)", ret);
+      RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
       return -1;
     }
 
@@ -75,6 +83,7 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
   g_fileNameDeque[muxerId].pop_front();
   free(front);
 
+  RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
   return 0;
 }
 
