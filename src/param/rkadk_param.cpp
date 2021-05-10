@@ -927,6 +927,56 @@ RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID) {
   return &g_stPARAMCtx.stCfg.stThumbCfg;
 }
 
+RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType) {
+  RKADK_S32 s32VencChnId = -1;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  switch(enStrmType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+  {
+    RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+    if(!pstRecCfg)
+      RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    else
+      s32VencChnId = pstRecCfg->attribute[0].venc_chn;
+    break;
+  }
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+  {
+    RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+    if(!pstRecCfg)
+      RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    else
+      s32VencChnId = pstRecCfg->attribute[1].venc_chn;
+    break;
+  }
+  case RKADK_STREAM_TYPE_SNAP:
+  {
+    RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(u32CamId);
+    if(!pstPhotoCfg)
+      RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    else
+      s32VencChnId = pstPhotoCfg->venc_chn;
+    break;
+  }
+  case RKADK_STREAM_TYPE_USER:
+  {
+    RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(u32CamId);
+    if(!pstStreamCfg)
+      RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
+    else
+      s32VencChnId = pstStreamCfg->attribute.venc_chn;
+    break;
+  }
+  default:
+    RKADK_LOGE("Unsupport stream type: %d", enStrmType);
+    break;
+  }
+
+  return s32VencChnId;
+}
+
 RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height) {
   RKADK_PARAM_RES_E type = RKADK_RES_BUTT;
 
