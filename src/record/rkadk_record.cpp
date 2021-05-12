@@ -116,6 +116,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
                                      VENC_CHN_ATTR_S *pstVencAttr) {
   RKADK_U32 u32DstFrameRateNum = 0;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_U32 bitrate;
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
 
@@ -128,47 +129,46 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
 
   if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    bitrate = pstRecCfg->attribute[index].bitrate / pstRecCfg->lapse_multiple;
     u32DstFrameRateNum = pstSensorCfg->framerate / pstRecCfg->lapse_multiple;
     if (u32DstFrameRateNum < 1)
       u32DstFrameRateNum = 1;
     else if (u32DstFrameRateNum > pstSensorCfg->framerate)
       u32DstFrameRateNum = pstSensorCfg->framerate;
   } else {
+    bitrate = pstRecCfg->attribute[index].bitrate;
     u32DstFrameRateNum = pstSensorCfg->framerate;
   }
 
   switch (pstRecCfg->codec_type) {
   case RKADK_CODEC_TYPE_H265:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265CBR;
-    pstVencAttr->stRcAttr.stH265Cbr.u32Gop = pstRecCfg->attribute[index].gop;
-    pstVencAttr->stRcAttr.stH265Cbr.u32BitRate =
-        pstRecCfg->attribute[index].bitrate;
-    pstVencAttr->stRcAttr.stH265Cbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH265Cbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stH265Cbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH265Cbr.u32SrcFrameRateNum =
+    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265VBR;
+    pstVencAttr->stRcAttr.stH265Vbr.u32Gop = pstRecCfg->attribute[index].gop;
+    pstVencAttr->stRcAttr.stH265Vbr.u32MaxBitRate = bitrate;
+    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateNum = u32DstFrameRateNum;
+    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateNum =
         pstSensorCfg->framerate;
     break;
   case RKADK_CODEC_TYPE_MJPEG:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_MJPEGCBR;
-    pstVencAttr->stRcAttr.stMjpegCbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegCbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stMjpegCbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegCbr.u32SrcFrameRateNum =
+    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_MJPEGVBR;
+    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateNum = u32DstFrameRateNum;
+    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateNum =
         pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stMjpegCbr.u32BitRate =
-        pstRecCfg->attribute[index].bitrate;
+    pstVencAttr->stRcAttr.stMjpegVbr.u32BitRate = bitrate;
     break;
   case RKADK_CODEC_TYPE_H264:
   default:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H264CBR;
-    pstVencAttr->stRcAttr.stH264Cbr.u32Gop = pstRecCfg->attribute[index].gop;
-    pstVencAttr->stRcAttr.stH264Cbr.u32BitRate =
-        pstRecCfg->attribute[index].bitrate;
-    pstVencAttr->stRcAttr.stH264Cbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH264Cbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stH264Cbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH264Cbr.u32SrcFrameRateNum =
+    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H264VBR;
+    pstVencAttr->stRcAttr.stH264Vbr.u32Gop = pstRecCfg->attribute[index].gop;
+    pstVencAttr->stRcAttr.stH264Vbr.u32MaxBitRate = bitrate;
+    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateNum = u32DstFrameRateNum;
+    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateDen = 1;
+    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateNum =
         pstSensorCfg->framerate;
     break;
   }

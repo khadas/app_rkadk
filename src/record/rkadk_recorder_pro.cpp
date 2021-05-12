@@ -125,10 +125,9 @@ static void DumpMuxerChanAttr(MUXER_CHN_ATTR_S stMuxerAttr) {
              stMuxerAttr.stVideoStreamParam.enCodecType);
 }
 
-static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_U32 u32PreRecTimeSec,
-                                RKADK_REC_SPLIT_ATTR_S stRecSplitAttr,
-                                RKADK_REC_STREAM_ATTR_S stSrcStreamAttr,
+static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_REC_TYPE_E enRecType,
                                 RKADK_RECORDER_STREAM_ATTR_S *stDstStreamAttr,
+                                RKADK_REC_ATTR_S *pstRecAttr,
                                 RKADK_U32 u32StreamIndex) {
   int videoTrackCnt = 0, audioTrackCnt = 0;
   MUXER_CHN_ATTR_S stMuxerAttr;
@@ -137,38 +136,44 @@ static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_U32 u32PreRecTimeSec,
   stDstStreamAttr->stMuxerChn.enModId = RK_ID_MUXER;
   stDstStreamAttr->stMuxerChn.s32ChnId = vmChnId;
 
-  stMuxerAttr.u32MuxerId = u32StreamIndex;
-  stMuxerAttr.u32PreRecTimeSec = u32PreRecTimeSec;
-  if (u32PreRecTimeSec) {
-    if (u32PreRecTimeSec > RKADK_PRE_RECORD_TIME_MAX) {
-      RKADK_LOGD("pre record time too long(%d) > RKADK_PRE_RECORD_TIME_MAX(%d)",
-                 u32PreRecTimeSec, RKADK_PRE_RECORD_TIME_MAX);
-      u32PreRecTimeSec = RKADK_PRE_RECORD_TIME_MAX;
-    }
-    stMuxerAttr.u32PreRecCacheTime = u32PreRecTimeSec + RKADK_PRE_RECORD_CACHE_TIME;
-  }
+  if(enRecType == RKADK_REC_TYPE_LAPSE)
+    stMuxerAttr.bLapseRecord = RK_TRUE;
+  else
+    stMuxerAttr.bLapseRecord = RK_FALSE;
 
-  stMuxerAttr.enMode = stRecSplitAttr.enMode;
+  stMuxerAttr.u32MuxerId = u32StreamIndex;
+  if (pstRecAttr->u32PreRecTimeSec) {
+    if (pstRecAttr->u32PreRecTimeSec > RKADK_PRE_RECORD_TIME_MAX) {
+      RKADK_LOGD("pre record time too long(%d) > RKADK_PRE_RECORD_TIME_MAX(%d)",
+                 pstRecAttr->u32PreRecTimeSec, RKADK_PRE_RECORD_TIME_MAX);
+      pstRecAttr->u32PreRecTimeSec = RKADK_PRE_RECORD_TIME_MAX;
+    }
+    stMuxerAttr.u32PreRecCacheTime = pstRecAttr->u32PreRecTimeSec + RKADK_PRE_RECORD_CACHE_TIME;
+  }
+  stMuxerAttr.u32PreRecTimeSec = pstRecAttr->u32PreRecTimeSec;
+
+  stMuxerAttr.enMode = pstRecAttr->stRecSplitAttr.enMode;
   if (stMuxerAttr.enMode == MUXER_MODE_AUTOSPLIT) {
-    memcpy(&(stMuxerAttr.stSplitAttr), &(stRecSplitAttr.stSplitAttr),
+    memcpy(&(stMuxerAttr.stSplitAttr), &(pstRecAttr->stRecSplitAttr.stSplitAttr),
            sizeof(MUXER_SPLIT_ATTR_S));
   } else if (stMuxerAttr.enMode == MUXER_MODE_SINGLE) {
-    stMuxerAttr.pcOutputFile = stRecSplitAttr.pcOutputFile;
+    stMuxerAttr.pcOutputFile = pstRecAttr->stRecSplitAttr.pcOutputFile;
   } else {
     RKADK_LOGE("invalid enMode = %d", stMuxerAttr.enMode);
     return -1;
   }
 
-  stMuxerAttr.enType = stSrcStreamAttr.enType;
-  if (stSrcStreamAttr.u32TrackCnt > RKADK_REC_TRACK_MAX_CNT) {
+  RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr = &(pstRecAttr->astStreamAttr[u32StreamIndex]);
+  stMuxerAttr.enType = pstSrcStreamAttr->enType;
+  if (pstSrcStreamAttr->u32TrackCnt > RKADK_REC_TRACK_MAX_CNT) {
     RKADK_LOGE("vmChnId(%d), u32TrackCnt(%d) > RKADK_REC_TRACK_MAX_CNT(%d)",
-               vmChnId, stSrcStreamAttr.u32TrackCnt, RKADK_REC_TRACK_MAX_CNT);
+               vmChnId, pstSrcStreamAttr->u32TrackCnt, RKADK_REC_TRACK_MAX_CNT);
     return -1;
   }
 
-  for (RKADK_U32 i = 0; i < stSrcStreamAttr.u32TrackCnt; i++) {
+  for (RKADK_U32 i = 0; i < pstSrcStreamAttr->u32TrackCnt; i++) {
     RKADK_TRACK_SOURCE_S *trackSrcHandle =
-        &(stSrcStreamAttr.aHTrackSrcHandle[i]);
+        &(pstSrcStreamAttr->aHTrackSrcHandle[i]);
     if (trackSrcHandle->enTrackType == RKADK_TRACK_SOURCE_TYPE_VIDEO) {
       videoTrackCnt++;
       if (videoTrackCnt > RKADK_REC_MAX_VIDEO_TRACK) {
@@ -256,9 +261,8 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
         pstRecorder;
 
   for (RKADK_U32 i = 0; i < pstRecAttr->u32StreamCnt; i++) {
-    ret = EnableMuxerChn(
-        vmChnId, pstRecAttr->u32PreRecTimeSec, pstRecAttr->stRecSplitAttr,
-        pstRecAttr->astStreamAttr[i], &(pstRecorder->stStreamAttr[i]), i);
+    ret = EnableMuxerChn(vmChnId, pstRecorder->enRecType,
+        &(pstRecorder->stStreamAttr[i]), pstRecAttr, i);
     if (ret) {
       RKADK_LOGE("u32StreamCnt(%d) Create Vm(%d) failed", i, vmChnId);
       goto failed;
