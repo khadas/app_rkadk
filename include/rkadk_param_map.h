@@ -71,7 +71,6 @@ static RKADK_SI_CONFIG_MAP_S g_stSensorCfgMapTable_0[] = {
 
 /* record map table */
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
-    DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, record_type),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, record_time),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, splite_time),
@@ -87,6 +86,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_0[] = {
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
 };
 
@@ -96,6 +96,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_1[] = {
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
 };
 
@@ -106,6 +107,7 @@ static RKADK_SI_CONFIG_MAP_S g_stStreamCfgMapTable_0[] = {
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
+    DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
 };
 

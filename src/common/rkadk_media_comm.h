@@ -24,10 +24,23 @@ extern "C" {
 #include "rkadk_common.h"
 #include "rkmedia_api.h"
 
-#define RKADK_MEDIA_AI_MAX_CNT (1)     /* audio capture maximum count */
-#define RKADK_MEDIA_AENC_MAX_CNT (2)   /* audio encoder maximum count */
-#define RKADK_MEDIA_VI_MAX_CNT (4)     /* video capture maximum count */
-#define RKADK_AI_AENC_MAX_BIND_CNT (2) /* ai aenc maximum bind count */
+/* audio capture maximum count */
+#define RKADK_MEDIA_AI_MAX_CNT (1)
+
+/* audio encoder maximum count */
+#define RKADK_MEDIA_AENC_MAX_CNT (2 * RKADK_MAX_SENSOR_CNT)
+
+/* video capture maximum count */
+#define RKADK_MEDIA_VI_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
+
+/* video encoder maximum count */
+#define RKADK_MEDIA_VENC_MAX_CNT (3 * RKADK_MAX_SENSOR_CNT)
+
+/* ai aenc maximum bind count */
+#define RKADK_AI_AENC_MAX_BIND_CNT (2 * RKADK_MAX_SENSOR_CNT)
+
+/* vi venc maximum bind count */
+#define RKADK_VI_VENC_MAX_BIND_CNT (3 * RKADK_MAX_SENSOR_CNT)
 
 typedef enum {
   RKADK_CODEC_TYPE_H264 = 0,
@@ -53,6 +66,10 @@ RKADK_S32 RKADK_MPI_AENC_DeInit(RKADK_S32 s32AencChnId);
 RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ChnId,
                             VI_CHN_ATTR_S *pstViChnAttr);
 RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ChnId);
+
+RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
+                              VENC_CHN_ATTR_S *pstVencChnAttr);
+RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId);
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);

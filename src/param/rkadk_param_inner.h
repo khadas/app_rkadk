@@ -52,8 +52,8 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
   RKADK_U32 osd_time_format;
-  bool osd;                 /* Whether to display OSD */
-  bool boot_sound;          /* boot sound */
+  bool osd;        /* Whether to display OSD */
+  bool boot_sound; /* boot sound */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
@@ -85,6 +85,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 bitrate;
   RKADK_U32 gop;
   RKADK_U32 profile;
+  RKADK_CODEC_TYPE_E codec_type;
   RKADK_U32 venc_chn;
 } RKADK_PARAM_VENC_ATTR_S;
 
@@ -94,7 +95,6 @@ typedef struct {
 } RKADK_PRAAM_VI_ATTR_S;
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
-  RKADK_CODEC_TYPE_E codec_type;
   RKADK_REC_TYPE_E record_type;
   RKADK_U32 record_time;
   RKADK_U32 splite_time;

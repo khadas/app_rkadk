@@ -144,6 +144,11 @@ typedef enum {
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_CODEC_TYPE_E enCodecType;
+} RKADK_PARAM_CODEC_CFG_S;
+
 /**
  * @brief     Parameter Module Init
  * @return    0 success,non-zero error code.

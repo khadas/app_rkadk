@@ -239,8 +239,6 @@ static void RKADK_PARAM_Dump() {
     }
 
     printf("\tRecord Config\n");
-    printf("\t\tsensor[%d] stRecCfg codec_type: %d\n", i,
-           pstCfg->stMediaCfg[i].stRecCfg.codec_type);
     printf("\t\tsensor[%d] stRecCfg record_type: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.record_type);
     printf("\t\tsensor[%d] stRecCfg record_time: %d\n", i,
@@ -269,6 +267,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].profile);
       printf("\t\tsensor[%d] stRecCfg[%d] venc_chn: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_chn);
+      printf("\t\tsensor[%d] stRecCfg[%d] codec_type: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].codec_type);
     }
 
     printf("\tPhoto Config\n");
@@ -294,6 +294,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.profile);
     printf("\t\tsensor[%d] stStreamCfg venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_chn);
+    printf("\t\tsensor[%d] stStreamCfg codec_type: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
   }
 }
 
@@ -509,7 +511,7 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const char *path) {
 }
 
 static void RKADK_PARAM_UseDefault() {
-  //default common config
+  // default common config
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   pstCommCfg->sensor_count = 1;
   pstCommCfg->enable_speaker = true;
@@ -520,7 +522,7 @@ static void RKADK_PARAM_UseDefault() {
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
 
-  //default audio config
+  // default audio config
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
   memcpy(pstAudioCfg->audio_node, AI_DEVICE_NAME, RKADK_BUFFER_LEN);
   pstAudioCfg->sample_format = AUDIO_SAMPLE_FORMAT;
@@ -529,13 +531,13 @@ static void RKADK_PARAM_UseDefault() {
   pstAudioCfg->samples_per_frame = AUDIO_FRAME_COUNT;
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
 
-  //default thumb config
+  // default thumb config
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
   pstThumbCfg->thumb_width = THUMB_WIDTH;
   pstThumbCfg->thumb_height = THUMB_HEIGHT;
   pstThumbCfg->venc_chn = THUMB_VENC_CHN;
 
-  //default sensor.0 config
+  // default sensor.0 config
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[0];
   pstSensorCfg->max_width = SENSOR_MAX_WIDTH;
   pstSensorCfg->max_height = SENSOR_MAX_HEIGHT;
@@ -549,9 +551,8 @@ static void RKADK_PARAM_UseDefault() {
   pstSensorCfg->hdr = 0;
   pstSensorCfg->antifog = 0;
 
-  //default sensor.0.rec config
+  // default sensor.0.rec config
   RKADK_PARAM_REC_CFG_S *pstRecCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stRecCfg;
-  pstRecCfg->codec_type = RKADK_CODEC_TYPE_H264;
   pstRecCfg->record_type = RKADK_REC_TYPE_NORMAL;
   pstRecCfg->record_time = 60;
   pstRecCfg->splite_time = 60;
@@ -560,22 +561,23 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->lapse_multiple = 30;
   pstRecCfg->file_num = 1;
 
-  //default sensor.0.rec.0 config
+  // default sensor.0.rec.0 config
   pstRecCfg->attribute[0].width = RECORD_VIDEO_WIDTH;
   pstRecCfg->attribute[0].height = RECORD_VIDEO_HEIGHT;
   pstRecCfg->attribute[0].bitrate = RECORD_VIDEO_WIDTH * RECORD_VIDEO_HEIGHT;
   pstRecCfg->attribute[0].gop = VIDEO_GOP;
   pstRecCfg->attribute[0].profile = VIDEO_PROFILE;
   pstRecCfg->attribute[0].venc_chn = 0;
+  pstRecCfg->attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
 
-  //default sensor.0.photo config
+  // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stPhotoCfg;
   pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
   pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
   pstPhotoCfg->snap_num = 1;
   pstPhotoCfg->venc_chn = 2;
 
-  //default sensor.0.stream config
+  // default sensor.0.stream config
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stStreamCfg;
   pstStreamCfg->attribute.width = STREAM_VIDEO_WIDTH;
   pstStreamCfg->attribute.height = STREAM_VIDEO_HEIGHT;
@@ -583,8 +585,9 @@ static void RKADK_PARAM_UseDefault() {
   pstStreamCfg->attribute.gop = VIDEO_GOP;
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
   pstStreamCfg->attribute.venc_chn = 3;
+  pstStreamCfg->attribute.codec_type = RKADK_CODEC_TYPE_H264;
 
-  //default vi config
+  // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];
   pstViCfg->chn_id = 0;
   memcpy(pstViCfg->device_name, "rkispp_m_bypass", RKADK_BUFFER_LEN);
@@ -932,11 +935,11 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
-  switch(enStrmType) {
+  switch (enStrmType) {
   case RKADK_STREAM_TYPE_VIDEO_MAIN:
   {
     RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
-    if(!pstRecCfg)
+    if (!pstRecCfg)
       RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     else
       s32VencChnId = pstRecCfg->attribute[0].venc_chn;
@@ -945,7 +948,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
   case RKADK_STREAM_TYPE_VIDEO_SUB:
   {
     RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
-    if(!pstRecCfg)
+    if (!pstRecCfg)
       RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     else
       s32VencChnId = pstRecCfg->attribute[1].venc_chn;
@@ -954,7 +957,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
   case RKADK_STREAM_TYPE_SNAP:
   {
     RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(u32CamId);
-    if(!pstPhotoCfg)
+    if (!pstPhotoCfg)
       RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
     else
       s32VencChnId = pstPhotoCfg->venc_chn;
@@ -963,7 +966,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
   case RKADK_STREAM_TYPE_USER:
   {
     RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(u32CamId);
-    if(!pstStreamCfg)
+    if (!pstStreamCfg)
       RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
     else
       s32VencChnId = pstStreamCfg->attribute.venc_chn;
@@ -1053,6 +1056,77 @@ RKADK_S32 RKADK_PARAM_GetResolution(RKADK_PARAM_RES_E type, RKADK_U32 *width,
   return 0;
 }
 
+static RKADK_CODEC_TYPE_E RKADK_PARAM_GetCodecType(RKADK_S32 s32CamId,
+                          RKADK_STREAM_TYPE_E enStreamType) {
+  RKADK_CODEC_TYPE_E enCodecType = RKADK_CODEC_TYPE_BUTT;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    enCodecType = pstRecCfg->attribute[0].codec_type;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    enCodecType = pstRecCfg->attribute[1].codec_type;
+    break;
+
+  case RKADK_STREAM_TYPE_USER:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId);
+    enCodecType = pstStreamCfg->attribute.codec_type;
+    break;
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", enStreamType);
+    break;
+  }
+
+  return enCodecType;
+}
+
+static RKADK_S32 RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
+                         RKADK_PARAM_CODEC_CFG_S *pstCodecCfg) {
+  RKADK_S32 ret;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (pstCodecCfg->enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[0].codec_type == pstCodecCfg->enCodecType)
+      return 0;
+
+    pstRecCfg->attribute[0].codec_type = pstCodecCfg->enCodecType;
+    ret = RKADK_PARAM_SaveRecCfg(RKADK_PARAM_PATH, s32CamId);
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[1].codec_type == pstCodecCfg->enCodecType)
+      return 0;
+
+    pstRecCfg->attribute[1].codec_type = pstCodecCfg->enCodecType;
+    ret = RKADK_PARAM_SaveRecCfg(RKADK_PARAM_PATH, s32CamId);
+    break;
+
+  case RKADK_STREAM_TYPE_USER:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId);
+    if (pstStreamCfg->attribute.codec_type == pstCodecCfg->enCodecType)
+      return 0;
+
+    pstStreamCfg->attribute.codec_type = pstCodecCfg->enCodecType;
+    ret = RKADK_PARAM_SaveStreamCfg(RKADK_PARAM_PATH, s32CamId);
+    break;
+
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", pstCodecCfg->enStreamType);
+    break;
+  }
+
+  return ret;
+}
+
 RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   RKADK_VOID *pvParam) {
@@ -1105,8 +1179,14 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
         pstRecCfg->attribute[0].width, pstRecCfg->attribute[0].height);
     break;
   case RKADK_PARAM_TYPE_CODEC_TYPE:
-    *(RKADK_CODEC_TYPE_E *)pvParam = pstRecCfg->codec_type;
+  {
+    RKADK_PARAM_CODEC_CFG_S *pstCodecCfg;
+
+    pstCodecCfg = (RKADK_PARAM_CODEC_CFG_S *)pvParam;
+    pstCodecCfg->enCodecType =
+        RKADK_PARAM_GetCodecType(s32CamID, pstCodecCfg->enStreamType);
     break;
+  }
   case RKADK_PARAM_TYPE_SPLITTIME:
     *(RKADK_U32 *)pvParam = pstRecCfg->splite_time;
     break;
@@ -1148,6 +1228,7 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
 RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   const RKADK_VOID *pvParam) {
+  RKADK_S32 ret;
   bool bSaveRecCfg = false;
   bool bSavePhotoCfg = false;
   bool bSaveSensorCfg = false;
@@ -1231,11 +1312,9 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
     bSaveRecCfg = true;
     break;
   case RKADK_PARAM_TYPE_CODEC_TYPE:
-    RKADK_CHECK_EQUAL(pstRecCfg->codec_type, *(RKADK_CODEC_TYPE_E *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstRecCfg->codec_type = *(RKADK_CODEC_TYPE_E *)pvParam;
-    bSaveRecCfg = true;
-    break;
+    ret = RKADK_PARAM_SetCodecType(s32CamID, (RKADK_PARAM_CODEC_CFG_S *)pvParam);
+    RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
+    return ret;
   case RKADK_PARAM_TYPE_SPLITTIME:
     RKADK_CHECK_EQUAL(pstRecCfg->splite_time, *(RKADK_U32 *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);

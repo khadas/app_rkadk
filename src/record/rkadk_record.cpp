@@ -22,10 +22,10 @@
 #include "rkadk_track_source.h"
 #include "rkmedia_api.h"
 #include <deque>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
@@ -140,7 +140,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
     u32DstFrameRateNum = pstSensorCfg->framerate;
   }
 
-  switch (pstRecCfg->codec_type) {
+  switch (pstRecCfg->attribute[index].codec_type) {
   case RKADK_CODEC_TYPE_H265:
     pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265VBR;
     pstVencAttr->stRcAttr.stH265Vbr.u32Gop = pstRecCfg->attribute[index].gop;
@@ -174,7 +174,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
   }
 
   pstVencAttr->stVencAttr.enType =
-      RKADK_MEDIA_GetRkCodecType(pstRecCfg->codec_type);
+      RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
   pstVencAttr->stVencAttr.imageType =
       pstRecCfg->vi_attr[index].stChnAttr.enPixFmt;
   pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
@@ -212,11 +212,9 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
     }
 
     // Create VENC
-    ret =
-        RK_MPI_VENC_CreateChn(pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
+    ret = RKADK_MPI_VENC_Init(pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
-      RKADK_LOGE("Create VENC[%d] failed(%d)", pstRecCfg->attribute[i].venc_chn,
-                 ret);
+      RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
       RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
@@ -237,10 +235,9 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
 
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
     // Destroy VENC
-    ret = RK_MPI_VENC_DestroyChn(pstRecCfg->attribute[i].venc_chn);
+    ret = RKADK_MPI_VENC_DeInit(pstRecCfg->attribute[i].venc_chn);
     if (ret) {
-      RKADK_LOGE("Destroy VENC[%d] failed(%d)",
-                 pstRecCfg->attribute[i].venc_chn, ret);
+      RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
       return ret;
     }
 
@@ -340,10 +337,9 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
   // Bind VI to VENC
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
     RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn);
-    ret = RK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
+    ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
-      RKADK_LOGE("Bind VI[%d] and VENC[%d] failed(%d)", stSrcChn.s32ChnId,
-                 stDestChn.s32ChnId, ret);
+      RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
       return -1;
     }
   }
@@ -377,10 +373,9 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
   // UnBind VI to VENC
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
     RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn);
-    ret = RK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+    ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     if (ret) {
-      RKADK_LOGE("UnBind VI[%d] and VENC[%d] failed(%d)", stSrcChn.s32ChnId,
-                 stDestChn.s32ChnId, ret);
+      RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
       return -1;
     }
   }
@@ -450,7 +445,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     aHTrackSrcHandle->enTrackType = RKADK_TRACK_SOURCE_TYPE_VIDEO;
     aHTrackSrcHandle->s32PrivateHandle = pstRecCfg->attribute[i].venc_chn;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.enCodecType =
-        RKADK_MEDIA_GetRkCodecType(pstRecCfg->codec_type);
+        RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[i].codec_type);
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.enImageType =
         pstRecCfg->vi_attr[i].stChnAttr.enPixFmt;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32FrameRate =
