@@ -28,6 +28,7 @@
 
 //#define DUMP_RUN_TIME
 //#define THUMB_SAVE_FILE
+#define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 
 typedef struct {
   RKADK_U32 width;
@@ -255,6 +256,123 @@ free_mb:
   return ret;
 }
 
+static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+                            RKADK_U32 u32Size) {
+  FILE *fd = NULL;
+  int ret = -1;
+  RKADK_U32 u32BoxSize;
+  char boxHeader[THM_BOX_HEADER_LEN];
+
+  fd = fopen(pszFileName, "r+");
+  if (!fd) {
+    RKADK_LOGE("open %s failed", pszFileName);
+    return -1;
+  }
+
+  if (fseek(fd, 0, SEEK_END)) {
+    RKADK_LOGE("seek file end failed");
+    goto exit;
+  }
+
+  u32BoxSize = u32Size + THM_BOX_HEADER_LEN;
+  boxHeader[0] = u32BoxSize >> 24;
+  boxHeader[1] = (u32BoxSize & 0x00FF0000) >> 16;
+  boxHeader[2] = (u32BoxSize & 0x0000FF00) >> 8;
+  boxHeader[3] = u32BoxSize & 0x000000FF;
+  boxHeader[4] = 't';
+  boxHeader[5] = 'h';
+  boxHeader[6] = 'm';
+  boxHeader[7] = 0x20;
+
+  if (fwrite(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+    RKADK_LOGE("write thm box header failed");
+    goto exit;
+  }
+
+  if (fwrite(pu8Buf, u32Size, 1, fd) != 1) {
+    RKADK_LOGE("write thm box body failed");
+    goto exit;
+  }
+
+  ret = 0;
+
+exit:
+  if (fd)
+    fclose(fd);
+
+  return ret;
+}
+
+static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+                             RKADK_U32 *pu32Size) {
+  FILE *fd = NULL;
+  int ret = -1;
+  RKADK_U64 u32BoxSize;
+  char boxHeader[THM_BOX_HEADER_LEN];
+  char largeSize[THM_BOX_HEADER_LEN];
+
+  fd = fopen(pszFileName, "r");
+  if (!fd) {
+    RKADK_LOGE("open %s failed", pszFileName);
+    return -1;
+  }
+
+  while (!feof(fd)) {
+    if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+      RKADK_LOGE("read box header failed");
+      break;
+    }
+
+    u32BoxSize = boxHeader[0] << 24 | boxHeader[1] << 16 | boxHeader[2] << 8 |
+                 boxHeader[3];
+    if (u32BoxSize <= 0) {
+      RKADK_LOGD("last one box, not find thm box");
+      break;
+    }
+
+    if (u32BoxSize == 1) {
+      if(fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+        RKADK_LOGE("read largeSize failed");
+        break;
+      }
+
+      u32BoxSize = (RKADK_U64)largeSize[0] << 56 |
+                   (RKADK_U64)largeSize[1] << 48 |
+                   (RKADK_U64)largeSize[2] << 40 |
+                   (RKADK_U64)largeSize[3] << 32 | largeSize[4] << 24 |
+                   largeSize[5] << 16 | largeSize[6] << 8 | largeSize[7];
+
+      if(fseek(fd, u32BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
+        RKADK_LOGE("largeSize seek failed");
+        break;
+      }
+
+      continue;
+    }
+
+    if (boxHeader[4] == 't' && boxHeader[5] == 'h' && boxHeader[6] == 'm' &&
+        boxHeader[7] == 0x20) {
+      *pu32Size = u32BoxSize - THM_BOX_HEADER_LEN;
+      if (fread(pu8Buf, *pu32Size, 1, fd) != 1)
+        RKADK_LOGE("read thm box body failed");
+      else
+        ret = 0;
+
+      break;
+    } else {
+      if (fseek(fd, u32BoxSize - THM_BOX_HEADER_LEN, SEEK_CUR)) {
+        RKADK_LOGE("seek failed");
+        break;
+      }
+    }
+  }
+
+  if (fd)
+    fclose(fd);
+
+  return ret;
+}
+
 RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
                             RKADK_U32 *pu32Size) {
   int ret = 0;
@@ -275,6 +393,9 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
 
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
+
+  if (!GetThmInBox(pszFileName, pu8Buf, pu32Size))
+    return 0;
 
   RKADK_PARAM_Init();
 
@@ -321,6 +442,9 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
     RKADK_LOGE("YuvToJpg failed");
     goto exit;
   }
+
+  if(BuildInThm(pszFileName, pu8Buf, *pu32Size))
+    RKADK_LOGE("BuildInThm failed");
 
 #ifdef DUMP_RUN_TIME
   gettimeofday(&tv_jpg_end, NULL);
