@@ -865,7 +865,7 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   char buffer[RKADK_BUFFER_LEN];
 
   memset(buffer, 0, RKADK_BUFFER_LEN);
-  sprintf(buffer, "amixer sset \'MIC PGA GAIN\' %d", volume / 10);
+  sprintf(buffer, "amixer sset MasterC %d%%", volume);
   system(buffer);
 }
 
@@ -873,7 +873,7 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
   char buffer[RKADK_BUFFER_LEN];
 
   memset(buffer, 0, RKADK_BUFFER_LEN);
-  sprintf(buffer, "amixer sset \'DAC VOLUME\' %d", (volume * 255) / 100);
+  sprintf(buffer, "amixer sset MasterP %d%%", volume);
   system(buffer);
 }
 
@@ -1481,13 +1481,13 @@ RKADK_S32 RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_E enParamType,
     *(bool *)pvParam = pstCommCfg->enable_speaker;
     break;
   case RKADK_PARAM_TYPE_VOLUME:
-    *(RKADK_U32 *)pvParam = (pstCommCfg->speaker_volume * 100) / 255;
+    *(RKADK_U32 *)pvParam = pstCommCfg->speaker_volume;
     break;
   case RKADK_PARAM_TYPE_MIC_UNMUTE:
     *(bool *)pvParam = pstCommCfg->mic_unmute;
     break;
   case RKADK_PARAM_TYPE_MIC_VOLUME:
-    *(RKADK_U32 *)pvParam = pstCommCfg->mic_volume * 10;
+    *(RKADK_U32 *)pvParam = pstCommCfg->mic_volume;
     break;
   case RKADK_PARAM_TYPE_OSD_TIME_FORMAT:
     *(RKADK_U32 *)pvParam = pstCommCfg->osd_time_format;
