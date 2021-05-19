@@ -31,6 +31,7 @@ typedef struct {
   pthread_t tid;
   RKADK_U32 videoSeq;
   RKADK_CODEC_TYPE_E enCodecType;
+  bool bCheckIDR;
 } VIDEO_STREAM_INFO_S;
 
 typedef struct {
@@ -201,6 +202,7 @@ static void RKADK_STREAM_VencOutCb1(MEDIA_BUFFER mb) {
 
 static void *RKADK_STREAM_VencGetMb0(void *params) {
   MEDIA_BUFFER mb = NULL;
+  RKADK_S32 s32NaluType;
   RKADK_VIDEO_STREAM_S vStreamData;
   VIDEO_STREAM_INFO_S *pstVideoStream = &g_videoStream[0];
 
@@ -211,11 +213,21 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
   }
 
   while (pstVideoStream->bGetBuffer) {
-    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstStreamCfg->attribute.venc_chn,
-                                   -1);
+    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstStreamCfg->attribute.venc_chn, -1);
     if (!mb) {
       RKADK_LOGE("RK_MPI_SYS_GetMediaBuffer get null buffer!");
       break;
+    }
+
+    s32NaluType = RK_MPI_MB_GetFlag(mb);
+    if(!pstVideoStream->bCheckIDR) {
+      if(s32NaluType == VENC_NALU_IDRSLICE) {
+        pstVideoStream->bCheckIDR = true;
+      } else {
+        RK_MPI_MB_ReleaseBuffer(mb);
+        RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+        continue;
+      }
     }
 
     memset(&vStreamData, 0, sizeof(RKADK_VIDEO_STREAM_S));
@@ -226,8 +238,7 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
     vStreamData.astPack.u64PTS = RK_MPI_MB_GetTimestamp(mb);
     vStreamData.astPack.stDataType.enPayloadType = pstVideoStream->enCodecType;
     RKADK_STREAM_GetNaluType(pstVideoStream->enCodecType,
-                             &vStreamData.astPack.stDataType,
-                             RK_MPI_MB_GetFlag(mb));
+                             &vStreamData.astPack.stDataType, s32NaluType);
 
     if (g_pstVencCB[0] && pstVideoStream->start)
       g_pstVencCB[0](&vStreamData);
@@ -243,6 +254,7 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
 
 static void *RKADK_STREAM_VencGetMb1(void *params) {
   MEDIA_BUFFER mb = NULL;
+  RKADK_S32 s32NaluType;
   RKADK_VIDEO_STREAM_S vStreamData;
   VIDEO_STREAM_INFO_S *pstVideoStream = &g_videoStream[1];
 
@@ -253,11 +265,21 @@ static void *RKADK_STREAM_VencGetMb1(void *params) {
   }
 
   while (pstVideoStream->bGetBuffer) {
-    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstStreamCfg->attribute.venc_chn,
-                                   -1);
+    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstStreamCfg->attribute.venc_chn, -1);
     if (!mb) {
       RKADK_LOGE("RK_MPI_SYS_GetMediaBuffer get null buffer!");
       break;
+    }
+
+    s32NaluType = RK_MPI_MB_GetFlag(mb);
+    if(!pstVideoStream->bCheckIDR) {
+      if(s32NaluType == VENC_NALU_IDRSLICE) {
+        pstVideoStream->bCheckIDR = true;
+      } else {
+        RK_MPI_MB_ReleaseBuffer(mb);
+        RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+        continue;
+      }
     }
 
     memset(&vStreamData, 0, sizeof(RKADK_VIDEO_STREAM_S));
@@ -268,8 +290,7 @@ static void *RKADK_STREAM_VencGetMb1(void *params) {
     vStreamData.astPack.u64PTS = RK_MPI_MB_GetTimestamp(mb);
     vStreamData.astPack.stDataType.enPayloadType = pstVideoStream->enCodecType;
     RKADK_STREAM_GetNaluType(pstVideoStream->enCodecType,
-                             &vStreamData.astPack.stDataType,
-                             RK_MPI_MB_GetFlag(mb));
+                             &vStreamData.astPack.stDataType, s32NaluType);
 
     if (g_pstVencCB[1] && pstVideoStream->start)
       g_pstVencCB[1](&vStreamData);
@@ -424,9 +445,9 @@ static int RKADK_STREAM_DestoryVecnThread(RKADK_U32 u32CamId) {
   if (pstVideoStream->tid) {
     ret = pthread_join(pstVideoStream->tid, NULL);
     if (ret)
-      RKADK_LOGE("read aenc thread exit failed!");
+      RKADK_LOGE("read venc thread exit failed!");
     else
-      RKADK_LOGD("read aenc thread exit ok");
+      RKADK_LOGD("read venc thread exit ok");
     pstVideoStream->tid = 0;
   }
 
@@ -480,6 +501,9 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   }
   videoStream->enCodecType = enCodecType;
   videoStream->videoSeq = 0;
+  videoStream->start = false;
+  videoStream->bGetBuffer = false;
+  videoStream->bCheckIDR = false;
 
   RK_MPI_SYS_Init();
   RKADK_PARAM_Init();
@@ -662,18 +686,19 @@ RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamID,
   RKADK_CHECK_POINTER(pstVideoInfo, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
 
-  memset(pstVideoInfo, 0, sizeof(RKADK_VIDEO_INFO_S));
-
-  if (!g_videoStream[u32CamID].init)
-    pstVideoInfo->enCodecType = RKADK_CODEC_TYPE_H265;
-  else
-    pstVideoInfo->enCodecType = g_videoStream[u32CamID].enCodecType;
+  RKADK_PARAM_Init();
 
   pstStreamCfg = RKADK_PARAM_GetStreamCfg(u32CamID);
   if (!pstStreamCfg) {
     RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
     return -1;
   }
+
+  memset(pstVideoInfo, 0, sizeof(RKADK_VIDEO_INFO_S));
+  if (!g_videoStream[u32CamID].init)
+    pstVideoInfo->enCodecType = pstStreamCfg->attribute.codec_type;
+  else
+    pstVideoInfo->enCodecType = g_videoStream[u32CamID].enCodecType;
 
   pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamID);
   if (!pstStreamCfg) {
