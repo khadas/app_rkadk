@@ -877,13 +877,23 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
   system(buffer);
 }
 
+static void RKADK_PARAM_MicMute(bool mute) {
+  char buffer[RKADK_BUFFER_LEN];
+
+  memset(buffer, 0, RKADK_BUFFER_LEN);
+  if(mute)
+    sprintf(buffer, "amixer sset 'ADC SDP MUTE' on");
+  else
+    sprintf(buffer, "amixer sset 'ADC SDP MUTE' off");
+
+  system(buffer);
+}
+
 static void RKADK_PARAM_SetVolume() {
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
-  if (!pstCommCfg->mic_unmute)
-    RKADK_PARAM_SetMicVolume(0);
-  else
-    RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
+  RKADK_PARAM_MicMute(!pstCommCfg->mic_unmute);
+  RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
 
   if (!pstCommCfg->enable_speaker)
     RKADK_PARAM_SetSpeakerVolume(0);
@@ -1425,10 +1435,7 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
 
     pstCommCfg->mic_unmute = *(bool *)pvParam;
-    if (!pstCommCfg->mic_unmute)
-      RKADK_PARAM_SetMicVolume(0);
-    else
-      RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
+    RKADK_PARAM_MicMute(!pstCommCfg->mic_unmute);
     break;
   case RKADK_PARAM_TYPE_MIC_VOLUME:
     RKADK_CHECK_EQUAL(pstCommCfg->mic_volume, *(bool *)pvParam,
