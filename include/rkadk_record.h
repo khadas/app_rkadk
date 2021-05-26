@@ -109,6 +109,13 @@ RKADK_S32
 RKADK_RECORD_RegisterEventCallback(
     RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback);
 
+/**
+ * @brief get aenc chn id.
+ * @return aenc chn id success
+ * @return -1 failure
+ */
+RKADK_S32 RKADK_RECORD_GetAencChn();
+
 #ifdef __cplusplus
 }
 #endif

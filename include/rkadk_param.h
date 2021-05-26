@@ -134,6 +134,7 @@ typedef enum {
   RKADK_PARAM_TYPE_SNAP_NUM,       /* continue snap num */
 
   // COMM Dependent Param
+  RKADK_PARAM_TYPE_REC_UNMUTE,      /* record audio mute, bool */
   RKADK_PARAM_TYPE_AUDIO,           /* speaker enable, bool */
   RKADK_PARAM_TYPE_VOLUME,          /* speaker volume, [0,100] */
   RKADK_PARAM_TYPE_MIC_UNMUTE,      /* mic(mute) enable, bool */

@@ -185,6 +185,7 @@ static void RKADK_PARAM_Dump() {
 
   printf("Common Config\n");
   printf("\tsensor_count: %d\n", pstCfg->stCommCfg.sensor_count);
+  printf("\trec_unmute: %d\n", pstCfg->stCommCfg.rec_unmute);
   printf("\tenable_speaker: %d\n", pstCfg->stCommCfg.enable_speaker);
   printf("\tspeaker_volume: %d\n", pstCfg->stCommCfg.speaker_volume);
   printf("\tmic_unmute: %d\n", pstCfg->stCommCfg.mic_unmute);
@@ -514,6 +515,7 @@ static void RKADK_PARAM_UseDefault() {
   // default common config
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   pstCommCfg->sensor_count = 1;
+  pstCommCfg->rec_unmute = true;
   pstCommCfg->enable_speaker = true;
   pstCommCfg->speaker_volume = 50;
   pstCommCfg->mic_unmute = true;
@@ -1413,6 +1415,12 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   switch (enParamType) {
+  case RKADK_PARAM_TYPE_REC_UNMUTE:
+    RKADK_CHECK_EQUAL(pstCommCfg->rec_unmute, *(bool *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+
+    pstCommCfg->rec_unmute = *(bool *)pvParam;
+    break;
   case RKADK_PARAM_TYPE_AUDIO:
     RKADK_CHECK_EQUAL(pstCommCfg->enable_speaker, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
@@ -1484,6 +1492,9 @@ RKADK_S32 RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_E enParamType,
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   switch (enParamType) {
+  case RKADK_PARAM_TYPE_REC_UNMUTE:
+    *(bool *)pvParam = pstCommCfg->rec_unmute;
+    break;
   case RKADK_PARAM_TYPE_AUDIO:
     *(bool *)pvParam = pstCommCfg->enable_speaker;
     break;

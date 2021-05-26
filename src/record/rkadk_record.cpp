@@ -605,3 +605,7 @@ RKADK_S32 RKADK_RECORD_RegisterEventCallback(
     RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback) {
   return RKADK_REC_RegisterEventCallback(pRecorder, pfnEventCallback);
 }
+
+RKADK_S32 RKADK_RECORD_GetAencChn() {
+  return RECORD_AENC_CHN;
+}

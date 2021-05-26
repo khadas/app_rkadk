@@ -27,6 +27,7 @@ extern "C" {
 /* common map table */
 static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, sensor_count),
+    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, rec_unmute),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, enable_speaker),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, speaker_volume),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, mic_unmute),

@@ -47,13 +47,14 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
 
 typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 sensor_count;
+  bool rec_unmute;          /* false:disable record audio, true:enable */
   bool enable_speaker;      /* speaker enable, default true */
   RKADK_U32 speaker_volume; /* speaker volume, [0,100] */
   bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
   RKADK_U32 osd_time_format;
-  bool osd;        /* Whether to display OSD */
-  bool boot_sound; /* boot sound */
+  bool osd;                 /* Whether to display OSD */
+  bool boot_sound;          /* boot sound */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
