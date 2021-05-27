@@ -778,8 +778,9 @@ static RKADK_S32 RKADK_PARAM_SetPhotoAttr(RKADK_S32 s32CamID) {
   pstPhotoCfg->vi_attr.stChnAttr.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.u32BufCnt = pstViCfg->buf_cnt;
 
-  // resolution > 2K
-  if ((pstViCfg->width != pstSensorCfg->max_width) && (pstViCfg->width > 2000))
+  if(!strcmp(pstViCfg->device_name, "rkispp_m_bypass"))
+    pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_FBC0;
+  else if (pstViCfg->width != pstSensorCfg->max_width && pstViCfg->width > 2000)
     pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV16;
   else
     pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV12;
@@ -822,13 +823,12 @@ static RKADK_S32 RKADK_PARAM_SetRecAttr(RKADK_S32 s32CamID) {
     pstRecCfg->vi_attr[i].stChnAttr.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.u32BufCnt = pstViCfg->buf_cnt;
 
-    // resolution > 2K
-    if ((pstViCfg->width != pstSensorCfg->max_width) &&
-        (pstViCfg->width > 2000)) {
+    if(!strcmp(pstViCfg->device_name, "rkispp_m_bypass"))
+      pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_FBC0;
+    else if (pstViCfg->width != pstSensorCfg->max_width && pstViCfg->width > 2000)
       pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_NV16;
-    } else {
+    else
       pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_NV12;
-    }
 
     pstRecCfg->vi_attr[i].stChnAttr.enBufType = VI_CHN_BUF_TYPE_MMAP;
     pstRecCfg->vi_attr[i].stChnAttr.enWorkMode = VI_WORK_MODE_NORMAL;
