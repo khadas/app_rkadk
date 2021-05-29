@@ -151,6 +151,15 @@ typedef enum {
     }                                                                          \
   } while (0)
 
+#define RKADK_SWAP16(x)                                                        \
+  (((RKADK_U16)(x)&0x00ff) << 8) | (((RKADK_U16)(x)&0xff00) >> 8)
+
+#define RKADK_SWAP32(x)                                                        \
+  ((((RKADK_U32)(x) & (0xff000000)) >> 24) |                                   \
+   (((RKADK_U32)(x) & (0x00ff0000)) >> 8) |                                    \
+   (((RKADK_U32)(x) & (0x0000ff00)) << 8) |                                    \
+   (((RKADK_U32)(x) & (0x000000ff)) << 24))
+
 #ifdef __cplusplus
 }
 #endif

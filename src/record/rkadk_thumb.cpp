@@ -331,7 +331,7 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
     }
 
     if (u32BoxSize == 1) {
-      if(fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+      if (fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
         RKADK_LOGE("read largeSize failed");
         break;
       }
@@ -342,7 +342,7 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
                    (RKADK_U64)largeSize[3] << 32 | largeSize[4] << 24 |
                    largeSize[5] << 16 | largeSize[6] << 8 | largeSize[7];
 
-      if(fseek(fd, u32BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
+      if (fseek(fd, u32BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
         RKADK_LOGE("largeSize seek failed");
         break;
       }
@@ -352,7 +352,12 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
 
     if (boxHeader[4] == 't' && boxHeader[5] == 'h' && boxHeader[6] == 'm' &&
         boxHeader[7] == 0x20) {
-      *pu32Size = u32BoxSize - THM_BOX_HEADER_LEN;
+      RKADK_U32 u32JpgSize = u32BoxSize - THM_BOX_HEADER_LEN;
+      if (*pu32Size < u32JpgSize)
+        RKADK_LOGW("pu32Size(%d) < u32JpgSize(%d)", *pu32Size, u32JpgSize);
+      else
+        *pu32Size = u32JpgSize;
+
       if (fread(pu8Buf, *pu32Size, 1, fd) != 1)
         RKADK_LOGE("read thm box body failed");
       else
@@ -443,7 +448,7 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
     goto exit;
   }
 
-  if(BuildInThm(pszFileName, pu8Buf, *pu32Size))
+  if (BuildInThm(pszFileName, pu8Buf, *pu32Size))
     RKADK_LOGE("BuildInThm failed");
 
 #ifdef DUMP_RUN_TIME
@@ -468,10 +473,4 @@ exit:
 
   malloc_trim(0);
   return ret;
-}
-
-RKADK_S32 RKADK_GetThmInJpg(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                            RKADK_U32 *pu32Size) {
-  RKADK_LOGD("Nonsupport");
-  return -1;
 }

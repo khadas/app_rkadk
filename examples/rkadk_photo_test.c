@@ -72,7 +72,10 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
 
   fwrite(pu8DataBuf, 1, u32DataLen, file);
   fclose(file);
+
   photoId++;
+  if (photoId > 10)
+    photoId = 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -124,6 +127,11 @@ int main(int argc, char *argv[]) {
   stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
   stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
+  stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
+  stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.u8LargeThumbNum = 1;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
 
   ret = RKADK_PHOTO_Init(&stPhotoAttr);
   if (ret) {
