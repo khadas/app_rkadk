@@ -31,6 +31,7 @@ extern "C" {
 
 #define RKADK_BUFFER_LEN 64
 #define RKADK_VI_PIX_FMT_LEN 5
+#define RKADK_RC_MODE_LEN 5
 
 #define RECORD_AUDIO_CODEC_TYPE RKADK_CODEC_TYPE_MP3
 #define RECORD_AI_CHN 0
@@ -90,6 +91,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 profile;
   RKADK_CODEC_TYPE_E codec_type;
   RKADK_U32 venc_chn;
+  char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
 } RKADK_PARAM_VENC_ATTR_S;
 
 typedef struct {
@@ -163,6 +165,9 @@ RKADK_PARAM_SENSOR_CFG_S *RKADK_PARAM_GetSensorCfg(RKADK_U32 u32CamId);
 RKADK_PARAM_AUDIO_CFG_S *RKADK_PARAM_GetAudioCfg(RKADK_VOID);
 
 RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
+
+VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
+                                     RKADK_CODEC_TYPE_E enCodecType);
 
 #ifdef __cplusplus
 }

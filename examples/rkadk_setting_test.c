@@ -118,7 +118,7 @@ static void SetRecCfg() {
   stParamRecCfg.record_type = RKADK_REC_TYPE_NORMAL;
   stParamRecCfg.record_time = 60;
   stParamRecCfg.splite_time = 60;
-  stParamRecCfg.pre_record_time = 3;
+  stParamRecCfg.pre_record_time = 0;
   stParamRecCfg.lapse_interval = 60;
   stParamRecCfg.lapse_multiple = 30;
   stParamRecCfg.file_num = 1;
@@ -130,6 +130,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[0].venc_chn = 0;
+  strcpy(stParamRecCfg.attribute[0].rc_mode, "VBR");
 
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
@@ -138,6 +139,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[1].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[1].venc_chn = 1;
+  strcpy(stParamRecCfg.attribute[1].rc_mode, "VBR");
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
                    sizeof(g_stRecCfgMapTable_0) /
@@ -171,6 +173,7 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.profile = VIDEO_PROFILE;
   stStreamCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stStreamCfg.attribute.venc_chn = 1;
+  strcpy(stStreamCfg.attribute.rc_mode, "VBR");
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
                    sizeof(g_stStreamCfgMapTable_0) /

@@ -79,6 +79,10 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
 RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(CODEC_TYPE_E enType);
 CODEC_TYPE_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType);
 
+RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
+                                RKADK_U32 u32BitRate, RKADK_U32 u32SrcFrameRate,
+                                RKADK_U32 u32DstFrameRate);
+
 #ifdef __cplusplus
 }
 #endif

@@ -272,6 +272,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_chn);
       printf("\t\tsensor[%d] stRecCfg[%d] codec_type: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].codec_type);
+      printf("\t\tsensor[%d] stRecCfg[%d] rc_mode: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].rc_mode);
     }
 
     printf("\tPhoto Config\n");
@@ -299,6 +301,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_chn);
     printf("\t\tsensor[%d] stStreamCfg codec_type: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
+    printf("\t\tsensor[%d] stStreamCfg rc_mode: %s\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.rc_mode);
   }
 }
 
@@ -573,6 +577,7 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].profile = VIDEO_PROFILE;
   pstRecCfg->attribute[0].venc_chn = 0;
   pstRecCfg->attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
+  memcpy(pstRecCfg->attribute[0].rc_mode, "VBR", RKADK_RC_MODE_LEN);
 
   // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -592,6 +597,7 @@ static void RKADK_PARAM_UseDefault() {
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
   pstStreamCfg->attribute.venc_chn = 3;
   pstStreamCfg->attribute.codec_type = RKADK_CODEC_TYPE_H264;
+  memcpy(pstStreamCfg->attribute.rc_mode, "VBR", RKADK_RC_MODE_LEN);
 
   // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];
@@ -910,6 +916,43 @@ static void RKADK_PARAM_SetVolume() {
     RKADK_PARAM_SetSpeakerVolume(0);
   else
     RKADK_PARAM_SetSpeakerVolume(pstCommCfg->speaker_volume);
+}
+
+VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
+                                     RKADK_CODEC_TYPE_E enCodecType) {
+  VENC_RC_MODE_E enRcMode = VENC_RC_MODE_BUTT;
+
+  RKADK_CHECK_POINTER(rcMode, VENC_RC_MODE_BUTT);
+
+  switch (enCodecType) {
+  case RKADK_CODEC_TYPE_H264:
+    if (!strcmp(rcMode, "CBR"))
+      enRcMode = VENC_RC_MODE_H264CBR;
+    else if (!strcmp(rcMode, "VBR"))
+      enRcMode = VENC_RC_MODE_H264VBR;
+    else if (!strcmp(rcMode, "AVBR"))
+      enRcMode = VENC_RC_MODE_H264AVBR;
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    if (!strcmp(rcMode, "CBR"))
+      enRcMode = VENC_RC_MODE_H265CBR;
+    else if (!strcmp(rcMode, "VBR"))
+      enRcMode = VENC_RC_MODE_H265VBR;
+    else if (!strcmp(rcMode, "AVBR"))
+      enRcMode = VENC_RC_MODE_H265AVBR;
+    break;
+  case RKADK_CODEC_TYPE_MJPEG:
+    if (!strcmp(rcMode, "CBR"))
+      enRcMode = VENC_RC_MODE_MJPEGCBR;
+    else if (!strcmp(rcMode, "VBR"))
+      enRcMode = VENC_RC_MODE_MJPEGVBR;
+    break;
+  default:
+    RKADK_LOGE("Nonsupport codec type: %d", enCodecType);
+    break;
+  }
+
+  return enRcMode;
 }
 
 RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx() {

@@ -114,6 +114,7 @@ static void RKADK_RECORD_SetAudioChn(MPP_CHN_S *pstAiChn,
 static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
                                      RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                      VENC_CHN_ATTR_S *pstVencAttr) {
+  int ret;
   RKADK_U32 u32DstFrameRateNum = 0;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
   RKADK_U32 bitrate;
@@ -140,37 +141,16 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
     u32DstFrameRateNum = pstSensorCfg->framerate;
   }
 
-  switch (pstRecCfg->attribute[index].codec_type) {
-  case RKADK_CODEC_TYPE_H265:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265VBR;
-    pstVencAttr->stRcAttr.stH265Vbr.u32Gop = pstRecCfg->attribute[index].gop;
-    pstVencAttr->stRcAttr.stH265Vbr.u32MaxBitRate = bitrate;
-    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    break;
-  case RKADK_CODEC_TYPE_MJPEG:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_MJPEGVBR;
-    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32BitRate = bitrate;
-    break;
-  case RKADK_CODEC_TYPE_H264:
-  default:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H264VBR;
-    pstVencAttr->stRcAttr.stH264Vbr.u32Gop = pstRecCfg->attribute[index].gop;
-    pstVencAttr->stRcAttr.stH264Vbr.u32MaxBitRate = bitrate;
-    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateNum = u32DstFrameRateNum;
-    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    break;
+  pstVencAttr->stRcAttr.enRcMode =
+      RKADK_PARAM_GetRcMode(pstRecCfg->attribute[index].rc_mode,
+                            pstRecCfg->attribute[index].codec_type);
+
+  ret = RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr,
+                              pstRecCfg->attribute[index].gop, bitrate,
+                              pstSensorCfg->framerate, u32DstFrameRateNum);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_SetRcAttr failed");
+    return -1;
   }
 
   pstVencAttr->stVencAttr.enType =
@@ -606,6 +586,4 @@ RKADK_S32 RKADK_RECORD_RegisterEventCallback(
   return RKADK_REC_RegisterEventCallback(pRecorder, pfnEventCallback);
 }
 
-RKADK_S32 RKADK_RECORD_GetAencChn() {
-  return RECORD_AENC_CHN;
-}
+RKADK_S32 RKADK_RECORD_GetAencChn() { return RECORD_AENC_CHN; }

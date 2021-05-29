@@ -693,3 +693,77 @@ RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(CODEC_TYPE_E enType) {
 
   return enCodecType;
 }
+
+RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
+                                RKADK_U32 u32BitRate, RKADK_U32 u32SrcFrameRate,
+                                RKADK_U32 u32DstFrameRate) {
+  switch (pstRcAttr->enRcMode) {
+  case VENC_RC_MODE_H265CBR:
+    pstRcAttr->stH265Cbr.u32Gop = u32Gop;
+    pstRcAttr->stH265Cbr.u32BitRate = u32BitRate;
+    pstRcAttr->stH265Cbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH265Cbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH265Cbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH265Cbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  case VENC_RC_MODE_H265VBR:
+    pstRcAttr->stH265Vbr.u32Gop = u32Gop;
+    pstRcAttr->stH265Vbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH265Vbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH265Vbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH265Vbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH265Vbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  case VENC_RC_MODE_H265AVBR:
+    pstRcAttr->stH265Avbr.u32Gop = u32Gop;
+    pstRcAttr->stH265Avbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH265Avbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH265Avbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH265Avbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH265Avbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  case VENC_RC_MODE_MJPEGCBR:
+    pstRcAttr->stMjpegCbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stMjpegCbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stMjpegCbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stMjpegCbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    pstRcAttr->stMjpegCbr.u32BitRate = u32BitRate;
+    break;
+  case VENC_RC_MODE_MJPEGVBR:
+    pstRcAttr->stMjpegVbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stMjpegVbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stMjpegVbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stMjpegVbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    pstRcAttr->stMjpegVbr.u32BitRate = u32BitRate;
+    break;
+  case VENC_RC_MODE_H264CBR:
+    pstRcAttr->stH264Cbr.u32Gop = u32Gop;
+    pstRcAttr->stH264Cbr.u32BitRate = u32BitRate;
+    pstRcAttr->stH264Cbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH264Cbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH264Cbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH264Cbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  case VENC_RC_MODE_H264VBR:
+    pstRcAttr->stH264Vbr.u32Gop = u32Gop;
+    pstRcAttr->stH264Vbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH264Vbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH264Vbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH264Vbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH264Vbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  case VENC_RC_MODE_H264AVBR:
+    pstRcAttr->stH264Avbr.u32Gop = u32Gop;
+    pstRcAttr->stH264Avbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH264Avbr.fr32DstFrameRateDen = 1;
+    pstRcAttr->stH264Avbr.fr32DstFrameRateNum = u32DstFrameRate;
+    pstRcAttr->stH264Avbr.u32SrcFrameRateDen = 1;
+    pstRcAttr->stH264Avbr.u32SrcFrameRateNum = u32SrcFrameRate;
+    break;
+  default:
+    RKADK_LOGE("Invalid rc mode: %d", pstRcAttr->enRcMode);
+    return -1;
+  }
+
+  return 0;
+}

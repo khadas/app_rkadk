@@ -220,8 +220,8 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
     }
 
     s32NaluType = RK_MPI_MB_GetFlag(mb);
-    if(!pstVideoStream->bCheckIDR) {
-      if(s32NaluType == VENC_NALU_IDRSLICE) {
+    if (!pstVideoStream->bCheckIDR) {
+      if (s32NaluType == VENC_NALU_IDRSLICE) {
         pstVideoStream->bCheckIDR = true;
       } else {
         RK_MPI_MB_ReleaseBuffer(mb);
@@ -272,8 +272,8 @@ static void *RKADK_STREAM_VencGetMb1(void *params) {
     }
 
     s32NaluType = RK_MPI_MB_GetFlag(mb);
-    if(!pstVideoStream->bCheckIDR) {
-      if(s32NaluType == VENC_NALU_IDRSLICE) {
+    if (!pstVideoStream->bCheckIDR) {
+      if (s32NaluType == VENC_NALU_IDRSLICE) {
         pstVideoStream->bCheckIDR = true;
       } else {
         RK_MPI_MB_ReleaseBuffer(mb);
@@ -317,9 +317,10 @@ static void RKADK_STREAM_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
 }
 
 static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
-                                     RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
-                                     VENC_CHN_ATTR_S *pstVencAttr,
-                                     RKADK_CODEC_TYPE_E enCodecType) {
+                                    RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
+                                    VENC_CHN_ATTR_S *pstVencAttr,
+                                    RKADK_CODEC_TYPE_E enCodecType) {
+  int ret;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
@@ -331,46 +332,15 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
     return -1;
   }
 
-  switch (enCodecType) {
-  case RKADK_CODEC_TYPE_H265:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H265VBR;
-    pstVencAttr->stRcAttr.stH265Vbr.u32Gop = pstStreamCfg->attribute.gop;
-    pstVencAttr->stRcAttr.stH265Vbr.u32MaxBitRate =
-        pstStreamCfg->attribute.bitrate;
-    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stH265Vbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stH265Vbr.fr32DstFrameRateDen = 1;
-    break;
+  pstVencAttr->stRcAttr.enRcMode =
+      RKADK_PARAM_GetRcMode(pstStreamCfg->attribute.rc_mode, enCodecType);
 
-  case RKADK_CODEC_TYPE_MJPEG:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_MJPEGVBR;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stMjpegVbr.fr32DstFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stMjpegVbr.u32BitRate =
-        pstStreamCfg->attribute.bitrate;
-    break;
-
-  case RKADK_CODEC_TYPE_H264:
-  default:
-    pstVencAttr->stRcAttr.enRcMode = VENC_RC_MODE_H264VBR;
-    pstVencAttr->stRcAttr.stH264Vbr.u32Gop = pstStreamCfg->attribute.gop;
-    pstVencAttr->stRcAttr.stH264Vbr.u32MaxBitRate =
-        pstStreamCfg->attribute.bitrate;
-    // frame rate: in 30/1, out 30/1.
-    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stH264Vbr.u32SrcFrameRateDen = 1;
-    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateNum =
-        pstSensorCfg->framerate;
-    pstVencAttr->stRcAttr.stH264Vbr.fr32DstFrameRateDen = 1;
-    break;
+  ret = RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, pstStreamCfg->attribute.gop,
+                            pstStreamCfg->attribute.bitrate,
+                            pstSensorCfg->framerate, pstSensorCfg->framerate);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_SetRcAttr failed");
+    return -1;
   }
 
   pstVencAttr->stVencAttr.enType = RKADK_MEDIA_GetRkCodecType(enCodecType);
@@ -531,7 +501,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   // Create VENC
   VENC_CHN_ATTR_S stVencChnAttr;
   ret = RKADK_STREAM_SetVencAttr(u32CamID, pstStreamCfg, &stVencChnAttr,
-                                  enCodecType);
+                                 enCodecType);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_SetVencAttr failed");
     return ret;
