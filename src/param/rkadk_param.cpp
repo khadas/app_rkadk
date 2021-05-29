@@ -233,6 +233,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stViCfg[j].chn_id);
       printf("\t\tsensor[%d] VI[%d] buf_cnt: %d\n", i, j,
              pstCfg->stMediaCfg[i].stViCfg[j].buf_cnt);
+      printf("\t\tsensor[%d] VI[%d] pix_fmt: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stViCfg[j].pix_fmt);
       printf("\t\tsensor[%d] VI[%d] width: %d\n", i, j,
              pstCfg->stMediaCfg[i].stViCfg[j].width);
       printf("\t\tsensor[%d] VI[%d] height: %d\n", i, j,
@@ -573,14 +575,16 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
 
   // default sensor.0.photo config
-  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stPhotoCfg;
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[0].stPhotoCfg;
   pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
   pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
   pstPhotoCfg->snap_num = 1;
   pstPhotoCfg->venc_chn = 2;
 
   // default sensor.0.stream config
-  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stStreamCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[0].stStreamCfg;
   pstStreamCfg->attribute.width = STREAM_VIDEO_WIDTH;
   pstStreamCfg->attribute.height = STREAM_VIDEO_HEIGHT;
   pstStreamCfg->attribute.bitrate = STREAM_VIDEO_WIDTH * STREAM_VIDEO_HEIGHT;
@@ -596,16 +600,19 @@ static void RKADK_PARAM_UseDefault() {
   pstViCfg->buf_cnt = 4;
   pstViCfg->width = RECORD_VIDEO_WIDTH;
   pstViCfg->height = RECORD_VIDEO_HEIGHT;
+  memcpy(pstViCfg->pix_fmt, "FBC0", RKADK_VI_PIX_FMT_LEN);
 
   pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[1];
   pstViCfg->chn_id = 1;
   memcpy(pstViCfg->device_name, "rkispp_scale0", RKADK_BUFFER_LEN);
   pstViCfg->buf_cnt = 4;
+  memcpy(pstViCfg->pix_fmt, "NV12", RKADK_VI_PIX_FMT_LEN);
 
   pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[2];
   pstViCfg->chn_id = 2;
   memcpy(pstViCfg->device_name, "rkispp_scale1", RKADK_BUFFER_LEN);
   pstViCfg->buf_cnt = 2;
+  memcpy(pstViCfg->pix_fmt, "NV12", RKADK_VI_PIX_FMT_LEN);
 
   pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[3];
   pstViCfg->chn_id = 3;
@@ -613,6 +620,7 @@ static void RKADK_PARAM_UseDefault() {
   pstViCfg->buf_cnt = 4;
   pstViCfg->width = STREAM_VIDEO_WIDTH;
   pstViCfg->height = STREAM_VIDEO_HEIGHT;
+  memcpy(pstViCfg->pix_fmt, "NV12", RKADK_VI_PIX_FMT_LEN);
 }
 
 static RKADK_S32 RKADK_PARAM_LoadDefault() {
@@ -708,14 +716,40 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_PARAM_WODR_MODE mode,
   pstViCfg->width = width;
   pstViCfg->height = height;
 
+  if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
+    if ((pstViCfg->width != pstSensorCfg->max_width) &&
+        (pstViCfg->width > 2000)) {
+      RKADK_LOGW("rkispp_scale0 resolution(%d * %d) > 2K, default NV16",
+                 pstViCfg->width, pstViCfg->height);
+      memcpy(pstViCfg->pix_fmt, "NV16", RKADK_VI_PIX_FMT_LEN);
+    }
+  }
+
   RKADK_PARAM_SaveViCfg(RKADK_PARAM_PATH, index, s32CamID);
   return index;
 }
 
+static IMAGE_TYPE_E RKADK_PARAM_GetPixFmt(char *pixFmt) {
+  IMAGE_TYPE_E enPixFmt = IMAGE_TYPE_UNKNOW;
+
+  RKADK_CHECK_POINTER(pixFmt, IMAGE_TYPE_UNKNOW);
+
+  if (!strcmp(pixFmt, "NV12"))
+    enPixFmt = IMAGE_TYPE_NV12;
+  else if (!strcmp(pixFmt, "NV16"))
+    enPixFmt = IMAGE_TYPE_NV16;
+  else if (!strcmp(pixFmt, "YUYV"))
+    enPixFmt = IMAGE_TYPE_YUYV422;
+  else if (!strcmp(pixFmt, "FBC0"))
+    enPixFmt = IMAGE_TYPE_FBC0;
+  else if (!strcmp(pixFmt, "FBC2"))
+    enPixFmt = IMAGE_TYPE_FBC2;
+
+  return enPixFmt;
+}
+
 static RKADK_S32 RKADK_PARAM_SetStreamAttr(RKADK_S32 s32CamID) {
   int index;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamID];
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamID].stStreamCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
@@ -736,17 +770,8 @@ static RKADK_S32 RKADK_PARAM_SetStreamAttr(RKADK_S32 s32CamID) {
   pstStreamCfg->vi_attr.stChnAttr.u32Width = pstViCfg->width;
   pstStreamCfg->vi_attr.stChnAttr.u32Height = pstViCfg->height;
   pstStreamCfg->vi_attr.stChnAttr.u32BufCnt = pstViCfg->buf_cnt;
-
-  // resolution > 2K
-  if ((pstViCfg->width != pstSensorCfg->max_width) &&
-      (pstViCfg->width > 2000)) {
-    RKADK_LOGW("Stream VI resolution(%d * %d) > 2K", pstViCfg->width,
-               pstViCfg->height);
-    pstStreamCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV16;
-  } else {
-    pstStreamCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV12;
-  }
-
+  pstStreamCfg->vi_attr.stChnAttr.enPixFmt =
+      RKADK_PARAM_GetPixFmt(pstViCfg->pix_fmt);
   pstStreamCfg->vi_attr.stChnAttr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   pstStreamCfg->vi_attr.stChnAttr.enWorkMode = VI_WORK_MODE_NORMAL;
 
@@ -755,8 +780,6 @@ static RKADK_S32 RKADK_PARAM_SetStreamAttr(RKADK_S32 s32CamID) {
 
 static RKADK_S32 RKADK_PARAM_SetPhotoAttr(RKADK_S32 s32CamID) {
   int index;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamID];
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamID].stPhotoCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
@@ -777,14 +800,8 @@ static RKADK_S32 RKADK_PARAM_SetPhotoAttr(RKADK_S32 s32CamID) {
   pstPhotoCfg->vi_attr.stChnAttr.u32Width = pstViCfg->width;
   pstPhotoCfg->vi_attr.stChnAttr.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.u32BufCnt = pstViCfg->buf_cnt;
-
-  if(!strcmp(pstViCfg->device_name, "rkispp_m_bypass"))
-    pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_FBC0;
-  else if (pstViCfg->width != pstSensorCfg->max_width && pstViCfg->width > 2000)
-    pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV16;
-  else
-    pstPhotoCfg->vi_attr.stChnAttr.enPixFmt = IMAGE_TYPE_NV12;
-
+  pstPhotoCfg->vi_attr.stChnAttr.enPixFmt =
+      RKADK_PARAM_GetPixFmt(pstViCfg->pix_fmt);
   pstPhotoCfg->vi_attr.stChnAttr.enBufType = VI_CHN_BUF_TYPE_MMAP;
   pstPhotoCfg->vi_attr.stChnAttr.enWorkMode = VI_WORK_MODE_NORMAL;
 
@@ -794,8 +811,6 @@ static RKADK_S32 RKADK_PARAM_SetPhotoAttr(RKADK_S32 s32CamID) {
 static RKADK_S32 RKADK_PARAM_SetRecAttr(RKADK_S32 s32CamID) {
   int i, index;
   RKADK_PARAM_WODR_MODE mode;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamID];
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamID].stRecCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
@@ -822,14 +837,8 @@ static RKADK_S32 RKADK_PARAM_SetRecAttr(RKADK_S32 s32CamID) {
     pstRecCfg->vi_attr[i].stChnAttr.u32Width = pstViCfg->width;
     pstRecCfg->vi_attr[i].stChnAttr.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.u32BufCnt = pstViCfg->buf_cnt;
-
-    if(!strcmp(pstViCfg->device_name, "rkispp_m_bypass"))
-      pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_FBC0;
-    else if (pstViCfg->width != pstSensorCfg->max_width && pstViCfg->width > 2000)
-      pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_NV16;
-    else
-      pstRecCfg->vi_attr[i].stChnAttr.enPixFmt = IMAGE_TYPE_NV12;
-
+    pstRecCfg->vi_attr[i].stChnAttr.enPixFmt =
+        RKADK_PARAM_GetPixFmt(pstViCfg->pix_fmt);
     pstRecCfg->vi_attr[i].stChnAttr.enBufType = VI_CHN_BUF_TYPE_MMAP;
     pstRecCfg->vi_attr[i].stChnAttr.enWorkMode = VI_WORK_MODE_NORMAL;
   }
@@ -883,7 +892,7 @@ static void RKADK_PARAM_MicMute(bool mute) {
   char buffer[RKADK_BUFFER_LEN];
 
   memset(buffer, 0, RKADK_BUFFER_LEN);
-  if(mute)
+  if (mute)
     sprintf(buffer, "amixer sset 'ADC SDP MUTE' on");
   else
     sprintf(buffer, "amixer sset 'ADC SDP MUTE' off");
@@ -942,14 +951,14 @@ RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID) {
   return &g_stPARAMCtx.stCfg.stThumbCfg;
 }
 
-RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType) {
+RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
+                                   RKADK_STREAM_TYPE_E enStrmType) {
   RKADK_S32 s32VencChnId = -1;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
   switch (enStrmType) {
-  case RKADK_STREAM_TYPE_VIDEO_MAIN:
-  {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN: {
     RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
     if (!pstRecCfg)
       RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
@@ -957,8 +966,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
       s32VencChnId = pstRecCfg->attribute[0].venc_chn;
     break;
   }
-  case RKADK_STREAM_TYPE_VIDEO_SUB:
-  {
+  case RKADK_STREAM_TYPE_VIDEO_SUB: {
     RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
     if (!pstRecCfg)
       RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
@@ -966,8 +974,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
       s32VencChnId = pstRecCfg->attribute[1].venc_chn;
     break;
   }
-  case RKADK_STREAM_TYPE_SNAP:
-  {
+  case RKADK_STREAM_TYPE_SNAP: {
     RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(u32CamId);
     if (!pstPhotoCfg)
       RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
@@ -975,8 +982,7 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStr
       s32VencChnId = pstPhotoCfg->venc_chn;
     break;
   }
-  case RKADK_STREAM_TYPE_USER:
-  {
+  case RKADK_STREAM_TYPE_USER: {
     RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(u32CamId);
     if (!pstStreamCfg)
       RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
@@ -1190,8 +1196,7 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
     *(RKADK_PARAM_RES_E *)pvParam = RKADK_PARAM_GetResType(
         pstRecCfg->attribute[0].width, pstRecCfg->attribute[0].height);
     break;
-  case RKADK_PARAM_TYPE_CODEC_TYPE:
-  {
+  case RKADK_PARAM_TYPE_CODEC_TYPE: {
     RKADK_PARAM_CODEC_CFG_S *pstCodecCfg;
 
     pstCodecCfg = (RKADK_PARAM_CODEC_CFG_S *)pvParam;

@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #define RKADK_BUFFER_LEN 64
+#define RKADK_VI_PIX_FMT_LEN 5
 
 #define RECORD_AUDIO_CODEC_TYPE RKADK_CODEC_TYPE_MP3
 #define RECORD_AI_CHN 0
@@ -43,6 +44,7 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
   RKADK_U32 buf_cnt;
   RKADK_U32 width;
   RKADK_U32 height;
+  char pix_fmt[RKADK_VI_PIX_FMT_LEN]; /* options: NV12/NV16/YUYV/FBC0/FBC2 */
 } RKADK_PARAM_VI_CFG_S;
 
 typedef struct tagRKADK_PARAM_COMM_CFG_S {

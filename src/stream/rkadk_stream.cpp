@@ -316,7 +316,7 @@ static void RKADK_STREAM_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
   pstVencChn->s32ChnId = pstStreamCfg->attribute.venc_chn;
 }
 
-static int RKADK_STREAM_SettVencAttr(RKADK_U32 u32CamID,
+static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
                                      RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
                                      VENC_CHN_ATTR_S *pstVencAttr,
                                      RKADK_CODEC_TYPE_E enCodecType) {
@@ -530,10 +530,10 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
 
   // Create VENC
   VENC_CHN_ATTR_S stVencChnAttr;
-  ret = RKADK_STREAM_SettVencAttr(u32CamID, pstStreamCfg, &stVencChnAttr,
+  ret = RKADK_STREAM_SetVencAttr(u32CamID, pstStreamCfg, &stVencChnAttr,
                                   enCodecType);
   if (ret) {
-    RKADK_LOGE("RKADK_STREAM_SettVencAttr failed");
+    RKADK_LOGE("RKADK_STREAM_SetVencAttr failed");
     return ret;
   }
 

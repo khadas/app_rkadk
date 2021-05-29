@@ -127,6 +127,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_0[] = {
     DEFINE_MAP(sensor.0.vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(sensor.0.vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(sensor.0.vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(sensor.0.vi.0, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_1[] = {
@@ -135,6 +136,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_1[] = {
     DEFINE_MAP(sensor.0.vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(sensor.0.vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(sensor.0.vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(sensor.0.vi.1, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_2[] = {
@@ -143,6 +145,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_2[] = {
     DEFINE_MAP(sensor.0.vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(sensor.0.vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(sensor.0.vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(sensor.0.vi.2, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
@@ -151,6 +154,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
 };
 
 #ifdef __cplusplus
