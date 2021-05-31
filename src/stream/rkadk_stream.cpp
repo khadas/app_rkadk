@@ -458,6 +458,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   int ret = 0;
   MPP_CHN_S stViChn;
   MPP_CHN_S stVencChn;
+  VENC_RC_PARAM_S stVencRcParam;
 
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
 
@@ -511,6 +512,13 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
     goto failed;
+  }
+
+  ret = RKADK_PARAM_GetRcParam(pstStreamCfg->attribute, &stVencRcParam);
+  if (!ret) {
+    ret = RK_MPI_VENC_SetRcParam(stVencChn.s32ChnId, &stVencRcParam);
+    if (ret)
+      RKADK_LOGW("RK_MPI_VENC_SetRcParam failed(%d), use default cfg", ret);
   }
 
   ret = RKADK_STREAM_VencGetData(u32CamID, &stVencChn);

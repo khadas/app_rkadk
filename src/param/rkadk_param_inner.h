@@ -83,6 +83,15 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_U32 bitrate;
 } RKADK_PARAM_AUDIO_CFG_S;
 
+typedef struct tagRKADK_PARAM_VENC_PARAM_S {
+  RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
+  RKADK_U32 qp_step;
+  RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
+  RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
+  RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
+  RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
+} RKADK_PARAM_VENC_PARAM_S;
+
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 width;
   RKADK_U32 height;
@@ -92,6 +101,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_CODEC_TYPE_E codec_type;
   RKADK_U32 venc_chn;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
+  RKADK_PARAM_VENC_PARAM_S venc_param;
 } RKADK_PARAM_VENC_ATTR_S;
 
 typedef struct {
@@ -168,6 +178,9 @@ RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
 
 VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
                                      RKADK_CODEC_TYPE_E enCodecType);
+
+RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
+                                 VENC_RC_PARAM_S *pstRcParam);
 
 #ifdef __cplusplus
 }

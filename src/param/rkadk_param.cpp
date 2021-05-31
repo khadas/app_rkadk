@@ -274,6 +274,18 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].codec_type);
       printf("\t\tsensor[%d] stRecCfg[%d] rc_mode: %s\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].rc_mode);
+      printf("\t\tsensor[%d] stRecCfg[%d] first_frame_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.first_frame_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] qp_step: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.qp_step);
+      printf("\t\tsensor[%d] stRecCfg[%d] max_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.max_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] min_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.min_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] row_qp_delta_i: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.row_qp_delta_i);
+      printf("\t\tsensor[%d] stRecCfg[%d] row_qp_delta_p: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.row_qp_delta_p);
     }
 
     printf("\tPhoto Config\n");
@@ -303,6 +315,21 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stStreamCfg rc_mode: %s\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.rc_mode);
+    printf(
+        "\t\tsensor[%d] stStreamCfg first_frame_qp: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.first_frame_qp);
+    printf("\t\tsensor[%d] stStreamCfg qp_step: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.qp_step);
+    printf("\t\tsensor[%d] stStreamCfg max_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.max_qp);
+    printf("\t\tsensor[%d] stStreamCfg min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.min_qp);
+    printf(
+        "\t\tsensor[%d] stStreamCfg row_qp_delta_i: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_i);
+    printf(
+        "\t\tsensor[%d] stStreamCfg row_qp_delta_p: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_p);
   }
 }
 
@@ -477,11 +504,19 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const char *path) {
             path, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
             g_stRecCfgMapTable_0_0,
             sizeof(g_stRecCfgMapTable_0_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
+        ret |= RKADK_Ini2Struct(
+            path, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
+            g_stRecParamMapTable_0_0,
+            sizeof(g_stRecParamMapTable_0_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
       } else {
         ret = RKADK_Ini2Struct(
             path, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
             g_stRecCfgMapTable_0_1,
             sizeof(g_stRecCfgMapTable_0_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
+        ret |= RKADK_Ini2Struct(
+            path, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
+            g_stRecParamMapTable_0_1,
+            sizeof(g_stRecParamMapTable_0_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
       }
 
       if (ret) {
@@ -497,6 +532,10 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const char *path) {
                            g_stStreamCfgMapTable_0,
                            sizeof(g_stStreamCfgMapTable_0) /
                                sizeof(RKADK_SI_CONFIG_MAP_S));
+    ret |= RKADK_Ini2Struct(
+        path, &pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param,
+        g_stStreamParamMapTable_0,
+        sizeof(g_stStreamParamMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
     if (ret) {
       RKADK_LOGE("load sensor[%d] stream param failed", i);
       return ret;
@@ -578,6 +617,8 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].venc_chn = 0;
   pstRecCfg->attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   memcpy(pstRecCfg->attribute[0].rc_mode, "VBR", RKADK_RC_MODE_LEN);
+  pstRecCfg->attribute[0].venc_param.max_qp = 48;
+  pstRecCfg->attribute[0].venc_param.min_qp = 8;
 
   // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -598,6 +639,8 @@ static void RKADK_PARAM_UseDefault() {
   pstStreamCfg->attribute.venc_chn = 3;
   pstStreamCfg->attribute.codec_type = RKADK_CODEC_TYPE_H264;
   memcpy(pstStreamCfg->attribute.rc_mode, "VBR", RKADK_RC_MODE_LEN);
+  pstStreamCfg->attribute.venc_param.max_qp = 48;
+  pstStreamCfg->attribute.venc_param.min_qp = 8;
 
   // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];
@@ -953,6 +996,56 @@ VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
   }
 
   return enRcMode;
+}
+
+RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
+                                 VENC_RC_PARAM_S *pstRcParam) {
+  RKADK_S32 s32FirstFrameStartQp;
+  RKADK_U32 u32RowQpDeltaI;
+  RKADK_U32 u32RowQpDeltaP;
+  RKADK_U32 u32StepQp;
+
+  RKADK_CHECK_POINTER(pstRcParam, RKADK_FAILURE);
+  memset(pstRcParam, 0, sizeof(VENC_RC_PARAM_S));
+
+  s32FirstFrameStartQp = stVencAttr.venc_param.first_frame_qp > 0 ?
+                             stVencAttr.venc_param.first_frame_qp : -1;
+
+  u32StepQp = stVencAttr.venc_param.qp_step > 0 ?
+                  stVencAttr.venc_param.qp_step : 2;
+
+  u32RowQpDeltaI = stVencAttr.venc_param.row_qp_delta_i > 0 ?
+                       stVencAttr.venc_param.row_qp_delta_i : 1;
+
+  u32RowQpDeltaP = stVencAttr.venc_param.row_qp_delta_p > 0 ?
+                       stVencAttr.venc_param.row_qp_delta_p : 2;
+
+  pstRcParam->s32FirstFrameStartQp = s32FirstFrameStartQp;
+  pstRcParam->u32RowQpDeltaI = u32RowQpDeltaI;
+  pstRcParam->u32RowQpDeltaP = u32RowQpDeltaP;
+  switch (stVencAttr.codec_type) {
+  case RKADK_CODEC_TYPE_H264:
+    pstRcParam->stParamH264.u32StepQp = u32StepQp;
+    pstRcParam->stParamH264.u32MaxQp = stVencAttr.venc_param.max_qp;
+    pstRcParam->stParamH264.u32MinQp = stVencAttr.venc_param.min_qp;
+    pstRcParam->stParamH264.u32MaxIQp = stVencAttr.venc_param.max_qp;
+    pstRcParam->stParamH264.u32MinIQp = stVencAttr.venc_param.min_qp;
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    pstRcParam->stParamH265.u32StepQp = u32StepQp;
+    pstRcParam->stParamH265.u32MaxQp = stVencAttr.venc_param.max_qp;
+    pstRcParam->stParamH265.u32MinQp = stVencAttr.venc_param.min_qp;
+    pstRcParam->stParamH265.u32MaxIQp = stVencAttr.venc_param.max_qp;
+    pstRcParam->stParamH265.u32MinIQp = stVencAttr.venc_param.min_qp;
+    break;
+  case RKADK_CODEC_TYPE_MJPEG:
+    break;
+  default:
+    RKADK_LOGE("Nonsupport codec type: %d", stVencAttr.codec_type);
+    return -1;
+  }
+
+  return 0;
 }
 
 RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx() {

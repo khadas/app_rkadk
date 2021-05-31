@@ -92,6 +92,11 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_0[] = {
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
+static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_0_0[] = {
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
+};
+
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_1[] = {
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, width),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, height),
@@ -101,6 +106,11 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_1[] = {
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
+};
+
+static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_0_1[] = {
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
 };
 
 /* stream map table */
@@ -113,6 +123,11 @@ static RKADK_SI_CONFIG_MAP_S g_stStreamCfgMapTable_0[] = {
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
+};
+
+static RKADK_SI_CONFIG_MAP_S g_stStreamParamMapTable_0[] = {
+    DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
+    DEFINE_MAP(sensor.0.stream, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
 };
 
 /* photo map table */

@@ -14,9 +14,9 @@
  *  limitations under the License.
  */
 
-#include "rkadk_struct2ini.h"
 #include "rkadk_param.h"
 #include "rkadk_param_map.h"
+#include "rkadk_struct2ini.h"
 #include <signal.h>
 #include <stdbool.h>
 
@@ -131,6 +131,8 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[0].venc_chn = 0;
   strcpy(stParamRecCfg.attribute[0].rc_mode, "VBR");
+  stParamRecCfg.attribute[0].venc_param.max_qp = 48;
+  stParamRecCfg.attribute[0].venc_param.min_qp = 8;
 
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
@@ -140,6 +142,8 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[1].venc_chn = 1;
   strcpy(stParamRecCfg.attribute[1].rc_mode, "VBR");
+  stParamRecCfg.attribute[1].venc_param.max_qp = 48;
+  stParamRecCfg.attribute[1].venc_param.min_qp = 8;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
                    sizeof(g_stRecCfgMapTable_0) /
@@ -150,6 +154,12 @@ static void SetRecCfg() {
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[1],
                    g_stRecCfgMapTable_0_1, sizeof(g_stRecCfgMapTable_0_1) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[0].venc_param,
+                   g_stRecParamMapTable_0_0, sizeof(g_stRecParamMapTable_0_0) /
+                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[1].venc_param,
+                   g_stRecParamMapTable_0_1, sizeof(g_stRecParamMapTable_0_1) /
+                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
                    sizeof(g_stRecCfgMapTable_0) /
@@ -160,6 +170,12 @@ static void SetRecCfg() {
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[1],
                    g_stRecCfgMapTable_0_1, sizeof(g_stRecCfgMapTable_0_1) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[0].venc_param,
+                   g_stRecParamMapTable_0_0, sizeof(g_stRecParamMapTable_0_0) /
+                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[1].venc_param,
+                   g_stRecParamMapTable_0_1, sizeof(g_stRecParamMapTable_0_1) /
+                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 static void SetStreamCfg() {
@@ -174,6 +190,8 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stStreamCfg.attribute.venc_chn = 1;
   strcpy(stStreamCfg.attribute.rc_mode, "VBR");
+  stStreamCfg.attribute.venc_param.max_qp = 48;
+  stStreamCfg.attribute.venc_param.min_qp = 8;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
                    sizeof(g_stStreamCfgMapTable_0) /
@@ -181,6 +199,16 @@ static void SetStreamCfg() {
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
                    sizeof(g_stStreamCfgMapTable_0) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg.attribute.venc_param,
+                   g_stStreamParamMapTable_0,
+                   sizeof(g_stStreamParamMapTable_0) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg.attribute.venc_param,
+                   g_stStreamParamMapTable_0,
+                   sizeof(g_stStreamParamMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 

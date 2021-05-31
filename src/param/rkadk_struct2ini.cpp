@@ -56,10 +56,10 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
 
     if (mapTable[i].keyVlaueType == int_e) {
       int keyInt = iniparser_getint(ini, sectionKey, -1);
-      if (keyInt != -1)
-        *(int *)((char *)structAddr + mapTable[i].offset) = keyInt;
-      else
+      if (keyInt == -1 && strcmp(mapTable[i].structMember, "first_frame_qp"))
         RKADK_LOGE("int [%s]: not exit", sectionKey);
+      else
+        *(int *)((char *)structAddr + mapTable[i].offset) = keyInt;
     } else if (mapTable[i].keyVlaueType == string_e) {
       char *keyString = (char *)iniparser_getstring(ini, sectionKey, NULL);
       if (keyString) {

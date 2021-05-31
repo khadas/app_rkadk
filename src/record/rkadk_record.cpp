@@ -168,6 +168,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
 static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
   int ret;
   VENC_CHN_ATTR_S stVencChnAttr;
+  VENC_RC_PARAM_S stVencRcParam;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
@@ -197,6 +198,14 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
       RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
+    }
+
+    ret = RKADK_PARAM_GetRcParam(pstRecCfg->attribute[i], &stVencRcParam);
+    if (!ret) {
+      ret = RK_MPI_VENC_SetRcParam(pstRecCfg->attribute[i].venc_chn,
+                                   &stVencRcParam);
+      if (ret)
+        RKADK_LOGW("RK_MPI_VENC_SetRcParam failed(%d), use default cfg", ret);
     }
   }
 
