@@ -343,6 +343,10 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
     return -1;
   }
 
+  if(enCodecType == RKADK_CODEC_TYPE_H265)
+    pstVencAttr->stVencAttr.stAttrH265e.bScaleList
+        = (RK_BOOL)pstStreamCfg->attribute.venc_param.scaling_list;
+
   pstVencAttr->stVencAttr.enType = RKADK_MEDIA_GetRkCodecType(enCodecType);
   pstVencAttr->stVencAttr.imageType = pstStreamCfg->vi_attr.stChnAttr.enPixFmt;
   pstVencAttr->stVencAttr.u32PicWidth = pstStreamCfg->attribute.width;

@@ -93,6 +93,7 @@ typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
 
   bool full_range;
+  bool scaling_list;
 } RKADK_PARAM_VENC_PARAM_S;
 
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {

@@ -290,6 +290,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.row_qp_delta_p);
       printf("\t\tsensor[%d] stRecCfg[%d] full_range: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.full_range);
+      printf("\t\tsensor[%d] stRecCfg[%d] scaling_list: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.scaling_list);
     }
 
     printf("\tPhoto Config\n");
@@ -336,6 +338,8 @@ static void RKADK_PARAM_Dump() {
         pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_p);
     printf("\t\tsensor[%d] stStreamCfg full_range: %d\n", i,
         pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.full_range);
+    printf("\t\tsensor[%d] stStreamCfg scaling_list: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.scaling_list);
   }
 }
 
@@ -626,6 +630,7 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].venc_param.max_qp = 48;
   pstRecCfg->attribute[0].venc_param.min_qp = 8;
   pstRecCfg->attribute[0].venc_param.full_range = true;
+  pstRecCfg->attribute[0].venc_param.scaling_list = true;
 
   // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -649,6 +654,7 @@ static void RKADK_PARAM_UseDefault() {
   pstStreamCfg->attribute.venc_param.max_qp = 48;
   pstStreamCfg->attribute.venc_param.min_qp = 8;
   pstStreamCfg->attribute.venc_param.full_range = true;
+  pstStreamCfg->attribute.venc_param.scaling_list = true;
 
   // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];

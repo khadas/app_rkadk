@@ -134,6 +134,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].venc_param.max_qp = 48;
   stParamRecCfg.attribute[0].venc_param.min_qp = 8;
   stParamRecCfg.attribute[0].venc_param.full_range = true;
+  stParamRecCfg.attribute[0].venc_param.scaling_list = true;
 
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
@@ -146,6 +147,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].venc_param.max_qp = 48;
   stParamRecCfg.attribute[1].venc_param.min_qp = 8;
   stParamRecCfg.attribute[1].venc_param.full_range = true;
+  stParamRecCfg.attribute[1].venc_param.scaling_list = true;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
                    sizeof(g_stRecCfgMapTable_0) /
@@ -195,6 +197,7 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.venc_param.max_qp = 48;
   stStreamCfg.attribute.venc_param.min_qp = 8;
   stStreamCfg.attribute.venc_param.full_range = true;
+  stStreamCfg.attribute.venc_param.scaling_list = true;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
                    sizeof(g_stStreamCfgMapTable_0) /

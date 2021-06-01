@@ -153,6 +153,10 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
     return -1;
   }
 
+  if(pstRecCfg->attribute[index].codec_type == RKADK_CODEC_TYPE_H265)
+    pstVencAttr->stVencAttr.stAttrH265e.bScaleList
+        = (RK_BOOL)pstRecCfg->attribute[index].venc_param.scaling_list;
+
   pstVencAttr->stVencAttr.enType =
       RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
   pstVencAttr->stVencAttr.imageType =
