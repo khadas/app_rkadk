@@ -17,6 +17,8 @@
 #include "rkadk_param.h"
 #include "rkadk_param_map.h"
 
+#define RKISPP_SCALE0_NV12_WIDTH_MAX 2080
+
 typedef enum {
   RKADK_RECORD_0 = 0,
   RKADK_RECORD_1,
@@ -286,6 +288,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.row_qp_delta_i);
       printf("\t\tsensor[%d] stRecCfg[%d] row_qp_delta_p: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.row_qp_delta_p);
+      printf("\t\tsensor[%d] stRecCfg[%d] full_range: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.full_range);
     }
 
     printf("\tPhoto Config\n");
@@ -330,6 +334,8 @@ static void RKADK_PARAM_Dump() {
     printf(
         "\t\tsensor[%d] stStreamCfg row_qp_delta_p: %d\n", i,
         pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_p);
+    printf("\t\tsensor[%d] stStreamCfg full_range: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.full_range);
   }
 }
 
@@ -616,9 +622,10 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].profile = VIDEO_PROFILE;
   pstRecCfg->attribute[0].venc_chn = 0;
   pstRecCfg->attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
-  memcpy(pstRecCfg->attribute[0].rc_mode, "VBR", RKADK_RC_MODE_LEN);
+  memcpy(pstRecCfg->attribute[0].rc_mode, "CBR", RKADK_RC_MODE_LEN);
   pstRecCfg->attribute[0].venc_param.max_qp = 48;
   pstRecCfg->attribute[0].venc_param.min_qp = 8;
+  pstRecCfg->attribute[0].venc_param.full_range = true;
 
   // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -641,6 +648,7 @@ static void RKADK_PARAM_UseDefault() {
   memcpy(pstStreamCfg->attribute.rc_mode, "VBR", RKADK_RC_MODE_LEN);
   pstStreamCfg->attribute.venc_param.max_qp = 48;
   pstStreamCfg->attribute.venc_param.min_qp = 8;
+  pstStreamCfg->attribute.venc_param.full_range = true;
 
   // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];
@@ -767,7 +775,7 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_PARAM_WODR_MODE mode,
 
   if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
     if ((pstViCfg->width != pstSensorCfg->max_width) &&
-        (pstViCfg->width > 2000)) {
+        (pstViCfg->width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
       RKADK_LOGW("rkispp_scale0 resolution(%d * %d) > 2K, default NV16",
                  pstViCfg->width, pstViCfg->height);
       memcpy(pstViCfg->pix_fmt, "NV16", RKADK_VI_PIX_FMT_LEN);

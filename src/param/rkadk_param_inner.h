@@ -84,12 +84,15 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
 } RKADK_PARAM_AUDIO_CFG_S;
 
 typedef struct tagRKADK_PARAM_VENC_PARAM_S {
+  /* rc param */
   RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
   RKADK_U32 qp_step;
   RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
   RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
   RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
   RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
+
+  bool full_range;
 } RKADK_PARAM_VENC_PARAM_S;
 
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {

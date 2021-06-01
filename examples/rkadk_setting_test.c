@@ -130,9 +130,10 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[0].venc_chn = 0;
-  strcpy(stParamRecCfg.attribute[0].rc_mode, "VBR");
+  strcpy(stParamRecCfg.attribute[0].rc_mode, "CBR");
   stParamRecCfg.attribute[0].venc_param.max_qp = 48;
   stParamRecCfg.attribute[0].venc_param.min_qp = 8;
+  stParamRecCfg.attribute[0].venc_param.full_range = true;
 
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
@@ -144,6 +145,7 @@ static void SetRecCfg() {
   strcpy(stParamRecCfg.attribute[1].rc_mode, "VBR");
   stParamRecCfg.attribute[1].venc_param.max_qp = 48;
   stParamRecCfg.attribute[1].venc_param.min_qp = 8;
+  stParamRecCfg.attribute[1].venc_param.full_range = true;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
                    sizeof(g_stRecCfgMapTable_0) /
@@ -192,6 +194,7 @@ static void SetStreamCfg() {
   strcpy(stStreamCfg.attribute.rc_mode, "VBR");
   stStreamCfg.attribute.venc_param.max_qp = 48;
   stStreamCfg.attribute.venc_param.min_qp = 8;
+  stStreamCfg.attribute.venc_param.full_range = true;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
                    sizeof(g_stStreamCfgMapTable_0) /

@@ -350,6 +350,8 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
   pstVencAttr->stVencAttr.u32VirWidth = pstStreamCfg->attribute.width;
   pstVencAttr->stVencAttr.u32VirHeight = pstStreamCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstStreamCfg->attribute.profile;
+  pstVencAttr->stVencAttr.bFullRange =
+      (RK_BOOL)pstStreamCfg->attribute.venc_param.full_range;
 
   return 0;
 }

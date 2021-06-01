@@ -162,6 +162,8 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
   pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
   pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
   pstVencAttr->stVencAttr.u32Profile = pstRecCfg->attribute[index].profile;
+  pstVencAttr->stVencAttr.bFullRange =
+      (RK_BOOL)pstRecCfg->attribute[index].venc_param.full_range;
   return 0;
 }
 
