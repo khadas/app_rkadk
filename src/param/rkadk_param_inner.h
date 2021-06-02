@@ -91,6 +91,9 @@ typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
   RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
   RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
+  bool hier_qp_en;
+  char hier_qp_delta[RKADK_BUFFER_LEN];
+  char hier_frame_num[RKADK_BUFFER_LEN];
 
   bool full_range;
   bool scaling_list;

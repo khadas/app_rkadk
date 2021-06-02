@@ -292,6 +292,12 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.full_range);
       printf("\t\tsensor[%d] stRecCfg[%d] scaling_list: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.scaling_list);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_en: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_qp_en);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_delta: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_qp_delta);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_frame_num: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_frame_num);
     }
 
     printf("\tPhoto Config\n");
@@ -321,25 +327,28 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stStreamCfg rc_mode: %s\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.rc_mode);
-    printf(
-        "\t\tsensor[%d] stStreamCfg first_frame_qp: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.first_frame_qp);
+    printf("\t\tsensor[%d] stStreamCfg first_frame_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.first_frame_qp);
     printf("\t\tsensor[%d] stStreamCfg qp_step: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.qp_step);
     printf("\t\tsensor[%d] stStreamCfg max_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.max_qp);
     printf("\t\tsensor[%d] stStreamCfg min_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.min_qp);
-    printf(
-        "\t\tsensor[%d] stStreamCfg row_qp_delta_i: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_i);
-    printf(
-        "\t\tsensor[%d] stStreamCfg row_qp_delta_p: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_p);
+    printf("\t\tsensor[%d] stStreamCfg row_qp_delta_i: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_i);
+    printf("\t\tsensor[%d] stStreamCfg row_qp_delta_p: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.row_qp_delta_p);
     printf("\t\tsensor[%d] stStreamCfg full_range: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.full_range);
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.full_range);
     printf("\t\tsensor[%d] stStreamCfg scaling_list: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.scaling_list);
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.scaling_list);
+    printf("\t\tsensor[%d] stStreamCfg hier_qp_en: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_qp_en);
+    printf("\t\tsensor[%d] stStreamCfg hier_qp_delta: %s\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_qp_delta);
+    printf("\t\tsensor[%d] stStreamCfg hier_frame_num: %s\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_frame_num);
   }
 }
 
@@ -631,6 +640,9 @@ static void RKADK_PARAM_UseDefault() {
   pstRecCfg->attribute[0].venc_param.min_qp = 8;
   pstRecCfg->attribute[0].venc_param.full_range = true;
   pstRecCfg->attribute[0].venc_param.scaling_list = true;
+  pstRecCfg->attribute[0].venc_param.hier_qp_en = true;
+  strcpy(pstRecCfg->attribute[0].venc_param.hier_qp_delta, "-3,0,0,0");
+  strcpy(pstRecCfg->attribute[0].venc_param.hier_frame_num, "3,0,0,0");
 
   // default sensor.0.photo config
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -655,6 +667,9 @@ static void RKADK_PARAM_UseDefault() {
   pstStreamCfg->attribute.venc_param.min_qp = 8;
   pstStreamCfg->attribute.venc_param.full_range = true;
   pstStreamCfg->attribute.venc_param.scaling_list = true;
+  pstStreamCfg->attribute.venc_param.hier_qp_en = true;
+  strcpy(pstStreamCfg->attribute.venc_param.hier_qp_delta, "-3,0,0,0");
+  strcpy(pstStreamCfg->attribute.venc_param.hier_frame_num, "3,0,0,0");
 
   // default vi config
   RKADK_PARAM_VI_CFG_S *pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stViCfg[0];
@@ -1012,6 +1027,23 @@ VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
   return enRcMode;
 }
 
+static void RKADK_PARAM_Strtok(char *input, RKADK_S32 *s32Output,
+                               RKADK_S32 u32OutputLen, const char *delim) {
+  char *p;
+
+  for (int i = 0; i < u32OutputLen; i++) {
+    if (!i)
+      p = strtok(input, delim);
+    else
+      p = strtok(NULL, delim);
+
+    if (!p)
+      break;
+
+    s32Output[i] = atoi(p);
+  }
+}
+
 RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
                                  VENC_RC_PARAM_S *pstRcParam) {
   RKADK_S32 s32FirstFrameStartQp;
@@ -1037,6 +1069,12 @@ RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
   pstRcParam->s32FirstFrameStartQp = s32FirstFrameStartQp;
   pstRcParam->u32RowQpDeltaI = u32RowQpDeltaI;
   pstRcParam->u32RowQpDeltaP = u32RowQpDeltaP;
+  pstRcParam->bEnableHierQp = (RK_BOOL)stVencAttr.venc_param.hier_qp_en;
+  RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_qp_delta,
+                     pstRcParam->s32HierQpDelta, RC_HEIR_SIZE, ",");
+  RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_frame_num,
+                     pstRcParam->s32HierFrameNum, RC_HEIR_SIZE, ",");
+
   switch (stVencAttr.codec_type) {
   case RKADK_CODEC_TYPE_H264:
     pstRcParam->stParamH264.u32StepQp = u32StepQp;
