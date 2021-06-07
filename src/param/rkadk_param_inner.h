@@ -39,6 +39,10 @@ extern "C" {
 #define STREAM_AI_CHN RECORD_AI_CHN
 #define STREAM_AENC_CHN 1
 
+typedef struct tagRKADK_PARAM_VERSION_S {
+  char version[RKADK_BUFFER_LEN];
+} RKADK_PARAM_VERSION_S;
+
 typedef struct tagRKADK_PARAM_VI_CFG_S {
   RKADK_U32 chn_id;
   char device_name[RKADK_BUFFER_LEN];
@@ -155,6 +159,7 @@ typedef struct tagRKADK_PARAM_THUMB_CFG_S {
 } RKADK_PARAM_THUMB_CFG_S;
 
 typedef struct tagPARAM_CFG_S {
+  RKADK_PARAM_VERSION_S stVersion;
   RKADK_PARAM_COMM_CFG_S stCommCfg;
   RKADK_PARAM_AUDIO_CFG_S stAudioCfg;
   RKADK_PARAM_THUMB_CFG_S stThumbCfg;

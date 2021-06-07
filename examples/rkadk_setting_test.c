@@ -39,11 +39,25 @@ void dump_map(RKADK_SI_CONFIG_MAP_S *pmap, int cnt) {
   }
 }
 
+static void SetVersion() {
+  RKADK_PARAM_VERSION_S stParamVersion;
+
+  dump_map(g_stVersionMapTable,
+           sizeof(g_stVersionMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  memset(&stParamVersion, 0, sizeof(RKADK_PARAM_VERSION_S));
+
+  strcpy(stParamVersion.version, RKADK_PARAM_VERSION);
+
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamVersion, g_stVersionMapTable,
+                   sizeof(g_stVersionMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamVersion, g_stVersionMapTable,
+                   sizeof(g_stVersionMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
+}
+
 static void SetCommCfg() {
   RKADK_PARAM_COMM_CFG_S stParamCommCfg;
-
-  dump_map(g_stCommCfgMapTable,
-           sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
   memset(&stParamCommCfg, 0, sizeof(RKADK_PARAM_COMM_CFG_S));
   stParamCommCfg.sensor_count = 1;
@@ -110,9 +124,6 @@ static void SetAudioCfg() {
 
 static void SetRecCfg() {
   RKADK_PARAM_REC_CFG_S stParamRecCfg;
-
-  dump_map(g_stRecCfgMapTable_0,
-           sizeof(g_stRecCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
   memset(&stParamRecCfg, 0, sizeof(RKADK_PARAM_REC_CFG_S));
   stParamRecCfg.record_type = RKADK_REC_TYPE_NORMAL;
@@ -327,6 +338,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (strstr(cmd, "set")) {
+      RKADK_LOGD("#Set version");
+      SetVersion();
+      RKADK_LOGD("SetVersion done");
+
       RKADK_LOGD("#Set config param");
       SetCommCfg();
       RKADK_LOGD("SetCommCfg done");

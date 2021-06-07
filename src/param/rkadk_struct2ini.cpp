@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_struct2ini.h"
+#include "rkadk_common.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,13 +33,13 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
 
   if (mapTableSize <= 0) {
     RKADK_LOGE("invalid mapTableSize[%d]", mapTableSize);
-    return -1;
+    return RKADK_FAILURE;
   }
 
   dictionary *ini = iniparser_load(iniFile);
   if (ini == NULL) {
     RKADK_LOGE("can't parse file: %s", iniFile);
-    return -1;
+    return RKADK_FAILURE;
   }
 
   for (int i = 0; i < mapTableSize; i++) {
@@ -46,7 +47,7 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
         strlen(mapTable[i].structName) + strlen(mapTable[i].structMember);
     if (searchLen >= (SI_MAX_SEARCH_STRING - 1)) {
       RKADK_LOGE("searchLen[%d] is too long", searchLen);
-      return -1;
+      return RKADK_FAILURE;
     }
 
     memset(sectionKey, 0, sizeof(sectionKey));
@@ -56,10 +57,14 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
 
     if (mapTable[i].keyVlaueType == int_e) {
       int keyInt = iniparser_getint(ini, sectionKey, -1);
-      if (keyInt == -1 && strcmp(mapTable[i].structMember, "first_frame_qp"))
-        RKADK_LOGE("int [%s]: not exit", sectionKey);
-      else
+      if (keyInt == -1 && strcmp(mapTable[i].structMember, "first_frame_qp")) {
+        #ifdef RKADK_DUMP_CONFIG
+        RKADK_LOGE("int [%s]: not exist", sectionKey);
+        #endif
+        return RKADK_PARAM_NOT_EXIST;
+      } else {
         *(int *)((char *)structAddr + mapTable[i].offset) = keyInt;
+      }
     } else if (mapTable[i].keyVlaueType == string_e) {
       char *keyString = (char *)iniparser_getstring(ini, sectionKey, NULL);
       if (keyString) {
@@ -75,16 +80,23 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
           }
         }
       } else {
-        RKADK_LOGE("string [%s]: not exit", sectionKey);
+        #ifdef RKADK_DUMP_CONFIG
+        RKADK_LOGE("string [%s]: not exist", sectionKey);
+        #endif
+        return RKADK_PARAM_NOT_EXIST;
       }
     } else if (mapTable[i].keyVlaueType == double_e) {
       double keyDouble = iniparser_getdouble(ini, sectionKey, -1.0);
       const double EPS = 1e-6;
 
-      if (fabs(keyDouble - (-1.0)) > EPS)
+      if (fabs(keyDouble - (-1.0)) > EPS) {
         *(double *)((char *)structAddr + mapTable[i].offset) = keyDouble;
-      else
-        RKADK_LOGE("double [%s]: not exit", sectionKey);
+      } else {
+        #ifdef RKADK_DUMP_CONFIG
+        RKADK_LOGE("double [%s]: not exist", sectionKey);
+        #endif
+        return RKADK_PARAM_NOT_EXIST;
+      }
     } else if (mapTable[i].keyVlaueType == bool_e) {
       int keyBool = iniparser_getboolean(ini, sectionKey, -1);
       if (keyBool != -1) {
@@ -93,7 +105,10 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
         else
           *(bool *)((char *)structAddr + mapTable[i].offset) = false;
       } else {
-        RKADK_LOGE("bool [%s] not exit", sectionKey);
+        #ifdef RKADK_DUMP_CONFIG
+        RKADK_LOGE("bool [%s] not exist", sectionKey);
+        #endif
+        return RKADK_PARAM_NOT_EXIST;
       }
     }
   }
@@ -113,7 +128,7 @@ int RKADK_Struct2Ini(const char *iniFile, void *structAddr,
 
   if (mapTableSize <= 0) {
     RKADK_LOGE("invalid mapTableSize[%d]", mapTableSize);
-    return -1;
+    return RKADK_FAILURE;
   }
 
   if (access(iniFile, F_OK)) {
@@ -123,18 +138,18 @@ int RKADK_Struct2Ini(const char *iniFile, void *structAddr,
       fclose(file);
     } else {
       RKADK_LOGE("%s creation failed", iniFile);
-      return -1;
+      return RKADK_FAILURE;
     }
   }
 
   dictionary *ini = iniparser_load(iniFile);
   if (ini == NULL) {
     RKADK_LOGE("can't parse file: %s", iniFile);
-    return -1;
+    return RKADK_FAILURE;
   }
 
   if (iniparser_find_entry(ini, mapTable[0].structName) == 0) {
-    RKADK_LOGI("section name[%s] no exit, so create", mapTable[0].structName);
+    RKADK_LOGI("section name[%s] no exist, so create", mapTable[0].structName);
     iniparser_set(ini, mapTable[0].structName, NULL);
   }
 
@@ -171,7 +186,7 @@ int RKADK_Struct2Ini(const char *iniFile, void *structAddr,
   if (fp == NULL) {
     RKADK_LOGE("fopen file: %s fail!", iniFile);
     iniparser_freedict(ini);
-    return -1;
+    return RKADK_FAILURE;
   }
 
   iniparser_dump_ini(ini, fp);

@@ -34,7 +34,7 @@ extern "C" {
 #define RKADK_ISPP_VI_NODE_CNT 4
 
 // camera sensor count
-#define RKADK_MAX_SENSOR_CNT 2
+#define RKADK_MAX_SENSOR_CNT 1
 
 // simultaneous record files num
 #define RECORD_FILE_NUM_MAX 2
@@ -84,6 +84,7 @@ typedef enum {
 #define RKADK_NULL 0L
 #define RKADK_SUCCESS 0
 #define RKADK_FAILURE (-1)
+#define RKADK_PARAM_NOT_EXIST (-2)
 
 #ifndef UPALIGNTO
 #define UPALIGNTO(value, align) ((value + align - 1) & (~(align - 1)))

@@ -24,6 +24,32 @@
 extern "C" {
 #endif
 
+typedef struct {
+  RKADK_U32 u32TableLen;
+  RKADK_SI_CONFIG_MAP_S *pstMapTable;
+} RKADK_MAP_TABLE_CFG_S;
+
+typedef enum {
+  RKADK_PARAM_SENSOR_MAP,
+  RKADK_PARAM_REC_MAP,
+  RKADK_PARAM_REC_MAIN_MAP,
+  RKADK_PARAM_REC_MAIN_PARAM_MAP,
+  RKADK_PARAM_REC_SUB_MAP,
+  RKADK_PARAM_REC_SUB_PARAM_MAP,
+  RKADK_PARAM_STREAM_MAP,
+  RKADK_PARAM_STREAM_PARAM_MAP,
+  RKADK_PARAM_PHOTO_MAP,
+  RKADK_PARAM_VI0_MAP,
+  RKADK_PARAM_VI1_MAP,
+  RKADK_PARAM_VI2_MAP,
+  RKADK_PARAM_VI3_MAP,
+  RKADK_PARAM_MAP_BUTT
+} RKADK_PARAM_MAP_TYPE_E;
+
+static RKADK_SI_CONFIG_MAP_S g_stVersionMapTable[] = {
+    DEFINE_MAP(version, tagRKADK_PARAM_VERSION_S, string_e, version),
+};
+
 /* common map table */
 static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, sensor_count),
@@ -188,6 +214,8 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, height),
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
 };
+
+RKADK_MAP_TABLE_CFG_S *RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable);
 
 #ifdef __cplusplus
 }

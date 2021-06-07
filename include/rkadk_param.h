@@ -23,6 +23,9 @@
 extern "C" {
 #endif
 
+/* version */
+#define RKADK_PARAM_VERSION "1.0.0"
+
 /* sensor default parameters */
 #define SENSOR_MAX_WIDTH 2688
 #define SENSOR_MAX_HEIGHT 1520
