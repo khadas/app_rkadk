@@ -62,6 +62,7 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 osd_time_format;
   bool osd;                 /* Whether to display OSD */
   bool boot_sound;          /* boot sound */
+  bool osd_speed;           /* speed osd */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {

@@ -145,6 +145,7 @@ typedef enum {
   RKADK_PARAM_TYPE_OSD,             /* show osd or not, bool */
   RKADK_PARAM_TYPE_OSD_TIME_FORMAT, /* osd format for time */
   RKADK_PARAM_TYPE_BOOTSOUND,       /* boot sound enable, bool */
+  RKADK_PARAM_TYPE_OSD_SPEED,       /* speed osd enable, bool */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 

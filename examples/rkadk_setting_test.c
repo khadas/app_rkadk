@@ -69,6 +69,7 @@ static void SetCommCfg() {
   stParamCommCfg.osd_time_format = 0;
   stParamCommCfg.osd = true;
   stParamCommCfg.boot_sound = true;
+  stParamCommCfg.osd_speed = false;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));

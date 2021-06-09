@@ -644,6 +644,7 @@ static void RKADK_PARAM_DefCommCfg(const char *path) {
   pstCommCfg->osd_time_format = 0;
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
+  pstCommCfg->osd_speed = false;
   RKADK_PARAM_SaveCommCfg(path);
 }
 
@@ -875,6 +876,7 @@ static void RKADK_PARAM_Dump() {
   printf("\tosd_time_format: %d\n", pstCfg->stCommCfg.osd_time_format);
   printf("\tshow osd: %d\n", pstCfg->stCommCfg.osd);
   printf("\tboot_sound: %d\n", pstCfg->stCommCfg.boot_sound);
+  printf("\tosd_speed: %d\n", pstCfg->stCommCfg.osd_speed);
 
   printf("Audio Config\n");
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
@@ -2366,6 +2368,12 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
 
     pstCommCfg->boot_sound = *(bool *)pvParam;
     break;
+  case RKADK_PARAM_TYPE_OSD_SPEED:
+    RKADK_CHECK_EQUAL(pstCommCfg->osd_speed, *(bool *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+
+    pstCommCfg->osd_speed = *(bool *)pvParam;
+    break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);
     RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
@@ -2411,6 +2419,9 @@ RKADK_S32 RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_E enParamType,
     break;
   case RKADK_PARAM_TYPE_BOOTSOUND:
     *(bool *)pvParam = pstCommCfg->boot_sound;
+    break;
+  case RKADK_PARAM_TYPE_OSD_SPEED:
+    *(bool *)pvParam = pstCommCfg->osd_speed;
     break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);
