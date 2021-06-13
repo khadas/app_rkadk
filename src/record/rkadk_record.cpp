@@ -153,9 +153,9 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
     return -1;
   }
 
-  if(pstRecCfg->attribute[index].codec_type == RKADK_CODEC_TYPE_H265)
-    pstVencAttr->stVencAttr.stAttrH265e.bScaleList
-        = (RK_BOOL)pstRecCfg->attribute[index].venc_param.scaling_list;
+  if (pstRecCfg->attribute[index].codec_type == RKADK_CODEC_TYPE_H265)
+    pstVencAttr->stVencAttr.stAttrH265e.bScaleList =
+        (RK_BOOL)pstRecCfg->attribute[index].venc_param.scaling_list;
 
   pstVencAttr->stVencAttr.enType =
       RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
@@ -264,8 +264,8 @@ static int RKADK_RECORD_CreateAudioChn() {
   stAiAttr.u32NbSamples = pstAudioParam->samples_per_frame;
   stAiAttr.u32SampleRate = pstAudioParam->samplerate;
   stAiAttr.u32Channels = pstAudioParam->channels;
-  stAiAttr.enAiLayout = AI_LAYOUT_NORMAL;
-  ret = RKADK_MPI_AI_Init(RECORD_AI_CHN, &stAiAttr);
+  stAiAttr.enAiLayout = pstAudioParam->ai_layout;
+  ret = RKADK_MPI_AI_Init(RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
     return ret;
@@ -281,7 +281,7 @@ static int RKADK_RECORD_CreateAudioChn() {
   ret = RKADK_MPI_AENC_Init(RECORD_AENC_CHN, &stAencAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AENC_Init failed(%d)", ret);
-    RKADK_MPI_AI_DeInit(RECORD_AI_CHN);
+    RKADK_MPI_AI_DeInit(RECORD_AI_CHN, pstAudioParam->vqe_mode);
     return -1;
   }
 
@@ -290,6 +290,13 @@ static int RKADK_RECORD_CreateAudioChn() {
 
 static int RKADK_RECORD_DestoryAudioChn() {
   int ret;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+
+  pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
 
   ret = RKADK_MPI_AENC_DeInit(RECORD_AENC_CHN);
   if (ret) {
@@ -297,7 +304,7 @@ static int RKADK_RECORD_DestoryAudioChn() {
     return ret;
   }
 
-  ret = RKADK_MPI_AI_DeInit(RECORD_AI_CHN);
+  ret = RKADK_MPI_AI_DeInit(RECORD_AI_CHN, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_DeInit failed(%d)", ret);
     return ret;

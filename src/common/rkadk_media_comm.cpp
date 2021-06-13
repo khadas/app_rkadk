@@ -92,7 +92,46 @@ static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
   return -1;
 }
 
-RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr) {
+static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
+                                        RK_U32 u32SampleRate,
+                                        RKADK_VQE_MODE_E enMode) {
+  int ret;
+  AI_RECORDVQE_CONFIG_S stAiVqeRecordAttr;
+
+  if (enMode != RKADK_VQE_MODE_AI_RECORD) {
+    RKADK_LOGW("NonSupport enMode: %d", enMode);
+    return -1;
+  }
+
+  memset(&stAiVqeRecordAttr, 0, sizeof(AI_RECORDVQE_CONFIG_S));
+  stAiVqeRecordAttr.s32WorkSampleRate = u32SampleRate;
+  stAiVqeRecordAttr.s32FrameSample = 320;
+  stAiVqeRecordAttr.stAnrConfig.fPostAddGain = 0;
+  stAiVqeRecordAttr.stAnrConfig.fGmin = -20;
+  stAiVqeRecordAttr.stAnrConfig.fNoiseFactor = 0.98;
+  stAiVqeRecordAttr.stAnrConfig.enHpfSwitch = 0;
+  stAiVqeRecordAttr.stAnrConfig.fHpfFc = 100.0f;
+  stAiVqeRecordAttr.stAnrConfig.enLpfSwitch = 0;
+  stAiVqeRecordAttr.stAnrConfig.fLpfFc = 10000.0f;
+  stAiVqeRecordAttr.u32OpenMask = AI_RECORDVQE_MASK_ANR;
+
+  ret = RK_MPI_AI_SetRecordVqeAttr(s32AiChnId, &stAiVqeRecordAttr);
+  if (ret) {
+    RKADK_LOGE("AI[%d] SetRecordVqeAttr failed: %d", s32AiChnId, ret);
+    return -1;
+  }
+
+  ret = RK_MPI_AI_EnableVqe(s32AiChnId);
+  if (ret) {
+    RKADK_LOGE("AI[%d] EnableVqe failed: %d", s32AiChnId, ret);
+    return -1;
+  }
+
+  return 0;
+}
+
+RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr,
+                            RKADK_VQE_MODE_E enMode) {
   int ret = -1;
   RKADK_S32 i;
 
@@ -125,6 +164,9 @@ RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr) {
       goto exit;
     }
 
+    if (enMode != RKADK_VQE_MODE_BUTT)
+      RKADK_MPI_AI_EnableVqe(s32AiChnId, pstAiChnAttr->u32SampleRate, enMode);
+
     g_stMediaCtx.stAiInfo[i].bUsed = true;
     g_stMediaCtx.stAiInfo[i].s32ChnId = s32AiChnId;
   }
@@ -139,7 +181,7 @@ exit:
   return ret;
 }
 
-RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId) {
+RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId, RKADK_VQE_MODE_E enMode) {
   int ret = -1;
   RKADK_S32 i;
   RKADK_S32 s32InitCnt;
@@ -159,6 +201,12 @@ RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId) {
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.aiMutex);
     return 0;
   } else if (1 == s32InitCnt) {
+    if (enMode != RKADK_VQE_MODE_BUTT) {
+      ret = RK_MPI_AI_DisableVqe(s32AiChnId);
+      if (ret)
+        RKADK_LOGE("AI[%d] DisableVqe failed: %d", s32AiChnId, ret);
+    }
+
     ret = RK_MPI_AI_DisableChn(s32AiChnId);
     if (ret) {
       RKADK_LOGE("Disable AI[%d] error %d", s32AiChnId, ret);

@@ -335,7 +335,8 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
   pstVencAttr->stRcAttr.enRcMode =
       RKADK_PARAM_GetRcMode(pstStreamCfg->attribute.rc_mode, enCodecType);
 
-  ret = RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, pstStreamCfg->attribute.gop,
+  ret =
+      RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, pstStreamCfg->attribute.gop,
                             pstStreamCfg->attribute.bitrate,
                             pstSensorCfg->framerate, pstSensorCfg->framerate);
   if (ret) {
@@ -343,9 +344,9 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamID,
     return -1;
   }
 
-  if(enCodecType == RKADK_CODEC_TYPE_H265)
-    pstVencAttr->stVencAttr.stAttrH265e.bScaleList
-        = (RK_BOOL)pstStreamCfg->attribute.venc_param.scaling_list;
+  if (enCodecType == RKADK_CODEC_TYPE_H265)
+    pstVencAttr->stVencAttr.stAttrH265e.bScaleList =
+        (RK_BOOL)pstStreamCfg->attribute.venc_param.scaling_list;
 
   pstVencAttr->stVencAttr.enType = RKADK_MEDIA_GetRkCodecType(enCodecType);
   pstVencAttr->stVencAttr.imageType = pstStreamCfg->vi_attr.stChnAttr.enPixFmt;
@@ -838,25 +839,18 @@ static int RKADK_STREAM_DestoryDataThread() {
   return ret;
 }
 
-static RKADK_S32 RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn,
-                                          AI_CHN_ATTR_S *pstAiAttr) {
-  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
-
+static RKADK_S32
+RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AI_CHN_ATTR_S *pstAiAttr,
+                         RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
   RKADK_CHECK_POINTER(pstAiChn, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
-
-  pstAudioParam = RKADK_PARAM_GetAudioCfg();
-  if (!pstAudioParam) {
-    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
-    return -1;
-  }
 
   pstAiAttr->pcAudioNode = pstAudioParam->audio_node;
   pstAiAttr->enSampleFormat = pstAudioParam->sample_format;
   pstAiAttr->u32NbSamples = pstAudioParam->samples_per_frame;
   pstAiAttr->u32SampleRate = pstAudioParam->samplerate;
   pstAiAttr->u32Channels = pstAudioParam->channels;
-  pstAiAttr->enAiLayout = AI_LAYOUT_NORMAL;
+  pstAiAttr->enAiLayout = pstAudioParam->ai_layout;
 
   pstAiChn->enModId = RK_ID_AI;
   pstAiChn->s32DevId = 0;
@@ -954,6 +948,7 @@ RKADK_VOID RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_E enCodecType) {
 
 RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
   if (g_audioStream.init) {
     RKADK_LOGI("Audio has been initialized");
@@ -973,15 +968,23 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   RKADK_PARAM_Init();
   RK_MPI_SYS_Init();
 
+  pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
+
   // Create AI
   AI_CHN_ATTR_S aiAttr;
-  ret = RKADK_STREAM_SetAiConfig(&g_audioStream.stAiChn, &aiAttr);
+  ret =
+      RKADK_STREAM_SetAiConfig(&g_audioStream.stAiChn, &aiAttr, pstAudioParam);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_SetAiConfig failed");
     return ret;
   }
 
-  ret = RKADK_MPI_AI_Init(g_audioStream.stAiChn.s32ChnId, &aiAttr);
+  ret = RKADK_MPI_AI_Init(g_audioStream.stAiChn.s32ChnId, &aiAttr,
+                          pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
     return ret;
@@ -1032,16 +1035,23 @@ pcm_mode:
 
 failed:
   RKADK_MPI_AENC_DeInit(g_audioStream.stAencChn.s32ChnId);
-  RKADK_MPI_AI_DeInit(g_audioStream.stAiChn.s32ChnId);
+  RKADK_MPI_AI_DeInit(g_audioStream.stAiChn.s32ChnId, pstAudioParam->vqe_mode);
   return ret;
 }
 
 RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret = 0;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
   if (!g_audioStream.init) {
     RKADK_LOGI("Audio has been deinit");
     return 0;
+  }
+
+  pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
   }
 
   if (RKADK_STREAM_CheckCodecType(false, enCodecType))
@@ -1065,7 +1075,8 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
     }
   }
 
-  ret = RKADK_MPI_AI_DeInit(g_audioStream.stAiChn.s32ChnId);
+  ret = RKADK_MPI_AI_DeInit(g_audioStream.stAiChn.s32ChnId,
+                            pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_DeInit failed(%d)", ret);
     return ret;

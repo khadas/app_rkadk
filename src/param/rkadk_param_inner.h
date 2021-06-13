@@ -86,6 +86,8 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_U32 samplerate;
   RKADK_U32 samples_per_frame;
   RKADK_U32 bitrate;
+  AI_LAYOUT_E ai_layout;
+  RKADK_VQE_MODE_E vqe_mode;
 } RKADK_PARAM_AUDIO_CFG_S;
 
 typedef struct tagRKADK_PARAM_VENC_PARAM_S {

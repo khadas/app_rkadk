@@ -358,6 +358,12 @@ static void RKADK_PARAM_CheckAudioCfg(const char *path) {
                                  AUDIO_FRAME_COUNT, "samples_per_frame");
   change |=
       RKADK_PARAM_CheckCfg(&pstAudioCfg->bitrate, AUDIO_BIT_REAT, "bitrate");
+  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->ai_layout,
+                                    AI_LAYOUT_NORMAL, AI_LAYOUT_REF_MIC,
+                                    AI_LAYOUT_NORMAL, "ai_layout");
+  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->vqe_mode,
+                                    RKADK_VQE_MODE_AI_TALK, RKADK_VQE_MODE_BUTT,
+                                    RKADK_VQE_MODE_AI_RECORD, "vqe_mode");
 
   if (change)
     RKADK_PARAM_SaveAudioCfg(path);
@@ -388,7 +394,8 @@ static void RKADK_PARAM_CheckSensorCfg(const char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgU32(&pstSensorCfg->ldc, 0, 255, 0, "ldc");
   change |= RKADK_PARAM_CheckCfgU32(&pstSensorCfg->wdr, 0, 10, 0, "wdr");
   change |= RKADK_PARAM_CheckCfgU32(&pstSensorCfg->hdr, 0, 2, 0, "hdr");
-  change |= RKADK_PARAM_CheckCfgU32(&pstSensorCfg->antifog, 0, 10, 0, "antifog");
+  change |=
+      RKADK_PARAM_CheckCfgU32(&pstSensorCfg->antifog, 0, 10, 0, "antifog");
 
   if (change)
     RKADK_PARAM_SaveSensorCfg(path, u32CamId);
@@ -477,8 +484,9 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->lapse_multiple, 1,
                                     pstSensorCfg->framerate,
                                     pstSensorCfg->framerate, "lapse_multiple");
-  change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->file_num, 1,
-                                    RECORD_FILE_NUM_MAX, RECORD_FILE_NUM_MAX, "file_num");
+  change |=
+      RKADK_PARAM_CheckCfgU32(&pstRecCfg->file_num, 1, RECORD_FILE_NUM_MAX,
+                              RECORD_FILE_NUM_MAX, "file_num");
 
   if (change)
     RKADK_PARAM_SaveRecCfg(path, u32CamId);
@@ -511,10 +519,13 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
       u32DefBitrate = 4 * 1024 * 1024;
     }
 
-    change |= RKADK_PARAM_CheckCfg(&pstAttribute->width, u32DefWidth, "rec width");
-    change |= RKADK_PARAM_CheckCfg(&pstAttribute->height, u32DefHeight, "rec height");
-    change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0,
-                                      VENC_MAX_CHN_NUM, u32DefVencChn, "rec venc_chn");
+    change |=
+        RKADK_PARAM_CheckCfg(&pstAttribute->width, u32DefWidth, "rec width");
+    change |=
+        RKADK_PARAM_CheckCfg(&pstAttribute->height, u32DefHeight, "rec height");
+    change |=
+        RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0, VENC_MAX_CHN_NUM,
+                                u32DefVencChn, "rec venc_chn");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, u32DefBitrate,
                                    "rec bitrate");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "rec gop");
@@ -593,7 +604,7 @@ static void RKADK_PARAM_CheckViCfg(const char *path, RKADK_U32 u32CamId,
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->pix_fmt, pixFmt,
                                     RKADK_VI_PIX_FMT_LEN, "vi pix_fmt");
 
-  if(change)
+  if (change)
     RKADK_PARAM_SaveViCfg(path, index, u32CamId);
 }
 
@@ -657,6 +668,8 @@ static void RKADK_PARAM_DefAudioCfg(const char *path) {
   pstAudioCfg->samplerate = AUDIO_SAMPLE_RATE;
   pstAudioCfg->samples_per_frame = AUDIO_FRAME_COUNT;
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
+  pstAudioCfg->ai_layout = AI_LAYOUT_NORMAL;
+  pstAudioCfg->vqe_mode = RKADK_VQE_MODE_AI_RECORD;
   RKADK_PARAM_SaveAudioCfg(path);
 }
 
@@ -885,6 +898,8 @@ static void RKADK_PARAM_Dump() {
   printf("\tsamplerate: %d\n", pstCfg->stAudioCfg.samplerate);
   printf("\tsamples_per_frame: %d\n", pstCfg->stAudioCfg.samples_per_frame);
   printf("\tbitrate: %d\n", pstCfg->stAudioCfg.bitrate);
+  printf("\tai_layout: %d\n", pstCfg->stAudioCfg.ai_layout);
+  printf("\tvqe_mode: %d\n", pstCfg->stAudioCfg.vqe_mode);
 
   printf("Thumb Config\n");
   printf("\tthumb_width: %d\n", pstCfg->stThumbCfg.thumb_width);
@@ -1556,9 +1571,9 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamID) {
 
   RKADK_CHECK_CAMERAID(s32CamID, RKADK_FAILURE);
 
-  index =
-      RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_SNAP, s32CamID, pstPhotoCfg->image_width,
-                              pstPhotoCfg->image_height);
+  index = RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_SNAP, s32CamID,
+                                  pstPhotoCfg->image_width,
+                                  pstPhotoCfg->image_height);
   if (index < 0 || index >= RKADK_ISPP_VI_NODE_CNT) {
     RKADK_LOGE("not find match vi index");
     return -1;
@@ -1593,9 +1608,9 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamID) {
     else
       enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
 
-    index =
-        RKADK_PARAM_FindViIndex(enStrmType, s32CamID, pstRecCfg->attribute[i].width,
-                                pstRecCfg->attribute[i].height);
+    index = RKADK_PARAM_FindViIndex(enStrmType, s32CamID,
+                                    pstRecCfg->attribute[i].width,
+                                    pstRecCfg->attribute[i].height);
     if (index < 0 || index >= RKADK_ISPP_VI_NODE_CNT) {
       RKADK_LOGE("not find match vi index");
       return -1;

@@ -113,6 +113,8 @@ static void SetAudioCfg() {
   stAudioCfg.samplerate = AUDIO_SAMPLE_RATE;
   stAudioCfg.samples_per_frame = AUDIO_FRAME_COUNT;
   stAudioCfg.bitrate = AUDIO_BIT_REAT;
+  stAudioCfg.ai_layout = AI_LAYOUT_NORMAL;
+  stAudioCfg.vqe_mode = RKADK_VQE_MODE_BUTT;
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stAudioCfg, g_stAudioCfgMapTable,
                    sizeof(g_stAudioCfgMapTable) /
