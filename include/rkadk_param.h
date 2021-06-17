@@ -118,6 +118,7 @@ typedef enum {
   RKADK_PARAM_TYPE_RES,             /* specify RKADK_PARAM_RES_E(record) */
   RKADK_PARAM_TYPE_PHOTO_RES,       /* specify RKADK_PARAM_RES_E(photo) */
   RKADK_PARAM_TYPE_CODEC_TYPE,      /* specify RKADK_CODEC_TYPE_E(record) */
+  RKADK_PARAM_TYPE_BITRATE,         /* encode bitrate */
   RKADK_PARAM_TYPE_FLIP,            /* bool */
   RKADK_PARAM_TYPE_MIRROR,          /* bool */
   RKADK_PARAM_TYPE_LDC,             /* ldc level [0,255] */
@@ -153,6 +154,11 @@ typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
   RKADK_CODEC_TYPE_E enCodecType;
 } RKADK_PARAM_CODEC_CFG_S;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_U32 u32Bitrate;
+} RKADK_PARAM_BITRATE_S;
 
 /**
  * @brief     Parameter Module Init

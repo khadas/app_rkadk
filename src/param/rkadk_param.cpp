@@ -2046,6 +2046,80 @@ RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
   return ret;
 }
 
+static RKADK_U32
+RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId, RKADK_STREAM_TYPE_E enStreamType) {
+  RKADK_U32 bitrate = 0;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    bitrate = pstRecCfg->attribute[0].bitrate;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    bitrate = pstRecCfg->attribute[1].bitrate;
+    break;
+
+  case RKADK_STREAM_TYPE_USER:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId);
+    bitrate = pstStreamCfg->attribute.bitrate;
+    break;
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", enStreamType);
+    break;
+  }
+
+  return bitrate;
+}
+
+static RKADK_S32
+RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
+                         RKADK_PARAM_BITRATE_S *pstBitrate) {
+  RKADK_S32 ret;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (pstBitrate->enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[0].bitrate == pstBitrate->u32Bitrate)
+      return 0;
+
+    pstRecCfg->attribute[0].bitrate = pstBitrate->u32Bitrate;
+    ret = RKADK_PARAM_SaveRecAttr(RKADK_PARAM_PATH, s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_MAIN);
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[1].bitrate == pstBitrate->u32Bitrate)
+      return 0;
+
+    pstRecCfg->attribute[1].bitrate = pstBitrate->u32Bitrate;
+    ret = RKADK_PARAM_SaveRecAttr(RKADK_PARAM_PATH, s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_SUB);
+    break;
+
+  case RKADK_STREAM_TYPE_USER:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId);
+    if (pstStreamCfg->attribute.bitrate == pstBitrate->u32Bitrate)
+      return 0;
+
+    pstStreamCfg->attribute.bitrate = pstBitrate->u32Bitrate;
+    ret = RKADK_PARAM_SaveStreamCfg(RKADK_PARAM_PATH, s32CamId);
+    break;
+
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", pstBitrate->enStreamType);
+    break;
+  }
+
+  return ret;
+}
+
 RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   RKADK_VOID *pvParam) {
@@ -2103,6 +2177,14 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
     pstCodecCfg = (RKADK_PARAM_CODEC_CFG_S *)pvParam;
     pstCodecCfg->enCodecType =
         RKADK_PARAM_GetCodecType(s32CamID, pstCodecCfg->enStreamType);
+    break;
+  }
+  case RKADK_PARAM_TYPE_BITRATE: {
+    RKADK_PARAM_BITRATE_S *pstBitrate;
+
+    pstBitrate = (RKADK_PARAM_BITRATE_S *)pvParam;
+    pstBitrate->u32Bitrate =
+        RKADK_PARAM_GetBitrate(s32CamID, pstBitrate->enStreamType);
     break;
   }
   case RKADK_PARAM_TYPE_SPLITTIME:
@@ -2235,6 +2317,10 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
   case RKADK_PARAM_TYPE_CODEC_TYPE:
     ret =
         RKADK_PARAM_SetCodecType(s32CamID, (RKADK_PARAM_CODEC_CFG_S *)pvParam);
+    RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
+    return ret;
+  case RKADK_PARAM_TYPE_BITRATE:
+    ret = RKADK_PARAM_SetBitrate(s32CamID, (RKADK_PARAM_BITRATE_S *)pvParam);
     RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
     return ret;
   case RKADK_PARAM_TYPE_SPLITTIME:
