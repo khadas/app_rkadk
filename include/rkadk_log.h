@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 #define RKADK_LOG_LEVEL_ERROR 0
 #define RKADK_LOG_LEVEL_WARNING 1
 #define RKADK_LOG_LEVEL_INFO 2

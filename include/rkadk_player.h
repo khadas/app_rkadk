@@ -87,6 +87,10 @@ typedef enum {
   DISPLAY_TYPE_MIPI,
 } RKADK_PLAYER_VO_INTF_TYPE_E;
 
+typedef enum {
+  CHNN_ASPECT_RATIO_AUTO = 1,
+  CHNN_ASPECT_RATIO_MANUAL,
+} RKADK_PLAYER_VO_CHNN_MODE_E;
 typedef RKADK_VOID (*RKADK_PLAYER_EVENT_FN)(RKADK_MW_PTR pPlayer,
                                             RKADK_PLAYER_EVENT_E enEvent,
                                             RKADK_VOID *pData);
@@ -107,6 +111,13 @@ typedef struct {
   RKADK_U32 u32ImgWidth;
   RKADK_U32 u32ImgHeight;
   RKADK_U32 u32VoLayerMode;
+  RKADK_U32 u32ChnnNum;
+  RKADK_U32 u32BorderColor;
+  RKADK_U32 u32BorderTopWidth;
+  RKADK_U32 u32BorderBottomWidth;
+  RKADK_U32 u32BorderLeftWidth;
+  RKADK_U32 u32BorderRightWidth;
+  RKADK_PLAYER_VO_CHNN_MODE_E u32EnMode;
   RKADK_PLAYER_VO_FORMAT_E u32VoFormat;
   RKADK_PLAYER_VO_DEV_E u32VoDev;
   RKADK_PLAYER_VO_INTF_TYPE_E u32EnIntfType;
@@ -165,7 +176,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer);
 
 /**
  * @brief stop the stream playing, and release the resource
- * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
+ * @param[in] pPlayer : void *: handle of the player
  * @retval  0 success, others failed
  */
 RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer);

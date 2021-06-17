@@ -25,11 +25,17 @@
 #include <string.h>
 #include <unistd.h>
 
+typedef struct {
+  RKADK_BOOL bEnableVideo;
+  RKADKSurfaceInterface *pSurface;
+  RTMediaPlayer *pMediaPlayer;
+  void *pListener;
+} RKADK_PLAYER_HANDLE_S;
+
 static RKADK_PLAYER_EVENT_FN g_pfnPlayerCallback = NULL;
-static RKADK_MW_PTR g_pPlayer = NULL;
+static RTMediaPlayer *g_pPlayer = NULL;
 static pthread_t g_thread = 0;
 static bool g_getPosition = false;
-static void *g_listener = NULL;
 
 void *GetPlayPositionThread(void *para) {
   RKADK_S64 position; // us
@@ -38,10 +44,10 @@ void *GetPlayPositionThread(void *para) {
     if (!g_pPlayer)
       break;
 
-    ((RTMediaPlayer *)g_pPlayer)->getCurrentPosition(&position);
+    g_pPlayer->getCurrentPosition(&position);
     if (g_pfnPlayerCallback) {
       position = position / 1000; // ms
-      g_pfnPlayerCallback(g_pPlayer, RKADK_PLAYER_EVENT_PROGRESS,
+      g_pfnPlayerCallback((RKADK_MW_PTR)g_pPlayer, RKADK_PLAYER_EVENT_PROGRESS,
                           (void *)&position);
     }
 
@@ -129,122 +135,212 @@ public:
       return;
 
     if (g_pfnPlayerCallback)
-      g_pfnPlayerCallback(g_pPlayer, event, NULL);
+      g_pfnPlayerCallback((RKADK_MW_PTR)g_pPlayer, event, NULL);
   }
 };
 
 RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
                               RKADK_PLAYER_CFG_S *pstPlayCfg) {
   int ret;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
+  RKADKPlayerListener *pListener = NULL;
 
   RKADK_CHECK_POINTER(pstPlayCfg, RKADK_FAILURE);
   g_pfnPlayerCallback = pstPlayCfg->pfnPlayerCallback;
 
-  RTMediaPlayer *mediaPlayer = new RTMediaPlayer();
-  if (!mediaPlayer) {
-    RKADK_LOGE("RTMediaPlayer failed");
+  if (*ppPlayer) {
+    RKADK_LOGE("player has been created");
     return -1;
   }
 
-  *ppPlayer = (RKADK_MW_PTR)mediaPlayer;
-  g_pPlayer = *ppPlayer;
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)malloc(sizeof(RKADK_PLAYER_HANDLE_S));
+  if (!pstPlayer) {
+    RKADK_LOGE("malloc pstPlayer failed");
+    return -1;
+  }
+  pstPlayer->bEnableVideo = pstPlayCfg->bEnableVideo;
+  pstPlayer->pSurface = NULL;
 
-  RKADKPlayerListener *listener = new RKADKPlayerListener();
-  ret = mediaPlayer->setListener(listener);
+  pstPlayer->pMediaPlayer = new RTMediaPlayer();
+  if (!pstPlayer->pMediaPlayer) {
+    RKADK_LOGE("Create RTMediaPlayer failed");
+    goto failed;
+  }
+  g_pPlayer = pstPlayer->pMediaPlayer;
+
+  pListener = new RKADKPlayerListener();
+  if (!pListener) {
+    RKADK_LOGE("Create RKADKPlayerListener failed");
+    goto failed;
+  }
+
+  ret = pstPlayer->pMediaPlayer->setListener(pListener);
   if (ret) {
     RKADK_LOGE("setListener failed = %d", ret);
-    return ret;
+    goto failed;
   }
-  g_listener = listener;
+  pstPlayer->pListener = (void *)pListener;
 
+  *ppPlayer = (RKADK_MW_PTR)pstPlayer;
   return 0;
+
+failed:
+  if (pListener)
+    delete pListener;
+
+  if (pstPlayer->pMediaPlayer)
+    delete pstPlayer->pMediaPlayer;
+
+  if (pstPlayer)
+    free(pstPlayer);
+
+  return -1;
 }
 
 RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  int ret;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  ((RTMediaPlayer *)pPlayer)->reset();
-  delete ((RTMediaPlayer *)pPlayer);
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstPlayer->pListener, RKADK_FAILURE);
+
+  ret = pstPlayer->pMediaPlayer->stop();
+  if (ret) {
+    RKADK_LOGE("RTMediaPlayer stop failed(%d)", ret);
+    return ret;
+  }
+
+  if (pstPlayer->bEnableVideo) {
+    RKADK_CHECK_POINTER(pstPlayer->pSurface, RKADK_FAILURE);
+    pstPlayer->pSurface->replay();
+  }
+
+  pstPlayer->pMediaPlayer->reset();
+  delete pstPlayer->pMediaPlayer;
   g_pPlayer = NULL;
 
-  delete ((RKADKPlayerListener *)g_listener);
-  g_listener = NULL;
+  if (pstPlayer->bEnableVideo)
+    delete pstPlayer->pSurface;
+
+  delete ((RKADKPlayerListener *)pstPlayer->pListener);
+  free(pPlayer);
 
   return 0;
 }
 
 RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                                      const RKADK_CHAR *pszfilePath) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(pszfilePath, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  return ((RTMediaPlayer *)pPlayer)->setDataSource(pszfilePath, NULL);
+  RKADK_CHECK_POINTER(pszfilePath, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  return pstPlayer->pMediaPlayer->setDataSource(pszfilePath, NULL);
 }
 
 RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  return ((RTMediaPlayer *)pPlayer)->prepare();
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  return pstPlayer->pMediaPlayer->prepare();
 }
 
 RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
                                     RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(pstFrameInfo, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  RKADKSurfaceInterface *pSurface = new RKADKSurfaceInterface();
-  if (!pSurface) {
+  RKADK_CHECK_POINTER(pstFrameInfo, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  if (!pstPlayer->bEnableVideo) {
+    RKADK_LOGE("don't enable video, bEnableVideo = %d",
+               pstPlayer->bEnableVideo);
+    return -1;
+  }
+
+  pstPlayer->pSurface = new RKADKSurfaceInterface(pstFrameInfo);
+  if (!pstPlayer->pSurface) {
     RKADK_LOGE("RKADKSurfaceInterface failed");
     return -1;
   }
 
-  pSurface->pstFrmInfo = pstFrameInfo;
-
-  return ((RTMediaPlayer *)pPlayer)
-      ->setVideoSink(static_cast<const void *>(pSurface));
+  return pstPlayer->pMediaPlayer->setVideoSink(
+      static_cast<const void *>(pstPlayer->pSurface));
 }
 
 RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  return ((RTMediaPlayer *)pPlayer)->start();
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  return pstPlayer->pMediaPlayer->start();
 }
 
 RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   int ret;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
 
-  ret = ((RTMediaPlayer *)pPlayer)->stop();
+  ret = pstPlayer->pMediaPlayer->stop();
   if (ret) {
     RKADK_LOGE("RTMediaPlayer stop failed(%d)", ret);
     return ret;
   }
 
-  return ((RTMediaPlayer *)pPlayer)->reset();
+  if (pstPlayer->bEnableVideo) {
+    RKADK_CHECK_POINTER(pstPlayer->pSurface, RKADK_FAILURE);
+    pstPlayer->pSurface->replay();
+  }
+
+  return pstPlayer->pMediaPlayer->reset();
 }
 
 RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  return ((RTMediaPlayer *)pPlayer)->pause();
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  return pstPlayer->pMediaPlayer->pause();
 }
 
 RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
-  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  return ((RTMediaPlayer *)pPlayer)->seekTo(s64TimeInMs * 1000);
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  return pstPlayer->pMediaPlayer->seekTo(s64TimeInMs * 1000);
 }
 
 RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
                                      RKADK_PLAYER_STATE_E *penState) {
   RKADK_U32 state;
   RKADK_PLAYER_STATE_E enState = RKADK_PLAYER_STATE_BUTT;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
   RKADK_CHECK_POINTER(penState, RKADK_FAILURE);
 
-  state = ((RTMediaPlayer *)pPlayer)->getState();
+  state = pstPlayer->pMediaPlayer->getState();
   switch (state) {
   case RT_STATE_IDLE:
     enState = RKADK_PLAYER_STATE_IDLE;

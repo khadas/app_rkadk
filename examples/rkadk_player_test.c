@@ -104,8 +104,15 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32VoFormat = VO_FORMAT_NV12;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
-  pstFrmInfo->u32DispFrmRt = 60;
-  pstFrmInfo->enIntfSync = VO_OUTPUT_USER;
+  pstFrmInfo->u32DispFrmRt = 30;
+  pstFrmInfo->enIntfSync = VO_OUTPUT_DEFAULT;
+  pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
+  pstFrmInfo->u32BorderTopWidth = 0;
+  pstFrmInfo->u32BorderBottomWidth = 0;
+  pstFrmInfo->u32BorderLeftWidth = 0;
+  pstFrmInfo->u32BorderRightWidth = 0;
+  pstFrmInfo->u32BorderColor = 0x0000FA;
+  pstFrmInfo->u32ChnnNum = 1;
   pstFrmInfo->stSyncInfo.bIdv = RK_TRUE;
   pstFrmInfo->stSyncInfo.bIhs = RK_TRUE;
   pstFrmInfo->stSyncInfo.bIvs = RK_TRUE;
@@ -129,7 +136,7 @@ int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
   char *file = "/etc/bsa_file/8k8bpsMono.wav";
-  RKADK_MW_PTR pPlayer;
+  RKADK_MW_PTR pPlayer = NULL;
   RKADK_BOOL bVideoEnable = false;
 
   param_init(&stFrmInfo);
@@ -173,11 +180,11 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_SetDataSource(pPlayer, file);
-  RKADK_PLAYER_Prepare(pPlayer);
 
   if (bVideoEnable)
     RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
 
+  RKADK_PLAYER_Prepare(pPlayer);
   RKADK_PLAYER_Play(pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
 
@@ -205,15 +212,6 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (bVideoEnable) {
-      ret = RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
-
-      if (ret) {
-        RKADK_LOGE("SetVideoSink failed, ret = %d", ret);
-        break;
-      }
-    }
-
     ret = RKADK_PLAYER_Play(pPlayer);
     if (ret) {
       RKADK_LOGE("Play failed, ret = %d", ret);
@@ -224,5 +222,6 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_Destroy(pPlayer);
+  pPlayer = NULL;
   return 0;
 }

@@ -27,10 +27,12 @@ extern "C" {
 
 typedef RKADK_PLAYER_FRAMEINFO_S VIDEO_FRAMEINFO_S;
 
+#define MAX_BUFFER_NUM 3
+
 class RKADKSurfaceInterface : RTSurfaceInterface {
 public:
-  RKADKSurfaceInterface();
-  ~RKADKSurfaceInterface();
+  RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo);
+  ~RKADKSurfaceInterface() { RKADK_LOGD("done"); }
 
   INT32 connect(INT32 mode) { return 0; }
   INT32 disconnect(INT32 mode) { return 0; }
@@ -38,8 +40,8 @@ public:
   INT32 allocateBuffer(RTNativeWindowBufferInfo *info) { return 0; }
   INT32 freeBuffer(void *buf, INT32 fence) { return 0; }
   INT32 remainBuffer(void *buf, INT32 fence) { return 0; }
-  INT32 queueBuffer(void *buf, INT32 fence) { return 0; }
-  INT32 dequeueBuffer(void **buf);
+  INT32 queueBuffer(void *buf, INT32 fence);
+  INT32 dequeueBuffer(void **buf) { return 0; }
   INT32 dequeueBufferAndWait(RTNativeWindowBufferInfo *info) { return 0; }
   INT32 mmapBuffer(RTNativeWindowBufferInfo *info, void **ptr) { return 0; }
   INT32 munmapBuffer(void **ptr, INT32 size, void *buf) { return 0; }
@@ -56,11 +58,12 @@ public:
 
   INT32 query(INT32 cmd, INT32 *param) { return 0; }
   void *getNativeWindow() { return NULL; }
-  VIDEO_FRAMEINFO_S *pstFrmInfo;
+  void replay();
 
 private:
   void *pCbMblk;
   INT32 s32Flag;
+  VIDEO_FRAMEINFO_S stFrmInfo;
 };
 
 #ifdef __cplusplus
