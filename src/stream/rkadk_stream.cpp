@@ -32,6 +32,7 @@ typedef struct {
   RKADK_U32 videoSeq;
   RKADK_CODEC_TYPE_E enCodecType;
   bool bCheckIDR;
+  RKADK_U32 u32WaitIDR;
 } VIDEO_STREAM_INFO_S;
 
 typedef struct {
@@ -225,7 +226,11 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
         pstVideoStream->bCheckIDR = true;
       } else {
         RK_MPI_MB_ReleaseBuffer(mb);
-        RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+        if(!pstVideoStream->u32WaitIDR || !(pstVideoStream->u32WaitIDR % 3))
+          RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+
+        RKADK_LOGD("pstVideoStream->u32WaitIDR: %d", pstVideoStream->u32WaitIDR);
+        pstVideoStream->u32WaitIDR++;
         continue;
       }
     }
@@ -482,6 +487,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   videoStream->start = false;
   videoStream->bGetBuffer = false;
   videoStream->bCheckIDR = false;
+  videoStream->u32WaitIDR = 0;
 
   RK_MPI_SYS_Init();
   RKADK_PARAM_Init();
