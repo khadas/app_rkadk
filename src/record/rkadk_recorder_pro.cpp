@@ -136,7 +136,7 @@ static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_REC_TYPE_E enRecType,
   stDstStreamAttr->stMuxerChn.enModId = RK_ID_MUXER;
   stDstStreamAttr->stMuxerChn.s32ChnId = vmChnId;
 
-  if(enRecType == RKADK_REC_TYPE_LAPSE)
+  if (enRecType == RKADK_REC_TYPE_LAPSE)
     stMuxerAttr.bLapseRecord = RK_TRUE;
   else
     stMuxerAttr.bLapseRecord = RK_FALSE;
