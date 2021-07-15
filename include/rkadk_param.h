@@ -117,8 +117,8 @@ typedef enum {
   RKADK_PARAM_TYPE_FPS,             /* framerate */
   RKADK_PARAM_TYPE_RES,             /* specify RKADK_PARAM_RES_E(record) */
   RKADK_PARAM_TYPE_PHOTO_RES,       /* specify RKADK_PARAM_RES_E(photo) */
-  RKADK_PARAM_TYPE_CODEC_TYPE,      /* specify RKADK_CODEC_TYPE_E(record) */
-  RKADK_PARAM_TYPE_BITRATE,         /* encode bitrate */
+  RKADK_PARAM_TYPE_CODEC_TYPE,      /* specify RKADK_PARAM_CODEC_CFG_S */
+  RKADK_PARAM_TYPE_BITRATE,         /* specify RKADK_PARAM_BITRATE_S */
   RKADK_PARAM_TYPE_FLIP,            /* bool */
   RKADK_PARAM_TYPE_MIRROR,          /* bool */
   RKADK_PARAM_TYPE_LDC,             /* ldc level [0,255] */

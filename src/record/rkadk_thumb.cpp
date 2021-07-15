@@ -319,7 +319,7 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
 
   while (!feof(fd)) {
     if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-      RKADK_LOGE("read box header failed");
+      RKADK_LOGW("read box header failed");
       break;
     }
 
