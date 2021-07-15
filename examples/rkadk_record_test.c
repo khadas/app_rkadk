@@ -246,9 +246,9 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-record:
-#ifdef RKAIQ
   RKADK_PARAM_Init();
+
+#ifdef RKAIQ
   ret = RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
@@ -259,12 +259,13 @@ record:
                         fps);
 
   IspProcess(stRecAttr.s32CamID);
+#endif
 
+record:
   ret = RKADK_PARAM_GetCamParam(
       stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &stRecAttr.enRecType);
   if (ret)
     RKADK_LOGW("RKADK_PARAM_GetCamParam record type failed");
-#endif
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("Create recorder failed");
@@ -294,16 +295,16 @@ record:
       stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
 
       RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_SPLITTIME,
-         &stSplitAttr.stPreSplitAttr.u32DurationSec);
-      if(stSplitAttr.stPreSplitAttr.u32DurationSec <= 0)
+                              &stSplitAttr.stPreSplitAttr.u32DurationSec);
+      if (stSplitAttr.stPreSplitAttr.u32DurationSec <= 0)
         stSplitAttr.stPreSplitAttr.u32DurationSec = 30;
 
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
-    } else if (strstr(cmd, "switch")) {
+    } else if (strstr(cmd, "switch_res")) {
       RKADK_PARAM_RES_E enRes;
-      if (strstr(cmd, "switch_1080"))
+      if (strstr(cmd, "switch_res_1080"))
         enRes = RKADK_RES_1080P;
-      else if (strstr(cmd, "switch_2K"))
+      else if (strstr(cmd, "switch_res_2K"))
         enRes = RKADK_RES_1520P;
       else
         enRes = RKADK_RES_2160P;
@@ -311,9 +312,6 @@ record:
       RKADK_RECORD_Stop(pRecorder);
       RKADK_RECORD_Destroy(pRecorder);
       pRecorder = NULL;
-#ifdef RKAIQ
-      SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
-#endif
 
       // must destroy recorder before switching the resolution
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RES, &enRes);
@@ -365,11 +363,49 @@ record:
     } else if (strstr(cmd, "antifog+")) {
       int antifog = 9;
       SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, true, OP_MANUAL, antifog);
-      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG, &antifog);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG,
+                              &antifog);
     } else if (strstr(cmd, "antifog-")) {
       int antifog = 0;
-      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL, antifog);
-      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG, &antifog);
+      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL,
+                                  antifog);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG,
+                              &antifog);
+    } else if (strstr(cmd, "get_codec_type")) {
+      RKADK_PARAM_CODEC_CFG_S stCodecType;
+
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_CODEC_TYPE,
+                              &stCodecType);
+      RKADK_LOGD("main enCodecType = %d", stCodecType.enCodecType);
+    } else if (strstr(cmd, "set_codec_type")) {
+      RKADK_PARAM_CODEC_CFG_S stCodecType;
+
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      stCodecType.enCodecType = RKADK_CODEC_TYPE_H265;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_CODEC_TYPE,
+                              &stCodecType);
+    } else if (strstr(cmd, "switch_codec_type")) {
+      RKADK_RECORD_Stop(pRecorder);
+      RKADK_RECORD_Destroy(pRecorder);
+      pRecorder = NULL;
+
+      RKADK_PARAM_CODEC_CFG_S stCodecCfg;
+      stCodecCfg.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      stCodecCfg.enCodecType = RKADK_CODEC_TYPE_H265;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_CODEC_TYPE,
+                              &stCodecCfg);
+      goto record;
+    } else if (strstr(cmd, "mic_unmute")) {
+      bool ummute = true;
+      RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_MIC_UNMUTE, &ummute);
+    } else if (strstr(cmd, "mic_mute")) {
+      bool ummute = false;
+      RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_MIC_UNMUTE, &ummute);
+    } else if (strstr(cmd, "stop")) {
+      RKADK_RECORD_Stop(pRecorder);
+    } else if (strstr(cmd, "start")) {
+      RKADK_RECORD_Start(pRecorder);
     }
 
     if (is_quit)

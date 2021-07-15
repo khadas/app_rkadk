@@ -36,19 +36,24 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "I:h";
+static RKADK_CHAR optstr[] = "I:a:i:t:h";
 static FILE *g_vo_file = NULL;
 static FILE *g_ao_file = NULL;
 static FILE *g_pcm_file = NULL;
 #define IQ_FILE_PATH "/oem/etc/iqfiles"
+
+const char *g_thumb_file = "/tmp/test.mp4";
 
 static bool is_quit = false;
 static RKADK_U32 g_u32CamID = 0;
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-I 0]\n", name);
+  printf("\t%s [-I 0] [-a /app] [-i /tmp/thumb.mp4] [-t 1000]\n", name);
   printf("\t-I: Camera id, Default:0\n");
+  printf("\t-a: aiq file path, Default:/oem/etc/iqfiles\n");
+  printf("\t-i: thumb test mp4 file, Default:/tmp/test.mp4\n");
+  printf("\t-t: sleep time, Default:500ms\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -167,7 +172,7 @@ static int AudioStartTest(RKADK_CHAR *pOutPath,
   RKADK_STREAM_AencRegisterCallback(enCodecType, AencDataCb);
 
   if (enCodecType != RKADK_CODEC_TYPE_PCM) {
-    g_pcm_file = fopen("/data/ai.pcm", "w");
+    g_pcm_file = fopen("/userdata/ai.pcm", "w");
     if (!g_pcm_file) {
       RKADK_LOGE("open %s file failed, exit", pOutPath);
       return -1;
@@ -244,7 +249,10 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
 
   fwrite(pu8DataBuf, 1, u32DataLen, file);
   fclose(file);
+
   photoId++;
+  if(photoId > 10)
+    photoId = 0;
 }
 
 void *TakePhotoThread(void *para) {
@@ -256,6 +264,11 @@ void *TakePhotoThread(void *para) {
   stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
   stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
+  stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
+  stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.u8LargeThumbNum = 1;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
+  stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
 
   ret = RKADK_PHOTO_Init(&stPhotoAttr);
   if (ret) {
@@ -265,7 +278,7 @@ void *TakePhotoThread(void *para) {
 
   while (!is_quit) {
     RKADK_PHOTO_TakePhoto(&stPhotoAttr);
-    sleep(10);
+    sleep(5);
   }
 
   RKADK_PHOTO_DeInit(stPhotoAttr.u32CamID);
@@ -274,18 +287,22 @@ void *TakePhotoThread(void *para) {
 }
 
 static void GetThumbTest() {
-  char *filePath = "/userdata/thm_test.jpg";
-  RKADK_U32 size = 10 * 1024; // 320 * 180 jpg
+  char *filePath = "/tmp/thm_test.jpg";
+  RKADK_U32 size = 50 * 1024;
   RKADK_U8 buffer[size];
   FILE *file = NULL;
 
-  if (RKADK_GetThmInMp4("/data/4K.mp4", buffer, &size)) {
+  if (RKADK_GetThmInMp4(g_thumb_file, buffer, &size)) {
     RKADK_LOGE("RKADK_GetThmInMp4 failed");
     return;
   }
 
-  RKADK_LOGD("jpg size = %d", size);
+  if(!size) {
+    RKADK_LOGE("RKADK_GetThmInMp4 faile, size = %d", size);
+    return;
+  }
 
+  RKADK_LOGD("jpg size = %d", size);
   file = fopen(filePath, "w");
   if (!file) {
     RKADK_LOGE("Create file(%s) failed", filePath);
@@ -300,7 +317,6 @@ static RKADK_S32
 GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
                   RKADK_CHAR (*paszFilename)[RKADK_MAX_FILE_PATH_LEN]) {
   static RKADK_U32 u32FileIdx = 0;
-  RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
   if (u32FileIdx > 5)
     u32FileIdx = 0;
@@ -459,6 +475,7 @@ int main(int argc, char *argv[]) {
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   pthread_t tid = 0;
   RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
+  RKADK_U32 u32SleepTime = 500;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -471,11 +488,14 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+    case 'i':
+      g_thumb_file = optarg;
+      break;
     case 'I':
       g_u32CamID = atoi(optarg);
       break;
     case 't':
-      enRecType = atoi(optarg);
+      u32SleepTime = atoi(optarg);
       break;
     case 'h':
     default:
@@ -500,13 +520,13 @@ int main(int argc, char *argv[]) {
 
   SAMPLE_COMM_ISP_Start(g_u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
 
-  IspProcess(g_u32CamID);
+  //IspProcess(g_u32CamID);
+#endif
 
   ret = RKADK_PARAM_GetCamParam(
       stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &enRecType);
   if (ret)
     RKADK_LOGW("RKADK_PARAM_GetCamParam record type failed");
-#endif
 
   // set default value
   stRecAttr.s32CamID = g_u32CamID;
@@ -525,11 +545,11 @@ int main(int argc, char *argv[]) {
   RKADK_RECORD_Start(pRecorder);
 
   // stream video test
-  VideoStartTest(g_u32CamID, "/data/stream.h264", RKADK_CODEC_TYPE_H264);
+  VideoStartTest(g_u32CamID, "/userdata/stream.h264", RKADK_CODEC_TYPE_H264);
 
   // stream audio test
   g_AudioCodecType = RKADK_CODEC_TYPE_MP3;
-  AudioStartTest("/data/aenc.mp3", RKADK_CODEC_TYPE_MP3);
+  AudioStartTest("/userdata/aac.adts", RKADK_CODEC_TYPE_MP3);
 
   // take photo pre second
   if (pthread_create(&tid, NULL, TakePhotoThread, NULL))
@@ -537,23 +557,12 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigterm_handler);
 
-  char cmd[64];
-  printf("\n#Usage: input 'quit' to exit programe!\n"
-         "peress any other key to manual split file\n");
   while (!is_quit) {
-    fgets(cmd, sizeof(cmd), stdin);
-    if (strstr(cmd, "quit")) {
-      RKADK_LOGD("#Get 'quit' cmd!");
-      is_quit = true;
-      break;
-    } else if (strstr(cmd, "thumb")) {
-      GetThumbTest();
-    }
-
     if (is_quit)
       break;
 
-    usleep(500000);
+    GetThumbTest();
+    usleep(u32SleepTime * 1000);
   }
 
   RKADK_RECORD_Stop(pRecorder);
