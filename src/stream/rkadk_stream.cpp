@@ -147,6 +147,49 @@ static void RKADK_STREAM_GetNaluType(RKADK_CODEC_TYPE_E enPayload,
   }
 }
 
+static bool RKADK_STREAM_VencChnMux(RKADK_U32 u32CamId, RKADK_U32 u32ChnId) {
+  int i;
+
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return false;
+  }
+
+  for (i = 0; i < (int)pstRecCfg->file_num; i++) {
+    if (u32ChnId == pstRecCfg->attribute[i].venc_chn) {
+      RKADK_LOGD("stream venc[%d] and record[%d] mux", u32ChnId, i);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static RKADK_S32 RKADK_STREAM_RequestIDR(RKADK_U32 u32CamId,
+                                         RKADK_U32 u32ChnId) {
+  int ret = 0;
+
+  if (RKADK_STREAM_VencChnMux(u32CamId, u32ChnId)) {
+    int i;
+    RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+    if (!pstRecCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+      return false;
+    }
+
+    for (i = 0; i < (int)pstRecCfg->file_num; i++) {
+      RKADK_LOGI("chn mux, venc_chn[%d] request IDR",
+                 pstRecCfg->attribute[i].venc_chn);
+      ret |= RK_MPI_VENC_RequestIDR(pstRecCfg->attribute[i].venc_chn, RK_TRUE);
+    }
+  } else {
+    ret = RK_MPI_VENC_RequestIDR(u32ChnId, RK_TRUE);
+  }
+
+  return ret;
+}
+
 static void RKADK_STREAM_VencOutCb0(MEDIA_BUFFER mb) {
   RKADK_VIDEO_STREAM_S vStreamData;
 
@@ -226,8 +269,8 @@ static void *RKADK_STREAM_VencGetMb0(void *params) {
         pstVideoStream->bCheckIDR = true;
       } else {
         RK_MPI_MB_ReleaseBuffer(mb);
-        if(!pstVideoStream->u32WaitIDR || !(pstVideoStream->u32WaitIDR % 3))
-          RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+        if (!pstVideoStream->u32WaitIDR || !(pstVideoStream->u32WaitIDR % 3))
+          RKADK_STREAM_RequestIDR(0, pstStreamCfg->attribute.venc_chn);
 
         RKADK_LOGD("pstVideoStream->u32WaitIDR: %d", pstVideoStream->u32WaitIDR);
         pstVideoStream->u32WaitIDR++;
@@ -282,7 +325,8 @@ static void *RKADK_STREAM_VencGetMb1(void *params) {
         pstVideoStream->bCheckIDR = true;
       } else {
         RK_MPI_MB_ReleaseBuffer(mb);
-        RK_MPI_VENC_RequestIDR(pstStreamCfg->attribute.venc_chn, RK_TRUE);
+        if (!pstVideoStream->u32WaitIDR || !(pstVideoStream->u32WaitIDR % 3))
+          RKADK_STREAM_RequestIDR(1, pstStreamCfg->attribute.venc_chn);
         continue;
       }
     }
@@ -378,25 +422,6 @@ RKADK_S32 RKADK_STREAM_VencUnRegisterCallback(RKADK_U32 u32CamID) {
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
   g_pstVencCB[u32CamID] = NULL;
   return 0;
-}
-
-static bool RKADK_STREAM_VencChnMux(RKADK_U32 u32CamId, RKADK_U32 u32ChnId) {
-  int i;
-
-  RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
-  if (!pstRecCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
-    return false;
-  }
-
-  for (i = 0; i < (int)pstRecCfg->file_num; i++) {
-    if (u32ChnId == pstRecCfg->attribute[i].venc_chn) {
-      RKADK_LOGD("stream venc[%d] and record[%d] mux", u32ChnId, i);
-      return true;
-    }
-  }
-
-  return false;
 }
 
 static int RKADK_STREAM_CreateVencThread(RKADK_U32 u32CamId) {
