@@ -22,8 +22,6 @@
 
 #define RKADK_REC_MAX_VIDEO_TRACK 1
 #define RKADK_REC_MAX_AUDIO_TRACK 1
-#define RKADK_PRE_RECORD_TIME_MAX 10
-#define RKADK_PRE_RECORD_CACHE_TIME 3
 
 static RKADK_REC_EVENT_CALLBACK_FN g_pfnEventCallback = NULL;
 
@@ -55,8 +53,12 @@ static void DumpMuxerChanAttr(MUXER_CHN_ATTR_S stMuxerAttr) {
                                                   : "MUXER_TYPE_MPEGTS",
              stMuxerAttr.enType);
 
-  RKADK_LOGD("u32PreRecTimeSec = %d(s)", stMuxerAttr.u32PreRecTimeSec);
-  RKADK_LOGD("u32PreRecCacheTime = %d(s)", stMuxerAttr.u32PreRecCacheTime);
+  RKADK_LOGD("u32PreRecTimeSec = %d(s)",
+             stMuxerAttr.stPreRecordParam.u32PreRecTimeSec);
+  RKADK_LOGD("u32PreRecCacheTime = %d(s)",
+             stMuxerAttr.stPreRecordParam.u32PreRecCacheTime);
+  RKADK_LOGD("enPreRecordMode = %d(s)",
+             stMuxerAttr.stPreRecordParam.enPreRecordMode);
   RKADK_LOGD("u32MuxerId = %d", stMuxerAttr.u32MuxerId);
 
   if (stMuxerAttr.enMode == MUXER_MODE_SINGLE) {
@@ -142,19 +144,17 @@ static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_REC_TYPE_E enRecType,
     stMuxerAttr.bLapseRecord = RK_FALSE;
 
   stMuxerAttr.u32MuxerId = u32StreamIndex;
-  if (pstRecAttr->u32PreRecTimeSec) {
-    if (pstRecAttr->u32PreRecTimeSec > RKADK_PRE_RECORD_TIME_MAX) {
-      RKADK_LOGD("pre record time too long(%d) > RKADK_PRE_RECORD_TIME_MAX(%d)",
-                 pstRecAttr->u32PreRecTimeSec, RKADK_PRE_RECORD_TIME_MAX);
-      pstRecAttr->u32PreRecTimeSec = RKADK_PRE_RECORD_TIME_MAX;
-    }
-    stMuxerAttr.u32PreRecCacheTime = pstRecAttr->u32PreRecTimeSec + RKADK_PRE_RECORD_CACHE_TIME;
-  }
-  stMuxerAttr.u32PreRecTimeSec = pstRecAttr->u32PreRecTimeSec;
+  stMuxerAttr.stPreRecordParam.u32PreRecTimeSec =
+      pstRecAttr->stPreRecordAttr.u32PreRecTimeSec;
+  stMuxerAttr.stPreRecordParam.u32PreRecCacheTime =
+      pstRecAttr->stPreRecordAttr.u32PreRecCacheTime;
+  stMuxerAttr.stPreRecordParam.enPreRecordMode =
+      pstRecAttr->stPreRecordAttr.enPreRecordMode;
 
   stMuxerAttr.enMode = pstRecAttr->stRecSplitAttr.enMode;
   if (stMuxerAttr.enMode == MUXER_MODE_AUTOSPLIT) {
-    memcpy(&(stMuxerAttr.stSplitAttr), &(pstRecAttr->stRecSplitAttr.stSplitAttr),
+    memcpy(&(stMuxerAttr.stSplitAttr),
+           &(pstRecAttr->stRecSplitAttr.stSplitAttr),
            sizeof(MUXER_SPLIT_ATTR_S));
   } else if (stMuxerAttr.enMode == MUXER_MODE_SINGLE) {
     stMuxerAttr.pcOutputFile = pstRecAttr->stRecSplitAttr.pcOutputFile;
@@ -163,7 +163,8 @@ static RKADK_S32 EnableMuxerChn(MUXER_CHN vmChnId, RKADK_REC_TYPE_E enRecType,
     return -1;
   }
 
-  RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr = &(pstRecAttr->astStreamAttr[u32StreamIndex]);
+  RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr =
+      &(pstRecAttr->astStreamAttr[u32StreamIndex]);
   stMuxerAttr.enType = pstSrcStreamAttr->enType;
   if (pstSrcStreamAttr->u32TrackCnt > RKADK_REC_TRACK_MAX_CNT) {
     RKADK_LOGE("vmChnId(%d), u32TrackCnt(%d) > RKADK_REC_TRACK_MAX_CNT(%d)",
@@ -262,7 +263,7 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
 
   for (RKADK_U32 i = 0; i < pstRecAttr->u32StreamCnt; i++) {
     ret = EnableMuxerChn(vmChnId, pstRecorder->enRecType,
-        &(pstRecorder->stStreamAttr[i]), pstRecAttr, i);
+                         &(pstRecorder->stStreamAttr[i]), pstRecAttr, i);
     if (ret) {
       RKADK_LOGE("u32StreamCnt(%d) Create Vm(%d) failed", i, vmChnId);
       goto failed;
@@ -276,12 +277,11 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
       RKADK_LOGE("Bind VENC[%d] and MUXER[%d]:VIDEO failed(%d)",
                  pstRecorder->stStreamAttr[i].stVencChn.s32ChnId,
                  pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId, ret);
-      RK_MPI_MUXER_DisableChn(
-          pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId);
+      RK_MPI_MUXER_DisableChn(pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId);
       goto failed;
     }
 
-    if(pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
+    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
       vmChnId++;
       continue;
     }
@@ -296,8 +296,7 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
                  pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId, ret);
       RK_MPI_MUXER_UnBind(&(pstRecorder->stStreamAttr[i].stVencChn),
                           &(pstRecorder->stStreamAttr[i].stMuxerChn));
-      RK_MPI_MUXER_DisableChn(
-          pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId);
+      RK_MPI_MUXER_DisableChn(pstRecorder->stStreamAttr[i].stMuxerChn.s32ChnId);
       goto failed;
     }
 
@@ -338,7 +337,7 @@ RKADK_S32 RKADK_REC_Destroy(RKADK_MW_PTR pRecorder) {
       goto end;
     }
 
-    if(stRecorder->enRecType != RKADK_REC_TYPE_LAPSE) {
+    if (stRecorder->enRecType != RKADK_REC_TYPE_LAPSE) {
       // UnBind AENC to MUXER:AIDEO
       stRecorder->stStreamAttr[i].stMuxerChn.enChnType = MUXER_CHN_TYPE_AUDIO;
       ret = RK_MPI_MUXER_UnBind(&(stRecorder->stStreamAttr[i].stAencChn),

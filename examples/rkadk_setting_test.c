@@ -133,6 +133,7 @@ static void SetRecCfg() {
   stParamRecCfg.record_time = 60;
   stParamRecCfg.splite_time = 60;
   stParamRecCfg.pre_record_time = 0;
+  stParamRecCfg.pre_record_mode = MUXER_PRE_RECORD_NONE;
   stParamRecCfg.lapse_interval = 60;
   stParamRecCfg.lapse_multiple = 30;
   stParamRecCfg.file_num = 2;

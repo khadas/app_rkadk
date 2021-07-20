@@ -104,6 +104,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, record_time),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, splite_time),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_time),
+    DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_mode),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_interval),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_multiple),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, file_num),

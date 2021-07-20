@@ -68,6 +68,12 @@ typedef struct {
   MUXER_TYPE_E enType;
 } RKADK_REC_STREAM_ATTR_S;
 
+typedef struct {
+  RKADK_U32 u32PreRecTimeSec; /* pre record time, unit in second(s)*/
+  RK_U32 u32PreRecCacheTime;
+  MUXER_PRE_RECORD_MODE_E enPreRecordMode;
+} RKADK_PRE_RECORD_ATTR_S;
+
 /* record attribute param */
 typedef struct {
   RKADK_REC_TYPE_E enRecType; /* record type */
@@ -81,7 +87,7 @@ typedef struct {
   RKADK_U32 u32StreamCnt; /* stream cnt */
   RKADK_REC_STREAM_ATTR_S
   astStreamAttr[RKADK_REC_STREAM_MAX_CNT]; /* array of stream attr */
-  RKADK_U32 u32PreRecTimeSec; /* pre record time, unit in second(s)*/
+  RKADK_PRE_RECORD_ATTR_S stPreRecordAttr;
 } RKADK_REC_ATTR_S;
 
 /**

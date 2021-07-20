@@ -391,6 +391,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
 static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
                                             RKADK_REC_TYPE_E enRecType,
                                             RKADK_REC_ATTR_S *pstRecAttr) {
+  RKADK_U32 u32Integer = 0, u32Remainder = 0;
   RKADK_U32 u32TrackCnt = RKADK_REC_TRACK_MAX_CNT;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
@@ -422,10 +423,18 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     RKADK_LOGW("enRecType(%d) != param record_type(%d)", enRecType,
                pstRecCfg->record_type);
 
+  u32Integer = pstRecCfg->attribute[0].gop / pstSensorCfg->framerate;
+  u32Remainder = pstRecCfg->attribute[0].gop % pstSensorCfg->framerate;
+  pstRecAttr->stPreRecordAttr.u32PreRecCacheTime =
+      pstRecCfg->pre_record_time + u32Integer;
+  if (u32Remainder)
+    pstRecAttr->stPreRecordAttr.u32PreRecCacheTime += 1;
+
   pstRecAttr->enRecType = enRecType;
   pstRecAttr->stRecSplitAttr.enMode = MUXER_MODE_AUTOSPLIT;
-  pstRecAttr->u32PreRecTimeSec = pstRecCfg->pre_record_time;
   pstRecAttr->u32StreamCnt = pstRecCfg->file_num;
+  pstRecAttr->stPreRecordAttr.u32PreRecTimeSec = pstRecCfg->pre_record_time;
+  pstRecAttr->stPreRecordAttr.enPreRecordMode = pstRecCfg->pre_record_mode;
 
   MUXER_SPLIT_ATTR_S *stSplitAttr = &(pstRecAttr->stRecSplitAttr.stSplitAttr);
   stSplitAttr->enSplitType = MUXER_SPLIT_TYPE_TIME;

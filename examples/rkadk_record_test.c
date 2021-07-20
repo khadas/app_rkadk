@@ -248,6 +248,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_PARAM_Init();
 
+record:
 #ifdef RKAIQ
   ret = RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
@@ -261,7 +262,6 @@ int main(int argc, char *argv[]) {
   IspProcess(stRecAttr.s32CamID);
 #endif
 
-record:
   ret = RKADK_PARAM_GetCamParam(
       stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &stRecAttr.enRecType);
   if (ret)
@@ -315,6 +315,10 @@ record:
 
       // must destroy recorder before switching the resolution
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RES, &enRes);
+
+#ifdef RKAIQ
+      SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+#endif
       goto record;
     } else if (strstr(cmd, "flip-")) {
       bool flip = false;
@@ -395,6 +399,11 @@ record:
       stCodecCfg.enCodecType = RKADK_CODEC_TYPE_H265;
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_CODEC_TYPE,
                               &stCodecCfg);
+
+#ifdef RKAIQ
+      SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+#endif
+
       goto record;
     } else if (strstr(cmd, "mic_unmute")) {
       bool ummute = true;

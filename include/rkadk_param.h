@@ -129,6 +129,7 @@ typedef enum {
   RKADK_PARAM_TYPE_RECORD_TYPE,     /* specify RKADK_REC_TYPE_E */
   RKADK_PARAM_TYPE_RECORD_TIME,     /* record time, unit in second(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_TIME, /* pre record time, unit in second(s) */
+  RKADK_PARAM_TYPE_PRE_RECORD_MODE, /* pre record mode, specify MUXER_PRE_RECORD_MODE_E */
   RKADK_PARAM_TYPE_SPLITTIME, /* record manual splite time, unit in second(s) */
   RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX
                                  */

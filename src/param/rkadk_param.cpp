@@ -479,8 +479,9 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfg(&pstRecCfg->splite_time, 60, "splite_time");
   change |=
       RKADK_PARAM_CheckCfg(&pstRecCfg->lapse_interval, 60, "lapse_interval");
-  change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->pre_record_time, 0, 10, 0,
-                                    "pre_record_time");
+  change |= RKADK_PARAM_CheckCfgU32(
+      (RKADK_U32 *)&pstRecCfg->pre_record_mode, MUXER_PRE_RECORD_NONE,
+      MUXER_PRE_RECORD_NORMAL, MUXER_PRE_RECORD_NONE, "pre_record_mode");
   change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->lapse_multiple, 1,
                                     pstSensorCfg->framerate,
                                     pstSensorCfg->framerate, "lapse_multiple");
@@ -834,6 +835,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, const char *path) {
   pstRecCfg->record_time = 60;
   pstRecCfg->splite_time = 60;
   pstRecCfg->pre_record_time = 0;
+  pstRecCfg->pre_record_mode = MUXER_PRE_RECORD_NONE;
   pstRecCfg->lapse_interval = 60;
   pstRecCfg->lapse_multiple = 30;
   pstRecCfg->file_num = 2;
@@ -948,6 +950,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stRecCfg.splite_time);
     printf("\t\tsensor[%d] stRecCfg pre_record_time: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.pre_record_time);
+    printf("\t\tsensor[%d] stRecCfg pre_record_mode: %d\n", i,
+           pstCfg->stMediaCfg[i].stRecCfg.pre_record_mode);
     printf("\t\tsensor[%d] stRecCfg lapse_interval: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.lapse_interval);
     printf("\t\tsensor[%d] stRecCfg lapse_multiple: %d\n", i,
@@ -2046,8 +2050,8 @@ RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
   return ret;
 }
 
-static RKADK_U32
-RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId, RKADK_STREAM_TYPE_E enStreamType) {
+static RKADK_U32 RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId,
+                                        RKADK_STREAM_TYPE_E enStreamType) {
   RKADK_U32 bitrate = 0;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
@@ -2075,9 +2079,8 @@ RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId, RKADK_STREAM_TYPE_E enStreamType) {
   return bitrate;
 }
 
-static RKADK_S32
-RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
-                         RKADK_PARAM_BITRATE_S *pstBitrate) {
+static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
+                                        RKADK_PARAM_BITRATE_S *pstBitrate) {
   RKADK_S32 ret;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
@@ -2207,6 +2210,9 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
     break;
   case RKADK_PARAM_TYPE_PRE_RECORD_TIME:
     *(RKADK_U32 *)pvParam = pstRecCfg->pre_record_time;
+    break;
+  case RKADK_PARAM_TYPE_PRE_RECORD_MODE:
+    *(MUXER_PRE_RECORD_MODE_E *)pvParam = pstRecCfg->pre_record_mode;
     break;
   case RKADK_PARAM_TYPE_PHOTO_RES:
     *(RKADK_PARAM_RES_E *)pvParam = RKADK_PARAM_GetResType(
@@ -2363,6 +2369,13 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
     RKADK_CHECK_EQUAL(pstRecCfg->pre_record_time, *(RKADK_U32 *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstRecCfg->pre_record_time = *(RKADK_U32 *)pvParam;
+    bSaveRecCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_PRE_RECORD_MODE:
+    RKADK_CHECK_EQUAL(pstRecCfg->pre_record_mode,
+                      *(MUXER_PRE_RECORD_MODE_E *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstRecCfg->pre_record_mode = *(MUXER_PRE_RECORD_MODE_E *)pvParam;
     bSaveRecCfg = true;
     break;
   case RKADK_PARAM_TYPE_PHOTO_RES:
