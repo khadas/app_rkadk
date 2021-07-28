@@ -223,23 +223,60 @@ static void SetStreamCfg() {
   strcpy(stStreamCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
   strcpy(stStreamCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
-                   sizeof(g_stStreamCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stPreviewCfgMapTable_0,
+                   sizeof(g_stPreviewCfgMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg, g_stStreamCfgMapTable_0,
-                   sizeof(g_stStreamCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg, g_stPreviewCfgMapTable_0,
+                   sizeof(g_stPreviewCfgMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg.attribute.venc_param,
-                   g_stStreamParamMapTable_0,
-                   sizeof(g_stStreamParamMapTable_0) /
+                   g_stPreviewParamMapTable_0,
+                   sizeof(g_stPreviewParamMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg.attribute.venc_param,
-                   g_stStreamParamMapTable_0,
-                   sizeof(g_stStreamParamMapTable_0) /
+                   g_stPreviewParamMapTable_0,
+                   sizeof(g_stPreviewParamMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
+}
+
+static void SetLiveCfg() {
+  RKADK_PARAM_STREAM_CFG_S stLiveCfg;
+
+  memset(&stLiveCfg, 0, sizeof(RKADK_PARAM_STREAM_CFG_S));
+  stLiveCfg.attribute.width = STREAM_VIDEO_WIDTH;
+  stLiveCfg.attribute.height = STREAM_VIDEO_HEIGHT;
+  stLiveCfg.attribute.bitrate = 4 * 1024 * 1024;
+  stLiveCfg.attribute.gop = VIDEO_GOP;
+  stLiveCfg.attribute.profile = VIDEO_PROFILE;
+  stLiveCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
+  stLiveCfg.attribute.venc_chn = 1;
+  strcpy(stLiveCfg.attribute.rc_mode, "VBR");
+  stLiveCfg.attribute.venc_param.max_qp = 48;
+  stLiveCfg.attribute.venc_param.min_qp = 8;
+  stLiveCfg.attribute.venc_param.full_range = true;
+  stLiveCfg.attribute.venc_param.scaling_list = true;
+  stLiveCfg.attribute.venc_param.hier_qp_en = true;
+  strcpy(stLiveCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
+  strcpy(stLiveCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
+
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stLiveCfg, g_stLiveCfgMapTable_0,
+                   sizeof(g_stLiveCfgMapTable_0) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stLiveCfg, g_stLiveCfgMapTable_0,
+                   sizeof(g_stLiveCfgMapTable_0) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stLiveCfg.attribute.venc_param,
+                   g_stLiveParamMapTable_0, sizeof(g_stLiveParamMapTable_0) /
+                                                sizeof(RKADK_SI_CONFIG_MAP_S));
+
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stLiveCfg.attribute.venc_param,
+                   g_stLiveParamMapTable_0, sizeof(g_stLiveParamMapTable_0) /
+                                                sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 static void SetPhotoCfg() {
@@ -270,6 +307,7 @@ static void SetViCfg() {
   stViCfg.height = SENSOR_MAX_HEIGHT;
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "FBC0");
+  strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_0,
                    sizeof(g_stViCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_0,
@@ -280,6 +318,7 @@ static void SetViCfg() {
   strcpy(stViCfg.device_name, "rkispp_scale0");
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "NV12");
+  strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_1,
                    sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_1,
@@ -290,6 +329,7 @@ static void SetViCfg() {
   strcpy(stViCfg.device_name, "rkispp_scale1");
   stViCfg.buf_cnt = 2;
   strcpy(stViCfg.pix_fmt, "NV12");
+  strcpy(stViCfg.module, "NONE");
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_2,
                    sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_2,
@@ -302,6 +342,7 @@ static void SetViCfg() {
   stViCfg.height = STREAM_VIDEO_HEIGHT;
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "NV12");
+  strcpy(stViCfg.module, "RECORD_SUB|PREVIEW|LIVE");
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
                    sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
@@ -358,6 +399,9 @@ int main(int argc, char *argv[]) {
 
       SetSensorCfg();
       RKADK_LOGD("SetSensorCfg done");
+
+      SetLiveCfg();
+      RKADK_LOGD("SetLiveCfg done");
 
       SetViCfg();
       RKADK_LOGD("SetViCfg done");

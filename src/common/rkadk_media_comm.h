@@ -91,6 +91,12 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
                                 RKADK_U32 u32BitRate, RKADK_U32 u32SrcFrameRate,
                                 RKADK_U32 u32DstFrameRate);
 
+RKADK_S32 RKADK_MEDIA_GetMediaBuffer(MPP_CHN_S *pstChn, OutCbFuncEx pfnDataCB,
+                                     RKADK_VOID *pHandle);
+
+RKADK_S32 RKADK_MEDIA_StopGetMediaBuffer(MPP_CHN_S *pstChn,
+                                         OutCbFuncEx pfnDataCB);
+
 #ifdef __cplusplus
 }
 #endif

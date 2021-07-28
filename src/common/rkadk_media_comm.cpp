@@ -16,6 +16,7 @@
 
 #include "rkadk_media_comm.h"
 #include "rkadk_log.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,10 +30,19 @@ typedef struct {
 } RKADK_BIND_INFO_S;
 
 typedef struct {
+  bool bGetBuffer;
+  RKADK_S32 s32GetCnt;
+  pthread_t tid;
+  RKADK_VOID *pHandle[RKADK_MEDIA_VENC_MAX_CNT];
+  OutCbFuncEx cbList[RKADK_MEDIA_VENC_MAX_CNT];
+} RKADK_GET_MB_ATTR_S;
+
+typedef struct {
   bool bUsed;
   RKADK_S32 s32InitCnt;
   RKADK_S32 s32ChnId;
   CODEC_TYPE_E enCodecType;
+  RKADK_GET_MB_ATTR_S stGetMBAttr;
 } RKADK_MEDIA_INFO_S;
 
 typedef struct {
@@ -56,7 +66,7 @@ static void RKADK_MEDIA_CtxInit() {
   if (g_bMediaCtxInit)
     return;
 
-  memset(&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
+  memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -488,6 +498,128 @@ RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId) {
   RKADK_LOGD("vencChnId[%d], InitCnt[%d]", s32ChnId,
              g_stMediaCtx.stVencInfo[i].s32InitCnt);
   ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
+  return ret;
+}
+
+static void *RKADK_MEDIA_GetMb(void *params) {
+  MEDIA_BUFFER mb = NULL;
+
+  RKADK_MEDIA_INFO_S *pstMediaInfo = (RKADK_MEDIA_INFO_S *)params;
+  if (!pstMediaInfo) {
+    RKADK_LOGE("Get MB thread invalid param");
+    return NULL;
+  }
+
+  while (pstMediaInfo->stGetMBAttr.bGetBuffer) {
+    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstMediaInfo->s32ChnId, -1);
+    if (!mb) {
+      RKADK_LOGE("RK_MPI_SYS_GetMediaBuffer get null buffer!");
+      break;
+    }
+
+    for (int i = 0; i < (int)pstMediaInfo->stGetMBAttr.s32GetCnt; i++)
+      if (pstMediaInfo->stGetMBAttr.cbList[i])
+        pstMediaInfo->stGetMBAttr.cbList[i](
+            mb, pstMediaInfo->stGetMBAttr.pHandle[i]);
+
+    RK_MPI_MB_ReleaseBuffer(mb);
+  }
+
+  RK_MPI_SYS_StopGetMediaBuffer(RK_ID_VDEC, pstMediaInfo->s32ChnId);
+  RKADK_LOGI("Exit get mb thread");
+  return NULL;
+}
+
+RKADK_S32 RKADK_MEDIA_GetMediaBuffer(MPP_CHN_S *pstChn, OutCbFuncEx pfnDataCB,
+                                     RKADK_VOID *pHandle) {
+  int ret = -1;
+  RKADK_S32 i;
+  RKADK_MEDIA_INFO_S *pstMediaInfo;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+                         pstChn->s32ChnId, "VENC_GET_MB");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
+    goto exit;
+  }
+
+  pstMediaInfo = &g_stMediaCtx.stVencInfo[i];
+  if (pstMediaInfo->s32InitCnt == 0) {
+    RKADK_LOGE("vencChnId[%d] don't init", pstChn->s32ChnId);
+    goto exit;
+  }
+
+  pstMediaInfo->stGetMBAttr.cbList[pstMediaInfo->stGetMBAttr.s32GetCnt] = pfnDataCB;
+  pstMediaInfo->stGetMBAttr.pHandle[pstMediaInfo->stGetMBAttr.s32GetCnt] = pHandle;
+  pstMediaInfo->stGetMBAttr.s32GetCnt++;
+
+  if (pstMediaInfo->stGetMBAttr.bGetBuffer) {
+    RKADK_LOGE("Get vencChnId[%d] MB thread has been created",
+               pstChn->s32ChnId);
+    ret = 0;
+    goto exit;
+  }
+
+  pstMediaInfo->stGetMBAttr.bGetBuffer = true;
+  ret = pthread_create(&pstMediaInfo->stGetMBAttr.tid, NULL, RKADK_MEDIA_GetMb,
+                       pstMediaInfo);
+  if (ret) {
+    RKADK_LOGE("Create get mb(%d) thread failed %d", pstChn->s32ChnId, ret);
+    goto exit;
+  }
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
+  return ret;
+}
+
+RKADK_S32 RKADK_MEDIA_StopGetMediaBuffer(MPP_CHN_S *pstChn,
+                                         OutCbFuncEx pfnDataCB) {
+  int i, ret = 0;
+  RKADK_MEDIA_INFO_S *pstMediaInfo;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+                         pstChn->s32ChnId, "VENC_GET_MB");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
+    ret = -1;
+    goto exit;
+  }
+
+  pstMediaInfo = &g_stMediaCtx.stVencInfo[i];
+  if (pstMediaInfo->s32InitCnt == 0) {
+    RKADK_LOGE("vencChnId[%d] don't init", pstChn->s32ChnId);
+    ret = -1;
+    goto exit;
+  }
+
+  for (i = 0; i < pstMediaInfo->stGetMBAttr.s32GetCnt; i++) {
+    if (pstMediaInfo->stGetMBAttr.cbList[i] == pfnDataCB) {
+      RKADK_LOGD("remove cbList, i = %d", i);
+      pstMediaInfo->stGetMBAttr.cbList[i] = NULL;
+      pstMediaInfo->stGetMBAttr.s32GetCnt--;
+      break;
+    }
+  }
+
+  if (!pstMediaInfo->stGetMBAttr.s32GetCnt) {
+    pstMediaInfo->stGetMBAttr.bGetBuffer = false;
+    if (pstMediaInfo->stGetMBAttr.tid) {
+      ret = pthread_join(pstMediaInfo->stGetMBAttr.tid, NULL);
+      if (ret)
+        RKADK_LOGE("Exit get mb thread failed!");
+      else
+        RKADK_LOGI("Exit get mb thread ok");
+      pstMediaInfo->stGetMBAttr.tid = 0;
+    }
+  }
 
 exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);

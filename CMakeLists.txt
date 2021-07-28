@@ -19,7 +19,8 @@ add_definitions(-Wall
 		-Wshadow
 		-ffast-math
 		-Wignored-qualifiers
-		-Werror-implicit-function-declaration)
+		-Werror-implicit-function-declaration
+		-fPIC)
 
 add_subdirectory(src)
 add_subdirectory(examples)

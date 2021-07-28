@@ -25,6 +25,7 @@ extern "C" {
 
 /* version */
 #define RKADK_PARAM_VERSION "1.0.1"
+//#define RKADK_PARAM_VERSION "1.1.0"
 
 /* sensor default parameters */
 #define SENSOR_MAX_WIDTH 2688
@@ -88,14 +89,6 @@ extern "C" {
 
 #define RKADK_WIDTH_3840P 3840
 #define RKADK_HEIGHT_2160P 2160
-
-typedef enum {
-  RKADK_STREAM_TYPE_VIDEO_MAIN,
-  RKADK_STREAM_TYPE_VIDEO_SUB,
-  RKADK_STREAM_TYPE_SNAP,
-  RKADK_STREAM_TYPE_USER,
-  RKADK_STREAM_TYPE_BUTT
-} RKADK_STREAM_TYPE_E;
 
 /* Resolution type */
 typedef enum {
@@ -239,7 +232,8 @@ RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height);
  * @brief        get venc chn id
  * @return       venc chn id success,-1 error code.
  */
-RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType);
+RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
+                                   RKADK_STREAM_TYPE_E enStrmType);
 
 #ifdef __cplusplus
 }
