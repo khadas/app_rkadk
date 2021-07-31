@@ -5,6 +5,7 @@ file(GLOB_RECURSE STREAM_SRC "${CMAKE_SOURCE_DIR}/src/stream/*.cpp")
 file(GLOB_RECURSE PLAYER_SRC "${CMAKE_SOURCE_DIR}/src/player/*.cpp")
 file(GLOB_RECURSE PARAM_SRC "${CMAKE_SOURCE_DIR}/src/param/*.cpp")
 file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
+file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
 add_library(rkadk SHARED
@@ -14,6 +15,7 @@ add_library(rkadk SHARED
 		${STREAM_SRC}
 		${PLAYER_SRC}
 		${PARAM_SRC}
+                ${RTMP_SRC}
 		${RTSP_SRC})
 
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")

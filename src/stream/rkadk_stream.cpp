@@ -18,7 +18,6 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkmedia_api.h"
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -751,7 +750,7 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AI_CHN_ATTR_S *pstAiAttr,
 
   pstAiChn->enModId = RK_ID_AI;
   pstAiChn->s32DevId = 0;
-  pstAiChn->s32ChnId = STREAM_AI_CHN;
+  pstAiChn->s32ChnId = PREVIEW_AI_CHN;
   return 0;
 }
 
@@ -771,10 +770,10 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(RKADK_CODEC_TYPE_E enCodecType,
 
   pstAencAttr->u32Bitrate = pstAudioParam->bitrate;
 
-  if (enCodecType == RECORD_AUDIO_CODEC_TYPE)
-    pstAencChn->s32ChnId = RECORD_AENC_CHN; // and record reuse aenc channel
+  if (enCodecType == LIVE_AUDIO_CODEC_TYPE)
+    pstAencChn->s32ChnId = LIVE_AENC_CHN; // and record reuse aenc channel
   else
-    pstAencChn->s32ChnId = STREAM_AENC_CHN;
+    pstAencChn->s32ChnId = PREVIEW_AENC_CHN;
 
   switch (enCodecType) {
   case RKADK_CODEC_TYPE_G711A:

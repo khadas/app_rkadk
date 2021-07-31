@@ -81,6 +81,16 @@ target_include_directories(rkadk_thumb_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkadk_thumb_test DESTINATION "bin")
 
 #--------------------------
+# rkadk_rtmp_test
+#--------------------------
+add_executable(rkadk_rtmp_test rkadk_rtmp_test.c ${ISP_SRC})
+add_dependencies(rkadk_rtmp_test rkadk)
+target_link_libraries(rkadk_rtmp_test easymedia rkadk rkaiq)
+target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_rtmp_test DESTINATION "bin")
+
+#--------------------------
 # rkadk_rtsp_test
 #--------------------------
 add_executable(rkadk_rtsp_test rkadk_rtsp_test.c ${ISP_SRC})

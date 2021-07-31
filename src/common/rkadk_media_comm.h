@@ -28,19 +28,19 @@ extern "C" {
 #define RKADK_MEDIA_AI_MAX_CNT (1)
 
 /* audio encoder maximum count */
-#define RKADK_MEDIA_AENC_MAX_CNT (2 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_MEDIA_AENC_MAX_CNT (3 * RKADK_MAX_SENSOR_CNT)
 
 /* video capture maximum count */
 #define RKADK_MEDIA_VI_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
 
 /* video encoder maximum count */
-#define RKADK_MEDIA_VENC_MAX_CNT (3 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_MEDIA_VENC_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
 
 /* ai aenc maximum bind count */
-#define RKADK_AI_AENC_MAX_BIND_CNT (2 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_AI_AENC_MAX_BIND_CNT (3 * RKADK_MAX_SENSOR_CNT)
 
 /* vi venc maximum bind count */
-#define RKADK_VI_VENC_MAX_BIND_CNT (3 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_VI_VENC_MAX_BIND_CNT (4 * RKADK_MAX_SENSOR_CNT)
 
 typedef enum {
   RKADK_CODEC_TYPE_H264 = 0,
