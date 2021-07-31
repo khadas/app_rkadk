@@ -503,6 +503,9 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
 
+  RKADK_LOGI("Create Recorder[%d, %d] Start...", pstRecAttr->s32CamID,
+             pstRecAttr->enRecType);
+
   RK_MPI_SYS_Init();
   RKADK_PARAM_Init();
 
@@ -532,6 +535,8 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, pstRecAttr->enRecType))
     goto failed;
 
+  RKADK_LOGI("Create Recorder[%d, %d] End...", pstRecAttr->s32CamID,
+             pstRecAttr->enRecType);
   return 0;
 
 failed:
@@ -556,6 +561,9 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     RKADK_LOGE("stRecorder is null");
     return -1;
   }
+
+  RKADK_LOGI("Destory Recorder[%d, %d] Start...", stRecorder->s32CamId,
+             stRecorder->enRecType);
 
   s32CamId = stRecorder->s32CamId;
   enRecType = stRecorder->enRecType;
@@ -598,6 +606,8 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   }
 
   g_pfnRequestFileNames[s32CamId] = NULL;
+  RKADK_LOGI("Destory Recorder[%d, %d] End...", stRecorder->s32CamId,
+             stRecorder->enRecType);
   return 0;
 }
 

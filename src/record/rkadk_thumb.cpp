@@ -319,14 +319,14 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
 
   while (!feof(fd)) {
     if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-      RKADK_LOGW("read box header failed");
+      RKADK_LOGI("Can't read box header");
       break;
     }
 
     u32BoxSize = boxHeader[0] << 24 | boxHeader[1] << 16 | boxHeader[2] << 8 |
                  boxHeader[3];
     if (u32BoxSize <= 0) {
-      RKADK_LOGD("last one box, not find thm box");
+      RKADK_LOGI("last one box, not find thm box");
       break;
     }
 

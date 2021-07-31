@@ -362,6 +362,8 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
 
+  RKADK_LOGI("Rtmp[%d, %s] Init...", u32CamId, path);
+
   if (*ppHandle) {
     RKADK_LOGE("rtmp handle has been created");
     return -1;
@@ -454,6 +456,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   }
 
   *ppHandle = (RKADK_MW_PTR)pHandle;
+  RKADK_LOGI("Rtmp[%d, %s] Init End...", u32CamId, path);
   return 0;
 
 unbind:
@@ -489,6 +492,8 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTMP_HANDLE_S *pstHandle = (RKADK_RTMP_HANDLE_S *)pHandle;
+
+  RKADK_LOGI("Rtmp[%d] DeInit...", pstHandle->u32CamId);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(pstHandle->u32CamId, RKADK_STREAM_TYPE_LIVE);
@@ -558,5 +563,6 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   free(pHandle);
+  RKADK_LOGI("Rtmp[%d] DeInit End...", pstHandle->u32CamId);
   return 0;
 }

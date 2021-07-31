@@ -235,6 +235,8 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
 
+  RKADK_LOGI("Rtsp[%d, %d, %s] Init...", u32CamId, port, path);
+
   if (*ppHandle) {
     RKADK_LOGE("rtsp handle has been created");
     return -1;
@@ -329,6 +331,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   }
 
   *ppHandle = (RKADK_MW_PTR)pHandle;
+  RKADK_LOGI("Rtsp[%d, %d, %s] Init End...", u32CamId, port, path);
   return 0;
 
 failed:
@@ -350,8 +353,9 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   MPP_CHN_S stVencChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-
   RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
+
+  RKADK_LOGI("Rtsp[%d] DeInit...", pstHandle->u32CamId);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(pstHandle->u32CamId, RKADK_STREAM_TYPE_LIVE);
@@ -390,6 +394,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   free(pHandle);
+  RKADK_LOGI("Rtsp[%d] DeInit End...", pstHandle->u32CamId);
   return 0;
 }
 

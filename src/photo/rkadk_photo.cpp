@@ -141,6 +141,9 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   RKADK_CHECK_POINTER(pstPhotoAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstPhotoAttr->u32CamID, RKADK_FAILURE);
 
+  RKADK_LOGI("Photo[%d, %d] Init...", pstPhotoAttr->u32CamID,
+             pstPhotoAttr->enPhotoType);
+
   PHOTO_INFO_S *pstPhotoInfo = &g_stPhotoInfo[pstPhotoAttr->u32CamID];
   if (pstPhotoInfo->init) {
     RKADK_LOGI("photo: camera[%d] has been init", pstPhotoAttr->u32CamID);
@@ -206,6 +209,8 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   }
 
   pstPhotoInfo->init = true;
+  RKADK_LOGI("Photo[%d, %d] Init End...", pstPhotoAttr->u32CamID,
+             pstPhotoAttr->enPhotoType);
   return 0;
 
 failed:
@@ -221,6 +226,8 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
   MPP_CHN_S stVencChn;
 
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
+
+  RKADK_LOGI("Photo[%d] DeInit...", u32CamID);
 
   PHOTO_INFO_S *pstPhotoInfo = &g_stPhotoInfo[u32CamID];
   if (!pstPhotoInfo->init) {
@@ -260,6 +267,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
 
   pstPhotoInfo->pDataRecvFn = NULL;
   pstPhotoInfo->init = false;
+  RKADK_LOGI("Photo[%d] DeInit End...", u32CamID);
   return 0;
 }
 

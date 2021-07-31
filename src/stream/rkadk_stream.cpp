@@ -337,6 +337,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
 
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
 
+  RKADK_LOGI("Preview[%d, %d] Video Init...", u32CamID, enCodecType);
+
   if (RKADK_STREAM_CheckCodecType(true, enCodecType))
     return -1;
 
@@ -427,6 +429,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   }
 
   videoStream->init = true;
+  RKADK_LOGI("Preview[%d, %d] Video Init End...", u32CamID, enCodecType);
   return 0;
 
 failed:
@@ -442,6 +445,8 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID) {
   MPP_CHN_S stVencChn;
 
   RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
+
+  RKADK_LOGI("Preview[%d] Video DeInit...", u32CamID);
 
   VIDEO_STREAM_INFO_S *videoStream = &g_videoStream[u32CamID];
   if (!videoStream->init) {
@@ -483,6 +488,7 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID) {
   }
 
   videoStream->init = false;
+  RKADK_LOGI("Preview[%d] Video DeInit End...", u32CamID);
   return 0;
 }
 
@@ -851,6 +857,8 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
     return 0;
   }
 
+  RKADK_LOGI("Preview[%d] Audio Init...", enCodecType);
+
   if (RKADK_STREAM_CheckCodecType(false, enCodecType))
     return -1;
 
@@ -911,6 +919,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
     }
 
     g_audioStream.init = true;
+  RKADK_LOGI("Preview[%d] Audio Init End...", enCodecType);
     return 0;
   }
 
@@ -938,6 +947,8 @@ failed:
 RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+
+  RKADK_LOGI("Preview[%d] Audio DeInit...", enCodecType);
 
   if (!g_audioStream.init) {
     RKADK_LOGI("Audio has been deinit");
@@ -981,6 +992,7 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
   g_audioStream.enCodecType = RKADK_CODEC_TYPE_BUTT;
   g_audioStream.init = false;
   g_audioStream.start = false;
+  RKADK_LOGI("Preview[%d] Audio DeInit End...", enCodecType);
   return 0;
 }
 
