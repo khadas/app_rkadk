@@ -169,6 +169,7 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigterm_handler);
 
   RKADK_PLAYER_CFG_S stPlayCfg;
+  memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   stPlayCfg.bEnableAudio = true;
   if (bVideoEnable)
     stPlayCfg.bEnableVideo = true;
