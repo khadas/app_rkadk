@@ -745,6 +745,7 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
 
   i = RKADK_BIND_GetIdx(pstInfo, count, pstSrcChn, pstDestChn);
   if (i < 0) {
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.bindMutex);
     RKADK_LOGE("not find usable index");
     return -1;
   }
