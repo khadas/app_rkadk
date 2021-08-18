@@ -24,8 +24,7 @@ extern "C" {
 #endif
 
 /* version */
-#define RKADK_PARAM_VERSION "1.0.1"
-//#define RKADK_PARAM_VERSION "1.1.0"
+#define RKADK_PARAM_VERSION "1.1.0"
 
 /* sensor default parameters */
 #define SENSOR_MAX_WIDTH 2688
@@ -52,6 +51,8 @@ extern "C" {
 #define RECORD_VIDEO_HEIGHT_S STREAM_VIDEO_HEIGHT
 #define PHOTO_VIDEO_WIDTH SENSOR_MAX_WIDTH
 #define PHOTO_VIDEO_HEIGHT SENSOR_MAX_HEIGHT
+#define DISP_WIDTH 720
+#define DISP_HEIGHT 1280
 
 /* thumb default parameters */
 #define THUMB_WIDTH 320
@@ -124,8 +125,7 @@ typedef enum {
   RKADK_PARAM_TYPE_PRE_RECORD_TIME, /* pre record time, unit in second(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_MODE, /* pre record mode, specify MUXER_PRE_RECORD_MODE_E */
   RKADK_PARAM_TYPE_SPLITTIME, /* record manual splite time, unit in second(s) */
-  RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX
-                                 */
+  RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX */
   RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* lapse interval */
   RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
   RKADK_PARAM_TYPE_PHOTO_ENABLE,   /* photo enable, bool*/

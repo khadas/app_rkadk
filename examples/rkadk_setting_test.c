@@ -342,7 +342,7 @@ static void SetViCfg() {
   stViCfg.height = STREAM_VIDEO_HEIGHT;
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "NV12");
-  strcpy(stViCfg.module, "RECORD_SUB|PREVIEW|LIVE");
+  strcpy(stViCfg.module, "RECORD_SUB|PREVIEW|LIVE|DISP");
   RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
                    sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
@@ -362,6 +362,31 @@ static void SetThumbCfg() {
                        sizeof(RKADK_SI_CONFIG_MAP_S));
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stThumbCfg, g_stThumbCfgMapTable,
                    sizeof(g_stThumbCfgMapTable) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+}
+
+static void SetDispCfg() {
+  RKADK_PARAM_DISP_CFG_S stDispCfg;
+
+  memset(&stDispCfg, 0, sizeof(RKADK_PARAM_DISP_CFG_S));
+  stDispCfg.width = DISP_WIDTH;
+  stDispCfg.height = DISP_HEIGHT;
+  // rga
+  stDispCfg.enable_buf_pool = true;
+  stDispCfg.buf_pool_cnt = 2;
+  stDispCfg.rotaion = 90;
+  stDispCfg.rga_chn = 0;
+  // vo
+  strcpy(stDispCfg.device_node, "/dev/dri/card0");
+  stDispCfg.plane_type = VO_PLANE_PRIMARY;
+  strcpy(stDispCfg.img_type, "RGB888");
+  stDispCfg.z_pos = 0;
+  stDispCfg.vo_chn = 0;
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stDispCfg, g_stDispCfgMapTable_0,
+                   sizeof(g_stDispCfgMapTable_0) /
+                       sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stDispCfg, g_stDispCfgMapTable_0,
+                   sizeof(g_stDispCfgMapTable_0) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -400,9 +425,6 @@ int main(int argc, char *argv[]) {
       SetSensorCfg();
       RKADK_LOGD("SetSensorCfg done");
 
-      SetLiveCfg();
-      RKADK_LOGD("SetLiveCfg done");
-
       SetViCfg();
       RKADK_LOGD("SetViCfg done");
 
@@ -414,6 +436,12 @@ int main(int argc, char *argv[]) {
 
       SetStreamCfg();
       RKADK_LOGD("SetStreamCfg done");
+
+      SetLiveCfg();
+      RKADK_LOGD("SetLiveCfg done");
+
+      SetDispCfg();
+      RKADK_LOGD("SetDispCfg done");
     }
 
     if (strstr(cmd, "get")) {

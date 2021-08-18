@@ -45,6 +45,7 @@ typedef enum {
   RKADK_PARAM_VI1_MAP,
   RKADK_PARAM_VI2_MAP,
   RKADK_PARAM_VI3_MAP,
+  RKADK_PARAM_DISP_MAP,
   RKADK_PARAM_MAP_BUTT
 } RKADK_PARAM_MAP_TYPE_E;
 
@@ -245,6 +246,21 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, height),
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
     DEFINE_MAP(sensor.0.vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, module),
+};
+
+/* display map table */
+static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable_0[] = {
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, width),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, height),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, bool_e, enable_buf_pool),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, buf_pool_cnt),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, rotaion),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, rga_chn),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, string_e, device_node),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, plane_type),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, string_e, img_type),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, z_pos),
+    DEFINE_MAP(sensor.0.disp, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_chn),
 };
 
 RKADK_MAP_TABLE_CFG_S *RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable);

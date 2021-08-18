@@ -47,7 +47,9 @@ static RKADK_MAP_TABLE_CFG_S
          {sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S),
           g_stViCfgMapTable_2},
          {sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stViCfgMapTable_3}}};
+          g_stViCfgMapTable_3},
+         {sizeof(g_stDispCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
+          g_stDispCfgMapTable_0}}};
 
 RKADK_MAP_TABLE_CFG_S *
 RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable) {

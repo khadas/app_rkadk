@@ -99,3 +99,13 @@ target_link_libraries(rkadk_rtsp_test easymedia rkadk rkaiq)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
+
+#--------------------------
+# rkadk_disp_test
+#--------------------------
+add_executable(rkadk_disp_test rkadk_disp_test.c ${ISP_SRC})
+add_dependencies(rkadk_disp_test rkadk)
+target_link_libraries(rkadk_disp_test easymedia rkadk rkaiq)
+target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_disp_test DESTINATION "bin")
