@@ -34,11 +34,11 @@ extern char *optarg;
 static RKADK_CHAR optstr[] = "a:I:t:h";
 
 static bool is_quit = false;
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-a /oem/etc/iqfiles] [-I 0] [-t 0]\n", name);
+  printf("\t%s [-a /etc/iqfiles] [-I 0] [-t 0]\n", name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
          "without this option aiq should run in other application\n");
@@ -53,7 +53,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
 
   RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
-  if (u32FileIdx > 5)
+  if (u32FileIdx >= 10)
     u32FileIdx = 0;
 
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
@@ -415,6 +415,31 @@ record:
       RKADK_RECORD_Stop(pRecorder);
     } else if (strstr(cmd, "start")) {
       RKADK_RECORD_Start(pRecorder);
+    } else if (strstr(cmd, "set_main_time")) {
+      RKADK_PARAM_REC_TIME_S stRecTime;
+
+      stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      stRecTime.time = 40;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TIME,
+                              &stRecTime);
+
+      memset(&stRecTime, 0, sizeof(RKADK_PARAM_REC_TIME_S));
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TIME,
+                              &stRecTime);
+      RKADK_LOGD("Record Main record time: %d", stRecTime.time);
+    } else if (strstr(cmd, "set_sun_time")) {
+      RKADK_PARAM_REC_TIME_S stRecTime;
+
+      stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      stRecTime.time = 40;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_SPLITTIME,
+                              &stRecTime);
+
+      memset(&stRecTime, 0, sizeof(RKADK_PARAM_REC_TIME_S));
+      stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_SPLITTIME,
+                              &stRecTime);
+      RKADK_LOGD("Record Sub split time: %d", stRecTime.time);
     }
 
     if (is_quit)

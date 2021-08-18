@@ -130,14 +130,14 @@ static void SetRecCfg() {
 
   memset(&stParamRecCfg, 0, sizeof(RKADK_PARAM_REC_CFG_S));
   stParamRecCfg.record_type = RKADK_REC_TYPE_NORMAL;
-  stParamRecCfg.record_time = 60;
-  stParamRecCfg.splite_time = 60;
   stParamRecCfg.pre_record_time = 0;
   stParamRecCfg.pre_record_mode = MUXER_PRE_RECORD_NONE;
-  stParamRecCfg.lapse_interval = 60;
   stParamRecCfg.lapse_multiple = 30;
   stParamRecCfg.file_num = 2;
 
+  stParamRecCfg.record_time_cfg[0].record_time = 60;
+  stParamRecCfg.record_time_cfg[0].splite_time = 60;
+  stParamRecCfg.record_time_cfg[0].lapse_interval = 60;
   stParamRecCfg.attribute[0].width = RECORD_VIDEO_WIDTH;
   stParamRecCfg.attribute[0].height = RECORD_VIDEO_HEIGHT;
   stParamRecCfg.attribute[0].bitrate = 30 * 1024 * 1024;
@@ -154,6 +154,10 @@ static void SetRecCfg() {
   strcpy(stParamRecCfg.attribute[0].venc_param.hier_qp_delta, "-3,0,0,0");
   strcpy(stParamRecCfg.attribute[0].venc_param.hier_frame_num, "3,0,0,0");
 
+
+  stParamRecCfg.record_time_cfg[1].record_time = 60;
+  stParamRecCfg.record_time_cfg[1].splite_time = 60;
+  stParamRecCfg.record_time_cfg[1].lapse_interval = 60;
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
   stParamRecCfg.attribute[1].bitrate = 4 * 1024 * 1024;

@@ -62,6 +62,7 @@ typedef struct {
 
 /* record stream attribute */
 typedef struct {
+  RKADK_U32 u32TimeLenSec; /* record time */
   RKADK_U32 u32TrackCnt; /* track cnt*/
   RKADK_TRACK_SOURCE_S
   aHTrackSrcHandle[RKADK_REC_TRACK_MAX_CNT]; /* array of track source cnt */

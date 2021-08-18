@@ -112,8 +112,7 @@ typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
   RKADK_U32 qp_step;
   RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
-  RKADK_U32
-      min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
+  RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
   RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
   RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
   bool hier_qp_en;
@@ -141,15 +140,19 @@ typedef struct {
   VI_CHN_ATTR_S stChnAttr;
 } RKADK_PRAAM_VI_ATTR_S;
 
-typedef struct tagRKADK_PARAM_REC_CFG_S {
-  RKADK_REC_TYPE_E record_type;
+typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
   RKADK_U32 record_time;
   RKADK_U32 splite_time;
+  RKADK_U32 lapse_interval;
+} RKADK_PARAM_REC_TIME_CFG_S;
+
+typedef struct tagRKADK_PARAM_REC_CFG_S {
+  RKADK_REC_TYPE_E record_type;
   RKADK_U32 pre_record_time;
   MUXER_PRE_RECORD_MODE_E pre_record_mode;
-  RKADK_U32 lapse_interval;
   RKADK_U32 lapse_multiple;
   RKADK_U32 file_num;
+  RKADK_PARAM_REC_TIME_CFG_S record_time_cfg[RECORD_FILE_NUM_MAX];
   RKADK_PARAM_VENC_ATTR_S attribute[RECORD_FILE_NUM_MAX];
   RKADK_PRAAM_VI_ATTR_S vi_attr[RECORD_FILE_NUM_MAX];
 } RKADK_PARAM_REC_CFG_S;

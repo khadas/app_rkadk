@@ -121,12 +121,12 @@ typedef enum {
   RKADK_PARAM_TYPE_HDR,             /* 0: normal, 1: HDR2, 2: HDR3, [0,2] */
   RKADK_PARAM_TYPE_REC,             /* record  enable, bool*/
   RKADK_PARAM_TYPE_RECORD_TYPE,     /* specify RKADK_REC_TYPE_E */
-  RKADK_PARAM_TYPE_RECORD_TIME,     /* record time, unit in second(s) */
+  RKADK_PARAM_TYPE_RECORD_TIME,     /* specify RKADK_PARAM_REC_TIME_S, record time(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_TIME, /* pre record time, unit in second(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_MODE, /* pre record mode, specify MUXER_PRE_RECORD_MODE_E */
-  RKADK_PARAM_TYPE_SPLITTIME, /* record manual splite time, unit in second(s) */
+  RKADK_PARAM_TYPE_SPLITTIME, /* specify RKADK_PARAM_REC_TIME_S, manual splite time(s) */
   RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX */
-  RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* lapse interval */
+  RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
   RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
   RKADK_PARAM_TYPE_PHOTO_ENABLE,   /* photo enable, bool*/
   RKADK_PARAM_TYPE_SNAP_NUM,       /* continue snap num */
@@ -153,6 +153,11 @@ typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
   RKADK_U32 u32Bitrate;
 } RKADK_PARAM_BITRATE_S;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_U32 time;
+} RKADK_PARAM_REC_TIME_S;
 
 /**
  * @brief     Parameter Module Init

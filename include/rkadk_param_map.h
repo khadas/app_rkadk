@@ -32,8 +32,10 @@ typedef struct {
 typedef enum {
   RKADK_PARAM_SENSOR_MAP,
   RKADK_PARAM_REC_MAP,
+  RKADK_PARAM_REC_MAIN_TIME_MAP,
   RKADK_PARAM_REC_MAIN_MAP,
   RKADK_PARAM_REC_MAIN_PARAM_MAP,
+  RKADK_PARAM_REC_SUB_TIME_MAP,
   RKADK_PARAM_REC_SUB_MAP,
   RKADK_PARAM_REC_SUB_PARAM_MAP,
   RKADK_PARAM_PREVIEW_MAP,
@@ -104,13 +106,16 @@ static RKADK_SI_CONFIG_MAP_S g_stSensorCfgMapTable_0[] = {
 /* record map table */
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, record_type),
-    DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, record_time),
-    DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, splite_time),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_time),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_mode),
-    DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_interval),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_multiple),
     DEFINE_MAP(sensor.0.rec, tagRKADK_PARAM_REC_CFG_S, int_e, file_num),
+};
+
+static RKADK_SI_CONFIG_MAP_S g_stRecTimeCfgMapTable_0_0[] = {
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, record_time),
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, splite_time),
+    DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, lapse_interval),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_0[] = {
@@ -132,6 +137,12 @@ static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_0_0[] = {
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_PARAM_S, bool_e, hier_qp_en),
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_PARAM_S, string_e, hier_qp_delta),
     DEFINE_MAP(sensor.0.rec.0, tagRKADK_PARAM_VENC_PARAM_S, string_e, hier_frame_num),
+};
+
+static RKADK_SI_CONFIG_MAP_S g_stRecTimeCfgMapTable_0_1[] = {
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, record_time),
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, splite_time),
+    DEFINE_MAP(sensor.0.rec.1, tagRKADK_PARAM_REC_TIME_CFG_S, int_e, lapse_interval),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0_1[] = {

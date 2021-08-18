@@ -392,7 +392,6 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
                                             RKADK_REC_TYPE_E enRecType,
                                             RKADK_REC_ATTR_S *pstRecAttr) {
   RKADK_U32 u32Integer = 0, u32Remainder = 0;
-  RKADK_U32 u32TrackCnt = RKADK_REC_TRACK_MAX_CNT;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
@@ -438,20 +437,20 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
 
   MUXER_SPLIT_ATTR_S *stSplitAttr = &(pstRecAttr->stRecSplitAttr.stSplitAttr);
   stSplitAttr->enSplitType = MUXER_SPLIT_TYPE_TIME;
-
-  if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
-    stSplitAttr->u32TimeLenSec = pstRecCfg->lapse_interval;
-    u32TrackCnt = 1; // only video track
-  } else {
-    stSplitAttr->u32TimeLenSec = pstRecCfg->record_time;
-  }
-
   stSplitAttr->enSplitNameType = MUXER_SPLIT_NAME_TYPE_CALLBACK;
   stSplitAttr->stNameCallBackAttr.pcbRequestFileNames = GetRecordFileName;
 
   for (int i = 0; i < (int)pstRecAttr->u32StreamCnt; i++) {
-    pstRecAttr->astStreamAttr[i].u32TrackCnt = u32TrackCnt;
     pstRecAttr->astStreamAttr[i].enType = MUXER_TYPE_MP4;
+    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
+      pstRecAttr->astStreamAttr[i].u32TimeLenSec =
+          pstRecCfg->record_time_cfg[i].lapse_interval;
+      pstRecAttr->astStreamAttr[i].u32TrackCnt = 1; // only video track
+    } else {
+      pstRecAttr->astStreamAttr[i].u32TimeLenSec =
+          pstRecCfg->record_time_cfg[i].record_time;
+      pstRecAttr->astStreamAttr[i].u32TrackCnt = RKADK_REC_TRACK_MAX_CNT;
+    }
 
     // video track
     RKADK_TRACK_SOURCE_S *aHTrackSrcHandle =

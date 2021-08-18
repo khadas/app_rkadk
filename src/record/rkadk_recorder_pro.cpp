@@ -133,6 +133,9 @@ static RKADK_S32 EnableMuxerChn(RKADK_REC_TYPE_E enRecType,
                                 RKADK_U32 u32StreamIndex) {
   int videoTrackCnt = 0, audioTrackCnt = 0;
   MUXER_CHN_ATTR_S stMuxerAttr;
+  RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr =
+      &(pstRecAttr->astStreamAttr[u32StreamIndex]);
+
   memset(&stMuxerAttr, 0, sizeof(stMuxerAttr));
 
   stDstStreamAttr->stMuxerChn.enModId = RK_ID_MUXER;
@@ -152,6 +155,8 @@ static RKADK_S32 EnableMuxerChn(RKADK_REC_TYPE_E enRecType,
       pstRecAttr->stPreRecordAttr.enPreRecordMode;
 
   stMuxerAttr.enMode = pstRecAttr->stRecSplitAttr.enMode;
+  pstRecAttr->stRecSplitAttr.stSplitAttr.u32TimeLenSec =
+      pstSrcStreamAttr->u32TimeLenSec;
   if (stMuxerAttr.enMode == MUXER_MODE_AUTOSPLIT) {
     memcpy(&(stMuxerAttr.stSplitAttr),
            &(pstRecAttr->stRecSplitAttr.stSplitAttr),
@@ -163,8 +168,6 @@ static RKADK_S32 EnableMuxerChn(RKADK_REC_TYPE_E enRecType,
     return -1;
   }
 
-  RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr =
-      &(pstRecAttr->astStreamAttr[u32StreamIndex]);
   stMuxerAttr.enType = pstSrcStreamAttr->enType;
   if (pstSrcStreamAttr->u32TrackCnt > RKADK_REC_TRACK_MAX_CNT) {
     RKADK_LOGE(

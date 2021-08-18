@@ -265,6 +265,45 @@ static RKADK_S32 RKADK_PARAM_SaveRecCfg(const char *path, RKADK_U32 u32CamId) {
   return 0;
 }
 
+static RKADK_S32 RKADK_PARAM_SaveRecTime(const char *path, RKADK_U32 u32CamId,
+                                         RKADK_STREAM_TYPE_E enStrmType) {
+  int ret;
+  RKADK_U32 index;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  pstRecCfg = &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stRecCfg;
+  switch (enStrmType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    index = 0;
+    pstMapTableCfg =
+        RKADK_PARAM_GetMapTable(u32CamId, RKADK_PARAM_REC_MAIN_TIME_MAP);
+    break;
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    index = 1;
+    pstMapTableCfg =
+        RKADK_PARAM_GetMapTable(u32CamId, RKADK_PARAM_REC_SUB_TIME_MAP);
+    break;
+  default:
+    return -1;
+  }
+
+  if (!pstMapTableCfg)
+    return -1;
+
+  ret = RKADK_Struct2Ini(path, &pstRecCfg->record_time_cfg[index],
+                         pstMapTableCfg->pstMapTable,
+                         pstMapTableCfg->u32TableLen);
+  if (ret) {
+    RKADK_LOGE("save sensor[%d] record time[%d] param failed", u32CamId, index);
+    return ret;
+  }
+
+  return 0;
+}
+
 static RKADK_S32 RKADK_PARAM_SaveRecAttr(const char *path, RKADK_U32 u32CamId,
                                          RKADK_STREAM_TYPE_E enStrmType) {
   int ret;
@@ -526,10 +565,6 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
   change = RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->record_type,
                                    RKADK_REC_TYPE_NORMAL, RKADK_REC_TYPE_LAPSE,
                                    RKADK_REC_TYPE_NORMAL, "record_type");
-  change |= RKADK_PARAM_CheckCfg(&pstRecCfg->record_time, 60, "record_time");
-  change |= RKADK_PARAM_CheckCfg(&pstRecCfg->splite_time, 60, "splite_time");
-  change |=
-      RKADK_PARAM_CheckCfg(&pstRecCfg->lapse_interval, 60, "lapse_interval");
   change |= RKADK_PARAM_CheckCfgU32(
       (RKADK_U32 *)&pstRecCfg->pre_record_mode, MUXER_PRE_RECORD_NONE,
       MUXER_PRE_RECORD_NORMAL, MUXER_PRE_RECORD_NONE, "pre_record_mode");
@@ -544,11 +579,23 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
     RKADK_PARAM_SaveRecCfg(path, u32CamId);
 
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    change = false;
     RKADK_STREAM_TYPE_E enStrmType;
     RKADK_PARAM_VENC_ATTR_S *pstAttribute = &pstRecCfg->attribute[i];
+    RKADK_PARAM_REC_TIME_CFG_S *pstRecTimeCfg = &pstRecCfg->record_time_cfg[i];
+
+    // check record time
+    change =
+        RKADK_PARAM_CheckCfg(&pstRecTimeCfg->record_time, 60, "record_time");
+    change |=
+        RKADK_PARAM_CheckCfg(&pstRecTimeCfg->splite_time, 60, "splite_time");
+    change |= RKADK_PARAM_CheckCfg(&pstRecTimeCfg->lapse_interval, 60,
+                                   "lapse_interval");
+
+    if (change)
+      RKADK_PARAM_SaveRecTime(path, u32CamId, enStrmType);
 
     // check venc attribute
+    change = false;
     if (strcmp(pstAttribute->rc_mode, "CBR") &&
         strcmp(pstAttribute->rc_mode, "VBR") &&
         strcmp(pstAttribute->rc_mode, "AVBR")) {
@@ -903,6 +950,31 @@ static void RKADK_PARAM_DefVencParam(const char *path, RKADK_U32 u32CamId,
   RKADK_PARAM_SaveVencParamCfg(path, u32CamId, enStrmType);
 }
 
+static void RKADK_PARAM_DefRecTime(RKADK_U32 u32CamId,
+                                   RKADK_STREAM_TYPE_E enStrmType,
+                                   const char *path) {
+  RKADK_PARAM_REC_TIME_CFG_S *pstTimeCfg = NULL;
+
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    RKADK_LOGE("invalid camera id: %d", u32CamId);
+    return;
+  }
+
+  if (enStrmType == RKADK_STREAM_TYPE_VIDEO_MAIN)
+    pstTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stRecCfg.record_time_cfg[0];
+  else
+    pstTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stRecCfg.record_time_cfg[1];
+
+  memset(pstTimeCfg, 0, sizeof(RKADK_PARAM_REC_TIME_CFG_S));
+  pstTimeCfg->record_time = 60;
+  pstTimeCfg->splite_time = 60;
+  pstTimeCfg->lapse_interval = 60;
+
+  RKADK_PARAM_SaveRecTime(path, u32CamId, enStrmType);
+}
+
 static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
                                    RKADK_STREAM_TYPE_E enStrmType,
                                    const char *path) {
@@ -956,11 +1028,8 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, const char *path) {
 
   memset(pstRecCfg, 0, sizeof(RKADK_PARAM_REC_CFG_S));
   pstRecCfg->record_type = RKADK_REC_TYPE_NORMAL;
-  pstRecCfg->record_time = 60;
-  pstRecCfg->splite_time = 60;
   pstRecCfg->pre_record_time = 0;
   pstRecCfg->pre_record_mode = MUXER_PRE_RECORD_NONE;
-  pstRecCfg->lapse_interval = 60;
   pstRecCfg->lapse_multiple = 30;
   pstRecCfg->file_num = 2;
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
@@ -1108,22 +1177,22 @@ static void RKADK_PARAM_Dump() {
     printf("\tRecord Config\n");
     printf("\t\tsensor[%d] stRecCfg record_type: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.record_type);
-    printf("\t\tsensor[%d] stRecCfg record_time: %d\n", i,
-           pstCfg->stMediaCfg[i].stRecCfg.record_time);
-    printf("\t\tsensor[%d] stRecCfg splite_time: %d\n", i,
-           pstCfg->stMediaCfg[i].stRecCfg.splite_time);
     printf("\t\tsensor[%d] stRecCfg pre_record_time: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.pre_record_time);
     printf("\t\tsensor[%d] stRecCfg pre_record_mode: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.pre_record_mode);
-    printf("\t\tsensor[%d] stRecCfg lapse_interval: %d\n", i,
-           pstCfg->stMediaCfg[i].stRecCfg.lapse_interval);
     printf("\t\tsensor[%d] stRecCfg lapse_multiple: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.lapse_multiple);
     printf("\t\tsensor[%d] stRecCfg file_num: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.file_num);
 
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
+      printf("\t\tsensor[%d] stRecCfg record_time: %d\n", i,
+             pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j].record_time);
+      printf("\t\tsensor[%d] stRecCfg splite_time: %d\n", i,
+             pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j].splite_time);
+      printf("\t\tsensor[%d] stRecCfg lapse_interval: %d\n", i,
+             pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j].lapse_interval);
       printf("\t\tsensor[%d] stRecCfg[%d] width: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].width);
       printf("\t\tsensor[%d] stRecCfg[%d] height: %d\n", i, j,
@@ -1520,6 +1589,7 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const char *path) {
     }
 
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
+      RKADK_MAP_TABLE_CFG_S *pstTimeMapTable = NULL;
       RKADK_MAP_TABLE_CFG_S *pstParamMapTable = NULL;
       RKADK_STREAM_TYPE_E enStrmType;
 
@@ -1527,18 +1597,34 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const char *path) {
              sizeof(RKADK_PARAM_VENC_ATTR_S));
       if (j == 0) {
         enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+        pstTimeMapTable =
+            RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_MAP);
         pstParamMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_PARAM_MAP);
       } else {
         enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+        pstTimeMapTable =
+            RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_MAP);
         pstParamMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_PARAM_MAP);
       }
 
-      if (!pstMapTableCfg || !pstParamMapTable)
+      if (!pstMapTableCfg || !pstParamMapTable || !pstTimeMapTable)
         return -1;
+
+      ret = RKADK_Ini2Struct(
+          path, &pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j],
+          pstTimeMapTable->pstMapTable, pstTimeMapTable->u32TableLen);
+      if (ret == RKADK_PARAM_NOT_EXIST) {
+        // use default
+        RKADK_LOGW("sensor[%d] rec time[%d] not exist, use default", i, j);
+        RKADK_PARAM_DefRecTime(i, enStrmType, path);
+      } else if (ret) {
+        RKADK_LOGE("load sensor[%d] record time[%d] failed", i, j);
+        return ret;
+      }
 
       ret = RKADK_Ini2Struct(path, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
                              pstMapTableCfg->pstMapTable,
@@ -2691,7 +2777,7 @@ static RKADK_U32 RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId,
 
 static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
                                         RKADK_PARAM_BITRATE_S *pstBitrate) {
-  RKADK_S32 ret;
+  RKADK_S32 ret = -1;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
 
@@ -2732,6 +2818,79 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
     break;
   }
 
+  return ret;
+}
+
+static RKADK_U32 RKADK_PARAM_GetRecTime(RKADK_S32 s32CamId,
+                                        RKADK_STREAM_TYPE_E enStreamType,
+                                        RKADK_PARAM_TYPE_E enParamType) {
+  RKADK_U32 time = -1;
+  RKADK_PARAM_REC_TIME_CFG_S *pstRecTimeCfg;
+
+  if (enStreamType == RKADK_STREAM_TYPE_VIDEO_MAIN)
+    pstRecTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.record_time_cfg[0];
+  else
+    pstRecTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.record_time_cfg[1];
+
+  switch (enParamType) {
+  case RKADK_PARAM_TYPE_RECORD_TIME:
+    time = pstRecTimeCfg->record_time;
+    break;
+  case RKADK_PARAM_TYPE_SPLITTIME:
+    time = pstRecTimeCfg->splite_time;
+    break;
+  case RKADK_PARAM_TYPE_LAPSE_INTERVAL:
+    time = pstRecTimeCfg->lapse_interval;
+    break;
+  default:
+    RKADK_LOGE("Invalid enParamType: %d", enParamType);
+    break;
+  }
+
+  return time;
+}
+
+static RKADK_S32 RKADK_PARAM_SetRecTime(RKADK_S32 s32CamId,
+                                        RKADK_PARAM_REC_TIME_S *pstRecTime,
+                                        RKADK_PARAM_TYPE_E enParamType) {
+  RKADK_S32 ret;
+  RKADK_PARAM_REC_TIME_CFG_S *pstRecTimeCfg;
+
+  if (pstRecTime->enStreamType == RKADK_STREAM_TYPE_VIDEO_MAIN)
+    pstRecTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.record_time_cfg[0];
+  else
+    pstRecTimeCfg =
+        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.record_time_cfg[1];
+
+  switch (enParamType) {
+  case RKADK_PARAM_TYPE_RECORD_TIME:
+    if (pstRecTimeCfg->record_time == pstRecTime->time)
+      return 0;
+
+    pstRecTimeCfg->record_time = pstRecTime->time;
+    break;
+  case RKADK_PARAM_TYPE_SPLITTIME:
+    if (pstRecTimeCfg->splite_time == pstRecTime->time)
+      return 0;
+
+    pstRecTimeCfg->splite_time = pstRecTime->time;
+    break;
+  case RKADK_PARAM_TYPE_LAPSE_INTERVAL:
+    if (pstRecTimeCfg->lapse_interval == pstRecTime->time)
+      return 0;
+
+    pstRecTimeCfg->lapse_interval = pstRecTime->time;
+    break;
+  default:
+    RKADK_LOGE("Invalid enParamType: %d", enParamType);
+    return -1;
+  }
+
+  ret = RKADK_PARAM_SaveRecTime(RKADK_PARAM_PATH, s32CamId,
+                                pstRecTime->enStreamType);
   return ret;
 }
 
@@ -2802,23 +2961,24 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
         RKADK_PARAM_GetBitrate(s32CamID, pstBitrate->enStreamType);
     break;
   }
+  case RKADK_PARAM_TYPE_RECORD_TIME:
   case RKADK_PARAM_TYPE_SPLITTIME:
-    *(RKADK_U32 *)pvParam = pstRecCfg->splite_time;
+  case RKADK_PARAM_TYPE_LAPSE_INTERVAL: {
+    RKADK_PARAM_REC_TIME_S *pstRecTime;
+
+    pstRecTime = (RKADK_PARAM_REC_TIME_S *)pvParam;
+    pstRecTime->time =
+        RKADK_PARAM_GetRecTime(s32CamID, pstRecTime->enStreamType, enParamType);
     break;
+  }
   case RKADK_PARAM_TYPE_RECORD_TYPE:
     *(RKADK_REC_TYPE_E *)pvParam = pstRecCfg->record_type;
     break;
   case RKADK_PARAM_TYPE_FILE_CNT:
     *(RKADK_U32 *)pvParam = pstRecCfg->file_num;
     break;
-  case RKADK_PARAM_TYPE_LAPSE_INTERVAL:
-    *(RKADK_U32 *)pvParam = pstRecCfg->lapse_interval;
-    break;
   case RKADK_PARAM_TYPE_LAPSE_MULTIPLE:
     *(RKADK_U32 *)pvParam = pstRecCfg->lapse_multiple;
-    break;
-  case RKADK_PARAM_TYPE_RECORD_TIME:
-    *(RKADK_U32 *)pvParam = pstRecCfg->record_time;
     break;
   case RKADK_PARAM_TYPE_PRE_RECORD_TIME:
     *(RKADK_U32 *)pvParam = pstRecCfg->pre_record_time;
@@ -2941,12 +3101,13 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
     ret = RKADK_PARAM_SetBitrate(s32CamID, (RKADK_PARAM_BITRATE_S *)pvParam);
     RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
     return ret;
+  case RKADK_PARAM_TYPE_RECORD_TIME:
   case RKADK_PARAM_TYPE_SPLITTIME:
-    RKADK_CHECK_EQUAL(pstRecCfg->splite_time, *(RKADK_U32 *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstRecCfg->splite_time = *(RKADK_U32 *)pvParam;
-    bSaveRecCfg = true;
-    break;
+  case RKADK_PARAM_TYPE_LAPSE_INTERVAL:
+    ret = RKADK_PARAM_SetRecTime(s32CamID, (RKADK_PARAM_REC_TIME_S *)pvParam,
+                                 enParamType);
+    RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
+    return ret;
   case RKADK_PARAM_TYPE_RECORD_TYPE:
     RKADK_CHECK_EQUAL(pstRecCfg->record_type, *(RKADK_REC_TYPE_E *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
@@ -2959,22 +3120,10 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
     pstRecCfg->file_num = *(RKADK_U32 *)pvParam;
     bSaveRecCfg = true;
     break;
-  case RKADK_PARAM_TYPE_LAPSE_INTERVAL:
-    RKADK_CHECK_EQUAL(pstRecCfg->lapse_interval, *(RKADK_U32 *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstRecCfg->lapse_interval = *(RKADK_U32 *)pvParam;
-    bSaveRecCfg = true;
-    break;
   case RKADK_PARAM_TYPE_LAPSE_MULTIPLE:
     RKADK_CHECK_EQUAL(pstRecCfg->lapse_multiple, *(RKADK_U32 *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstRecCfg->lapse_multiple = *(RKADK_U32 *)pvParam;
-    bSaveRecCfg = true;
-    break;
-  case RKADK_PARAM_TYPE_RECORD_TIME:
-    RKADK_CHECK_EQUAL(pstRecCfg->record_time, *(RKADK_U32 *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstRecCfg->record_time = *(RKADK_U32 *)pvParam;
     bSaveRecCfg = true;
     break;
   case RKADK_PARAM_TYPE_PRE_RECORD_TIME:
