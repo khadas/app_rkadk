@@ -153,6 +153,9 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
     return -1;
   }
 
+  RKADK_LOGI("Create Player[%d, %d] Start...", pstPlayCfg->bEnableVideo,
+             pstPlayCfg->bEnableAudio);
+
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)malloc(sizeof(RKADK_PLAYER_HANDLE_S));
   if (!pstPlayer) {
     RKADK_LOGE("malloc pstPlayer failed");
@@ -182,9 +185,15 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
   pstPlayer->pListener = (void *)pListener;
 
   *ppPlayer = (RKADK_MW_PTR)pstPlayer;
+
+  RKADK_LOGI("Create Player[%d, %d] End...", pstPlayCfg->bEnableVideo,
+             pstPlayCfg->bEnableAudio);
   return 0;
 
 failed:
+  RKADK_LOGI("Create Player[%d, %d] failed...", pstPlayCfg->bEnableVideo,
+             pstPlayCfg->bEnableAudio);
+
   if (pListener)
     delete pListener;
 
@@ -205,6 +214,8 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstPlayer->pListener, RKADK_FAILURE);
+
+  RKADK_LOGI("Destory Player Start...");
 
   ret = pstPlayer->pMediaPlayer->stop();
   if (ret) {
@@ -227,6 +238,7 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   delete ((RKADKPlayerListener *)pstPlayer->pListener);
   free(pPlayer);
 
+  RKADK_LOGI("Destory Player End...");
   return 0;
 }
 

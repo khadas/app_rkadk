@@ -502,7 +502,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
 
-  RKADK_LOGI("Create Recorder[%d, %d] Start...", pstRecAttr->s32CamID,
+  RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID,
              pstRecAttr->enRecType);
 
   RK_MPI_SYS_Init();
@@ -534,12 +534,13 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, pstRecAttr->enRecType))
     goto failed;
 
-  RKADK_LOGI("Create Recorder[%d, %d] End...", pstRecAttr->s32CamID,
+  RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->s32CamID,
              pstRecAttr->enRecType);
   return 0;
 
 failed:
-  RKADK_LOGE("failed");
+  RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->s32CamID,
+             pstRecAttr->enRecType);
   RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
 
   if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE)
@@ -561,7 +562,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
-  RKADK_LOGI("Destory Recorder[%d, %d] Start...", stRecorder->s32CamId,
+  RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->s32CamId,
              stRecorder->enRecType);
 
   s32CamId = stRecorder->s32CamId;
@@ -605,8 +606,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   }
 
   g_pfnRequestFileNames[s32CamId] = NULL;
-  RKADK_LOGI("Destory Recorder[%d, %d] End...", stRecorder->s32CamId,
-             stRecorder->enRecType);
+  RKADK_LOGI("Destory Record[%d, %d] End...", s32CamId, enRecType);
   return 0;
 }
 

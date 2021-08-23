@@ -393,8 +393,8 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     return ret;
   }
 
-  free(pHandle);
   RKADK_LOGI("Rtsp[%d] DeInit End...", pstHandle->u32CamId);
+  free(pHandle);
   return 0;
 }
 
