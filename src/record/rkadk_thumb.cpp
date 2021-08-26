@@ -104,7 +104,6 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
   srcInfo.virAddr = buffer->getData();
   srcInfo.mmuFlag = 1;
   srcInfo.rotation = 0;
-  srcInfo.blend = 0xFF0405;
   rga_set_rect(&srcInfo.rect, 0, 0, width, height, strideWidth, strideHeight,
                RK_FORMAT_YCbCr_420_SP);
 
