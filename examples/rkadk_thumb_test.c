@@ -31,14 +31,18 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:t:f:h";
+static RKADK_CHAR optstr[] = "i:t:T:f:W:H:h";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-i /tmp/xxx.mp4] [-t 0]\n", name);
   printf("\t-i: test file\n");
-  printf("\t-t: thumbnail type, default DCF, options: DCF, MPF1, MPF2\n");
+  printf("\t-T: thumbnail type, default JPG, options: NV12, JPG, RGB565, "
+         "RBG888\n");
+  printf("\t-t: JPG thumbnail type, default DCF, options: DCF, MPF1, MPF2\n");
   printf("\t-f: file type, default mp4, options: mp4, jpg\n");
+  printf("\t-W: thumbnail width, default obtained from ini\n");
+  printf("\t-H: thumbnail height, default obtained from ini\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -50,13 +54,16 @@ static void sigterm_handler(int sig) {
 int main(int argc, char *argv[]) {
   int c;
   unsigned int count = 1;
-  int buf_size = 30 * 1024;
+  int buf_size = 1024 * 1024;
   RKADK_CHAR *pInuptPath = "/userdata/RecordTest_0.mp4";
-  RKADK_U32 size = buf_size; // 320 * 180 jpg
+  RKADK_U32 size = buf_size;
   RKADK_U8 buffer[size];
   char filePath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_JPG_THUMB_TYPE_E eJpgThumbType = RKADK_JPG_THUMB_TYPE_DCF;
   bool bIsMp4 = true;
+  RKADK_THUMB_TYPE_E enType = RKADK_THUMB_TYPE_JPEG;
+  const char *postfix = "jpg";
+  int width = 0, height = 0;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
@@ -66,6 +73,24 @@ int main(int argc, char *argv[]) {
     case 'f':
       if (strstr(optarg, "jpg"))
         bIsMp4 = false;
+      break;
+    case 'W':
+      width = atoi(optarg);
+      break;
+    case 'H':
+      height = atoi(optarg);
+      break;
+    case 'T':
+      if (strstr(optarg, "NV12")) {
+        enType = RKADK_THUMB_TYPE_NV12;
+        postfix = "yuv";
+      } else if (strstr(optarg, "RGB565")) {
+        enType = RKADK_THUMB_TYPE_RGB565;
+        postfix = "rgb565";
+      } else if (strstr(optarg, "RGB888")) {
+        enType = RKADK_THUMB_TYPE_RGB888;
+        postfix = "rgb888";
+      }
       break;
     case 't':
       if (strstr(optarg, "MPF1"))
@@ -95,7 +120,8 @@ int main(int argc, char *argv[]) {
     size = buf_size;
 
     if (bIsMp4) {
-      if (RKADK_GetThmInMp4(pInuptPath, buffer, &size)) {
+      if (RKADK_GetThmInMp4Ex(pInuptPath, buffer, &size, width, height,
+                              enType)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
         return -1;
       }
@@ -106,12 +132,12 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     }
-    RKADK_LOGD("jpg size: %d, count: %d", size, count);
+    RKADK_LOGD("%s size: %d, count: %d", postfix, size, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (size > 0) {
       FILE *file = NULL;
-      sprintf(filePath, "/tmp/thm_test_%u.jpg", count);
+      sprintf(filePath, "/tmp/thm_test_%u.%s", count, postfix);
       file = fopen(filePath, "w");
       if (!file) {
         RKADK_LOGE("Create file(%s) failed", filePath);
@@ -120,6 +146,7 @@ int main(int argc, char *argv[]) {
 
       fwrite(buffer, 1, size, file);
       fclose(file);
+      RKADK_LOGD("save %s done", filePath);
     }
 #endif
 

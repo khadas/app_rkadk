@@ -65,8 +65,9 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
   RKADK_U32 width;
   RKADK_U32 height;
   char pix_fmt[RKADK_PIX_FMT_LEN]; /* options: NV12/NV16/YUYV/FBC0/FBC2 */
-  char module
-      [RKADK_BUFFER_LEN]; /* NONE/RECORD_MAIN/RECORD_SUB/PREVIEW/PHOTO/LIVE */
+
+  /* options: NONE/RECORD_MAIN/RECORD_SUB/PREVIEW/PHOTO/LIVE/DISP */
+  char module [RKADK_BUFFER_LEN];
 } RKADK_PARAM_VI_CFG_S;
 
 typedef struct tagRKADK_PARAM_COMM_CFG_S {

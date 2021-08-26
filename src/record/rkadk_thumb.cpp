@@ -29,6 +29,7 @@
 //#define DUMP_RUN_TIME
 //#define THUMB_SAVE_FILE
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
+#define RGA_ZOOM_MAX 16
 
 typedef struct {
   RKADK_U32 width;
@@ -37,13 +38,127 @@ typedef struct {
   RKADK_U32 strideHeight;
 } THUMB_RECT_S;
 
-static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
-                    THUMB_RECT_S stScaleRect) {
-  int ret = 0, error;
-  int strideWidth = 0, strideHeight = 0;
-  int width = 0, height = 0;
+typedef struct {
+  int format;
+  void *virAddr;
+  THUMB_RECT_S stRect;
+} THUMB_INFO_S;
+
+static RKADK_U32 GetDataLen(RKADK_U32 width, RKADK_U32 height,
+                            RKADK_THUMB_TYPE_E enType) {
+  RKADK_U32 u32DataLen;
+
+  if (enType == RKADK_THUMB_TYPE_NV12 || enType == RKADK_THUMB_TYPE_JPEG)
+    u32DataLen = width * height * 3 / 2;
+  else if (enType == RKADK_THUMB_TYPE_RGB565)
+    u32DataLen = width * height * 2;
+  else if (enType == RKADK_THUMB_TYPE_RGB888)
+    u32DataLen = width * height * 3;
+  else {
+    RKADK_LOGE("Invalid enType = %d", enType);
+    return -1;
+  }
+
+  return u32DataLen;
+}
+
+static int RgaProcess(THUMB_INFO_S *stSrcInfo, THUMB_INFO_S *stDstInfo) {
+  int ret;
   rga_info_t srcInfo;
   rga_info_t dstInfo;
+
+  memset(&srcInfo, 0, sizeof(rga_info_t));
+  srcInfo.fd = -1;
+  srcInfo.virAddr = stSrcInfo->virAddr;
+  srcInfo.mmuFlag = 1;
+  srcInfo.rotation = 0;
+  rga_set_rect(&srcInfo.rect, 0, 0, stSrcInfo->stRect.width,
+               stSrcInfo->stRect.height, stSrcInfo->stRect.strideWidth,
+               stSrcInfo->stRect.strideHeight, stSrcInfo->format);
+
+  memset(&dstInfo, 0, sizeof(rga_info_t));
+  dstInfo.fd = -1;
+  dstInfo.virAddr = stDstInfo->virAddr;
+  dstInfo.mmuFlag = 1;
+  rga_set_rect(&dstInfo.rect, 0, 0, stDstInfo->stRect.width,
+               stDstInfo->stRect.height, stDstInfo->stRect.strideWidth,
+               stDstInfo->stRect.strideHeight, stDstInfo->format);
+
+  ret = c_RkRgaBlit(&srcInfo, &dstInfo, NULL);
+  if (ret)
+    RKADK_LOGE("c_RkRgaBlit scale failed(%d)", ret);
+
+  return ret;
+}
+
+static RKADK_U32 getZoomCount(RKADK_U32 u32SrcLen, RKADK_U32 u32DstLen) {
+  RKADK_U32 count = 0;
+  float remainder;
+
+  remainder = u32SrcLen / RGA_ZOOM_MAX;
+  if (remainder <= u32DstLen)
+    return 1;
+
+  count++;
+  while (remainder > u32DstLen) {
+    remainder = remainder / RGA_ZOOM_MAX;
+    count++;
+  }
+
+  return count;
+}
+
+static RKADK_U32 ZoomCount(THUMB_RECT_S stSrcRect, THUMB_RECT_S stDstRect) {
+  RKADK_U32 widthZoomcnt = 0, heightZoomcnt = 0;
+
+  widthZoomcnt = getZoomCount(stSrcRect.strideWidth, stDstRect.strideWidth);
+  heightZoomcnt = getZoomCount(stSrcRect.strideHeight, stDstRect.strideHeight);
+
+  return widthZoomcnt >= heightZoomcnt ? widthZoomcnt : heightZoomcnt;
+}
+
+static int SetThumbInfo(THUMB_INFO_S stSrcInfo, THUMB_INFO_S *pstDstInfo,
+                        RKADK_THUMB_TYPE_E enType) {
+  RKADK_U32 u32DataLen;
+
+  pstDstInfo->format = stSrcInfo.format;
+  pstDstInfo->stRect.width = stSrcInfo.stRect.width / RGA_ZOOM_MAX;
+  if (stSrcInfo.stRect.width % RGA_ZOOM_MAX)
+    pstDstInfo->stRect.width += 1;
+  pstDstInfo->stRect.width = UPALIGNTO(pstDstInfo->stRect.width, 2);
+  pstDstInfo->stRect.strideWidth = UPALIGNTO(pstDstInfo->stRect.width, 4);
+
+  pstDstInfo->stRect.height = stSrcInfo.stRect.height / RGA_ZOOM_MAX;
+  if (stSrcInfo.stRect.height % RGA_ZOOM_MAX)
+    pstDstInfo->stRect.height += 1;
+  pstDstInfo->stRect.height = UPALIGNTO(pstDstInfo->stRect.height, 2);
+  pstDstInfo->stRect.strideHeight = pstDstInfo->stRect.height;
+
+  u32DataLen = GetDataLen(pstDstInfo->stRect.strideWidth,
+                          pstDstInfo->stRect.strideHeight, enType);
+  if (u32DataLen <= 0) {
+    RKADK_LOGE("GetDataLen failed");
+    return -1;
+  }
+
+  pstDstInfo->virAddr = malloc(u32DataLen);
+  if (!pstDstInfo->virAddr) {
+    RKADK_LOGE("malloc pstDstInfo.virAddr failed");
+    return -1;
+  }
+
+  memset(pstDstInfo->virAddr, 0, u32DataLen);
+  RKADK_LOGD("malloc pstDstInfo->virAddr[%p]", pstDstInfo->virAddr);
+  return 0;
+}
+
+static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
+                    THUMB_RECT_S stScaleRect, RKADK_THUMB_TYPE_E enType) {
+  int ret = 0, error;
+  int zoomCnt;
+  THUMB_INFO_S stSrcInfo, stDstInfo;
+  THUMB_INFO_S stSrcTmpInfo, stDstTmpInfo;
+  THUMB_INFO_S *pstSrcInfo = NULL, *pstDstInfo = NULL;
 
 #ifdef DUMP_RUN_TIME
   struct timeval tv_start, tv_end;
@@ -56,6 +171,11 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
   RKADK_CHECK_POINTER(buffer, RKADK_FAILURE);
   RKADK_CHECK_POINTER(scaleBuffer, RKADK_FAILURE);
 
+  memset(&stSrcInfo, 0, sizeof(THUMB_INFO_S));
+  memset(&stDstInfo, 0, sizeof(THUMB_INFO_S));
+  memset(&stSrcTmpInfo, 0, sizeof(THUMB_INFO_S));
+  memset(&stDstTmpInfo, 0, sizeof(THUMB_INFO_S));
+
   RtMetaData *meta = buffer->getMetaData();
   meta->findInt32(kKeyFrameError, &error);
   if (error) {
@@ -63,30 +183,43 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
     return -1;
   }
 
+  stSrcInfo.format = RK_FORMAT_YCbCr_420_SP;
+  stSrcInfo.virAddr = buffer->getData();
+
   // stride of width and height
-  if (!meta->findInt32(kKeyFrameW, &strideWidth)) {
+  if (!meta->findInt32(kKeyFrameW, (int *)&stSrcInfo.stRect.strideWidth)) {
     RKADK_LOGW("not find width stride in meta");
     return -1;
   }
-  if (!meta->findInt32(kKeyFrameH, &strideHeight)) {
+  if (!meta->findInt32(kKeyFrameH, (int *)&stSrcInfo.stRect.strideHeight)) {
     RKADK_LOGW("not find height stride in meta");
     return -1;
   }
 
   // valid width and height of datas
-  if (!meta->findInt32(kKeyVCodecWidth, &width)) {
+  if (!meta->findInt32(kKeyVCodecWidth, (int *)&stSrcInfo.stRect.width)) {
     RKADK_LOGW("not find width in meta");
     return -1;
   }
-  if (!meta->findInt32(kKeyVCodecHeight, &height)) {
+  if (!meta->findInt32(kKeyVCodecHeight, (int *)&stSrcInfo.stRect.height)) {
     RKADK_LOGW("not find height in meta");
     return -1;
   }
 
-  RKADK_LOGD("src width = %d, height = %d", width, height);
-  RKADK_LOGD("src strideWidth = %d, strideHeight = %d", strideWidth,
-             strideHeight);
+  RKADK_LOGD("src width = %d, height = %d", stSrcInfo.stRect.width,
+             stSrcInfo.stRect.height);
+  RKADK_LOGD("src strideWidth = %d, strideHeight = %d",
+             stSrcInfo.stRect.strideWidth, stSrcInfo.stRect.strideHeight);
   RKADK_LOGD("src buffer size = %d", buffer->getSize());
+
+  if (enType == RKADK_THUMB_TYPE_RGB565)
+    stDstInfo.format = RK_FORMAT_RGB_565;
+  else if (enType == RKADK_THUMB_TYPE_RGB888)
+    stDstInfo.format = RK_FORMAT_RGB_888;
+  else
+    stDstInfo.format = RK_FORMAT_YCbCr_420_SP;
+  stDstInfo.virAddr = scaleBuffer;
+  memcpy(&stDstInfo.stRect, &stScaleRect, sizeof(THUMB_RECT_S));
 
   RKADK_LOGD("dts width = %d, height = %d", stScaleRect.width,
              stScaleRect.height);
@@ -99,25 +232,69 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
     return -1;
   }
 
-  memset(&srcInfo, 0, sizeof(rga_info_t));
-  srcInfo.fd = -1;
-  srcInfo.virAddr = buffer->getData();
-  srcInfo.mmuFlag = 1;
-  srcInfo.rotation = 0;
-  rga_set_rect(&srcInfo.rect, 0, 0, width, height, strideWidth, strideHeight,
-               RK_FORMAT_YCbCr_420_SP);
+  zoomCnt = ZoomCount(stSrcInfo.stRect, stDstInfo.stRect);
+  RKADK_LOGD("zoomCnt = %d", zoomCnt);
+  if (zoomCnt == 1) {
+    ret = RgaProcess(&stSrcInfo, &stDstInfo);
+  } else {
+    for (int i = 0; i < zoomCnt; i++) {
+      if (i == 0) {
+        pstSrcInfo = &stSrcInfo;
 
-  memset(&dstInfo, 0, sizeof(rga_info_t));
-  dstInfo.fd = -1;
-  dstInfo.virAddr = scaleBuffer;
-  dstInfo.mmuFlag = 1;
-  rga_set_rect(&dstInfo.rect, 0, 0, stScaleRect.width, stScaleRect.height,
-               stScaleRect.strideWidth, stScaleRect.strideHeight,
-               RK_FORMAT_YCbCr_420_SP);
+        ret = SetThumbInfo(stSrcInfo, &stDstTmpInfo, enType);
+        if (ret) {
+          RKADK_LOGE("SetThumbInfo failed");
+          goto End;
+        }
 
-  ret = c_RkRgaBlit(&srcInfo, &dstInfo, NULL);
-  if (ret)
-    RKADK_LOGE("c_RkRgaBlit scale failed(%d)", ret);
+        pstDstInfo = &stDstTmpInfo;
+      } else if (i == (zoomCnt - 1)) {
+        pstSrcInfo = &stDstTmpInfo;
+        pstDstInfo = &stDstInfo;
+      } else {
+        if (stSrcTmpInfo.virAddr) {
+          RKADK_LOGD("free stSrcTmpInfo.virAddr[%p]", stSrcTmpInfo.virAddr);
+          free(stSrcTmpInfo.virAddr);
+        }
+
+        memcpy(&stSrcTmpInfo, &stDstTmpInfo, sizeof(THUMB_INFO_S));
+
+        ret = SetThumbInfo(stSrcTmpInfo, &stDstTmpInfo, enType);
+        if (ret) {
+          RKADK_LOGE("SetThumbInfo failed");
+          goto End;
+        }
+
+        pstSrcInfo = &stSrcTmpInfo;
+        pstDstInfo = &stDstTmpInfo;
+      }
+
+      RKADK_LOGD("Zoom %d", i);
+      RKADK_LOGD("Src[%d, %d, %d, %d]", pstSrcInfo->stRect.width,
+                 pstSrcInfo->stRect.height, pstSrcInfo->stRect.strideWidth,
+                 pstSrcInfo->stRect.strideHeight);
+      RKADK_LOGD("Dst[%d, %d, %d, %d]", pstDstInfo->stRect.width,
+                 pstDstInfo->stRect.height, pstDstInfo->stRect.strideWidth,
+                 pstDstInfo->stRect.strideHeight);
+
+      ret = RgaProcess(pstSrcInfo, pstDstInfo);
+      if (ret) {
+        RKADK_LOGE("RgaProcess failed(%d)", ret);
+        goto End;
+      }
+    }
+  }
+
+End:
+  if (stSrcTmpInfo.virAddr) {
+    RKADK_LOGD("free stSrcTmpInfo.virAddr[%p]", stSrcTmpInfo.virAddr);
+    free(stSrcTmpInfo.virAddr);
+  }
+
+  if (stDstTmpInfo.virAddr) {
+    RKADK_LOGD("free stDstTmpInfo.virAddr[%p]", stDstTmpInfo.virAddr);
+    free(stDstTmpInfo.virAddr);
+  }
 
   c_RkRgaDeInit();
 
@@ -131,7 +308,7 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
 }
 
 static int YuvToJpg(RTMediaBuffer *buffer, RKADK_U8 *pu8Buf,
-                    RKADK_U32 *pu32Size) {
+                    RKADK_U32 *pu32Size, RKADK_U32 width, RKADK_U32 height) {
   int ret = 0;
   char *scaleBuffer;
   RKADK_U32 scaleBufferLen = 0;
@@ -156,10 +333,10 @@ static int YuvToJpg(RTMediaBuffer *buffer, RKADK_U8 *pu8Buf,
     return -1;
   }
 
-  stScaleRect.width = ptsThumbCfg->thumb_width;
-  stScaleRect.height = ptsThumbCfg->thumb_height;
-  stScaleRect.strideWidth = UPALIGNTO(ptsThumbCfg->thumb_width, 16);
-  stScaleRect.strideHeight = UPALIGNTO(ptsThumbCfg->thumb_height, 16);
+  stScaleRect.width = width;
+  stScaleRect.height = height;
+  stScaleRect.strideWidth = width;
+  stScaleRect.strideHeight = height;
   scaleBufferLen =
       stScaleRect.strideWidth * stScaleRect.strideHeight * 3 / 2; // NV12
 
@@ -174,7 +351,7 @@ static int YuvToJpg(RTMediaBuffer *buffer, RKADK_U8 *pu8Buf,
   }
 
   scaleBuffer = (char *)RK_MPI_MB_GetPtr(mb);
-  ret = YuvScale(buffer, scaleBuffer, stScaleRect);
+  ret = YuvScale(buffer, scaleBuffer, stScaleRect, RKADK_THUMB_TYPE_JPEG);
   if (ret) {
     RKADK_LOGE("YuvScale failed(%d)", ret);
     goto free_mb;
@@ -255,8 +432,36 @@ free_mb:
   return ret;
 }
 
+static int YuvConvert(RTMediaBuffer *buffer, RKADK_U8 *pu8Buf,
+                      RKADK_U32 *pu32Size, RKADK_U32 width, RKADK_U32 height,
+                      RKADK_THUMB_TYPE_E enType) {
+  THUMB_RECT_S stRect;
+  RKADK_U32 u32DataLen;
+
+  RKADK_CHECK_POINTER(buffer, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
+
+  memset(pu8Buf, 0, *pu32Size);
+
+  stRect.width = width;
+  stRect.height = height;
+  stRect.strideWidth = width;
+  stRect.strideHeight = height;
+  u32DataLen = GetDataLen(stRect.strideWidth, stRect.strideHeight, enType);
+  if (u32DataLen > *pu32Size) {
+    RKADK_LOGE("u32DataLen[%d] > *pu32Size[%d]", u32DataLen, *pu32Size);
+    return -1;
+  } else if (u32DataLen <= 0) {
+    RKADK_LOGE("GetDataLen failed");
+    return -1;
+  }
+
+  *pu32Size = u32DataLen;
+  return YuvScale(buffer, (char *)pu8Buf, stRect, enType);
+}
+
 static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                            RKADK_U32 u32Size) {
+                            RKADK_U32 u32Size, RKADK_THUMB_TYPE_E enType) {
   FILE *fd = NULL;
   int ret = -1;
   RKADK_U32 u32BoxSize;
@@ -281,7 +486,7 @@ static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   boxHeader[4] = 't';
   boxHeader[5] = 'h';
   boxHeader[6] = 'm';
-  boxHeader[7] = 0x20;
+  boxHeader[7] = enType;
 
   if (fwrite(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
     RKADK_LOGE("write thm box header failed");
@@ -303,7 +508,7 @@ exit:
 }
 
 static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                             RKADK_U32 *pu32Size) {
+                             RKADK_U32 *pu32Size, RKADK_THUMB_TYPE_E enType) {
   FILE *fd = NULL;
   int ret = -1;
   RKADK_U64 u32BoxSize;
@@ -350,7 +555,7 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
     }
 
     if (boxHeader[4] == 't' && boxHeader[5] == 'h' && boxHeader[6] == 'm' &&
-        boxHeader[7] == 0x20) {
+        boxHeader[7] == enType) {
       RKADK_U32 u32JpgSize = u32BoxSize - THM_BOX_HEADER_LEN;
       if (*pu32Size < u32JpgSize)
         RKADK_LOGW("pu32Size(%d) < u32JpgSize(%d)", *pu32Size, u32JpgSize);
@@ -377,8 +582,9 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   return ret;
 }
 
-RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                            RKADK_U32 *pu32Size) {
+static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+                             RKADK_U32 *pu32Size,
+                             RKADK_THUMB_ATTR_S *pstThumbAttr) {
   int ret = 0;
   RTMediaBuffer *buffer = NULL;
   RtMetaData metaData;
@@ -398,10 +604,36 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
 
-  if (!GetThmInBox(pszFileName, pu8Buf, pu32Size))
-    return 0;
-
   RKADK_PARAM_Init();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  if (pstThumbAttr->enType < RKADK_THUMB_TYPE_NV12 ||
+      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGB888) {
+    RKADK_LOGE("Invalid thumb type = %d", pstThumbAttr->enType);
+    return -1;
+  }
+
+  if (!pstThumbAttr->u32Width || !pstThumbAttr->u32Height) {
+    pstThumbAttr->u32Width = ptsThumbCfg->thumb_width;
+    pstThumbAttr->u32Height = ptsThumbCfg->thumb_height;
+  }
+
+  if (pstThumbAttr->u32Width != UPALIGNTO(pstThumbAttr->u32Width, 4)) {
+    RKADK_LOGE("Width is not 4-aligned");
+    return -1;
+  }
+
+  if (pstThumbAttr->u32Height != UPALIGNTO(pstThumbAttr->u32Height, 2)) {
+    RKADK_LOGE("Height is not 2-aligned");
+    return -1;
+  }
+
+  if (!GetThmInBox(pszFileName, pu8Buf, pu32Size, pstThumbAttr->enType))
+    return 0;
 
   RTMetadataRetriever *retriever = new RTMetadataRetriever();
   if (!retriever) {
@@ -441,13 +673,23 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   }
 #endif
 
-  ret = YuvToJpg(buffer, pu8Buf, pu32Size);
-  if (ret) {
-    RKADK_LOGE("YuvToJpg failed");
-    goto exit;
+  if (pstThumbAttr->enType == RKADK_THUMB_TYPE_JPEG) {
+    ret = YuvToJpg(buffer, pu8Buf, pu32Size, pstThumbAttr->u32Width,
+                   pstThumbAttr->u32Height);
+    if (ret) {
+      RKADK_LOGE("YuvToJpg failed");
+      goto exit;
+    }
+  } else {
+    ret = YuvConvert(buffer, pu8Buf, pu32Size, pstThumbAttr->u32Width,
+                     pstThumbAttr->u32Height, pstThumbAttr->enType);
+    if (ret) {
+      RKADK_LOGE("YuvConvert failed");
+      goto exit;
+    }
   }
 
-  if (BuildInThm(pszFileName, pu8Buf, *pu32Size))
+  if (BuildInThm(pszFileName, pu8Buf, *pu32Size, pstThumbAttr->enType))
     RKADK_LOGE("BuildInThm failed");
 
 #ifdef DUMP_RUN_TIME
@@ -472,4 +714,21 @@ exit:
 
   malloc_trim(0);
   return ret;
+}
+
+RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+                            RKADK_U32 *pu32Size) {
+  RKADK_THUMB_ATTR_S stThumbAttr;
+
+  stThumbAttr.u32Width = 0;
+  stThumbAttr.u32Height = 0;
+  stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+  return GetThmInMp4(pszFileName, pu8Buf, pu32Size, &stThumbAttr);
+}
+
+RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+                              RKADK_U32 *pu32Size,
+                              RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  return GetThmInMp4(pszFileName, pu8Buf, pu32Size, pstThumbAttr);
+  // return RgaTest(width, height, enType);
 }

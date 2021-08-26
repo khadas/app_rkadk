@@ -77,6 +77,19 @@ typedef enum {
   RKADK_TRUE = 1,
 } RKADK_BOOL;
 
+typedef enum {
+  RKADK_THUMB_TYPE_NV12 = 0,
+  RKADK_THUMB_TYPE_JPEG,
+  RKADK_THUMB_TYPE_RGB565,
+  RKADK_THUMB_TYPE_RGB888
+} RKADK_THUMB_TYPE_E;
+
+typedef struct {
+  RKADK_U32 u32Width;
+  RKADK_U32 u32Height;
+  RKADK_THUMB_TYPE_E enType;
+} RKADK_THUMB_ATTR_S;
+
 #ifndef NULL
 #define NULL 0L
 #endif
