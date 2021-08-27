@@ -198,7 +198,9 @@ typedef struct tagRKADK_PARAM_MEDIA_CFG_S {
 } RKADK_PARAM_MEDIA_CFG_S;
 
 typedef struct tagRKADK_PARAM_THUMB_CFG_S {
+  // 4 alignment
   RKADK_U32 thumb_width;
+  // 2 alignment
   RKADK_U32 thumb_height;
   RKADK_U32 venc_chn;
 } RKADK_PARAM_THUMB_CFG_S;

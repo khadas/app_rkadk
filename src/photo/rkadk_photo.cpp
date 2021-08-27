@@ -19,6 +19,9 @@
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
 #include "rkmedia_api.h"
+#include <malloc.h>
+#include <rga/RgaApi.h>
+#include <rga/rga.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -101,17 +104,17 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   case RKADK_PHOTO_MPF_SINGLE:
     pstAttrJpege->enReceiveMode = VENC_PIC_RECEIVE_SINGLE;
     pstAttrJpege->stMPFCfg.astLargeThumbNailSize[0].u32Width =
-        UPALIGNTO(stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width, 8);
+        UPALIGNTO(stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width, 4);
     pstAttrJpege->stMPFCfg.astLargeThumbNailSize[0].u32Height =
-        UPALIGNTO(stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height, 8);
+        UPALIGNTO(stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height, 2);
     break;
   case RKADK_PHOTO_MPF_MULTI:
     pstAttrJpege->enReceiveMode = VENC_PIC_RECEIVE_MULTI;
     for (int i = 0; i < pstAttrJpege->stMPFCfg.u8LargeThumbNailNum; i++) {
       pstAttrJpege->stMPFCfg.astLargeThumbNailSize[i].u32Width = UPALIGNTO(
-          stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[i].u32Width, 8);
+          stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[i].u32Width, 4);
       pstAttrJpege->stMPFCfg.astLargeThumbNailSize[i].u32Height = UPALIGNTO(
-          stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[i].u32Height, 8);
+          stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[i].u32Height, 2);
     }
     break;
   default:
@@ -812,15 +815,206 @@ static RKADK_S32 RKADK_JPG_GetMPF(FILE *fd, RKADK_JPG_THUMB_TYPE_E eThmType,
   return -1;
 }
 
-RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
-                                  RKADK_JPG_THUMB_TYPE_E eThmType,
-                                  RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size) {
+static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
+                                        MB_IMAGE_INFO_S stImageInfo,
+                                        RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
+                                        RKADK_THUMB_ATTR_S *pstThumbAttr,
+                                        int dstFormat) {
+  int ret;
+  RKADK_U32 u32DstDataLen;
+  rga_info_t srcInfo;
+  rga_info_t dstInfo;
+
+  if (dstFormat == RK_FORMAT_YCbCr_420_SP)
+    u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3 / 2;
+  else if (dstFormat == RK_FORMAT_RGB_565)
+    u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 2;
+  else if (dstFormat == RK_FORMAT_RGB_888)
+    u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3;
+  else
+    return -1;
+
+  if (*pu32Size < u32DstDataLen) {
+    RKADK_LOGE("u32DstDataLen[%d] > *pu32Size[%d]", u32DstDataLen, *pu32Size);
+    return -1;
+  }
+
+  ret = c_RkRgaInit();
+  if (ret < 0) {
+    RKADK_LOGE("c_RkRgaInit failed(%d)", ret);
+    return -1;
+  }
+
+  memset(&srcInfo, 0, sizeof(rga_info_t));
+  srcInfo.fd = -1;
+  srcInfo.virAddr = pSrcPtr;
+  srcInfo.mmuFlag = 1;
+  srcInfo.rotation = 0;
+  rga_set_rect(&srcInfo.rect, 0, 0, stImageInfo.u32Width, stImageInfo.u32Height,
+               stImageInfo.u32HorStride, stImageInfo.u32VerStride,
+               RK_FORMAT_YCbCr_420_SP);
+
+  memset(&dstInfo, 0, sizeof(rga_info_t));
+  dstInfo.fd = -1;
+  dstInfo.virAddr = pu8Buf;
+  dstInfo.mmuFlag = 1;
+  rga_set_rect(&dstInfo.rect, 0, 0, pstThumbAttr->u32Width, pstThumbAttr->u32Height,
+               pstThumbAttr->u32Width, pstThumbAttr->u32Height, dstFormat);
+
+  ret = c_RkRgaBlit(&srcInfo, &dstInfo, NULL);
+  if (ret)
+    RKADK_LOGE("c_RkRgaBlit scale failed(%d)", ret);
+
+  c_RkRgaDeInit();
+
+  *pu32Size = u32DstDataLen;
+  RKADK_LOGD("done[%d]", ret);
+  return ret;
+}
+
+static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
+                                       RKADK_U32 u32JpgBufLen, RKADK_U8 *pu8Buf,
+                                       RKADK_U32 *pu32Size,
+                                       RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  int ret = 0;
+  RKADK_S32 s32VdecChnID = 0;
+  VDEC_CHN_ATTR_S stVdecAttr;
+  MEDIA_BUFFER jpg_mb = NULL;
+  MEDIA_BUFFER mb = NULL;
+  RKADK_U32 mbSize = 0;
+  MB_IMAGE_INFO_S stImageInfo;
+  int dstFormat;
+
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  // Jpg Decode
+  RK_MPI_SYS_Init();
+
+  stVdecAttr.enCodecType = RK_CODEC_TYPE_JPEG;
+  stVdecAttr.enMode = VIDEO_MODE_FRAME;
+  stVdecAttr.enDecodecMode = VIDEO_DECODEC_HADRWARE;
+  ret = RK_MPI_VDEC_CreateChn(s32VdecChnID, &stVdecAttr);
+  if (ret) {
+    printf("Create VDEC[0] failed[%d]!\n", ret);
+    return ret;
+  }
+
+  jpg_mb = RK_MPI_MB_CreateBuffer(u32JpgBufLen, RK_FALSE, 0);
+  if (!jpg_mb) {
+    RKADK_LOGE("no space left");
+    ret = -1;
+    goto exit;
+  }
+
+  memcpy(RK_MPI_MB_GetPtr(jpg_mb), pu8JpgBuf, u32JpgBufLen);
+  RK_MPI_MB_SetSize(jpg_mb, u32JpgBufLen);
+  ret = RK_MPI_SYS_SendMediaBuffer(RK_ID_VDEC, s32VdecChnID, jpg_mb);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_SYS_SendMediaBuffer failed[%d]", ret);
+    goto exit;
+  }
+
+  mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VDEC, s32VdecChnID, -1);
+  if (!mb) {
+    RKADK_LOGE("RK_MPI_SYS_GetMediaBuffer failed");
+    ret = -1;
+    goto exit;
+  }
+
+  mbSize = RK_MPI_MB_GetSize(mb);
+  ret = RK_MPI_MB_GetImageInfo(mb, &stImageInfo);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_MB_GetImageInfo failed[%d]", ret);
+    goto stop_get_mb;
+  }
+  RKADK_LOGD("mb[%d, %d, %d, %d], type = %d, size = %d", stImageInfo.u32Width,
+             stImageInfo.u32Height, stImageInfo.u32HorStride,
+             stImageInfo.u32VerStride, stImageInfo.enImgType, mbSize);
+
+  if (stImageInfo.enImgType != IMAGE_TYPE_NV12)
+    RKADK_LOGW("Jpg decode output format != NV12");
+
+  if (pstThumbAttr->enType == RKADK_THUMB_TYPE_RGB565)
+    dstFormat = RK_FORMAT_RGB_565;
+  else if (pstThumbAttr->enType == RKADK_THUMB_TYPE_RGB888)
+    dstFormat = RK_FORMAT_RGB_888;
+  else
+    dstFormat = RK_FORMAT_YCbCr_420_SP;
+
+  if (RK_FORMAT_YCbCr_420_SP == dstFormat &&
+      stImageInfo.u32HorStride == pstThumbAttr->u32Width &&
+      stImageInfo.u32VerStride == pstThumbAttr->u32Height) {
+    if (*pu32Size < mbSize)
+      RKADK_LOGW("pu32Size(%d) < mbSize(%d)", *pu32Size, mbSize);
+    else
+      *pu32Size = mbSize;
+    memcpy(pu8Buf, RK_MPI_MB_GetPtr(mb), *pu32Size);
+  } else {
+    ret = RKADK_PHOTO_RgaProcess(RK_MPI_MB_GetPtr(mb), stImageInfo, pu8Buf,
+                                 pu32Size, pstThumbAttr, dstFormat);
+  }
+
+stop_get_mb:
+  if (RK_MPI_SYS_StopGetMediaBuffer(RK_ID_VDEC, s32VdecChnID))
+    RKADK_LOGW("RK_MPI_SYS_StopGetMediaBuffer faield");
+
+exit:
+  RK_MPI_VDEC_DestroyChn(s32VdecChnID);
+
+  if (jpg_mb)
+    RK_MPI_MB_ReleaseBuffer(jpg_mb);
+
+  if (mb)
+    RK_MPI_MB_ReleaseBuffer(mb);
+
+  return ret;
+}
+
+static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
+                                      RKADK_JPG_THUMB_TYPE_E eThmType,
+                                      RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
+                                      RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fd = NULL;
   RKADK_S32 ret = -1;
   RKADK_U16 u16Marker;
+  RKADK_U8 *pu8JpgBuf;
+  RKADK_U32 u32JpgBufLen = 0;
+  RKADK_U32 *pu32JpgBufLen;
 
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
+
+  RKADK_PARAM_Init();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  if (!pstThumbAttr->u32Width || !pstThumbAttr->u32Height) {
+    pstThumbAttr->u32Width = ptsThumbCfg->thumb_width;
+    pstThumbAttr->u32Height = ptsThumbCfg->thumb_height;
+  }
+
+  if (pstThumbAttr->u32Width != UPALIGNTO(pstThumbAttr->u32Width, 4)) {
+    RKADK_LOGE("Width is not 4-aligned");
+    return -1;
+  }
+
+  if (pstThumbAttr->u32Height != UPALIGNTO(pstThumbAttr->u32Height, 2)) {
+    RKADK_LOGE("Height is not 2-aligned");
+    return -1;
+  }
+
+  if (pstThumbAttr->enType < RKADK_THUMB_TYPE_NV12 ||
+      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGB888) {
+    RKADK_LOGE("Invalid thumb type = %d", pstThumbAttr->enType);
+    return -1;
+  }
 
   fd = fopen(pszFileName, "r");
   if (!fd) {
@@ -837,14 +1031,27 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
     goto exit;
   }
 
+  if (pstThumbAttr->enType != RKADK_THUMB_TYPE_JPEG) {
+    u32JpgBufLen = ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
+    pu8JpgBuf = (RKADK_U8 *)malloc(u32JpgBufLen);
+    if (!pu8JpgBuf) {
+      RKADK_LOGE("malloc pu8JpgBuf failed");
+      goto exit;
+    }
+    pu32JpgBufLen = &u32JpgBufLen;
+  } else {
+    pu32JpgBufLen = pu32Size;
+    pu8JpgBuf = pu8Buf;
+  }
+
   switch (eThmType) {
   case RKADK_JPG_THUMB_TYPE_DCF:
-    ret = RKADK_JPG_GetDCF(fd, pu8Buf, pu32Size);
+    ret = RKADK_JPG_GetDCF(fd, pu8JpgBuf, pu32JpgBufLen);
     break;
 
   case RKADK_JPG_THUMB_TYPE_MFP1:
   case RKADK_JPG_THUMB_TYPE_MFP2:
-    ret = RKADK_JPG_GetMPF(fd, eThmType, pu8Buf, pu32Size);
+    ret = RKADK_JPG_GetMPF(fd, eThmType, pu8JpgBuf, pu32JpgBufLen);
     break;
 
   default:
@@ -852,9 +1059,43 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
     break;
   }
 
+  if (ret) {
+    RKADK_LOGE("Get Jpg thumbnail failed");
+    goto exit;
+  }
+
+  if (pstThumbAttr->enType == RKADK_THUMB_TYPE_JPEG)
+    goto exit;
+
+  ret = RKADK_PHOTO_JpgDecode(pu8JpgBuf, u32JpgBufLen, pu8Buf, pu32Size,
+                              pstThumbAttr);
+
+  if (pu8JpgBuf)
+    free(pu8JpgBuf);
+
 exit:
   if (fd)
     fclose(fd);
 
   return ret;
+}
+
+RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
+                                  RKADK_JPG_THUMB_TYPE_E eThmType,
+                                  RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size) {
+  RKADK_THUMB_ATTR_S stThumbAttr;
+
+  stThumbAttr.u32Width = 0;
+  stThumbAttr.u32Height = 0;
+  stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+  return RKADK_PHOTO_GetThumb(pszFileName, eThmType, pu8Buf, pu32Size,
+                              &stThumbAttr);
+}
+
+RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
+                                    RKADK_JPG_THUMB_TYPE_E eThmType,
+                                    RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
+                                    RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  return RKADK_PHOTO_GetThumb(pszFileName, eThmType, pu8Buf, pu32Size,
+                              pstThumbAttr);
 }

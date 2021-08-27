@@ -61,10 +61,11 @@ int main(int argc, char *argv[]) {
   char filePath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_JPG_THUMB_TYPE_E eJpgThumbType = RKADK_JPG_THUMB_TYPE_DCF;
   bool bIsMp4 = true;
-  RKADK_THUMB_TYPE_E enType = RKADK_THUMB_TYPE_JPEG;
   const char *postfix = "jpg";
-  int width = 0, height = 0;
+  RKADK_THUMB_ATTR_S stThumbAttr;
 
+  memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
+  stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
     case 'i':
@@ -75,20 +76,20 @@ int main(int argc, char *argv[]) {
         bIsMp4 = false;
       break;
     case 'W':
-      width = atoi(optarg);
+      stThumbAttr.u32Width = atoi(optarg);
       break;
     case 'H':
-      height = atoi(optarg);
+      stThumbAttr.u32Height = atoi(optarg);
       break;
     case 'T':
       if (strstr(optarg, "NV12")) {
-        enType = RKADK_THUMB_TYPE_NV12;
+        stThumbAttr.enType = RKADK_THUMB_TYPE_NV12;
         postfix = "yuv";
       } else if (strstr(optarg, "RGB565")) {
-        enType = RKADK_THUMB_TYPE_RGB565;
+        stThumbAttr.enType = RKADK_THUMB_TYPE_RGB565;
         postfix = "rgb565";
       } else if (strstr(optarg, "RGB888")) {
-        enType = RKADK_THUMB_TYPE_RGB888;
+        stThumbAttr.enType = RKADK_THUMB_TYPE_RGB888;
         postfix = "rgb888";
       }
       break;
@@ -120,19 +121,20 @@ int main(int argc, char *argv[]) {
     size = buf_size;
 
     if (bIsMp4) {
-      if (RKADK_GetThmInMp4Ex(pInuptPath, buffer, &size, width, height,
-                              enType)) {
+      if (RKADK_GetThmInMp4Ex(pInuptPath, buffer, &size, &stThumbAttr)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
         return -1;
       }
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
-      if (RKADK_PHOTO_GetThmInJpg(pInuptPath, eJpgThumbType, buffer, &size)) {
+      if (RKADK_PHOTO_GetThmInJpgEx(pInuptPath, eJpgThumbType, buffer, &size,
+                                    &stThumbAttr)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
         return -1;
       }
     }
-    RKADK_LOGD("%s size: %d, count: %d", postfix, size, count);
+    RKADK_LOGD("%s[%d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
+               stThumbAttr.u32Height, size, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (size > 0) {

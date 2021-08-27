@@ -85,7 +85,9 @@ typedef enum {
 } RKADK_THUMB_TYPE_E;
 
 typedef struct {
+  // 4 alignment
   RKADK_U32 u32Width;
+  // 2 alignment
   RKADK_U32 u32Height;
   RKADK_THUMB_TYPE_E enType;
 } RKADK_THUMB_ATTR_S;
