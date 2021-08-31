@@ -27,9 +27,10 @@ extern "C" {
 RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
                             RKADK_U32 *pu32Size);
 
-RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                              RKADK_U32 *pu32Size,
+RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName,
                               RKADK_THUMB_ATTR_S *pstThumbAttr);
+
+RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);
 
 #ifdef __cplusplus
 }

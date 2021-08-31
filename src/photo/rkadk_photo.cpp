@@ -818,7 +818,6 @@ static RKADK_S32 RKADK_JPG_GetMPF(FILE *fd, RKADK_JPG_THUMB_TYPE_E eThmType,
 
 static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
                                         MB_IMAGE_INFO_S stImageInfo,
-                                        RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
                                         RKADK_THUMB_ATTR_S *pstThumbAttr,
                                         int dstFormat) {
   int ret;
@@ -835,8 +834,9 @@ static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
   else
     return -1;
 
-  if (*pu32Size < u32DstDataLen) {
-    RKADK_LOGE("u32DstDataLen[%d] > *pu32Size[%d]", u32DstDataLen, *pu32Size);
+  if (pstThumbAttr->u32BufSize < u32DstDataLen) {
+    RKADK_LOGE("u32DstDataLen[%d] > buffer size[%d]", u32DstDataLen,
+               pstThumbAttr->u32BufSize);
     return -1;
   }
 
@@ -857,7 +857,7 @@ static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
 
   memset(&dstInfo, 0, sizeof(rga_info_t));
   dstInfo.fd = -1;
-  dstInfo.virAddr = pu8Buf;
+  dstInfo.virAddr = pstThumbAttr->pu8Buf;
   dstInfo.mmuFlag = 1;
   rga_set_rect(&dstInfo.rect, 0, 0, pstThumbAttr->u32Width,
                pstThumbAttr->u32Height, pstThumbAttr->u32Width,
@@ -869,14 +869,13 @@ static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
 
   c_RkRgaDeInit();
 
-  *pu32Size = u32DstDataLen;
+  pstThumbAttr->u32BufSize = u32DstDataLen;
   RKADK_LOGD("done[%d]", ret);
   return ret;
 }
 
 static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
-                                       RKADK_U32 u32JpgBufLen, RKADK_U8 *pu8Buf,
-                                       RKADK_U32 *pu32Size,
+                                       RKADK_U32 u32JpgBufLen,
                                        RKADK_THUMB_ATTR_S *pstThumbAttr) {
   int ret = 0;
   RKADK_S32 s32VdecChnID = 0;
@@ -950,14 +949,16 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
   if (RK_FORMAT_YCbCr_420_SP == dstFormat &&
       stImageInfo.u32HorStride == pstThumbAttr->u32Width &&
       stImageInfo.u32VerStride == pstThumbAttr->u32Height) {
-    if (*pu32Size < mbSize)
-      RKADK_LOGW("pu32Size(%d) < mbSize(%d)", *pu32Size, mbSize);
+    if (pstThumbAttr->u32BufSize < mbSize)
+      RKADK_LOGW("buffer size[%d] < mbSize[%d]", pstThumbAttr->u32BufSize,
+                 mbSize);
     else
-      *pu32Size = mbSize;
-    memcpy(pu8Buf, RK_MPI_MB_GetPtr(mb), *pu32Size);
+      pstThumbAttr->u32BufSize = mbSize;
+    memcpy(pstThumbAttr->pu8Buf, RK_MPI_MB_GetPtr(mb),
+           pstThumbAttr->u32BufSize);
   } else {
-    ret = RKADK_PHOTO_RgaProcess(RK_MPI_MB_GetPtr(mb), stImageInfo, pu8Buf,
-                                 pu32Size, pstThumbAttr, dstFormat);
+    ret = RKADK_PHOTO_RgaProcess(RK_MPI_MB_GetPtr(mb), stImageInfo,
+                                 pstThumbAttr, dstFormat);
   }
 
 stop_get_mb:
@@ -976,8 +977,7 @@ exit:
   return ret;
 }
 
-static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd, RKADK_U8 *pu8Buf,
-                                        RKADK_U32 u32DataLen,
+static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd,
                                         RKADK_THUMB_ATTR_S *pstThumbAttr) {
 
   char tag[JPG_THUMB_TAG_LEN];
@@ -988,23 +988,23 @@ static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd, RKADK_U8 *pu8Buf,
     return -1;
   }
 
-  if (fwrite(pu8Buf, u32DataLen, 1, fd) != 1) {
+  if (fwrite(pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, 1, fd) != 1) {
     RKADK_LOGE("write thm data failed");
     return -1;
   }
 
-  if (fwrite((char *)&pstThumbAttr->u32Width, sizeof(RKADK_U32), 1, fd) != 1) {
+  if (fwrite((char *)&pstThumbAttr->u32Width, 4, 1, fd) != 1) {
     RKADK_LOGE("write thm width failed");
     return -1;
   }
 
-  if (fwrite((char *)&pstThumbAttr->u32Height, sizeof(RKADK_U32), 1, fd) != 1) {
+  if (fwrite((char *)&pstThumbAttr->u32Height, 4, 1, fd) != 1) {
     RKADK_LOGE("write thm height failed");
     return -1;
   }
 
   // width: 4byte, height: 4byte
-  u32Size = u32DataLen + 8;
+  u32Size = pstThumbAttr->u32BufSize + 8;
   if (fwrite((char *)&u32Size, sizeof(RKADK_U32), 1, fd) != 1) {
     RKADK_LOGE("write thm len failed");
     return -1;
@@ -1024,13 +1024,11 @@ static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd, RKADK_U8 *pu8Buf,
   return 0;
 }
 
-static RKADK_S32 RKADK_PHOTO_GetThmInFile(FILE *fd, RKADK_U8 *pu8Buf,
-                                          RKADK_U32 *pu32Size,
+static RKADK_S32 RKADK_PHOTO_GetThmInFile(FILE *fd,
                                           RKADK_THUMB_ATTR_S *pstThumbAttr) {
   int ret = -1;
   char tag[JPG_THUMB_TAG_LEN];
   RKADK_U32 u32Size = 0;
-  RKADK_U32 u32Width = 0, u32Height = 0;
 
   if (pstThumbAttr->enType == RKADK_THUMB_TYPE_JPEG)
     return -1;
@@ -1086,11 +1084,6 @@ static RKADK_S32 RKADK_PHOTO_GetThmInFile(FILE *fd, RKADK_U8 *pu8Buf,
     if (tag[3] == pstThumbAttr->enType) {
       // 8: 4byte width + 4byte height
       RKADK_U32 u32DataLen = u32Size - 8;
-      if (u32DataLen > *pu32Size)
-        RKADK_LOGW("pu32Size[%d] < thumbnail data len[%d]", *pu32Size,
-                   u32DataLen);
-      else
-        *pu32Size = u32DataLen;
 
       // offset: thm data size + 4byte thm size
       if (fseek(fd, -(u32Size + 4), SEEK_CUR)) {
@@ -1098,37 +1091,53 @@ static RKADK_S32 RKADK_PHOTO_GetThmInFile(FILE *fd, RKADK_U8 *pu8Buf,
         break;
       }
 
+      if (!pstThumbAttr->pu8Buf) {
+        pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(u32DataLen);
+        if (!pstThumbAttr->pu8Buf) {
+          RKADK_LOGE("malloc thumbnail buffer[%d] failed", u32DataLen);
+          break;
+        }
+        RKADK_LOGD("malloc thumbnail buffer[%p], u32DataLen[%d]",
+                   pstThumbAttr->pu8Buf, u32DataLen);
+
+        pstThumbAttr->u32BufSize = u32DataLen;
+      } else {
+        if (u32DataLen > pstThumbAttr->u32BufSize)
+          RKADK_LOGW("buffer size[%d] < thumbnail data len[%d]",
+                     pstThumbAttr->u32BufSize, u32DataLen);
+        else
+          pstThumbAttr->u32BufSize = u32DataLen;
+      }
+
       // read thm data
-      if (fread(pu8Buf, *pu32Size, 1, fd) != 1) {
+      if (fread(pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, 1, fd) != 1) {
         RKADK_LOGE("read jpg thumb data failed");
         break;
       }
 
       // seek the remain data
-      if (u32DataLen > *pu32Size) {
-        if (fseek(fd, u32DataLen - *pu32Size, SEEK_CUR)) {
+      if (u32DataLen > pstThumbAttr->u32BufSize) {
+        if (fseek(fd, u32DataLen - pstThumbAttr->u32BufSize, SEEK_CUR)) {
           RKADK_LOGE("seek remain data failed");
           break;
         }
       }
 
       // read thm width
-      if (fread(&u32Width, 4, 1, fd) != 1) {
+      if (fread(&(pstThumbAttr->u32Width), 4, 1, fd) != 1) {
         RKADK_LOGE("read jpg thumb width failed");
         break;
       }
 
       // read thm height
-      if (fread(&u32Height, 4, 1, fd) != 1) {
+      if (fread(&(pstThumbAttr->u32Height), 4, 1, fd) != 1) {
         RKADK_LOGE("read jpg thumb height failed");
         break;
       }
 
-      RKADK_LOGD("u32Width = %d, u32Height = %d", u32Width, u32Height);
-      pstThumbAttr->u32Width = u32Width;
-      pstThumbAttr->u32Height = u32Height;
-
       ret = 0;
+      RKADK_LOGD("u32Width = %d, u32Height = %d", pstThumbAttr->u32Width,
+                 pstThumbAttr->u32Height);
       RKADK_LOGD("done");
       break;
     } else {
@@ -1144,14 +1153,52 @@ static RKADK_S32 RKADK_PHOTO_GetThmInFile(FILE *fd, RKADK_U8 *pu8Buf,
       RKADK_LOGE("seek jpg file header failed");
       ret = 0;
     }
+
+    RKADK_PHOTO_ThumbBufFree(pstThumbAttr);
   }
 
   return ret;
 }
 
+static RKADK_S32 RKADK_PHOTO_ThmBufMalloc(RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  if (pstThumbAttr->pu8Buf)
+    return 0;
+
+  switch (pstThumbAttr->enType) {
+  case RKADK_THUMB_TYPE_NV12:
+    pstThumbAttr->u32BufSize =
+        pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3 / 2;
+    break;
+  case RKADK_THUMB_TYPE_JPEG:
+    pstThumbAttr->u32BufSize = pstThumbAttr->u32Width * pstThumbAttr->u32Height;
+    break;
+  case RKADK_THUMB_TYPE_RGB565:
+    pstThumbAttr->u32BufSize =
+        pstThumbAttr->u32Width * pstThumbAttr->u32Height * 2;
+    break;
+  case RKADK_THUMB_TYPE_RGB888:
+    pstThumbAttr->u32BufSize =
+        pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3;
+    break;
+  default:
+    RKADK_LOGE("Invalid enType[%d]", pstThumbAttr->enType);
+    return -1;
+  }
+
+  pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(pstThumbAttr->u32BufSize);
+  if (!pstThumbAttr->pu8Buf) {
+    RKADK_LOGE("malloc pu8Buf failed, u32BufSize = %d",
+               pstThumbAttr->u32BufSize);
+    return -1;
+  }
+
+  RKADK_LOGD("malloc thumbnail buffer[%p], u32BufSize[%d]",
+             pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize);
+  return 0;
+}
+
 static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
                                       RKADK_JPG_THUMB_TYPE_E eThmType,
-                                      RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
                                       RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fd = NULL;
   RKADK_S32 ret = -1;
@@ -1160,9 +1207,6 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
   RKADK_U32 u32JpgBufLen = 0;
   RKADK_U32 *pu32JpgBufLen;
 
-  RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
-
   RKADK_PARAM_Init();
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
   if (!ptsThumbCfg) {
@@ -1170,9 +1214,10 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
     return -1;
   }
 
-  if (!pstThumbAttr->u32Width || !pstThumbAttr->u32Height) {
-    pstThumbAttr->u32Width = ptsThumbCfg->thumb_width;
-    pstThumbAttr->u32Height = ptsThumbCfg->thumb_height;
+  if (!pstThumbAttr->u32Width || !pstThumbAttr->u32Height ||
+      pstThumbAttr->enType == RKADK_THUMB_TYPE_JPEG) {
+    pstThumbAttr->u32Width = UPALIGNTO(ptsThumbCfg->thumb_width, 4);
+    pstThumbAttr->u32Height = UPALIGNTO(ptsThumbCfg->thumb_height, 2);
   }
 
   if (pstThumbAttr->u32Width != UPALIGNTO(pstThumbAttr->u32Width, 4)) {
@@ -1197,11 +1242,14 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
     return -1;
   }
 
-  memset(pu8Buf, 0, *pu32Size);
-
-  ret = RKADK_PHOTO_GetThmInFile(fd, pu8Buf, pu32Size, pstThumbAttr);
+  ret = RKADK_PHOTO_GetThmInFile(fd, pstThumbAttr);
   if (!ret)
     goto exit;
+
+  if (RKADK_PHOTO_ThmBufMalloc(pstThumbAttr))
+    goto exit;
+
+  memset(pstThumbAttr->pu8Buf, 0, pstThumbAttr->u32BufSize);
 
   // check SOI
   u16Marker = RKADK_JPG_ReadU16(fd, RKADK_JPG_BIG_ENDIAN);
@@ -1217,10 +1265,11 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
       RKADK_LOGE("malloc pu8JpgBuf failed");
       goto exit;
     }
+    RKADK_LOGD("malloc temp jpg buffer[%p]", pu8JpgBuf);
     pu32JpgBufLen = &u32JpgBufLen;
   } else {
-    pu32JpgBufLen = pu32Size;
-    pu8JpgBuf = pu8Buf;
+    pu32JpgBufLen = &(pstThumbAttr->u32BufSize);
+    pu8JpgBuf = pstThumbAttr->pu8Buf;
   }
 
   switch (eThmType) {
@@ -1246,15 +1295,16 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
   if (pstThumbAttr->enType == RKADK_THUMB_TYPE_JPEG)
     goto exit;
 
-  ret = RKADK_PHOTO_JpgDecode(pu8JpgBuf, u32JpgBufLen, pu8Buf, pu32Size,
-                              pstThumbAttr);
+  ret = RKADK_PHOTO_JpgDecode(pu8JpgBuf, u32JpgBufLen, pstThumbAttr);
   if (!ret) {
-    if (RKADK_PHOTO_BuildInThm(fd, pu8Buf, *pu32Size, pstThumbAttr))
+    if (RKADK_PHOTO_BuildInThm(fd, pstThumbAttr))
       RKADK_LOGE("RKADK_PHOTO_BuildInThm failed");
   }
 
-  if (pu8JpgBuf)
+  if (pu8JpgBuf) {
+    RKADK_LOGD("free temp jpg buffer[%p]", pu8JpgBuf);
     free(pu8JpgBuf);
+  }
 
 exit:
   if (fd)
@@ -1266,19 +1316,47 @@ exit:
 RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
                                   RKADK_JPG_THUMB_TYPE_E eThmType,
                                   RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size) {
+  int ret;
   RKADK_THUMB_ATTR_S stThumbAttr;
+
+  RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
 
   stThumbAttr.u32Width = 0;
   stThumbAttr.u32Height = 0;
   stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
-  return RKADK_PHOTO_GetThumb(pszFileName, eThmType, pu8Buf, pu32Size,
-                              &stThumbAttr);
+  stThumbAttr.pu8Buf = pu8Buf;
+  stThumbAttr.u32BufSize = *pu32Size;
+
+  ret = RKADK_PHOTO_GetThumb(pszFileName, eThmType, &stThumbAttr);
+  *pu32Size = stThumbAttr.u32BufSize;
+
+  return ret;
 }
 
 RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
                                     RKADK_JPG_THUMB_TYPE_E eThmType,
-                                    RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size,
                                     RKADK_THUMB_ATTR_S *pstThumbAttr) {
-  return RKADK_PHOTO_GetThumb(pszFileName, eThmType, pu8Buf, pu32Size,
-                              pstThumbAttr);
+  int ret;
+
+  RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstThumbAttr, RKADK_FAILURE);
+
+  ret = RKADK_PHOTO_GetThumb(pszFileName, eThmType, pstThumbAttr);
+  if (ret)
+    RKADK_PHOTO_ThumbBufFree(pstThumbAttr);
+
+  return ret;
+}
+
+RKADK_S32 RKADK_PHOTO_ThumbBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  RKADK_CHECK_POINTER(pstThumbAttr, RKADK_FAILURE);
+
+  if (pstThumbAttr->pu8Buf) {
+    RKADK_LOGD("free thumbnail buffer[%p]", pstThumbAttr->pu8Buf);
+    free(pstThumbAttr->pu8Buf);
+    pstThumbAttr->pu8Buf = NULL;
+  }
+
+  return 0;
 }

@@ -27,6 +27,9 @@
 #include "rkadk_photo.h"
 #include "rkadk_thumb.h"
 
+#define THUMB_TEST_SAVE_FILE
+//#define THUMB_ONLY_TEST_JPG
+
 extern int optind;
 extern char *optarg;
 
@@ -50,22 +53,25 @@ static void sigterm_handler(int sig) {
   is_quit = true;
 }
 
-#define THUMB_TEST_SAVE_FILE
 int main(int argc, char *argv[]) {
   int c;
   unsigned int count = 1;
-  int buf_size = 1024 * 1024;
   RKADK_CHAR *pInuptPath = "/userdata/RecordTest_0.mp4";
-  RKADK_U32 size = buf_size;
-  RKADK_U8 buffer[size];
   char filePath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_JPG_THUMB_TYPE_E eJpgThumbType = RKADK_JPG_THUMB_TYPE_DCF;
   bool bIsMp4 = true;
   const char *postfix = "jpg";
-  RKADK_THUMB_ATTR_S stThumbAttr;
 
+#ifdef THUMB_ONLY_TEST_JPG
+  int buf_size = 1024 * 1024;
+  RKADK_U32 size = buf_size;
+  RKADK_U8 buffer[size];
+#else
+  RKADK_THUMB_ATTR_S stThumbAttr;
   memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
   stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
     case 'i':
@@ -75,6 +81,12 @@ int main(int argc, char *argv[]) {
       if (strstr(optarg, "jpg"))
         bIsMp4 = false;
       break;
+#ifdef THUMB_ONLY_TEST_JPG
+    case 'W':
+    case 'H':
+    case 'T':
+      break;
+#else
     case 'W':
       stThumbAttr.u32Width = atoi(optarg);
       break;
@@ -93,6 +105,7 @@ int main(int argc, char *argv[]) {
         postfix = "rgb888";
       }
       break;
+#endif
     case 't':
       if (strstr(optarg, "MPF1"))
         eJpgThumbType = RKADK_JPG_THUMB_TYPE_MFP1;
@@ -118,28 +131,27 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigterm_handler);
 
   while (!is_quit) {
+#ifdef THUMB_ONLY_TEST_JPG
     size = buf_size;
 
     if (bIsMp4) {
-      if (RKADK_GetThmInMp4Ex(pInuptPath, buffer, &size, &stThumbAttr)) {
+      if (RKADK_GetThmInMp4(pInuptPath, buffer, &size)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
         return -1;
       }
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
-      if (RKADK_PHOTO_GetThmInJpgEx(pInuptPath, eJpgThumbType, buffer, &size,
-                                    &stThumbAttr)) {
+      if (RKADK_PHOTO_GetThmInJpg(pInuptPath, eJpgThumbType, buffer, &size)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
         return -1;
       }
     }
-    RKADK_LOGD("%s[%d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
-               stThumbAttr.u32Height, size, count);
+    RKADK_LOGD("%s: size: %d, count: %d", postfix, size, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (size > 0) {
       FILE *file = NULL;
-      sprintf(filePath, "/tmp/thm_test_%u.%s", count, postfix);
+      sprintf(filePath, "/tmp/thm_test_%u.%s", count, "jpg");
       file = fopen(filePath, "w");
       if (!file) {
         RKADK_LOGE("Create file(%s) failed", filePath);
@@ -152,6 +164,43 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+#else
+    if (bIsMp4) {
+      if (RKADK_GetThmInMp4Ex(pInuptPath, &stThumbAttr)) {
+        RKADK_LOGE("RKADK_GetThmInMp4Ex failed");
+        return -1;
+      }
+    } else {
+      RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
+      if (RKADK_PHOTO_GetThmInJpgEx(pInuptPath, eJpgThumbType, &stThumbAttr)) {
+        RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
+        return -1;
+      }
+    }
+    RKADK_LOGD("%s[%d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
+               stThumbAttr.u32Height, stThumbAttr.u32BufSize, count);
+
+#ifdef THUMB_TEST_SAVE_FILE
+    if (stThumbAttr.u32BufSize > 0) {
+      FILE *file = NULL;
+      sprintf(filePath, "/tmp/thm_test_%u.%s", count, postfix);
+      file = fopen(filePath, "w");
+      if (!file) {
+        RKADK_LOGE("Create file(%s) failed", filePath);
+        return -1;
+      }
+
+      fwrite(stThumbAttr.pu8Buf, 1, stThumbAttr.u32BufSize, file);
+      fclose(file);
+      RKADK_LOGD("save %s done", filePath);
+    }
+#endif
+
+    if (bIsMp4)
+      RKADK_ThmBufFree(&stThumbAttr);
+    else
+      RKADK_PHOTO_ThumbBufFree(&stThumbAttr);
+#endif
     count--;
     if (count <= 0)
       break;
