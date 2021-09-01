@@ -23,13 +23,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "mp3_header/mp3_header.h"
 #include "isp/sample_common.h"
+#include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
+#include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_photo.h"
 #include "rkadk_record.h"
+#include "rkadk_rtmp.h"
+#include "rkadk_rtsp.h"
 #include "rkadk_stream.h"
 #include "rkadk_thumb.h"
 
@@ -40,7 +43,7 @@ static RKADK_CHAR optstr[] = "I:a:i:t:h";
 static FILE *g_vo_file = NULL;
 static FILE *g_ao_file = NULL;
 static FILE *g_pcm_file = NULL;
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 const char *g_thumb_file = "/tmp/test.mp4";
 
@@ -49,7 +52,7 @@ static RKADK_U32 g_u32CamID = 0;
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-I 0] [-a /app] [-i /tmp/thumb.mp4] [-t 1000]\n", name);
+  printf("\t%s [-I 0] [-a /etc/iqfiles] [-i /tmp/thumb.mp4] [-t 1000]\n", name);
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-a: aiq file path, Default:/oem/etc/iqfiles\n");
   printf("\t-i: thumb test mp4 file, Default:/tmp/test.mp4\n");
@@ -65,8 +68,9 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
   if (g_vo_file) {
     fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
            g_vo_file);
-    // RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
-    //      pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+    if ((pVStreamData->u32Seq % 30) == 0)
+      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
   }
 
   return 0;
@@ -137,13 +141,15 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   if (g_ao_file) {
     if (g_AudioCodecType == RKADK_CODEC_TYPE_MP3) {
       GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
-                    pAStreamData->u32Len);
+                   pAStreamData->u32Len);
       fwrite(mp3_header, 1, 7, g_ao_file);
     }
 
     fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_ao_file);
-    // RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-    //           pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+
+    if ((pAStreamData->u32Seq % 30) == 0)
+      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+                 pAStreamData->u64TimeStamp, pAStreamData->u32Len);
   }
 
   return 0;
@@ -171,6 +177,7 @@ static int AudioStartTest(RKADK_CHAR *pOutPath,
   }
   RKADK_STREAM_AencRegisterCallback(enCodecType, AencDataCb);
 
+#if 0
   if (enCodecType != RKADK_CODEC_TYPE_PCM) {
     g_pcm_file = fopen("/userdata/ai.pcm", "w");
     if (!g_pcm_file) {
@@ -179,6 +186,7 @@ static int AudioStartTest(RKADK_CHAR *pOutPath,
     }
     RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_PCM, PcmDataCb);
   }
+#endif
 
   ret = RKADK_STREAM_AudioInit(enCodecType);
   if (ret) {
@@ -251,7 +259,7 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
   fclose(file);
 
   photoId++;
-  if(photoId > 10)
+  if (photoId > 10)
     photoId = 0;
 }
 
@@ -297,7 +305,7 @@ static void GetThumbTest() {
     return;
   }
 
-  if(!size) {
+  if (!size) {
     RKADK_LOGE("RKADK_GetThmInMp4 faile, size = %d", size);
     return;
   }
@@ -450,16 +458,16 @@ static int IspProcess(RKADK_S32 s32CamID) {
   // LDCH
   rk_aiq_ldch_attrib_t attr;
   ret = SAMPLE_COMM_ISP_GetLdchAttrib(s32CamID, &attr);
-  if(ret) {
+  if (ret) {
     RKADK_LOGW("SAMPLE_COMM_ISP_GetLdchAttrib failed");
   } else {
     RKADK_LOGD("LDC attr.en = %d", attr.en);
     RKADK_LOGD("LDC attr.correct_level = %d", attr.correct_level);
   }
 
-  //WDR
+  // WDR
   ret = SAMPLE_COMM_ISP_GetDarkAreaBoostStrth(s32CamID, &wdrLevel);
-  if(ret)
+  if (ret)
     RKADK_LOGW("SAMPLE_COMM_ISP_GetDarkAreaBoostStrth failed");
   else
     RKADK_LOGD("WDR wdrLevel = %d", wdrLevel);
@@ -476,6 +484,8 @@ int main(int argc, char *argv[]) {
   pthread_t tid = 0;
   RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
   RKADK_U32 u32SleepTime = 500;
+  RKADK_MW_PTR pRtspHandle = NULL;
+  RKADK_MW_PTR pRtmpHandle = NULL;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -520,11 +530,11 @@ int main(int argc, char *argv[]) {
 
   SAMPLE_COMM_ISP_Start(g_u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
 
-  //IspProcess(g_u32CamID);
+  // IspProcess(g_u32CamID);
 #endif
 
-  ret = RKADK_PARAM_GetCamParam(
-      stRecAttr.s32CamID, RKADK_PARAM_TYPE_RECORD_TYPE, &enRecType);
+  ret = RKADK_PARAM_GetCamParam(g_u32CamID, RKADK_PARAM_TYPE_RECORD_TYPE,
+                                &enRecType);
   if (ret)
     RKADK_LOGW("RKADK_PARAM_GetCamParam record type failed");
 
@@ -551,17 +561,49 @@ int main(int argc, char *argv[]) {
   g_AudioCodecType = RKADK_CODEC_TYPE_MP3;
   AudioStartTest("/userdata/aac.adts", RKADK_CODEC_TYPE_MP3);
 
+  // display test
+  RKADK_DISP_Init(g_u32CamID);
+
   // take photo pre second
   if (pthread_create(&tid, NULL, TakePhotoThread, NULL))
     RKADK_LOGE("Create take photo thread failed");
 
+#if 0
+  // rtsp test
+  RKADK_RTSP_Init(g_u32CamID, 554, "/live/main_stream", &pRtspHandle);
+  RKADK_RTSP_Start(pRtspHandle);
+#else
+  // rtmp test
+  RKADK_RTMP_Init(g_u32CamID, "rtmp://127.0.0.1:1935/live/substream",
+                  &pRtmpHandle);
+#endif
+
   signal(SIGINT, sigterm_handler);
 
+  char cmd[64];
+  printf("\n#Usage: input 'quit' to exit programe!\n"
+         "peress any other key to capture one picture to file\n");
   while (!is_quit) {
+    fgets(cmd, sizeof(cmd), stdin);
+    if (strstr(cmd, "live_init")) {
+#if 0
+      RKADK_RTSP_Init(g_u32CamID, 554, "/live/main_stream", &pRtspHandle);
+      RKADK_RTSP_Start(pRtspHandle);
+#else
+      RKADK_RTMP_Init(g_u32CamID, "rtmp://127.0.0.1:1935/live/substream",
+                      &pRtmpHandle);
+#endif
+    } else if (strstr(cmd, "live_deinit")) {
+#if 0
+      RKADK_RTSP_DeInit(pRtspHandle);
+#else
+      RKADK_RTMP_DeInit(pRtmpHandle);
+#endif
+    }
+
     if (is_quit)
       break;
 
-    GetThumbTest();
     usleep(u32SleepTime * 1000);
   }
 
@@ -571,6 +613,12 @@ int main(int argc, char *argv[]) {
   VideoStopTest(g_u32CamID);
   AudioStopTest(g_AudioCodecType);
 
+#if 0
+  RKADK_RTSP_DeInit(pRtspHandle);
+#else
+  RKADK_RTMP_DeInit(pRtmpHandle);
+#endif
+
   if (tid) {
     ret = pthread_join(tid, NULL);
     if (ret) {
@@ -579,6 +627,8 @@ int main(int argc, char *argv[]) {
       RKADK_LOGI("thread exit successed");
     }
   }
+
+  RKADK_DISP_DeInit(g_u32CamID);
 
 #ifdef RKAIQ
   SAMPLE_COMM_ISP_Stop(g_u32CamID);

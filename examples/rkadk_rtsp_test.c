@@ -125,6 +125,7 @@ int main(int argc, char *argv[]) {
     usleep(500000);
   }
 
+  RKADK_RTSP_Stop(pHandle);
   RKADK_RTSP_DeInit(pHandle);
   pHandle = NULL;
 

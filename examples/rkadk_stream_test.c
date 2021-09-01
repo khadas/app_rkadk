@@ -32,7 +32,7 @@
 extern int optind;
 extern char *optarg;
 
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
@@ -43,7 +43,7 @@ static RKADK_CHAR optstr[] = "a:I:m:e:o:h";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-a /oem/etc/iqfiles] [-I 0] [-m audio] [-e g711a] [-o "
+  printf("\t%s [-a /etc/iqfiles] [-I 0] [-m audio] [-e g711a] [-o "
          "/tmp/aenc.g711a]\n",
          name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
@@ -161,7 +161,7 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   if (g_output_file) {
     if (g_enCodecType == RKADK_CODEC_TYPE_MP3) {
       GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
-                    pAStreamData->u32Len);
+                   pAStreamData->u32Len);
       fwrite(mp3_header, 1, 7, g_output_file);
     }
 

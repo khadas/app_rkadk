@@ -34,11 +34,11 @@ extern char *optarg;
 static bool is_quit = false;
 static RKADK_CHAR optstr[] = "a:I:?";
 
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-a /oem/etc/iqfiles] [-I 0]\n", name);
+  printf("\t%s [-a /etc/iqfiles] [-I 0]\n", name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
          "without this option aiq should run in other application\n");
