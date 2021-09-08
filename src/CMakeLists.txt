@@ -8,6 +8,7 @@ file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
 file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
 file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
 file(GLOB_RECURSE VI_SRC "${CMAKE_SOURCE_DIR}/src/vi/*.cpp")
+file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.cpp")
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
 add_library(rkadk SHARED
@@ -20,7 +21,8 @@ add_library(rkadk SHARED
                 ${RTMP_SRC}
 		${RTSP_SRC}
                 ${DISP_SRC}
-                ${VI_SRC})
+                ${VI_SRC}
+		${STORAGE_SRC})
 
 set(LIB_RTSP ${CMAKE_SOURCE_DIR}/src/live/rtsp/librtsp.a)
 message("LIB_RTSP = ${LIB_RTSP}")
