@@ -16,44 +16,43 @@
 
 #include "rkadk_param_map.h"
 
-static RKADK_MAP_TABLE_CFG_S
-    g_sensorMapTableList[RKADK_MAX_SENSOR_CNT][RKADK_PARAM_MAP_BUTT] = {
-        {{sizeof(g_stSensorCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stSensorCfgMapTable_0},
-         {sizeof(g_stRecCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecCfgMapTable_0},
-         {sizeof(g_stRecTimeCfgMapTable_0_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecTimeCfgMapTable_0_0},
-         {sizeof(g_stRecCfgMapTable_0_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecCfgMapTable_0_0},
-         {sizeof(g_stRecParamMapTable_0_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecParamMapTable_0_0},
-         {sizeof(g_stRecTimeCfgMapTable_0_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecTimeCfgMapTable_0_1},
-         {sizeof(g_stRecCfgMapTable_0_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecCfgMapTable_0_1},
-         {sizeof(g_stRecParamMapTable_0_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stRecParamMapTable_0_1},
-         {sizeof(g_stPreviewCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stPreviewCfgMapTable_0},
-         {sizeof(g_stPreviewParamMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stPreviewParamMapTable_0},
-         {sizeof(g_stLiveCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stLiveCfgMapTable_0},
-         {sizeof(g_stLiveParamMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stLiveParamMapTable_0},
-         {sizeof(g_stPhotoCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stPhotoCfgMapTable_0},
-         {sizeof(g_stViCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stViCfgMapTable_0},
-         {sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stViCfgMapTable_1},
-         {sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stViCfgMapTable_2},
-         {sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stViCfgMapTable_3},
-         {sizeof(g_stDispCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
-          g_stDispCfgMapTable_0}}};
+static RKADK_MAP_TABLE_CFG_S g_sensorMapTableList[RKADK_PARAM_MAP_BUTT] = {
+    {sizeof(g_stSensorCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stSensorCfgMapTable},
+    {sizeof(g_stRecCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecCfgMapTable},
+    {sizeof(g_stRecTimeCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecTimeCfgMapTable_0},
+    {sizeof(g_stRecCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecCfgMapTable_0},
+    {sizeof(g_stRecParamMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecParamMapTable_0},
+    {sizeof(g_stRecTimeCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecTimeCfgMapTable_1},
+    {sizeof(g_stRecCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecCfgMapTable_1},
+    {sizeof(g_stRecParamMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stRecParamMapTable_1},
+    {sizeof(g_stPreviewCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stPreviewCfgMapTable},
+    {sizeof(g_stPreviewParamMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stPreviewParamMapTable},
+    {sizeof(g_stLiveCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stLiveCfgMapTable},
+    {sizeof(g_stLiveParamMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stLiveParamMapTable},
+    {sizeof(g_stPhotoCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stPhotoCfgMapTable},
+    {sizeof(g_stViCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stViCfgMapTable_0},
+    {sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stViCfgMapTable_1},
+    {sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stViCfgMapTable_2},
+    {sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stViCfgMapTable_3},
+    {sizeof(g_stDispCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stDispCfgMapTable}};
 
 RKADK_MAP_TABLE_CFG_S *
 RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable) {
@@ -64,5 +63,5 @@ RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable) {
     return NULL;
   }
 
-  return &(g_sensorMapTableList[u32Camid][eMapTable]);
+  return &(g_sensorMapTableList[eMapTable]);
 }

@@ -60,8 +60,12 @@ extern "C" {
 #define THUMB_VENC_CHN (VENC_MAX_CHN_NUM - 1)
 
 /* setting file path */
-#define RKADK_PARAM_PATH "/data/rkadk_setting.ini"
-#define RKADK_DEFPARAM_PATH "/etc/rkadk_defsetting.ini"
+#define RKADK_DEFPARAM_PATH "/etc/rkadk/rkadk_defsetting.ini"
+#define RKADK_DEFPARAM_PATH_SENSOR_0 "/etc/rkadk/rkadk_defsetting_sensor_0.ini"
+#define RKADK_DEFPARAM_PATH_SENSOR_1 "/etc/rkadk/rkadk_defsetting_sensor_1.ini"
+#define RKADK_PARAM_PATH "/data/rkadk/rkadk_setting.ini"
+#define RKADK_PARAM_PATH_SENSOR_0 "/data/rkadk/rkadk_setting_sensor_0.ini"
+#define RKADK_PARAM_PATH_SENSOR_1 "/data/rkadk/rkadk_setting_sensor_1.ini"
 
 /* Resolution */
 #define RKADK_WIDTH_720P 1280

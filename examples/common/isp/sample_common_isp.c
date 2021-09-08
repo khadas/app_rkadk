@@ -27,6 +27,12 @@
 #include <time.h>
 #include <unistd.h>
 
+#define SAMPLE_MAX_SENSOR_CNT 2
+typedef struct {
+  int camera_id;
+  unsigned int start_count;
+} SAMPLE_ISP_ATTR_S;
+
 #define MAX_AIQ_CTX 4
 static rk_aiq_sys_ctx_t *g_aiq_ctx[MAX_AIQ_CTX];
 static pthread_mutex_t aiq_ctx_mutex[MAX_AIQ_CTX] = {
@@ -41,7 +47,7 @@ rk_aiq_wb_gain_t gs_wb_auto_gain = {2.083900, 1.000000, 1.000000, 2.018500};
 unsigned int g_2dnr_default_level = 50;
 unsigned int g_3dnr_default_level = 50;
 rk_aiq_working_mode_t g_WDRMode[MAX_AIQ_CTX];
-static unsigned int g_start_count = 0;
+static SAMPLE_ISP_ATTR_S g_isp_attr[SAMPLE_MAX_SENSOR_CNT] = {{-1, 0}, {-1, 0}};
 
 typedef enum _SHUTTERSPEED_TYPE_E {
   SHUTTERSPEED_1_25 = 0,
@@ -86,10 +92,43 @@ typedef enum rk_HDR_MODE_E {
   HDR_MODE_HDR3,
 } HDR_MODE_E;
 
+static int SAMPLE_COMM_FindUsableIdx(int CamId) {
+  for (int i = 0; i < SAMPLE_MAX_SENSOR_CNT; i++) {
+    if (g_isp_attr[i].camera_id == -1) {
+      printf("%s: find usable index[%d] CamId[%d]\n", __func__, i, CamId);
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+static int SAMPLE_COMM_GetIdx(int CamId) {
+  for (int i = 0; i < SAMPLE_MAX_SENSOR_CNT; i++) {
+    if (g_isp_attr[i].camera_id == CamId) {
+      printf("%s: find matched index[%d] CamId[%d]\n", __func__, i, CamId);
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 int SAMPLE_COMM_ISP_Start(int CamId, rk_aiq_working_mode_t WDRMode,
                           bool MultiCam, const char *iq_file_dir, int fps) {
-  if (g_start_count != 0) {
-    g_start_count++;
+  int index;
+
+  index = SAMPLE_COMM_GetIdx(CamId);
+  if(index < 0) {
+    index = SAMPLE_COMM_FindUsableIdx(CamId);
+    if (index < 0) {
+      printf("not find usable index\n");
+      return -1;
+    }
+  }
+
+  if(g_isp_attr[index].start_count != 0) {
+    g_isp_attr[index].start_count++;
     return 0;
   }
 
@@ -108,7 +147,8 @@ int SAMPLE_COMM_ISP_Start(int CamId, rk_aiq_working_mode_t WDRMode,
     return -1;
   }
 
-  g_start_count++;
+  g_isp_attr[index].camera_id = CamId;
+  g_isp_attr[index].start_count++;
   return 0;
 }
 
@@ -225,8 +265,16 @@ int SAMPLE_COMM_ISP_GetFecAttrib(int CamId, rk_aiq_fec_attrib_t *attr) {
 }
 
 int SAMPLE_COMM_ISP_Stop(int CamId) {
-  if (g_start_count > 1) {
-    g_start_count--;
+  int index;
+
+  index = SAMPLE_COMM_GetIdx(CamId);
+  if (index < 0) {
+    printf("%s: not find matched CamId[%d]\n", __func__, CamId);
+    return -1;
+  }
+
+  if (g_isp_attr[index].start_count > 1) {
+    g_isp_attr[index].start_count--;
     return 0;
   }
 
@@ -240,7 +288,8 @@ int SAMPLE_COMM_ISP_Stop(int CamId) {
   rk_aiq_uapi_sysctl_deinit(g_aiq_ctx[CamId]);
   printf("rk_aiq_uapi_sysctl_deinit exit\n");
   g_aiq_ctx[CamId] = NULL;
-  g_start_count = 0;
+  g_isp_attr[index].camera_id = -1;
+  g_isp_attr[index].start_count = 0;
   return 0;
 }
 

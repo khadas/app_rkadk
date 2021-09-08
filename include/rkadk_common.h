@@ -25,7 +25,7 @@ extern "C" {
 #include <pthread.h>
 
 // dump config info for debug
-//#define RKADK_DUMP_CONFIG
+// #define RKADK_DUMP_CONFIG
 
 // dump isp process result
 //#define RKADK_DUMP_ISP_RESULT
@@ -34,7 +34,7 @@ extern "C" {
 #define RKADK_ISPP_VI_NODE_CNT 4
 
 // camera sensor count
-#define RKADK_MAX_SENSOR_CNT 1
+#define RKADK_MAX_SENSOR_CNT 2
 
 // simultaneous record files num
 #define RECORD_FILE_NUM_MAX 2
@@ -45,7 +45,7 @@ typedef unsigned char RKADK_U8;
 typedef unsigned short RKADK_U16;
 typedef unsigned int RKADK_U32;
 
-typedef signed char RKADK_S8;
+typedef char RKADK_S8;
 typedef short RKADK_S16;
 typedef int RKADK_S32;
 

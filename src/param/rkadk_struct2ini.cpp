@@ -58,9 +58,9 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
     if (mapTable[i].keyVlaueType == int_e) {
       int keyInt = iniparser_getint(ini, sectionKey, -1);
       if (keyInt == -1 && strcmp(mapTable[i].structMember, "first_frame_qp")) {
-        #ifdef RKADK_DUMP_CONFIG
+#ifdef RKADK_DUMP_CONFIG
         RKADK_LOGE("int [%s]: not exist", sectionKey);
-        #endif
+#endif
         return RKADK_PARAM_NOT_EXIST;
       } else {
         *(int *)((char *)structAddr + mapTable[i].offset) = keyInt;
@@ -80,9 +80,9 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
           }
         }
       } else {
-        #ifdef RKADK_DUMP_CONFIG
+#ifdef RKADK_DUMP_CONFIG
         RKADK_LOGE("string [%s]: not exist", sectionKey);
-        #endif
+#endif
         return RKADK_PARAM_NOT_EXIST;
       }
     } else if (mapTable[i].keyVlaueType == double_e) {
@@ -92,9 +92,9 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
       if (fabs(keyDouble - (-1.0)) > EPS) {
         *(double *)((char *)structAddr + mapTable[i].offset) = keyDouble;
       } else {
-        #ifdef RKADK_DUMP_CONFIG
+#ifdef RKADK_DUMP_CONFIG
         RKADK_LOGE("double [%s]: not exist", sectionKey);
-        #endif
+#endif
         return RKADK_PARAM_NOT_EXIST;
       }
     } else if (mapTable[i].keyVlaueType == bool_e) {
@@ -105,9 +105,9 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
         else
           *(bool *)((char *)structAddr + mapTable[i].offset) = false;
       } else {
-        #ifdef RKADK_DUMP_CONFIG
+#ifdef RKADK_DUMP_CONFIG
         RKADK_LOGE("bool [%s] not exist", sectionKey);
-        #endif
+#endif
         return RKADK_PARAM_NOT_EXIST;
       }
     }

@@ -19,10 +19,10 @@
 #include "rkadk_param.h"
 #include "rkmedia_api.h"
 #include "rtsp_demo.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 typedef struct {
   bool start;
@@ -158,8 +158,8 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
     assert(pHandle);
   }
 
-  if(!pHandle->start) {
-    if(!pHandle->bVencChnMux)
+  if (!pHandle->start) {
+    if (!pHandle->bVencChnMux)
       RK_MPI_MB_ReleaseBuffer(mb);
 
     return;
@@ -176,7 +176,7 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
         RKADK_LOGD("wait first idr frame");
       }
 
-      if(!pHandle->bVencChnMux)
+      if (!pHandle->bVencChnMux)
         RK_MPI_MB_ReleaseBuffer(mb);
       return;
     }
@@ -190,7 +190,7 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
     rtsp_do_event(pHandle->stRtspHandle);
   }
 
-  if(!pHandle->bVencChnMux)
+  if (!pHandle->bVencChnMux)
     RK_MPI_MB_ReleaseBuffer(mb);
 }
 
@@ -272,7 +272,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
 
   enType = RKADK_PARAM_VencChnMux(u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_LIVE) {
-    switch(enType) {
+    switch (enType) {
     case RKADK_STREAM_TYPE_VIDEO_MAIN:
       RKADK_LOGI("Live and Record main venc[%d] mux", stVencChn.s32ChnId);
       break;
@@ -364,8 +364,6 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
-  RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
-
   RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn);
 
   // exit get media buffer
@@ -392,6 +390,8 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     RKADK_LOGE("RKADK_MPI_VI_DeInit failed %d", ret);
     return ret;
   }
+
+  RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
 
   RKADK_LOGI("Rtsp[%d] DeInit End...", pstHandle->u32CamId);
   free(pHandle);

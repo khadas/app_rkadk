@@ -29,17 +29,18 @@
 
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
-static std::deque<char *> g_fileNameDeque[RKADK_REC_STREAM_MAX_CNT];
+static std::deque<char *>
+    g_fileNameDeque[RKADK_REC_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
 static pthread_mutex_t g_fileNameMutexLock = PTHREAD_MUTEX_INITIALIZER;
 
 static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
                              RKADK_U32 muxerId) {
-  int i, ret;
+  int index, ret;
   RKADK_RECORDER_HANDLE_S *pstRecorder;
 
   RKADK_MUTEX_LOCK(g_fileNameMutexLock);
 
-  if (muxerId >= RKADK_REC_STREAM_MAX_CNT) {
+  if (muxerId >= RKADK_REC_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT) {
     RKADK_LOGE("Incorrect file index: %d", muxerId);
     RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
@@ -71,9 +72,10 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
     }
 
     char *newName[pstRecorder->u32StreamCnt];
-    for (i = 0; i < (int)pstRecorder->u32StreamCnt; i++) {
+    for (int i = 0; i < (int)pstRecorder->u32StreamCnt; i++) {
       newName[i] = strdup(fileName[i]);
-      g_fileNameDeque[i].push_back(newName[i]);
+      index = i + (RKADK_REC_STREAM_MAX_CNT * pstRecorder->s32CamId);
+      g_fileNameDeque[index].push_back(newName[i]);
     }
     free(fileName);
   }
@@ -550,7 +552,7 @@ failed:
 }
 
 RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
-  RKADK_S32 ret;
+  RKADK_S32 ret, index;
   RKADK_S32 s32CamId;
   RKADK_REC_TYPE_E enRecType;
   RKADK_RECORDER_HANDLE_S *stRecorder = NULL;
@@ -570,13 +572,14 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
 
   for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
-    while (!g_fileNameDeque[i].empty()) {
-      RKADK_LOGD("clear file name deque(%d)", i);
-      auto front = g_fileNameDeque[i].front();
-      g_fileNameDeque[i].pop_front();
+    index = i + (RKADK_REC_STREAM_MAX_CNT * s32CamId);
+    while (!g_fileNameDeque[index].empty()) {
+      RKADK_LOGI("clear file name deque[%d]", index);
+      auto front = g_fileNameDeque[index].front();
+      g_fileNameDeque[index].pop_front();
       free(front);
     }
-    g_fileNameDeque[i].clear();
+    g_fileNameDeque[index].clear();
   }
 
   ret = RKADK_REC_Destroy(pRecorder);

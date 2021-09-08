@@ -94,12 +94,12 @@ static void SetSensorCfg() {
   stSensorCfg.hdr = 0;
   stSensorCfg.antifog = 0;
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stSensorCfg, g_stSensorCfgMapTable_0,
-                   sizeof(g_stSensorCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stSensorCfg, g_stSensorCfgMapTable,
+                   sizeof(g_stSensorCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stSensorCfg, g_stSensorCfgMapTable_0,
-                   sizeof(g_stSensorCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stSensorCfg, g_stSensorCfgMapTable,
+                   sizeof(g_stSensorCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -174,36 +174,36 @@ static void SetRecCfg() {
   strcpy(stParamRecCfg.attribute[1].venc_param.hier_qp_delta, "-3,0,0,0");
   strcpy(stParamRecCfg.attribute[1].venc_param.hier_frame_num, "3,0,0,0");
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
-                   sizeof(g_stRecCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stParamRecCfg, g_stRecCfgMapTable,
+                   sizeof(g_stRecCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[0],
-                   g_stRecCfgMapTable_0_0, sizeof(g_stRecCfgMapTable_0_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[0],
+                   g_stRecCfgMapTable_0, sizeof(g_stRecCfgMapTable_0) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[1],
-                   g_stRecCfgMapTable_0_1, sizeof(g_stRecCfgMapTable_0_1) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[1],
+                   g_stRecCfgMapTable_1, sizeof(g_stRecCfgMapTable_1) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[0].venc_param,
-                   g_stRecParamMapTable_0_0, sizeof(g_stRecParamMapTable_0_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[0].venc_param,
+                   g_stRecParamMapTable_0, sizeof(g_stRecParamMapTable_0) /
                                                  sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stParamRecCfg.attribute[1].venc_param,
-                   g_stRecParamMapTable_0_1, sizeof(g_stRecParamMapTable_0_1) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[1].venc_param,
+                   g_stRecParamMapTable_1, sizeof(g_stRecParamMapTable_1) /
                                                  sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg, g_stRecCfgMapTable_0,
-                   sizeof(g_stRecCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stParamRecCfg, g_stRecCfgMapTable,
+                   sizeof(g_stRecCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[0],
-                   g_stRecCfgMapTable_0_0, sizeof(g_stRecCfgMapTable_0_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[0],
+                   g_stRecCfgMapTable_0, sizeof(g_stRecCfgMapTable_0) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[1],
-                   g_stRecCfgMapTable_0_1, sizeof(g_stRecCfgMapTable_0_1) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[1],
+                   g_stRecCfgMapTable_1, sizeof(g_stRecCfgMapTable_1) /
                                                sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[0].venc_param,
-                   g_stRecParamMapTable_0_0, sizeof(g_stRecParamMapTable_0_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[0].venc_param,
+                   g_stRecParamMapTable_0, sizeof(g_stRecParamMapTable_0) /
                                                  sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamRecCfg.attribute[1].venc_param,
-                   g_stRecParamMapTable_0_1, sizeof(g_stRecParamMapTable_0_1) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stParamRecCfg.attribute[1].venc_param,
+                   g_stRecParamMapTable_1, sizeof(g_stRecParamMapTable_1) /
                                                  sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -227,22 +227,22 @@ static void SetStreamCfg() {
   strcpy(stStreamCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
   strcpy(stStreamCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg, g_stPreviewCfgMapTable_0,
-                   sizeof(g_stPreviewCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stStreamCfg, g_stPreviewCfgMapTable,
+                   sizeof(g_stPreviewCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg, g_stPreviewCfgMapTable_0,
-                   sizeof(g_stPreviewCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stStreamCfg, g_stPreviewCfgMapTable,
+                   sizeof(g_stPreviewCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stStreamCfg.attribute.venc_param,
-                   g_stPreviewParamMapTable_0,
-                   sizeof(g_stPreviewParamMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stStreamCfg.attribute.venc_param,
+                   g_stPreviewParamMapTable,
+                   sizeof(g_stPreviewParamMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stStreamCfg.attribute.venc_param,
-                   g_stPreviewParamMapTable_0,
-                   sizeof(g_stPreviewParamMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stStreamCfg.attribute.venc_param,
+                   g_stPreviewParamMapTable,
+                   sizeof(g_stPreviewParamMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -266,20 +266,20 @@ static void SetLiveCfg() {
   strcpy(stLiveCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
   strcpy(stLiveCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stLiveCfg, g_stLiveCfgMapTable_0,
-                   sizeof(g_stLiveCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stLiveCfg, g_stLiveCfgMapTable,
+                   sizeof(g_stLiveCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stLiveCfg, g_stLiveCfgMapTable_0,
-                   sizeof(g_stLiveCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stLiveCfg, g_stLiveCfgMapTable,
+                   sizeof(g_stLiveCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stLiveCfg.attribute.venc_param,
-                   g_stLiveParamMapTable_0, sizeof(g_stLiveParamMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stLiveCfg.attribute.venc_param,
+                   g_stLiveParamMapTable, sizeof(g_stLiveParamMapTable) /
                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stLiveCfg.attribute.venc_param,
-                   g_stLiveParamMapTable_0, sizeof(g_stLiveParamMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stLiveCfg.attribute.venc_param,
+                   g_stLiveParamMapTable, sizeof(g_stLiveParamMapTable) /
                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -292,12 +292,12 @@ static void SetPhotoCfg() {
   stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
 
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stPhotoCfg, g_stPhotoCfgMapTable_0,
-                   sizeof(g_stPhotoCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stPhotoCfg, g_stPhotoCfgMapTable,
+                   sizeof(g_stPhotoCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stPhotoCfg, g_stPhotoCfgMapTable_0,
-                   sizeof(g_stPhotoCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stPhotoCfg, g_stPhotoCfgMapTable,
+                   sizeof(g_stPhotoCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -312,9 +312,9 @@ static void SetViCfg() {
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "FBC0");
   strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_0,
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_0,
                    sizeof(g_stViCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_0,
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_0,
                    sizeof(g_stViCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
@@ -323,9 +323,9 @@ static void SetViCfg() {
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_1,
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_1,
                    sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_1,
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_1,
                    sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
@@ -334,9 +334,9 @@ static void SetViCfg() {
   stViCfg.buf_cnt = 2;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "NONE");
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_2,
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_2,
                    sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_2,
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_2,
                    sizeof(g_stViCfgMapTable_2) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
@@ -347,9 +347,9 @@ static void SetViCfg() {
   stViCfg.buf_cnt = 4;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "RECORD_SUB|PREVIEW|LIVE|DISP");
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_3,
                    sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stViCfg, g_stViCfgMapTable_3,
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stViCfg, g_stViCfgMapTable_3,
                    sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
@@ -386,11 +386,11 @@ static void SetDispCfg() {
   strcpy(stDispCfg.img_type, "RGB888");
   stDispCfg.z_pos = 0;
   stDispCfg.vo_chn = 0;
-  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH, &stDispCfg, g_stDispCfgMapTable_0,
-                   sizeof(g_stDispCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_DEFPARAM_PATH_SENSOR_0, &stDispCfg, g_stDispCfgMapTable,
+                   sizeof(g_stDispCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stDispCfg, g_stDispCfgMapTable_0,
-                   sizeof(g_stDispCfgMapTable_0) /
+  RKADK_Struct2Ini(RKADK_PARAM_PATH_SENSOR_0, &stDispCfg, g_stDispCfgMapTable,
+                   sizeof(g_stDispCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 

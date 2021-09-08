@@ -34,7 +34,7 @@ extern char *optarg;
 #define IQ_FILE_PATH "/etc/iqfiles"
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I";
+static RKADK_CHAR optstr[] = "a:I:h";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");

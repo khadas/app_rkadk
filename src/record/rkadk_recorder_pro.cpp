@@ -130,7 +130,7 @@ static void DumpMuxerChanAttr(MUXER_CHN_ATTR_S stMuxerAttr) {
 static RKADK_S32 EnableMuxerChn(RKADK_REC_TYPE_E enRecType,
                                 RKADK_RECORDER_STREAM_ATTR_S *stDstStreamAttr,
                                 RKADK_REC_ATTR_S *pstRecAttr,
-                                RKADK_U32 u32StreamIndex) {
+                                RKADK_U32 u32StreamIndex, RKADK_S32 s32CamId) {
   int videoTrackCnt = 0, audioTrackCnt = 0;
   MUXER_CHN_ATTR_S stMuxerAttr;
   RKADK_REC_STREAM_ATTR_S *pstSrcStreamAttr =
@@ -139,14 +139,15 @@ static RKADK_S32 EnableMuxerChn(RKADK_REC_TYPE_E enRecType,
   memset(&stMuxerAttr, 0, sizeof(stMuxerAttr));
 
   stDstStreamAttr->stMuxerChn.enModId = RK_ID_MUXER;
-  stDstStreamAttr->stMuxerChn.s32ChnId = u32StreamIndex;
+  stDstStreamAttr->stMuxerChn.s32ChnId =
+      u32StreamIndex + (s32CamId * RKADK_REC_STREAM_MAX_CNT);
 
   if (enRecType == RKADK_REC_TYPE_LAPSE)
     stMuxerAttr.bLapseRecord = RK_TRUE;
   else
     stMuxerAttr.bLapseRecord = RK_FALSE;
 
-  stMuxerAttr.u32MuxerId = u32StreamIndex;
+  stMuxerAttr.u32MuxerId = stDstStreamAttr->stMuxerChn.s32ChnId;
   stMuxerAttr.stPreRecordParam.u32PreRecTimeSec =
       pstRecAttr->stPreRecordAttr.u32PreRecTimeSec;
   stMuxerAttr.stPreRecordParam.u32PreRecCacheTime =
@@ -265,10 +266,11 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
         pstRecorder;
 
   for (RKADK_U32 i = 0; i < pstRecAttr->u32StreamCnt; i++) {
-    ret = EnableMuxerChn(pstRecorder->enRecType,
-                         &(pstRecorder->stStreamAttr[i]), pstRecAttr, i);
+    ret =
+        EnableMuxerChn(pstRecorder->enRecType, &(pstRecorder->stStreamAttr[i]),
+                       pstRecAttr, i, s32CamId);
     if (ret) {
-      RKADK_LOGE("Create Vm(%d) failed", i);
+      RKADK_LOGE("Create Vm[%d] failed[%d]", i, ret);
       goto failed;
     }
 

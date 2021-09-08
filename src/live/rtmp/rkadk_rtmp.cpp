@@ -156,14 +156,7 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId, char *path,
                                    RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
                                    RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg,
                                    MUXER_CHN_ATTR_S *pstMuxerAttr) {
-  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
-
-  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
-  if (!pstRecCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
-    return -1;
-  }
 
   pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
@@ -172,7 +165,8 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId, char *path,
   }
 
   memset(pstMuxerAttr, 0, sizeof(MUXER_CHN_ATTR_S));
-  pstMuxerAttr->u32MuxerId = pstRecCfg->file_num;
+  pstMuxerAttr->u32MuxerId =
+      RECORD_FILE_NUM_MAX * RKADK_MAX_SENSOR_CNT + u32CamId;
   pstMuxerAttr->enMode = MUXER_MODE_SINGLE;
   pstMuxerAttr->enType = MUXER_TYPE_FLV;
   pstMuxerAttr->pcOutputFile = path;
