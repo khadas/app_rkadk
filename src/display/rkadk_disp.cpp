@@ -17,6 +17,7 @@
 #include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
+#include "rkadk_param_inner.h"
 #include "rkmedia_api.h"
 #include <stdio.h>
 #include <stdlib.h>

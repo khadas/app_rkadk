@@ -15,7 +15,9 @@
  */
 
 #include "rkadk_param.h"
+#include "rkadk_param_inner.h"
 #include "rkadk_param_map.h"
+#include "rkadk_media_comm.h"
 
 #define RKISPP_SCALE0_NV12_WIDTH_MAX 2080
 #define RKISPP_SCALE1_WIDTH_MAX 1280

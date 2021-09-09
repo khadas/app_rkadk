@@ -22,7 +22,6 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rkadk_media_comm.h"
 
 typedef enum {
   RKADK_H264E_NALU_BSLICE = 0,   /* B SLICE types */

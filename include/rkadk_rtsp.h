@@ -22,7 +22,6 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rkadk_media_comm.h"
 
 RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
                           RKADK_MW_PTR *ppHandle);

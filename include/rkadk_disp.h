@@ -22,7 +22,6 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rkmedia_common.h"
 
 RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId);
 
