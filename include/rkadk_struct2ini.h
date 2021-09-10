@@ -45,9 +45,9 @@ typedef struct {
   RKADK_U32 offset;
 } RKADK_SI_CONFIG_MAP_S;
 
-RKADK_S32 RKADK_Ini2Struct(const char *iniFile, void *structAddr,
+RKADK_S32 RKADK_Ini2Struct(char *iniFile, void *structAddr,
                            RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize);
-RKADK_S32 RKADK_Struct2Ini(const char *iniFile, void *structAddr,
+RKADK_S32 RKADK_Struct2Ini(char *iniFile, void *structAddr,
                            RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize);
 
 #ifdef __cplusplus

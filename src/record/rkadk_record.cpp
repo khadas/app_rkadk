@@ -509,7 +509,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
              pstRecAttr->enRecType);
 
   RK_MPI_SYS_Init();
-  RKADK_PARAM_Init();
+  RKADK_PARAM_Init(NULL, NULL);
 
   if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;

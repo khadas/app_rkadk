@@ -32,7 +32,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:?";
+static RKADK_CHAR optstr[] = "a:I:p:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -43,6 +43,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
          "without this option aiq should run in other application\n");
   printf("\t-I: camera id, Default 0\n");
+  printf("\t-p: param ini directory path, Default:/data/rkadk\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -54,6 +55,9 @@ int main(int argc, char *argv[]) {
   int c, ret, fps;
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  const char *iniPath = NULL;
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -69,7 +73,11 @@ int main(int argc, char *argv[]) {
     case 'I':
       u32CamId = atoi(optarg);
       break;
-    case '?':
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
+      break;
+    case 'h':
     default:
       print_usage(argv[0]);
       optind = 0;
@@ -81,7 +89,17 @@ int main(int argc, char *argv[]) {
   RKADK_LOGD("#camera id: %d", u32CamId);
 
 #ifdef RKAIQ
-  RKADK_PARAM_Init();
+  if (iniPath) {
+    memset(path, 0, RKADK_PATH_LEN);
+    memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
+    sprintf(path, "%s/rkadk_setting.ini", iniPath);
+    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
+      sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
+    RKADK_PARAM_Init(path, sensorPath);
+  } else {
+    RKADK_PARAM_Init(NULL, NULL);
+  }
+
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");

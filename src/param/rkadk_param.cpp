@@ -15,9 +15,9 @@
  */
 
 #include "rkadk_param.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_param_inner.h"
 #include "rkadk_param_map.h"
-#include "rkadk_media_comm.h"
 
 #define RKISPP_SCALE0_NV12_WIDTH_MAX 2080
 #define RKISPP_SCALE1_WIDTH_MAX 1280
@@ -26,7 +26,7 @@
 static RKADK_PARAM_CONTEXT_S g_stPARAMCtx = {
     .bInit = false, .mutexLock = PTHREAD_MUTEX_INITIALIZER, .stCfg = {0}};
 
-static RKADK_S32 RKADK_PARAM_SaveViCfg(const char *path, RKADK_U32 viIndex,
+static RKADK_S32 RKADK_PARAM_SaveViCfg(char *path, RKADK_U32 viIndex,
                                        RKADK_U32 u32CamId) {
   int ret = 0;
   RKADK_PARAM_MEDIA_CFG_S *pstMediaCfg = NULL;
@@ -67,7 +67,7 @@ static RKADK_S32 RKADK_PARAM_SaveViCfg(const char *path, RKADK_U32 viIndex,
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveVersion(const char *path) {
+static RKADK_S32 RKADK_PARAM_SaveVersion(char *path) {
   int ret = 0;
   RKADK_PARAM_VERSION_S *pstVersion = &g_stPARAMCtx.stCfg.stVersion;
 
@@ -80,7 +80,7 @@ static RKADK_S32 RKADK_PARAM_SaveVersion(const char *path) {
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveCommCfg(const char *path) {
+static RKADK_S32 RKADK_PARAM_SaveCommCfg(char *path) {
   int ret = 0;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
@@ -93,7 +93,7 @@ static RKADK_S32 RKADK_PARAM_SaveCommCfg(const char *path) {
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveAudioCfg(const char *path) {
+static RKADK_S32 RKADK_PARAM_SaveAudioCfg(char *path) {
   int ret = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
 
@@ -106,7 +106,7 @@ static RKADK_S32 RKADK_PARAM_SaveAudioCfg(const char *path) {
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveThumbCfg(const char *path) {
+static RKADK_S32 RKADK_PARAM_SaveThumbCfg(char *path) {
   int ret = 0;
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
 
@@ -119,8 +119,7 @@ static RKADK_S32 RKADK_PARAM_SaveThumbCfg(const char *path) {
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveSensorCfg(const char *path,
-                                           RKADK_U32 u32CamId) {
+static RKADK_S32 RKADK_PARAM_SaveSensorCfg(char *path, RKADK_U32 u32CamId) {
   int ret;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
@@ -140,8 +139,7 @@ static RKADK_S32 RKADK_PARAM_SaveSensorCfg(const char *path,
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SavePhotoCfg(const char *path,
-                                          RKADK_U32 u32CamId) {
+static RKADK_S32 RKADK_PARAM_SavePhotoCfg(char *path, RKADK_U32 u32CamId) {
   int ret;
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
@@ -161,8 +159,7 @@ static RKADK_S32 RKADK_PARAM_SavePhotoCfg(const char *path,
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveVencParamCfg(const char *path,
-                                              RKADK_U32 u32CamId,
+static RKADK_S32 RKADK_PARAM_SaveVencParamCfg(char *path, RKADK_U32 u32CamId,
                                               RKADK_STREAM_TYPE_E enStrmType) {
   int ret = 0;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
@@ -209,7 +206,7 @@ static RKADK_S32 RKADK_PARAM_SaveVencParamCfg(const char *path,
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveStreamCfg(const char *path, RKADK_U32 u32CamId,
+static RKADK_S32 RKADK_PARAM_SaveStreamCfg(char *path, RKADK_U32 u32CamId,
                                            RKADK_STREAM_TYPE_E enStrmType) {
   int ret = 0;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
@@ -245,7 +242,7 @@ static RKADK_S32 RKADK_PARAM_SaveStreamCfg(const char *path, RKADK_U32 u32CamId,
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveRecCfg(const char *path, RKADK_U32 u32CamId) {
+static RKADK_S32 RKADK_PARAM_SaveRecCfg(char *path, RKADK_U32 u32CamId) {
   int ret = 0;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
@@ -267,7 +264,7 @@ static RKADK_S32 RKADK_PARAM_SaveRecCfg(const char *path, RKADK_U32 u32CamId) {
   return 0;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveRecTime(const char *path, RKADK_U32 u32CamId,
+static RKADK_S32 RKADK_PARAM_SaveRecTime(char *path, RKADK_U32 u32CamId,
                                          RKADK_STREAM_TYPE_E enStrmType) {
   int ret;
   RKADK_U32 index;
@@ -306,7 +303,7 @@ static RKADK_S32 RKADK_PARAM_SaveRecTime(const char *path, RKADK_U32 u32CamId,
   return 0;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveRecAttr(const char *path, RKADK_U32 u32CamId,
+static RKADK_S32 RKADK_PARAM_SaveRecAttr(char *path, RKADK_U32 u32CamId,
                                          RKADK_STREAM_TYPE_E enStrmType) {
   int ret;
   RKADK_U32 index;
@@ -345,7 +342,7 @@ static RKADK_S32 RKADK_PARAM_SaveRecAttr(const char *path, RKADK_U32 u32CamId,
   return 0;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveDispCfg(const char *path, RKADK_U32 u32CamId) {
+static RKADK_S32 RKADK_PARAM_SaveDispCfg(char *path, RKADK_U32 u32CamId) {
   int ret;
   RKADK_PARAM_DISP_CFG_S *pstDispCfg;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
@@ -403,7 +400,7 @@ static bool RKADK_PARAM_CheckCfgStr(char *value, const char *defValue,
   }
 }
 
-static void RKADK_PARAM_CheckCommCfg(const char *path) {
+static void RKADK_PARAM_CheckCommCfg(char *path) {
   bool change = false;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
@@ -418,7 +415,7 @@ static void RKADK_PARAM_CheckCommCfg(const char *path) {
     RKADK_PARAM_SaveCommCfg(path);
 }
 
-static void RKADK_PARAM_CheckAudioCfg(const char *path) {
+static void RKADK_PARAM_CheckAudioCfg(char *path) {
   bool change = false;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
 
@@ -446,7 +443,7 @@ static void RKADK_PARAM_CheckAudioCfg(const char *path) {
     RKADK_PARAM_SaveAudioCfg(path);
 }
 
-static void RKADK_PARAM_CheckThumbCfg(const char *path) {
+static void RKADK_PARAM_CheckThumbCfg(char *path) {
   bool change = false;
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
 
@@ -461,7 +458,7 @@ static void RKADK_PARAM_CheckThumbCfg(const char *path) {
     RKADK_PARAM_SaveThumbCfg(path);
 }
 
-static void RKADK_PARAM_CheckSensorCfg(const char *path, RKADK_U32 u32CamId) {
+static void RKADK_PARAM_CheckSensorCfg(char *path, RKADK_U32 u32CamId) {
   bool change = false;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
@@ -478,7 +475,7 @@ static void RKADK_PARAM_CheckSensorCfg(const char *path, RKADK_U32 u32CamId) {
     RKADK_PARAM_SaveSensorCfg(path, u32CamId);
 }
 
-static void RKADK_PARAM_CheckStreamCfg(const char *path, RKADK_U32 u32CamId,
+static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                        RKADK_STREAM_TYPE_E enStrmType) {
   bool change = false;
   RKADK_PARAM_VENC_ATTR_S *pstAttribute = NULL;
@@ -540,7 +537,7 @@ static void RKADK_PARAM_CheckStreamCfg(const char *path, RKADK_U32 u32CamId,
     RKADK_PARAM_SaveVencParamCfg(path, u32CamId, enStrmType);
 }
 
-static void RKADK_PARAM_CheckPhotoCfg(const char *path, RKADK_U32 u32CamId) {
+static void RKADK_PARAM_CheckPhotoCfg(char *path, RKADK_U32 u32CamId) {
   bool change = false;
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stPhotoCfg;
@@ -557,7 +554,7 @@ static void RKADK_PARAM_CheckPhotoCfg(const char *path, RKADK_U32 u32CamId) {
     RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
 
-static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
+static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
   bool change = false;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
@@ -658,7 +655,7 @@ static void RKADK_PARAM_CheckRecCfg(const char *path, RKADK_U32 u32CamId) {
   }
 }
 
-static void RKADK_PARAM_CheckViCfg(const char *path, RKADK_U32 u32CamId,
+static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
                                    RKADK_U32 index) {
   bool change = false;
   RKADK_U32 u32ChnId;
@@ -728,7 +725,7 @@ static void RKADK_PARAM_CheckViCfg(const char *path, RKADK_U32 u32CamId,
     RKADK_PARAM_SaveViCfg(path, index, u32CamId);
 }
 
-static void RKADK_PARAM_CheckDispCfg(const char *path, RKADK_U32 u32CamId) {
+static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   bool change = false;
   RKADK_PARAM_DISP_CFG_S *pstDispCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stDispCfg;
@@ -765,7 +762,7 @@ static void RKADK_PARAM_CheckDispCfg(const char *path, RKADK_U32 u32CamId) {
     RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
 
-static bool RKADK_PARAM_CheckVersion(const RKADK_S8 *s8Path) {
+static bool RKADK_PARAM_CheckVersion(char *path) {
   int ret;
   char version[RKADK_BUFFER_LEN];
   RKADK_PARAM_CFG_S *pstCfg = &g_stPARAMCtx.stCfg;
@@ -774,7 +771,7 @@ static bool RKADK_PARAM_CheckVersion(const RKADK_S8 *s8Path) {
   memset(&pstCfg->stVersion, 0, sizeof(RKADK_PARAM_VERSION_S));
 
   ret = RKADK_Ini2Struct(
-      RKADK_DEFPARAM_PATH, &pstCfg->stVersion, g_stVersionMapTable,
+      (char *)RKADK_DEFPARAM_PATH, &pstCfg->stVersion, g_stVersionMapTable,
       sizeof(g_stVersionMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret) {
     RKADK_LOGE("load default ini version failed");
@@ -784,7 +781,7 @@ static bool RKADK_PARAM_CheckVersion(const RKADK_S8 *s8Path) {
           strlen(pstCfg->stVersion.version));
 
   memset(&pstCfg->stVersion, 0, sizeof(RKADK_PARAM_VERSION_S));
-  ret = RKADK_Ini2Struct(s8Path, &pstCfg->stVersion, g_stVersionMapTable,
+  ret = RKADK_Ini2Struct(path, &pstCfg->stVersion, g_stVersionMapTable,
                          sizeof(g_stVersionMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret) {
@@ -801,7 +798,7 @@ static bool RKADK_PARAM_CheckVersion(const RKADK_S8 *s8Path) {
   return true;
 }
 
-static void RKADK_PARAM_DefCommCfg(const char *path) {
+static void RKADK_PARAM_DefCommCfg(char *path) {
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
   memset(pstCommCfg, 0, sizeof(RKADK_PARAM_COMM_CFG_S));
@@ -818,7 +815,7 @@ static void RKADK_PARAM_DefCommCfg(const char *path) {
   RKADK_PARAM_SaveCommCfg(path);
 }
 
-static void RKADK_PARAM_DefAudioCfg(const char *path) {
+static void RKADK_PARAM_DefAudioCfg(char *path) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
 
   memset(pstAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
@@ -833,7 +830,7 @@ static void RKADK_PARAM_DefAudioCfg(const char *path) {
   RKADK_PARAM_SaveAudioCfg(path);
 }
 
-static void RKADK_PARAM_DefThumbCfg(const char *path) {
+static void RKADK_PARAM_DefThumbCfg(char *path) {
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
 
   memset(pstThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
@@ -843,7 +840,7 @@ static void RKADK_PARAM_DefThumbCfg(const char *path) {
   RKADK_PARAM_SaveThumbCfg(path);
 }
 
-static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, const char *path) {
+static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[0];
 
   memset(pstSensorCfg, 0, sizeof(RKADK_PARAM_SENSOR_CFG_S));
@@ -865,7 +862,7 @@ static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, const char *path) {
 }
 
 static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
-                                 const char *path) {
+                                 char *path) {
   RKADK_PARAM_VI_CFG_S *pstViCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stViCfg[u32ViIndex];
 
@@ -909,7 +906,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   RKADK_PARAM_SaveViCfg(path, u32ViIndex, u32CamId);
 }
 
-static void RKADK_PARAM_DefVencParam(const char *path, RKADK_U32 u32CamId,
+static void RKADK_PARAM_DefVencParam(char *path, RKADK_U32 u32CamId,
                                      RKADK_STREAM_TYPE_E enStrmType) {
   RKADK_PARAM_VENC_PARAM_S *pstVencParam = NULL;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
@@ -953,8 +950,7 @@ static void RKADK_PARAM_DefVencParam(const char *path, RKADK_U32 u32CamId,
 }
 
 static void RKADK_PARAM_DefRecTime(RKADK_U32 u32CamId,
-                                   RKADK_STREAM_TYPE_E enStrmType,
-                                   const char *path) {
+                                   RKADK_STREAM_TYPE_E enStrmType, char *path) {
   RKADK_PARAM_REC_TIME_CFG_S *pstTimeCfg = NULL;
 
   if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
@@ -978,8 +974,7 @@ static void RKADK_PARAM_DefRecTime(RKADK_U32 u32CamId,
 }
 
 static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
-                                   RKADK_STREAM_TYPE_E enStrmType,
-                                   const char *path) {
+                                   RKADK_STREAM_TYPE_E enStrmType, char *path) {
   RKADK_U32 u32Width, u32Height;
   RKADK_U32 u32VecnChn;
   RKADK_U32 u32Bitrate;
@@ -1024,7 +1019,7 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
   RKADK_PARAM_SaveRecAttr(path, u32CamId, enStrmType);
 }
 
-static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, const char *path) {
+static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stRecCfg;
 
@@ -1037,7 +1032,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, const char *path) {
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
 }
 
-static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, const char *path) {
+static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stPhotoCfg;
 
@@ -1052,7 +1047,7 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, const char *path) {
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
 
-static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, const char *path,
+static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
                                      RKADK_STREAM_TYPE_E enStrmType) {
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = NULL;
 
@@ -1084,7 +1079,7 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, const char *path,
   RKADK_PARAM_SaveStreamCfg(path, u32CamId, enStrmType);
 }
 
-static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, const char *path) {
+static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_DISP_CFG_S *pstDispCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stDispCfg;
 
@@ -1465,87 +1460,79 @@ static void RKADK_PARAM_DumpViAttr() {
   }
 }
 
-static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
-                                       const RKADK_S8 *s8SensorPath_0,
-                                       const RKADK_S8 *s8SensorPath_1) {
+static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
+                                       char (*sensorPath)[RKADK_PATH_LEN]) {
   int i, j, ret = 0;
-  const RKADK_S8 *s8SensorPath = NULL;
   RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
   RKADK_PARAM_MAP_TYPE_E enMapType = RKADK_PARAM_MAP_BUTT;
   RKADK_PARAM_CFG_S *pstCfg = &g_stPARAMCtx.stCfg;
 
-  if (!RKADK_PARAM_CheckVersion(s8Path))
+  if (!RKADK_PARAM_CheckVersion(path))
     return -1;
 
   // load common config
   memset(&pstCfg->stCommCfg, 0, sizeof(RKADK_PARAM_COMM_CFG_S));
-  ret = RKADK_Ini2Struct(s8Path, &pstCfg->stCommCfg, g_stCommCfgMapTable,
+  ret = RKADK_Ini2Struct(path, &pstCfg->stCommCfg, g_stCommCfgMapTable,
                          sizeof(g_stCommCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret == RKADK_PARAM_NOT_EXIST) {
     // use default
     RKADK_LOGW("common config param not exist, use default");
-    RKADK_PARAM_DefCommCfg(s8Path);
+    RKADK_PARAM_DefCommCfg(path);
   } else if (ret) {
-    RKADK_LOGE("load %s failed", s8Path);
+    RKADK_LOGE("load %s failed", path);
     return ret;
   }
-  RKADK_PARAM_CheckCommCfg(s8Path);
+  RKADK_PARAM_CheckCommCfg(path);
 
   // load audio config
   memset(&pstCfg->stAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
-  ret = RKADK_Ini2Struct(s8Path, &pstCfg->stAudioCfg, g_stAudioCfgMapTable,
+  ret = RKADK_Ini2Struct(path, &pstCfg->stAudioCfg, g_stAudioCfgMapTable,
                          sizeof(g_stAudioCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret == RKADK_PARAM_NOT_EXIST) {
     // use default
     RKADK_LOGW("audio config param not exist, use default");
-    RKADK_PARAM_DefAudioCfg(s8Path);
+    RKADK_PARAM_DefAudioCfg(path);
   } else if (ret) {
     RKADK_LOGE("load audio param failed");
     return ret;
   }
-  RKADK_PARAM_CheckAudioCfg(s8Path);
+  RKADK_PARAM_CheckAudioCfg(path);
 
   // load thumb config
   memset(&pstCfg->stThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
-  ret = RKADK_Ini2Struct(s8Path, &pstCfg->stThumbCfg, g_stThumbCfgMapTable,
+  ret = RKADK_Ini2Struct(path, &pstCfg->stThumbCfg, g_stThumbCfgMapTable,
                          sizeof(g_stThumbCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret == RKADK_PARAM_NOT_EXIST) {
     // use default
     RKADK_LOGW("thumb config param not exist, use default");
-    RKADK_PARAM_DefThumbCfg(s8Path);
+    RKADK_PARAM_DefThumbCfg(path);
   } else if (ret) {
     RKADK_LOGE("load thumb param failed");
     return ret;
   }
-  RKADK_PARAM_CheckThumbCfg(s8Path);
+  RKADK_PARAM_CheckThumbCfg(path);
 
   // load sensor config
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
-    if (i == 0)
-      s8SensorPath = s8SensorPath_0;
-    else
-      s8SensorPath = s8SensorPath_1;
-    RKADK_LOGD("u8SensorPath[%d]: %s", i, s8SensorPath);
-
     pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_SENSOR_MAP);
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     memset(&pstCfg->stSensorCfg[i], 0, sizeof(RKADK_PARAM_SENSOR_CFG_S));
-    ret = RKADK_Ini2Struct(s8SensorPath, &pstCfg->stSensorCfg[i],
+    ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stSensorCfg[i],
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] config param not exist, use default", i);
-      RKADK_PARAM_DefSensorCfg(i, s8SensorPath);
+      RKADK_PARAM_DefSensorCfg(i, sensorPath[i]);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] param failed", i);
       return ret;
     }
-    RKADK_PARAM_CheckSensorCfg(s8SensorPath, i);
+    RKADK_PARAM_CheckSensorCfg(sensorPath[i], i);
 
     // load vi config
     for (j = 0; j < RKADK_ISPP_VI_NODE_CNT; j++) {
@@ -1564,7 +1551,7 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
 
       memset(&pstCfg->stMediaCfg[i].stViCfg[j], 0,
              sizeof(RKADK_PARAM_VI_CFG_S));
-      ret = RKADK_Ini2Struct(s8SensorPath, &pstCfg->stMediaCfg[i].stViCfg[j],
+      ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stViCfg[j],
                              pstMapTableCfg->pstMapTable,
                              pstMapTableCfg->u32TableLen);
 
@@ -1572,12 +1559,12 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
         // use default
         RKADK_LOGW("sensor[%d] vi[%d] config param not exist, use default", i,
                    j);
-        RKADK_PARAM_DefViCfg(i, j, s8SensorPath);
+        RKADK_PARAM_DefViCfg(i, j, sensorPath[i]);
       } else if (ret) {
         RKADK_LOGE("load sensor[%d] vi[%d] param failed", i, j);
         return ret;
       }
-      RKADK_PARAM_CheckViCfg(s8SensorPath, i, j);
+      RKADK_PARAM_CheckViCfg(sensorPath[i], i, j);
     }
 
     // load record config
@@ -1585,13 +1572,13 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
     pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAP);
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
-    ret = RKADK_Ini2Struct(s8SensorPath, &pstCfg->stMediaCfg[i].stRecCfg,
+    ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] record param not exist, use default", i);
-      RKADK_PARAM_DefRecCfg(i, s8SensorPath);
+      RKADK_PARAM_DefRecCfg(i, sensorPath[i]);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] record param failed", i);
       return ret;
@@ -1624,46 +1611,47 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
         return -1;
 
       ret = RKADK_Ini2Struct(
-          s8SensorPath, &pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j],
+          sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j],
           pstTimeMapTable->pstMapTable, pstTimeMapTable->u32TableLen);
       if (ret == RKADK_PARAM_NOT_EXIST) {
         // use default
         RKADK_LOGW("sensor[%d] rec time[%d] not exist, use default", i, j);
-        RKADK_PARAM_DefRecTime(i, enStrmType, s8SensorPath);
+        RKADK_PARAM_DefRecTime(i, enStrmType, sensorPath[i]);
       } else if (ret) {
         RKADK_LOGE("load sensor[%d] record time[%d] failed", i, j);
         return ret;
       }
 
       ret = RKADK_Ini2Struct(
-          s8SensorPath, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
+          sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
           pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
       if (ret == RKADK_PARAM_NOT_EXIST) {
         // use default
         RKADK_LOGW("sensor[%d] rec attribute[%d] param not exist, use default",
                    i, j);
-        RKADK_PARAM_DefRecAttr(i, enStrmType, s8SensorPath);
+        RKADK_PARAM_DefRecAttr(i, enStrmType, sensorPath[i]);
       } else if (ret) {
         RKADK_LOGE("load sensor[%d] record attribute[%d] param failed", i, j);
         return ret;
       }
 
       ret = RKADK_Ini2Struct(
-          s8SensorPath, &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
+          sensorPath[i],
+          &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
           pstParamMapTable->pstMapTable, pstParamMapTable->u32TableLen);
       if (ret == RKADK_PARAM_NOT_EXIST) {
         // use default
         RKADK_LOGW(
             "sensor[%d] rec attribute[%d] venc param not exist, use default", i,
             j);
-        RKADK_PARAM_DefVencParam(s8SensorPath, i, enStrmType);
+        RKADK_PARAM_DefVencParam(sensorPath[i], i, enStrmType);
       } else if (ret) {
         RKADK_LOGE("load sensor[%d] record attribute[%d] venc param failed", i,
                    j);
         return ret;
       }
     }
-    RKADK_PARAM_CheckRecCfg(s8SensorPath, i);
+    RKADK_PARAM_CheckRecCfg(sensorPath[i], i);
 
     // load preview config
     memset(&pstCfg->stMediaCfg[i].stStreamCfg.attribute, 0,
@@ -1672,12 +1660,12 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     ret = RKADK_Ini2Struct(
-        s8SensorPath, &pstCfg->stMediaCfg[i].stStreamCfg.attribute,
+        sensorPath[i], &pstCfg->stMediaCfg[i].stStreamCfg.attribute,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] stream config param not exist, use default", i);
-      RKADK_PARAM_DefStreamCfg(i, s8SensorPath, RKADK_STREAM_TYPE_PREVIEW);
+      RKADK_PARAM_DefStreamCfg(i, sensorPath[i], RKADK_STREAM_TYPE_PREVIEW);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] stream param failed", i);
       return ret;
@@ -1688,17 +1676,17 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     ret = RKADK_Ini2Struct(
-        s8SensorPath, &pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param,
+        sensorPath[i], &pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] stream venc param not exist, use default", i);
-      RKADK_PARAM_DefVencParam(s8SensorPath, i, RKADK_STREAM_TYPE_PREVIEW);
+      RKADK_PARAM_DefVencParam(sensorPath[i], i, RKADK_STREAM_TYPE_PREVIEW);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] stream venc param failed", i);
       return ret;
     }
-    RKADK_PARAM_CheckStreamCfg(s8SensorPath, i, RKADK_STREAM_TYPE_PREVIEW);
+    RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_PREVIEW);
 
     // load live config
     memset(&pstCfg->stMediaCfg[i].stLiveCfg.attribute, 0,
@@ -1707,12 +1695,12 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     ret = RKADK_Ini2Struct(
-        s8SensorPath, &pstCfg->stMediaCfg[i].stLiveCfg.attribute,
+        sensorPath[i], &pstCfg->stMediaCfg[i].stLiveCfg.attribute,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] live config param not exist, use default", i);
-      RKADK_PARAM_DefStreamCfg(i, s8SensorPath, RKADK_STREAM_TYPE_LIVE);
+      RKADK_PARAM_DefStreamCfg(i, sensorPath[i], RKADK_STREAM_TYPE_LIVE);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] live param failed", i);
       return ret;
@@ -1723,17 +1711,17 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     ret = RKADK_Ini2Struct(
-        s8SensorPath, &pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param,
+        sensorPath[i], &pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] live venc param not exist, use default", i);
-      RKADK_PARAM_DefVencParam(s8SensorPath, i, RKADK_STREAM_TYPE_LIVE);
+      RKADK_PARAM_DefVencParam(sensorPath[i], i, RKADK_STREAM_TYPE_LIVE);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] live venc param failed", i);
       return ret;
     }
-    RKADK_PARAM_CheckStreamCfg(s8SensorPath, i, RKADK_STREAM_TYPE_LIVE);
+    RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_LIVE);
 
     // load photo config
     pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_PHOTO_MAP);
@@ -1741,36 +1729,36 @@ static RKADK_S32 RKADK_PARAM_LoadParam(const RKADK_S8 *s8Path,
 
     memset(&pstCfg->stMediaCfg[i].stPhotoCfg, 0,
            sizeof(RKADK_PARAM_PHOTO_CFG_S));
-    ret = RKADK_Ini2Struct(s8SensorPath, &pstCfg->stMediaCfg[i].stPhotoCfg,
+    ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stPhotoCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] photo config param not exist, use default", i);
-      RKADK_PARAM_DefPhotoCfg(i, s8SensorPath);
+      RKADK_PARAM_DefPhotoCfg(i, sensorPath[i]);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] photo param failed", i);
       return ret;
     }
-    RKADK_PARAM_CheckPhotoCfg(s8SensorPath, i);
+    RKADK_PARAM_CheckPhotoCfg(sensorPath[i], i);
 
     // load display config
     pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_DISP_MAP);
     RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
 
     memset(&pstCfg->stMediaCfg[i].stDispCfg, 0, sizeof(RKADK_PARAM_DISP_CFG_S));
-    ret = RKADK_Ini2Struct(s8SensorPath, &pstCfg->stMediaCfg[i].stDispCfg,
+    ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stDispCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
     if (ret == RKADK_PARAM_NOT_EXIST) {
       // use default
       RKADK_LOGW("sensor[%d] display config param not exist, use default", i);
-      RKADK_PARAM_DefDispCfg(i, s8SensorPath);
+      RKADK_PARAM_DefDispCfg(i, sensorPath[i]);
     } else if (ret) {
       RKADK_LOGE("load sensor[%d] display param failed", i);
       return ret;
     }
-    RKADK_PARAM_CheckDispCfg(s8SensorPath, i);
+    RKADK_PARAM_CheckDispCfg(sensorPath[i], i);
   }
 
   return 0;
@@ -1784,26 +1772,26 @@ static void RKADK_PARAM_UseDefault() {
   // default version
   RKADK_PARAM_VERSION_S *pstVersion = &g_stPARAMCtx.stCfg.stVersion;
   memcpy(pstVersion->version, RKADK_PARAM_VERSION, strlen(RKADK_PARAM_VERSION));
-  RKADK_PARAM_SaveVersion(RKADK_PARAM_PATH);
+  RKADK_PARAM_SaveVersion(g_stPARAMCtx.path);
 
   // default common config
-  RKADK_PARAM_DefCommCfg(RKADK_PARAM_PATH);
+  RKADK_PARAM_DefCommCfg(g_stPARAMCtx.path);
 
   // default audio config
-  RKADK_PARAM_DefAudioCfg(RKADK_PARAM_PATH);
+  RKADK_PARAM_DefAudioCfg(g_stPARAMCtx.path);
 
   // default thumb config
-  RKADK_PARAM_DefThumbCfg(RKADK_PARAM_PATH);
+  RKADK_PARAM_DefThumbCfg(g_stPARAMCtx.path);
 
   // default sensor.0 config
-  RKADK_PARAM_DefSensorCfg(0, RKADK_PARAM_PATH_SENSOR_0);
+  RKADK_PARAM_DefSensorCfg(0, g_stPARAMCtx.sensorPath[0]);
 
   // default vi config
   for (i = 0; i < RKADK_ISPP_VI_NODE_CNT; i++)
-    RKADK_PARAM_DefViCfg(0, i, RKADK_PARAM_PATH_SENSOR_0);
+    RKADK_PARAM_DefViCfg(0, i, g_stPARAMCtx.sensorPath[0]);
 
   // default sensor.0.rec config
-  RKADK_PARAM_DefRecCfg(0, RKADK_PARAM_PATH_SENSOR_0);
+  RKADK_PARAM_DefRecCfg(0, g_stPARAMCtx.sensorPath[0]);
 
   pstRecCfg = &g_stPARAMCtx.stCfg.stMediaCfg[0].stRecCfg;
   for (i = 0; i < (int)pstRecCfg->file_num; i++) {
@@ -1812,59 +1800,56 @@ static void RKADK_PARAM_UseDefault() {
     else
       enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
 
-    RKADK_PARAM_DefRecAttr(0, enStrmType, RKADK_PARAM_PATH_SENSOR_0);
-    RKADK_PARAM_DefVencParam(RKADK_PARAM_PATH_SENSOR_0, 0, enStrmType);
+    RKADK_PARAM_DefRecAttr(0, enStrmType, g_stPARAMCtx.sensorPath[0]);
+    RKADK_PARAM_DefVencParam(g_stPARAMCtx.sensorPath[0], 0, enStrmType);
   }
 
   // default sensor.0.photo config
-  RKADK_PARAM_DefPhotoCfg(0, RKADK_PARAM_PATH_SENSOR_0);
+  RKADK_PARAM_DefPhotoCfg(0, g_stPARAMCtx.sensorPath[0]);
 
   // default sensor.0.stream config
-  RKADK_PARAM_DefStreamCfg(0, RKADK_PARAM_PATH_SENSOR_0,
+  RKADK_PARAM_DefStreamCfg(0, g_stPARAMCtx.sensorPath[0],
                            RKADK_STREAM_TYPE_PREVIEW);
-  RKADK_PARAM_DefVencParam(RKADK_PARAM_PATH_SENSOR_0, 0,
+  RKADK_PARAM_DefVencParam(g_stPARAMCtx.sensorPath[0], 0,
                            RKADK_STREAM_TYPE_PREVIEW);
 
   // default sensor.0.live config
-  RKADK_PARAM_DefStreamCfg(0, RKADK_PARAM_PATH_SENSOR_0,
+  RKADK_PARAM_DefStreamCfg(0, g_stPARAMCtx.sensorPath[0],
                            RKADK_STREAM_TYPE_LIVE);
-  RKADK_PARAM_DefVencParam(RKADK_PARAM_PATH_SENSOR_0, 0,
+  RKADK_PARAM_DefVencParam(g_stPARAMCtx.sensorPath[0], 0,
                            RKADK_STREAM_TYPE_LIVE);
 
   // default sensor.0.disp config
-  RKADK_PARAM_DefDispCfg(0, RKADK_PARAM_PATH_SENSOR_0);
+  RKADK_PARAM_DefDispCfg(0, g_stPARAMCtx.sensorPath[0]);
 }
 
 static RKADK_S32 RKADK_PARAM_LoadDefault() {
   int ret;
-  char buffer[100];
-  const RKADK_S8 *s8SensorPath;
-  const RKADK_S8 *s8DefSensorPath;
+  char buffer[RKADK_PATH_LEN * 2 + 4];
+  char defSensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
-  ret = RKADK_PARAM_LoadParam(RKADK_DEFPARAM_PATH, RKADK_DEFPARAM_PATH_SENSOR_0,
-                              RKADK_DEFPARAM_PATH_SENSOR_1);
+  for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+    memset(defSensorPath[i], 0, RKADK_PATH_LEN);
+    sprintf(defSensorPath[i], "%s_%d.ini", RKADK_DEFPARAM_PATH_SENSOR_PREFIX,
+            i);
+    RKADK_LOGD("defSensorPath[%d]: %s", i, defSensorPath[i]);
+  }
+
+  ret = RKADK_PARAM_LoadParam((char *)RKADK_DEFPARAM_PATH, defSensorPath);
   if (ret) {
     RKADK_LOGE("load default ini failed");
     return ret;
   }
 
   memset(buffer, 0, RKADK_BUFFER_LEN);
-  sprintf(buffer, "cp %s %s", RKADK_DEFPARAM_PATH, RKADK_PARAM_PATH);
+  sprintf(buffer, "cp %s %s", RKADK_DEFPARAM_PATH, g_stPARAMCtx.path);
   RKADK_LOGD("%s", buffer);
   system(buffer);
 
   for (int i = 0; i < (int)pstCommCfg->sensor_count; i++) {
-    if (i == 0) {
-      s8DefSensorPath = RKADK_DEFPARAM_PATH_SENSOR_0;
-      s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-    } else {
-      s8DefSensorPath = RKADK_DEFPARAM_PATH_SENSOR_1;
-      s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
-    }
-
     memset(buffer, 0, RKADK_BUFFER_LEN);
-    sprintf(buffer, "cp %s %s", s8DefSensorPath, s8SensorPath);
+    sprintf(buffer, "cp %s %s", defSensorPath[i], g_stPARAMCtx.sensorPath[i]);
     RKADK_LOGD("%s", buffer);
     system(buffer);
   }
@@ -1875,7 +1860,6 @@ static RKADK_S32 RKADK_PARAM_LoadDefault() {
 static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
                                         RKADK_U32 width, RKADK_U32 height) {
   int index = -1;
-  const RKADK_S8 *s8SensorPath;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
@@ -1884,11 +1868,6 @@ static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
         pstViCfg->height == height)
       return index;
   }
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
     pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
@@ -1902,7 +1881,7 @@ static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
         if (pstViCfg->buf_cnt < 4)
           pstViCfg->buf_cnt = 4;
       }
-      RKADK_PARAM_SaveViCfg(s8SensorPath, index, s32CamId);
+      RKADK_PARAM_SaveViCfg(g_stPARAMCtx.sensorPath[s32CamId], index, s32CamId);
       break;
     }
   }
@@ -1932,7 +1911,6 @@ static RKADK_S32 RKADK_PARAM_FindClosestVi(RKADK_S32 s32CamId,
                                            const char *module, RKADK_U32 width,
                                            RKADK_U32 height) {
   int i, index = -1;
-  const RKADK_S8 *s8SensorPath;
   RKADK_U32 u32WidthDiff = 0, u32PreDiff = 0;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
@@ -1966,12 +1944,7 @@ static RKADK_S32 RKADK_PARAM_FindClosestVi(RKADK_S32 s32CamId,
       pstViCfg->buf_cnt = 4;
   }
 
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
-
-  RKADK_PARAM_SaveViCfg(s8SensorPath, index, s32CamId);
+  RKADK_PARAM_SaveViCfg(g_stPARAMCtx.sensorPath[s32CamId], index, s32CamId);
 
   RKADK_LOGI("Find %s[%d*%d] closest vi config[%d*%d]", module, width, height,
              pstViCfg->width, pstViCfg->height);
@@ -1982,7 +1955,6 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
                                          RKADK_S32 s32CamId, RKADK_U32 width,
                                          RKADK_U32 height) {
   int index;
-  const RKADK_S8 *s8SensorPath;
   char module[RKADK_BUFFER_LEN];
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
@@ -1990,11 +1962,6 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
   memset(module, 0, RKADK_BUFFER_LEN);
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   switch (enStrmType) {
   case RKADK_STREAM_TYPE_VIDEO_MAIN:
@@ -2036,7 +2003,7 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     height = pstRecAttr->height;
     pstPhotoCfg->image_width = width;
     pstPhotoCfg->image_height = height;
-    RKADK_PARAM_SavePhotoCfg(s8SensorPath, s32CamId);
+    RKADK_PARAM_SavePhotoCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
 
     if ((width == pstSensorCfg->max_width) &&
         (height == pstSensorCfg->max_height))
@@ -2101,9 +2068,11 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     pstAttrCfg->height = height;
 
     if (enStrmType == RKADK_STREAM_TYPE_VIDEO_SUB)
-      RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId, enStrmType);
+      RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                              enStrmType);
     else
-      RKADK_PARAM_SaveStreamCfg(s8SensorPath, s32CamId, enStrmType);
+      RKADK_PARAM_SaveStreamCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                enStrmType);
     break;
 
   default:
@@ -2138,7 +2107,7 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     }
   }
 
-  RKADK_PARAM_SaveViCfg(s8SensorPath, index, s32CamId);
+  RKADK_PARAM_SaveViCfg(g_stPARAMCtx.sensorPath[s32CamId], index, s32CamId);
   return index;
 }
 
@@ -2753,14 +2722,8 @@ static RKADK_S32
 RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
                          RKADK_PARAM_CODEC_CFG_S *pstCodecCfg) {
   RKADK_S32 ret;
-  const RKADK_S8 *s8SensorPath;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   switch (pstCodecCfg->enStreamType) {
   case RKADK_STREAM_TYPE_VIDEO_MAIN:
@@ -2769,7 +2732,7 @@ RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
       return 0;
 
     pstRecCfg->attribute[0].codec_type = pstCodecCfg->enCodecType;
-    ret = RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                   RKADK_STREAM_TYPE_VIDEO_MAIN);
     break;
 
@@ -2779,7 +2742,7 @@ RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
       return 0;
 
     pstRecCfg->attribute[1].codec_type = pstCodecCfg->enCodecType;
-    ret = RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                   RKADK_STREAM_TYPE_VIDEO_SUB);
     break;
 
@@ -2791,7 +2754,7 @@ RKADK_PARAM_SetCodecType(RKADK_S32 s32CamId,
       return 0;
 
     pstStreamCfg->attribute.codec_type = pstCodecCfg->enCodecType;
-    ret = RKADK_PARAM_SaveStreamCfg(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveStreamCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                     pstCodecCfg->enStreamType);
     break;
 
@@ -2836,14 +2799,8 @@ static RKADK_U32 RKADK_PARAM_GetBitrate(RKADK_S32 s32CamId,
 static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
                                         RKADK_PARAM_BITRATE_S *pstBitrate) {
   RKADK_S32 ret = -1;
-  const RKADK_S8 *s8SensorPath;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   switch (pstBitrate->enStreamType) {
   case RKADK_STREAM_TYPE_VIDEO_MAIN:
@@ -2852,7 +2809,7 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
       return 0;
 
     pstRecCfg->attribute[0].bitrate = pstBitrate->u32Bitrate;
-    ret = RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                   RKADK_STREAM_TYPE_VIDEO_MAIN);
     break;
 
@@ -2862,7 +2819,7 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
       return 0;
 
     pstRecCfg->attribute[1].bitrate = pstBitrate->u32Bitrate;
-    ret = RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                   RKADK_STREAM_TYPE_VIDEO_SUB);
     break;
 
@@ -2873,7 +2830,7 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
       return 0;
 
     pstStreamCfg->attribute.bitrate = pstBitrate->u32Bitrate;
-    ret = RKADK_PARAM_SaveStreamCfg(s8SensorPath, s32CamId,
+    ret = RKADK_PARAM_SaveStreamCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                                     pstBitrate->enStreamType);
     break;
 
@@ -2920,13 +2877,7 @@ static RKADK_S32 RKADK_PARAM_SetRecTime(RKADK_S32 s32CamId,
                                         RKADK_PARAM_REC_TIME_S *pstRecTime,
                                         RKADK_PARAM_TYPE_E enParamType) {
   RKADK_S32 ret;
-  const RKADK_S8 *s8SensorPath;
   RKADK_PARAM_REC_TIME_CFG_S *pstRecTimeCfg;
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   if (pstRecTime->enStreamType == RKADK_STREAM_TYPE_VIDEO_MAIN)
     pstRecTimeCfg =
@@ -2959,8 +2910,8 @@ static RKADK_S32 RKADK_PARAM_SetRecTime(RKADK_S32 s32CamId,
     return -1;
   }
 
-  ret =
-      RKADK_PARAM_SaveRecTime(s8SensorPath, s32CamId, pstRecTime->enStreamType);
+  ret = RKADK_PARAM_SaveRecTime(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                pstRecTime->enStreamType);
   return ret;
 }
 
@@ -3081,17 +3032,11 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
   bool bSaveRecAttr = false;
   bool bSavePhotoCfg = false;
   bool bSaveSensorCfg = false;
-  const RKADK_S8 *s8SensorPath;
   RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_BUTT;
   RKADK_PARAM_RES_E type = RKADK_RES_BUTT;
 
   // RKADK_LOGD("s32CamId: %d, enParamType: %d, u32_pvParam: %d, b_pvParam: %d",
   // s32CamId, enParamType, *(RKADK_U32 *)pvParam, *(bool *)pvParam);
-
-  if (s32CamId == 0)
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_0;
-  else
-    s8SensorPath = RKADK_PARAM_PATH_SENSOR_1;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
   RKADK_CHECK_INIT(g_stPARAMCtx.bInit, RKADK_FAILURE);
@@ -3234,18 +3179,19 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
   }
 
   if (bSaveSensorCfg)
-    RKADK_PARAM_SaveSensorCfg(s8SensorPath, s32CamId);
+    RKADK_PARAM_SaveSensorCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
 
   if (bSaveRecCfg)
-    RKADK_PARAM_SaveRecCfg(s8SensorPath, s32CamId);
+    RKADK_PARAM_SaveRecCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
 
   if (bSaveRecAttr) {
-    RKADK_PARAM_SaveRecAttr(s8SensorPath, s32CamId, enStrmType);
+    RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                            enStrmType);
     RKADK_PARAM_SetRecViAttr(s32CamId);
   }
 
   if (bSavePhotoCfg) {
-    RKADK_PARAM_SavePhotoCfg(s8SensorPath, s32CamId);
+    RKADK_PARAM_SavePhotoCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
     RKADK_PARAM_SetPhotoViAttr(s32CamId);
   }
 
@@ -3331,7 +3277,7 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
     return -1;
   }
 
-  RKADK_PARAM_SaveCommCfg(RKADK_PARAM_PATH);
+  RKADK_PARAM_SaveCommCfg(g_stPARAMCtx.path);
   RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
   return 0;
 }
@@ -3409,7 +3355,44 @@ RKADK_S32 RKADK_PARAM_SetDefault() {
   return ret;
 }
 
-RKADK_S32 RKADK_PARAM_Init() {
+RKADK_VOID RKADK_PARAM_SetPath(char *path, char (*sensorPath)[RKADK_PATH_LEN]) {
+  RKADK_U32 u32PathLen;
+
+  memset(g_stPARAMCtx.path, 0, RKADK_PATH_LEN);
+  if (path) {
+    u32PathLen = strlen(path);
+    if (u32PathLen > (RKADK_PATH_LEN - 1)) {
+      RKADK_LOGW("path[%s] len[%d] > %d", path, u32PathLen, RKADK_PATH_LEN - 1);
+      memcpy(g_stPARAMCtx.path, RKADK_PARAM_PATH, strlen(RKADK_PARAM_PATH));
+    } else {
+      memcpy(g_stPARAMCtx.path, path, u32PathLen);
+    }
+  } else {
+    memcpy(g_stPARAMCtx.path, RKADK_PARAM_PATH, strlen(RKADK_PARAM_PATH));
+  }
+  RKADK_LOGI("path: %s", g_stPARAMCtx.path);
+
+  for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+    memset(g_stPARAMCtx.sensorPath[i], 0, RKADK_PATH_LEN);
+    if (sensorPath && sensorPath[i]) {
+      u32PathLen = strlen(sensorPath[i]);
+      if (u32PathLen > (RKADK_PATH_LEN - 1)) {
+        RKADK_LOGW("sensorPath[%s] len[%d] > %d", sensorPath[i], u32PathLen,
+                   RKADK_PATH_LEN - 1);
+        sprintf(g_stPARAMCtx.sensorPath[i], "%s_%d.ini",
+                RKADK_PARAM_PATH_SENSOR_PREFIX, i);
+      } else {
+        memcpy(g_stPARAMCtx.sensorPath[i], sensorPath[i], u32PathLen);
+      }
+    } else {
+      sprintf(g_stPARAMCtx.sensorPath[i], "%s_%d.ini",
+              RKADK_PARAM_PATH_SENSOR_PREFIX, i);
+    }
+    RKADK_LOGI("sensorPath[%d]: %s", i, g_stPARAMCtx.sensorPath[i]);
+  }
+}
+
+RKADK_S32 RKADK_PARAM_Init(char *path, char (*sensorPath)[RKADK_PATH_LEN]) {
   RKADK_S32 ret = RKADK_SUCCESS;
 
   /* Check Module Init Status */
@@ -3418,9 +3401,10 @@ RKADK_S32 RKADK_PARAM_Init() {
 
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
 
+  RKADK_PARAM_SetPath(path, sensorPath);
+
   memset(&g_stPARAMCtx.stCfg, 0, sizeof(RKADK_PARAM_CFG_S));
-  ret = RKADK_PARAM_LoadParam(RKADK_PARAM_PATH, RKADK_PARAM_PATH_SENSOR_0,
-                              RKADK_PARAM_PATH_SENSOR_1);
+  ret = RKADK_PARAM_LoadParam(g_stPARAMCtx.path, g_stPARAMCtx.sensorPath);
   if (ret) {
     RKADK_LOGE("load setting ini failed, load default ini");
     ret = RKADK_PARAM_LoadDefault();

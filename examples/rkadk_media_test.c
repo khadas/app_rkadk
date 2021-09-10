@@ -39,7 +39,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "I:a:i:t:h";
+static RKADK_CHAR optstr[] = "I:a:i:t:p:h";
 static FILE *g_vo_file = NULL;
 static FILE *g_ao_file = NULL;
 static FILE *g_pcm_file = NULL;
@@ -57,6 +57,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-a: aiq file path, Default:/oem/etc/iqfiles\n");
   printf("\t-i: thumb test mp4 file, Default:/tmp/test.mp4\n");
   printf("\t-t: sleep time, Default:500ms\n");
+  printf("\t-p: param ini directory path, Default:/data/rkadk\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -486,6 +487,9 @@ int main(int argc, char *argv[]) {
   RKADK_U32 u32SleepTime = 500;
   RKADK_MW_PTR pRtspHandle = NULL;
   RKADK_MW_PTR pRtmpHandle = NULL;
+  const char *iniPath = NULL;
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -507,6 +511,10 @@ int main(int argc, char *argv[]) {
     case 't':
       u32SleepTime = atoi(optarg);
       break;
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -521,7 +529,17 @@ int main(int argc, char *argv[]) {
   RK_BOOL fec_enable = RK_FALSE;
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
 
-  RKADK_PARAM_Init();
+  if (iniPath) {
+    memset(path, 0, RKADK_PATH_LEN);
+    memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
+    sprintf(path, "%s/rkadk_setting.ini", iniPath);
+    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
+      sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
+    RKADK_PARAM_Init(path, sensorPath);
+  } else {
+    RKADK_PARAM_Init(NULL, NULL);
+  }
+
   ret = RKADK_PARAM_GetCamParam(g_u32CamID, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");

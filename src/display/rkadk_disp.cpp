@@ -138,7 +138,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   RKADK_LOGI("Disp u32CamId[%d] Init Start...", u32CamId);
 
   RK_MPI_SYS_Init();
-  RKADK_PARAM_Init();
+  RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(u32CamId);
   if (!pstDispCfg) {

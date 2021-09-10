@@ -693,7 +693,7 @@ static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName,
   start = ((long)tv_begin.tv_sec) * 1000 + (long)tv_begin.tv_usec / 1000;
 #endif
 
-  RKADK_PARAM_Init();
+  RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");

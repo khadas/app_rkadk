@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
+int RKADK_Ini2Struct(char *iniFile, void *structAddr,
                      RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
   char sectionKey[SI_MAX_SEARCH_STRING] = {0};
   int searchLen = 0;
@@ -117,7 +117,7 @@ int RKADK_Ini2Struct(const char *iniFile, void *structAddr,
   return 0;
 }
 
-int RKADK_Struct2Ini(const char *iniFile, void *structAddr,
+int RKADK_Struct2Ini(char *iniFile, void *structAddr,
                      RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
   char temp[SI_CONFIG_MAP_STR_LENGTH_MAX] = {0};
   char sectionKey[SI_MAX_SEARCH_STRING] = {0};

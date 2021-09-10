@@ -34,6 +34,7 @@ extern "C" {
 #define RKADK_BUFFER_LEN 64
 #define RKADK_PIX_FMT_LEN 10
 #define RKADK_RC_MODE_LEN 5
+#define RKADK_PATH_LEN 128
 
 /* sensor default parameters */
 #define SENSOR_MAX_WIDTH 2688
@@ -81,11 +82,9 @@ extern "C" {
 
 /* setting file path */
 #define RKADK_DEFPARAM_PATH "/etc/rkadk/rkadk_defsetting.ini"
-#define RKADK_DEFPARAM_PATH_SENSOR_0 "/etc/rkadk/rkadk_defsetting_sensor_0.ini"
-#define RKADK_DEFPARAM_PATH_SENSOR_1 "/etc/rkadk/rkadk_defsetting_sensor_1.ini"
+#define RKADK_DEFPARAM_PATH_SENSOR_PREFIX "/etc/rkadk/rkadk_defsetting_sensor"
 #define RKADK_PARAM_PATH "/data/rkadk/rkadk_setting.ini"
-#define RKADK_PARAM_PATH_SENSOR_0 "/data/rkadk/rkadk_setting_sensor_0.ini"
-#define RKADK_PARAM_PATH_SENSOR_1 "/data/rkadk/rkadk_setting_sensor_1.ini"
+#define RKADK_PARAM_PATH_SENSOR_PREFIX "/data/rkadk/rkadk_setting_sensor"
 
 /* Resolution */
 #define RKADK_WIDTH_720P 1280
@@ -358,13 +357,15 @@ typedef struct {
   bool bInit;                /* module init status */
   pthread_mutex_t mutexLock; /* param lock, protect pstCfg */
   RKADK_PARAM_CFG_S stCfg;   /* param config */
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 } RKADK_PARAM_CONTEXT_S;
 
 /**
  * @brief     Parameter Module Init
  * @return    0 success,non-zero error code.
  */
-RKADK_S32 RKADK_PARAM_Init(RKADK_VOID);
+RKADK_S32 RKADK_PARAM_Init(char *path, char (*sensorPath)[RKADK_PATH_LEN]);
 
 /**
  * @brief     Parameter Module Deinit

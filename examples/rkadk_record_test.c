@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:t:h";
+static RKADK_CHAR optstr[] = "a:I:t:p:h";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -44,6 +44,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-t: Record type, Default:0, Options: 0(normal), 1(lapse)\n");
+  printf("\t-p: param ini directory path, Default:/data/rkadk\n");
 }
 
 static RKADK_S32
@@ -213,6 +214,9 @@ int main(int argc, char *argv[]) {
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL;
   RK_BOOL fec_enable = RK_FALSE;
+  const char *iniPath = NULL;
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
 
   // set default value
@@ -237,6 +241,10 @@ int main(int argc, char *argv[]) {
     case 't':
       stRecAttr.enRecType = atoi(optarg);
       break;
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -246,7 +254,16 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_PARAM_Init();
+  if (iniPath) {
+    memset(path, 0, RKADK_PATH_LEN);
+    memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
+    sprintf(path, "%s/rkadk_setting.ini", iniPath);
+    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
+      sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
+    RKADK_PARAM_Init(path, sensorPath);
+  } else {
+    RKADK_PARAM_Init(NULL, NULL);
+  }
 
 record:
 #ifdef RKAIQ

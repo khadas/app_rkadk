@@ -22,8 +22,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "mp3_header/mp3_header.h"
 #include "isp/sample_common.h"
+#include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
@@ -39,7 +39,7 @@ static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
 static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_PCM;
 
-static RKADK_CHAR optstr[] = "a:I:m:e:o:h";
+static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -54,6 +54,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-e: Encode type, Value:pcm, g711a, g711u, h264, h265, mjpeg, "
          "jpeg, Default:pcm\n");
   printf("\t-o: Output path, Default:\"/tmp/ai.pcm\"\n");
+  printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   ;
 }
 
@@ -84,7 +85,6 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   }
 
 #ifdef RKAIQ
-  RKADK_PARAM_Init();
   ret = RKADK_PARAM_GetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
@@ -300,6 +300,9 @@ int main(int argc, char *argv[]) {
   RKADK_CHAR *pMode = "audio";
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   int c;
+  const char *iniPath = NULL;
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -324,6 +327,10 @@ int main(int argc, char *argv[]) {
     case 'o':
       pOutPath = optarg;
       break;
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -335,6 +342,17 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGD("#Test mode: %s", pMode);
   RKADK_LOGD("#Out path: %s", pOutPath);
+
+  if (iniPath) {
+    memset(path, 0, RKADK_PATH_LEN);
+    memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
+    sprintf(path, "%s/rkadk_setting.ini", iniPath);
+    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
+      sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
+    RKADK_PARAM_Init(path, sensorPath);
+  } else {
+    RKADK_PARAM_Init(NULL, NULL);
+  }
 
   if (!strcmp(pMode, "audio"))
     AudioTest(pOutPath, g_enCodecType);

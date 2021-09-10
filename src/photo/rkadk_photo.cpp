@@ -157,7 +157,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
 
   pstPhotoInfo->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
 
-  RKADK_PARAM_Init();
+  RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamID);
   if (!pstPhotoCfg) {
@@ -1208,7 +1208,7 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
   RKADK_U32 u32JpgBufLen = 0;
   RKADK_U32 *pu32JpgBufLen;
 
-  RKADK_PARAM_Init();
+  RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
