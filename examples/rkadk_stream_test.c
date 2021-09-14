@@ -21,13 +21,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "isp/sample_common.h"
 #include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_stream.h"
+#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -93,7 +92,7 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_COMM_ISP_Start(u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
+  RKADK_VI_ISP_Start(u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
   RKADK_STREAM_VencRegisterCallback(u32CamID, VencDataCb);
@@ -102,7 +101,7 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VideoInit failed = %d", ret);
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop(u32CamID);
+    RKADK_VI_ISP_Stop(u32CamID);
 #endif
     return -1;
   }
@@ -111,7 +110,7 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VencStart failed");
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop(u32CamID);
+    RKADK_VI_ISP_Stop(u32CamID);
 #endif
     return -1;
   }
@@ -136,7 +135,7 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   RKADK_STREAM_VencUnRegisterCallback(u32CamID);
 
 #ifdef RKAIQ
-  SAMPLE_COMM_ISP_Stop(u32CamID);
+  RKADK_VI_ISP_Stop(u32CamID);
 #endif
 
   if (g_output_file) {

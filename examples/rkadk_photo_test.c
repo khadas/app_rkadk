@@ -21,12 +21,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "isp/sample_common.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_photo.h"
+#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -137,7 +136,7 @@ int main(int argc, char *argv[]) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_COMM_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
   memset(&stPhotoAttr, 0, sizeof(RKADK_PHOTO_ATTR_S));
@@ -155,7 +154,7 @@ int main(int argc, char *argv[]) {
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_Init failed(%d)", ret);
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop(u32CamId);
+    RKADK_VI_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -183,7 +182,7 @@ int main(int argc, char *argv[]) {
   RKADK_PHOTO_DeInit(stPhotoAttr.u32CamID);
 
 #ifdef RKAIQ
-  SAMPLE_COMM_ISP_Stop(u32CamId);
+  RKADK_VI_ISP_Stop(u32CamId);
 #endif
   return 0;
 }

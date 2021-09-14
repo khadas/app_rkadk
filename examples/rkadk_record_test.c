@@ -21,12 +21,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "isp/sample_common.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_record.h"
+#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -125,9 +124,9 @@ static int IspProcess(RKADK_S32 s32CamID) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam flip failed");
 
   if (mirror || flip) {
-    ret = SAMPLE_COMM_ISP_SET_MirrorFlip(s32CamID, mirror, flip);
+    ret = RKADK_VI_ISP_SET_MirrorFlip(s32CamID, mirror, flip);
     if (ret)
-      RKADK_LOGE("SAMPLE_COMM_ISP_SET_MirrorFlip failed");
+      RKADK_LOGE("RKADK_VI_ISP_SET_MirrorFlip failed");
   }
 
   // set antifog
@@ -136,9 +135,9 @@ static int IspProcess(RKADK_S32 s32CamID) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam antifog failed");
   } else {
     if (antifog > 0) {
-      ret = SAMPLE_COMM_ISP_EnableDefog(s32CamID, true, OP_MANUAL, antifog);
+      ret = RKADK_VI_ISP_EnableDefog(s32CamID, true, OP_MANUAL, antifog);
       if (ret)
-        RKADK_LOGE("SAMPLE_COMM_ISP_SET_EnableDefog failed");
+        RKADK_LOGE("RKADK_VI_ISP_SET_EnableDefog failed");
     }
   }
 
@@ -148,9 +147,9 @@ static int IspProcess(RKADK_S32 s32CamID) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam ldc failed");
   } else {
     if (ldcLevel > 0) {
-      ret = SAMPLE_COMM_ISP_EnableLdch(s32CamID, true, ldcLevel);
+      ret = RKADK_VI_ISP_EnableLdch(s32CamID, true, ldcLevel);
       if (ret)
-        RKADK_LOGE("SAMPLE_COMM_ISP_EnableLdch failed");
+        RKADK_LOGE("RKADK_VI_ISP_EnableLdch failed");
     }
   }
 
@@ -160,42 +159,42 @@ static int IspProcess(RKADK_S32 s32CamID) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam wdr failed");
   } else {
     if (wdrLevel > 0) {
-      ret = SAMPLE_COMM_ISP_SetDarkAreaBoostStrth(s32CamID, wdrLevel);
+      ret = RKADK_VI_ISP_SET_DarkAreaBoostStrth(s32CamID, wdrLevel);
       if (ret)
-        RKADK_LOGE("SAMPLE_COMM_ISP_SetDarkAreaBoostStrth failed");
+        RKADK_LOGE("RKADK_VI_ISP_SET_DarkAreaBoostStrth failed");
     }
   }
 
 #ifdef RKADK_DUMP_ISP_RESULT
   // mirror flip
-  ret = SAMPLE_COMM_ISP_GET_MirrorFlip(s32CamID, &mirror, &flip);
+  ret = RKADK_VI_ISP_GET_MirrorFlip(s32CamID, &mirror, &flip);
   if (ret)
-    RKADK_LOGE("SAMPLE_COMM_ISP_GET_MirrorFlip failed");
+    RKADK_LOGE("RKADK_VI_ISP_GET_MirrorFlip failed");
   else
     RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
 
   // antifog
   bool on;
-  ret = SAMPLE_COMM_ISP_GetMDhzStrth(s32CamID, &on, &ldcLevel);
+  ret = RKADK_VI_ISP_GET_MDhzStrth(s32CamID, &on, &ldcLevel);
   if (ret)
-    RKADK_LOGE("SAMPLE_COMM_ISP_GetMDhzStrth failed");
+    RKADK_LOGE("RKADK_VI_ISP_GET_MDhzStrth failed");
   else
     RKADK_LOGD("GET antifog on = %d, ldcLevel = %d", on, ldcLevel);
 
   // LDCH
   rk_aiq_ldch_attrib_t attr;
-  ret = SAMPLE_COMM_ISP_GetLdchAttrib(s32CamID, &attr);
+  ret = RKADK_VI_ISP_GET_LdchAttrib(s32CamID, &attr);
   if (ret) {
-    RKADK_LOGE("SAMPLE_COMM_ISP_GetLdchAttrib failed");
+    RKADK_LOGE("RKADK_VI_ISP_GET_LdchAttrib failed");
   } else {
     RKADK_LOGD("LDC attr.en = %d", attr.en);
     RKADK_LOGD("LDC attr.correct_level = %d", attr.correct_level);
   }
 
   // WDR
-  ret = SAMPLE_COMM_ISP_GetDarkAreaBoostStrth(s32CamID, &wdrLevel);
+  ret = RKADK_VI_ISP_GET_DarkAreaBoostStrth(s32CamID, &wdrLevel);
   if (ret)
-    RKADK_LOGE("SAMPLE_COMM_ISP_GetDarkAreaBoostStrth failed");
+    RKADK_LOGE("RKADK_VI_ISP_GET_DarkAreaBoostStrth failed");
   else
     RKADK_LOGD("WDR wdrLevel = %d", wdrLevel);
 #endif
@@ -273,7 +272,7 @@ record:
     return -1;
   }
 
-  SAMPLE_COMM_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
+  RKADK_VI_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
                         fps);
 
   IspProcess(stRecAttr.s32CamID);
@@ -287,7 +286,7 @@ record:
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("Create recorder failed");
 #ifdef RKAIQ
-    SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+    RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
     return -1;
   }
@@ -334,25 +333,25 @@ record:
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_RES, &enRes);
 
 #ifdef RKAIQ
-      SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+      RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
       goto record;
     } else if (strstr(cmd, "flip-")) {
       bool flip = false;
-      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
+      RKADK_VI_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FLIP, &flip);
     } else if (strstr(cmd, "flip+")) {
       bool flip = true;
-      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
+      RKADK_VI_ISP_SET_MirrorFlip(stRecAttr.s32CamID, false, flip);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FLIP, &flip);
     } else if (strstr(cmd, "mirror-")) {
       bool mirror = false;
-      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
+      RKADK_VI_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_MIRROR,
                               &mirror);
     } else if (strstr(cmd, "mirror+")) {
       bool mirror = true;
-      SAMPLE_COMM_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
+      RKADK_VI_ISP_SET_MirrorFlip(stRecAttr.s32CamID, mirror, false);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_MIRROR,
                               &mirror);
     } else if (strstr(cmd, "mic_volume")) {
@@ -367,28 +366,28 @@ record:
                               &enRes);
     } else if (strstr(cmd, "wdr+")) {
       RKADK_U32 wdr = 9;
-      SAMPLE_COMM_ISP_SetDarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
+      RKADK_VI_ISP_SET_DarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_WDR, &wdr);
     } else if (strstr(cmd, "wdr-")) {
       RKADK_U32 wdr = 0;
-      SAMPLE_COMM_ISP_SetDarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
+      RKADK_VI_ISP_SET_DarkAreaBoostStrth(stRecAttr.s32CamID, wdr);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_WDR, &wdr);
     } else if (strstr(cmd, "ldc+")) {
       RKADK_U32 ldc = 200;
-      SAMPLE_COMM_ISP_EnableLdch(stRecAttr.s32CamID, true, ldc);
+      RKADK_VI_ISP_EnableLdch(stRecAttr.s32CamID, true, ldc);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_LDC, &ldc);
     } else if (strstr(cmd, "ldc-")) {
       RKADK_U32 ldc = 0;
-      SAMPLE_COMM_ISP_EnableLdch(stRecAttr.s32CamID, false, ldc);
+      RKADK_VI_ISP_EnableLdch(stRecAttr.s32CamID, false, ldc);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_LDC, &ldc);
     } else if (strstr(cmd, "antifog+")) {
       int antifog = 9;
-      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, true, OP_MANUAL, antifog);
+      RKADK_VI_ISP_EnableDefog(stRecAttr.s32CamID, true, OP_MANUAL, antifog);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG,
                               &antifog);
     } else if (strstr(cmd, "antifog-")) {
       int antifog = 0;
-      SAMPLE_COMM_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL,
+      RKADK_VI_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL,
                                   antifog);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG,
                               &antifog);
@@ -418,7 +417,7 @@ record:
                               &stCodecCfg);
 
 #ifdef RKAIQ
-      SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+      RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
 
       goto record;
@@ -469,7 +468,7 @@ record:
   RKADK_RECORD_Destroy(pRecorder);
 
 #ifdef RKAIQ
-  SAMPLE_COMM_ISP_Stop(stRecAttr.s32CamID);
+  RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
 
   RKADK_LOGD("exit!");

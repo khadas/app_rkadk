@@ -14,6 +14,12 @@ include_directories(${ROCKIT_HEADER_DIR})
 include_directories(${ROCKIT_HEADER_DIR}/mpi)
 include_directories(include)
 
+if(USE_RKAIQ)
+    find_package(RkAiq REQUIRED)
+    include_directories(${RKAIQ_INCLUDE_DIRS})
+    add_definitions(-DRKAIQ)
+endif()
+
 #-Wextra
 add_definitions(-Wall
 		-Wshadow

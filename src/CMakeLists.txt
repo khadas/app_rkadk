@@ -7,6 +7,7 @@ file(GLOB_RECURSE PARAM_SRC "${CMAKE_SOURCE_DIR}/src/param/*.cpp")
 file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
 file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
 file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
+file(GLOB_RECURSE VI_SRC "${CMAKE_SOURCE_DIR}/src/vi/*.cpp")
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
 add_library(rkadk SHARED
@@ -18,13 +19,18 @@ add_library(rkadk SHARED
 		${PARAM_SRC}
                 ${RTMP_SRC}
 		${RTSP_SRC}
-                ${DISP_SRC})
+                ${DISP_SRC}
+                ${VI_SRC})
 
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/param")
 target_link_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/live/rtsp")
 target_link_libraries(rkadk easymedia rockit rga iniparser rtsp)
+
+if(USE_RKAIQ)
+    target_link_libraries(rkadk rkaiq)
+endif()
 
 # install target
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
