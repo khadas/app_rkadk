@@ -14,6 +14,12 @@
  *  limitations under the License.
  */
 
+#include "rkadk_stream.h"
+#include "mp3_header/mp3_header.h"
+#include "rkadk_common.h"
+#include "rkadk_log.h"
+#include "rkadk_param.h"
+#include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,12 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "mp3_header/mp3_header.h"
-#include "rkadk_common.h"
-#include "rkadk_log.h"
-#include "rkadk_param.h"
-#include "rkadk_stream.h"
-#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -118,7 +118,42 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   RKADK_LOGD("initial finish\n");
   signal(SIGINT, sigterm_handler);
 
+  char cmd[64];
+  printf("\n#Usage: input 'quit' to exit programe!\n"
+         "peress any other key to manual split file\n");
+
   while (!is_quit) {
+    fgets(cmd, sizeof(cmd), stdin);
+
+    if (strstr(cmd, "fps")) {
+      int fpsTest = 20;
+      RKADK_PARAM_GOP_S stGopCfg;
+      RKADK_S32 s32VencChn;
+
+      // set ini fps
+      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fpsTest);
+
+      // set ini gop
+      stGopCfg.enStreamType = RKADK_STREAM_TYPE_PREVIEW;
+      stGopCfg.u32Gop = fpsTest;
+      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_GOP, &stGopCfg);
+
+      // set aiq fps
+      RKADK_VI_ISP_SET_FrameRate(u32CamID, fpsTest);
+
+      // set mpp fps and gop
+      s32VencChn =
+          RKADK_PARAM_GetVencChnId(u32CamID, RKADK_STREAM_TYPE_PREVIEW);
+      RK_MPI_VENC_SetGop(s32VencChn, stGopCfg.u32Gop);
+      RK_MPI_VENC_SetFps(s32VencChn, fpsTest, 1, fpsTest, 1);
+
+      // get ini fps and gop
+      RKADK_PARAM_GetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fpsTest);
+      RKADK_LOGD("fps: %d", fpsTest);
+      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_GOP, &stGopCfg);
+      RKADK_LOGD("gop: %d", stGopCfg.u32Gop);
+    }
+
     usleep(500000);
   }
 

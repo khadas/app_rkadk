@@ -2842,6 +2842,82 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
   return ret;
 }
 
+static RKADK_U32 RKADK_PARAM_GetGop(RKADK_S32 s32CamId,
+                                    RKADK_STREAM_TYPE_E enStreamType) {
+  RKADK_U32 u32Gop = 0;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    u32Gop = pstRecCfg->attribute[0].gop;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    u32Gop = pstRecCfg->attribute[1].gop;
+    break;
+
+  case RKADK_STREAM_TYPE_PREVIEW:
+  case RKADK_STREAM_TYPE_LIVE:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId, enStreamType);
+    u32Gop = pstStreamCfg->attribute.gop;
+    break;
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", enStreamType);
+    break;
+  }
+
+  return u32Gop;
+}
+
+static RKADK_S32 RKADK_PARAM_SetGop(RKADK_S32 s32CamId,
+                                    RKADK_PARAM_GOP_S *pstGop) {
+  RKADK_S32 ret;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+
+  switch (pstGop->enStreamType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[0].gop == pstGop->u32Gop)
+      return 0;
+
+    pstRecCfg->attribute[0].gop = pstGop->u32Gop;
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_MAIN);
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[1].gop == pstGop->u32Gop)
+      return 0;
+
+    pstRecCfg->attribute[1].gop = pstGop->u32Gop;
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_SUB);
+    break;
+
+  case RKADK_STREAM_TYPE_PREVIEW:
+  case RKADK_STREAM_TYPE_LIVE:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId, pstGop->enStreamType);
+    if (pstStreamCfg->attribute.gop == pstGop->u32Gop)
+      return 0;
+
+    pstStreamCfg->attribute.gop = pstGop->u32Gop;
+    ret = RKADK_PARAM_SaveStreamCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                    pstGop->enStreamType);
+    break;
+
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", pstGop->enStreamType);
+    break;
+  }
+
+  return ret;
+}
+
 static RKADK_U32 RKADK_PARAM_GetRecTime(RKADK_S32 s32CamId,
                                         RKADK_STREAM_TYPE_E enStreamType,
                                         RKADK_PARAM_TYPE_E enParamType) {
@@ -2982,6 +3058,13 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
         RKADK_PARAM_GetBitrate(s32CamId, pstBitrate->enStreamType);
     break;
   }
+  case RKADK_PARAM_TYPE_GOP: {
+    RKADK_PARAM_GOP_S *pstGop;
+
+    pstGop = (RKADK_PARAM_GOP_S *)pvParam;
+    pstGop->u32Gop = RKADK_PARAM_GetGop(s32CamId, pstGop->enStreamType);
+    break;
+  }
   case RKADK_PARAM_TYPE_RECORD_TIME:
   case RKADK_PARAM_TYPE_SPLITTIME:
   case RKADK_PARAM_TYPE_LAPSE_INTERVAL: {
@@ -3053,7 +3136,7 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
 
   switch (enParamType) {
   case RKADK_PARAM_TYPE_FPS:
-    RKADK_CHECK_EQUAL(pstSensorCfg->flip, *(RKADK_U32 *)pvParam,
+    RKADK_CHECK_EQUAL(pstSensorCfg->framerate, *(RKADK_U32 *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstSensorCfg->framerate = *(RKADK_U32 *)pvParam;
     bSaveSensorCfg = true;
@@ -3120,6 +3203,10 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
     return ret;
   case RKADK_PARAM_TYPE_BITRATE:
     ret = RKADK_PARAM_SetBitrate(s32CamId, (RKADK_PARAM_BITRATE_S *)pvParam);
+    RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
+    return ret;
+  case RKADK_PARAM_TYPE_GOP:
+    ret = RKADK_PARAM_SetGop(s32CamId, (RKADK_PARAM_GOP_S *)pvParam);
     RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
     return ret;
   case RKADK_PARAM_TYPE_RECORD_TIME:

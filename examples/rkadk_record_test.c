@@ -14,6 +14,11 @@
  *  limitations under the License.
  */
 
+#include "rkadk_record.h"
+#include "rkadk_common.h"
+#include "rkadk_log.h"
+#include "rkadk_param.h"
+#include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,11 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "rkadk_common.h"
-#include "rkadk_log.h"
-#include "rkadk_param.h"
-#include "rkadk_record.h"
-#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -281,7 +281,7 @@ record:
   }
 
   RKADK_VI_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
-                        fps);
+                     fps);
 
   IspProcess(stRecAttr.s32CamID);
 #endif
@@ -395,8 +395,7 @@ record:
                               &antifog);
     } else if (strstr(cmd, "antifog-")) {
       int antifog = 0;
-      RKADK_VI_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL,
-                                  antifog);
+      RKADK_VI_ISP_EnableDefog(stRecAttr.s32CamID, false, OP_MANUAL, antifog);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_ANTIFOG,
                               &antifog);
     } else if (strstr(cmd, "get_codec_type")) {
@@ -464,6 +463,37 @@ record:
       RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_SPLITTIME,
                               &stRecTime);
       RKADK_LOGD("Record Sub split time: %d", stRecTime.time);
+    } else if (strstr(cmd, "fps")) {
+      int fpsTest = 20;
+      RKADK_PARAM_GOP_S stGopCfg;
+      RKADK_S32 s32VencChn;
+
+      // set ini fps
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS,
+                              &fpsTest);
+
+      // set ini gop
+      stGopCfg.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      stGopCfg.u32Gop = fpsTest;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
+                              &stGopCfg);
+
+      // set aiq fps
+      RKADK_VI_ISP_SET_FrameRate(stRecAttr.s32CamID, fpsTest);
+
+      // set mpp fps and gop
+      s32VencChn = RKADK_PARAM_GetVencChnId(stRecAttr.s32CamID,
+                                            RKADK_STREAM_TYPE_VIDEO_MAIN);
+      RK_MPI_VENC_SetGop(s32VencChn, stGopCfg.u32Gop);
+      RK_MPI_VENC_SetFps(s32VencChn, fpsTest, 1, fpsTest, 1);
+
+      // get ini fps and gop
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS,
+                              &fpsTest);
+      RKADK_LOGD("fps: %d", fpsTest);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
+                              &stGopCfg);
+      RKADK_LOGD("gop: %d", stGopCfg.u32Gop);
     }
 
     if (is_quit)

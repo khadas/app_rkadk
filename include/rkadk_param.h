@@ -132,6 +132,7 @@ typedef enum {
 typedef enum {
   // CAM Dependent Param
   RKADK_PARAM_TYPE_FPS,             /* framerate */
+  RKADK_PARAM_TYPE_GOP,             /* gop */
   RKADK_PARAM_TYPE_RES,             /* specify RKADK_PARAM_RES_E(record) */
   RKADK_PARAM_TYPE_PHOTO_RES,       /* specify RKADK_PARAM_RES_E(photo) */
   RKADK_PARAM_TYPE_CODEC_TYPE,      /* specify RKADK_PARAM_CODEC_CFG_S */
@@ -191,6 +192,11 @@ typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
   RKADK_U32 time;
 } RKADK_PARAM_REC_TIME_S;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_U32 u32Gop;
+} RKADK_PARAM_GOP_S;
 
 typedef struct tagRKADK_PARAM_VERSION_S {
   char version[RKADK_BUFFER_LEN];
