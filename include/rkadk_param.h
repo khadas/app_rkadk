@@ -363,9 +363,11 @@ typedef struct {
 
 /**
  * @brief     Parameter Module Init
+ * @param[in] globalSetting: global setting ini file path
+ * @param[in] sesnorSettingArrary: sensor setting ini file path arrary
  * @return    0 success,non-zero error code.
  */
-RKADK_S32 RKADK_PARAM_Init(char *path, char (*sensorPath)[RKADK_PATH_LEN]);
+RKADK_S32 RKADK_PARAM_Init(char *globalSetting, char **sesnorSettingArrary);
 
 /**
  * @brief     Parameter Module Deinit

@@ -14,6 +14,11 @@
  *  limitations under the License.
  */
 
+#include "rkadk_photo.h"
+#include "rkadk_common.h"
+#include "rkadk_log.h"
+#include "rkadk_param.h"
+#include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,11 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "rkadk_common.h"
-#include "rkadk_log.h"
-#include "rkadk_param.h"
-#include "rkadk_photo.h"
-#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;
@@ -123,7 +123,15 @@ int main(int argc, char *argv[]) {
     sprintf(path, "%s/rkadk_setting.ini", iniPath);
     for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
       sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
-    RKADK_PARAM_Init(path, sensorPath);
+
+    /*
+    lg:
+      char *sPath[] = {"/data/rkadk/rkadk_setting_sensor_0.ini",
+      "/data/rkadk/rkadk_setting_sensor_1.ini", NULL};
+    */
+    char *sPath[] = {sensorPath[0], sensorPath[1], NULL};
+
+    RKADK_PARAM_Init(path, sPath);
   } else {
     RKADK_PARAM_Init(NULL, NULL);
   }
