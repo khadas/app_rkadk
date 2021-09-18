@@ -79,6 +79,7 @@ static RKADK_SI_CONFIG_MAP_S g_stAudioCfgMapTable[] = {
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, bitrate),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, ai_layout),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, vqe_mode),
+    DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, codec_type),
 };
 
 /* thumb map table */

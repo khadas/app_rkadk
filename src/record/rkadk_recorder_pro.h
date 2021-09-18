@@ -147,6 +147,11 @@ RKADK_S32
 RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
                                 RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback);
 
+/**
+ * @brief whether to enable audio
+ */
+bool RKADK_REC_EnableAudio(void);
+
 #ifdef __cplusplus
 }
 #endif

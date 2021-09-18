@@ -50,7 +50,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
-  printf("\t-e: Encode type, Value:pcm, g711a, g711u, h264, h265, mjpeg, "
+  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, h264, h265, mjpeg"
          "jpeg, Default:pcm\n");
   printf("\t-o: Output path, Default:\"/tmp/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
@@ -301,7 +301,10 @@ static RKADK_CODEC_TYPE_E GetEncoderMode(char *encoder) {
   if (!strcmp(encoder, "pcm")) {
     enCodecType = RKADK_CODEC_TYPE_PCM;
     pCodecName = "PCM";
-  } else if (!strcmp(encoder, "mp3")) {
+  } else if (!strcmp(encoder, "mp2")) {
+    enCodecType = RKADK_CODEC_TYPE_MP2;
+    pCodecName = "MP2";
+  }  else if (!strcmp(encoder, "mp3")) {
     enCodecType = RKADK_CODEC_TYPE_MP3;
     pCodecName = "MP3";
   } else if (!strcmp(encoder, "g711a")) {

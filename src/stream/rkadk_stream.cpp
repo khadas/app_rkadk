@@ -782,7 +782,7 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(RKADK_CODEC_TYPE_E enCodecType,
 
   pstAencAttr->u32Bitrate = pstAudioParam->bitrate;
 
-  if (enCodecType == LIVE_AUDIO_CODEC_TYPE)
+  if (enCodecType == pstAudioParam->codec_type)
     pstAencChn->s32ChnId = LIVE_AENC_CHN; // and record reuse aenc channel
   else
     pstAencChn->s32ChnId = PREVIEW_AENC_CHN;
@@ -804,11 +804,11 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(RKADK_CODEC_TYPE_E enCodecType,
     break;
   case RKADK_CODEC_TYPE_G726:
     pstAencAttr->stAencG726.u32Channels = pstAudioParam->channels;
-    pstAencAttr->stAencG726.u32SampleRate = pstAudioParam->channels;
+    pstAencAttr->stAencG726.u32SampleRate = pstAudioParam->samplerate;
     break;
   case RKADK_CODEC_TYPE_MP2:
     pstAencAttr->stAencMP2.u32Channels = pstAudioParam->channels;
-    pstAencAttr->stAencMP2.u32SampleRate = pstAudioParam->channels;
+    pstAencAttr->stAencMP2.u32SampleRate = pstAudioParam->samplerate;
     break;
 
   default:

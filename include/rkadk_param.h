@@ -45,7 +45,8 @@ extern "C" {
 #define AUDIO_SAMPLE_RATE 16000
 #define AUDIO_CHANNEL 1
 #define AUDIO_BIT_REAT 64000
-#define AUDIO_FRAME_COUNT 1024
+/* mp2: 1152, mp3: 1024 */
+#define AUDIO_FRAME_COUNT  1152
 #define AUDIO_SAMPLE_FORMAT RK_SAMPLE_FMT_S16
 #define AI_DEVICE_NAME "default"
 
@@ -69,7 +70,6 @@ extern "C" {
 #define THUMB_HEIGHT 180
 #define THUMB_VENC_CHN (VENC_MAX_CHN_NUM - 1)
 
-#define RECORD_AUDIO_CODEC_TYPE RKADK_CODEC_TYPE_MP3
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0
 
@@ -77,8 +77,7 @@ extern "C" {
 #define PREVIEW_AENC_CHN 1
 
 #define LIVE_AI_CHN RECORD_AI_CHN
-#define LIVE_AENC_CHN 2
-#define LIVE_AUDIO_CODEC_TYPE RECORD_AUDIO_CODEC_TYPE
+#define LIVE_AENC_CHN RECORD_AENC_CHN
 
 /* setting file path */
 #define RKADK_DEFPARAM_PATH "/etc/rkadk/rkadk_defsetting.ini"
@@ -250,6 +249,7 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_U32 bitrate;
   AI_LAYOUT_E ai_layout;
   RKADK_VQE_MODE_E vqe_mode;
+  RKADK_CODEC_TYPE_E codec_type;
 } RKADK_PARAM_AUDIO_CFG_S;
 
 typedef struct tagRKADK_PARAM_VENC_PARAM_S {

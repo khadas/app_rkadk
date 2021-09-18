@@ -26,7 +26,7 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/param")
 target_link_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/live/rtsp")
-target_link_libraries(rkadk easymedia rockit rga iniparser rtsp)
+target_link_libraries(rkadk easymedia third_media rockit rga iniparser rtsp)
 
 if(USE_RKAIQ)
     target_link_libraries(rkadk rkaiq)

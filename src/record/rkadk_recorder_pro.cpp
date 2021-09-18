@@ -16,6 +16,7 @@
 
 #include "rkadk_recorder_pro.h"
 #include "rkadk_log.h"
+#include "rkadk_param_inner.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -286,7 +287,8 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
       goto failed;
     }
 
-    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE)
+    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE ||
+        !RKADK_REC_EnableAudio())
       continue;
 
     // Bind AENC to MUXER:AIDEO
@@ -337,7 +339,8 @@ RKADK_S32 RKADK_REC_Destroy(RKADK_MW_PTR pRecorder) {
       goto end;
     }
 
-    if (stRecorder->enRecType != RKADK_REC_TYPE_LAPSE) {
+    if (stRecorder->enRecType != RKADK_REC_TYPE_LAPSE &&
+        RKADK_REC_EnableAudio()) {
       // UnBind AENC to MUXER:AIDEO
       stRecorder->stStreamAttr[i].stMuxerChn.enChnType = MUXER_CHN_TYPE_AUDIO;
       ret = RK_MPI_MUXER_UnBind(&(stRecorder->stStreamAttr[i].stAencChn),
@@ -481,4 +484,20 @@ RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
   }
 
   return 0;
+}
+
+bool RKADK_REC_EnableAudio() {
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = NULL;
+
+  pstAudioCfg = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return false;
+  }
+
+  if (pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3 ||
+      pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP2)
+    return true;
+
+  return false;
 }

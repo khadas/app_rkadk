@@ -438,6 +438,9 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->vqe_mode,
                                     RKADK_VQE_MODE_AI_TALK, RKADK_VQE_MODE_BUTT,
                                     RKADK_VQE_MODE_AI_RECORD, "vqe_mode");
+  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->codec_type,
+                                    RKADK_CODEC_TYPE_MP3, RKADK_CODEC_TYPE_PCM,
+                                    RKADK_CODEC_TYPE_MP2, "codec_type");
 
   if (change)
     RKADK_PARAM_SaveAudioCfg(path);
@@ -827,6 +830,7 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
   pstAudioCfg->ai_layout = AI_LAYOUT_NORMAL;
   pstAudioCfg->vqe_mode = RKADK_VQE_MODE_AI_RECORD;
+  pstAudioCfg->codec_type = RKADK_CODEC_TYPE_MP2;
   RKADK_PARAM_SaveAudioCfg(path);
 }
 
@@ -1130,6 +1134,7 @@ static void RKADK_PARAM_Dump() {
   printf("\tbitrate: %d\n", pstCfg->stAudioCfg.bitrate);
   printf("\tai_layout: %d\n", pstCfg->stAudioCfg.ai_layout);
   printf("\tvqe_mode: %d\n", pstCfg->stAudioCfg.vqe_mode);
+  printf("\tcodec_type: %d\n", pstCfg->stAudioCfg.codec_type);
 
   printf("Thumb Config\n");
   printf("\tthumb_width: %d\n", pstCfg->stThumbCfg.thumb_width);

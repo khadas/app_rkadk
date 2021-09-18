@@ -279,9 +279,40 @@ static int RKADK_RECORD_CreateAudioChn() {
 
   // Create AENC
   AENC_CHN_ATTR_S stAencAttr;
-  stAencAttr.enCodecType = RKADK_MEDIA_GetRkCodecType(RECORD_AUDIO_CODEC_TYPE);
+  stAencAttr.enCodecType =
+      RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
   stAencAttr.u32Bitrate = pstAudioParam->bitrate;
   stAencAttr.u32Quality = 1;
+
+  switch (pstAudioParam->codec_type) {
+  case RKADK_CODEC_TYPE_G711A:
+    stAencAttr.stAencG711A.u32Channels = pstAudioParam->channels;
+    stAencAttr.stAencG711A.u32NbSample = pstAudioParam->samples_per_frame;
+    stAencAttr.stAencG711A.u32SampleRate = pstAudioParam->samplerate;
+    break;
+  case RKADK_CODEC_TYPE_G711U:
+    stAencAttr.stAencG711U.u32Channels = pstAudioParam->channels;
+    stAencAttr.stAencG711U.u32NbSample = pstAudioParam->samples_per_frame;
+    stAencAttr.stAencG711U.u32SampleRate = pstAudioParam->samplerate;
+    break;
+  case RKADK_CODEC_TYPE_MP3:
+    stAencAttr.stAencMP3.u32Channels = pstAudioParam->channels;
+    stAencAttr.stAencMP3.u32SampleRate = pstAudioParam->samplerate;
+    break;
+  case RKADK_CODEC_TYPE_G726:
+    stAencAttr.stAencG726.u32Channels = pstAudioParam->channels;
+    stAencAttr.stAencG726.u32SampleRate = pstAudioParam->samplerate;
+    break;
+  case RKADK_CODEC_TYPE_MP2:
+    stAencAttr.stAencMP2.u32Channels = pstAudioParam->channels;
+    stAencAttr.stAencMP2.u32SampleRate = pstAudioParam->samplerate;
+    break;
+
+  default:
+    RKADK_LOGE("Nonsupport codec type(%d)", pstAudioParam->codec_type);
+    return -1;
+  }
+
   stAencAttr.stAencMP3.u32Channels = pstAudioParam->channels;
   stAencAttr.stAencMP3.u32SampleRate = pstAudioParam->samplerate;
   ret = RKADK_MPI_AENC_Init(RECORD_AENC_CHN, &stAencAttr);
@@ -332,7 +363,7 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
     // Bind AI to AENC
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
@@ -368,7 +399,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
     // UnBind AI to AENC
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
@@ -455,6 +486,10 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
       pstRecAttr->astStreamAttr[i].u32TrackCnt = RKADK_REC_TRACK_MAX_CNT;
     }
 
+    if (pstRecAttr->astStreamAttr[i].u32TrackCnt == RKADK_REC_TRACK_MAX_CNT)
+      if (!RKADK_REC_EnableAudio())
+        pstRecAttr->astStreamAttr[i].u32TrackCnt = 1;
+
     // video track
     RKADK_TRACK_SOURCE_S *aHTrackSrcHandle =
         &(pstRecAttr->astStreamAttr[i].aHTrackSrcHandle[0]);
@@ -476,7 +511,8 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
         pstRecCfg->attribute[i].height;
 
-    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE)
+    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE ||
+        !RKADK_REC_EnableAudio())
       continue;
 
     // audio track
@@ -484,7 +520,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     aHTrackSrcHandle->enTrackType = RKADK_TRACK_SOURCE_TYPE_AUDIO;
     aHTrackSrcHandle->s32PrivateHandle = RECORD_AENC_CHN;
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.enCodecType =
-        RKADK_MEDIA_GetRkCodecType(RECORD_AUDIO_CODEC_TYPE);
+        RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.enSampFmt =
         pstAudioParam->sample_format;
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32ChnCnt =
@@ -514,7 +550,8 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;
 
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE) {
+  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE &&
+      RKADK_REC_EnableAudio()) {
     if (RKADK_RECORD_CreateAudioChn()) {
       RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
       return -1;
@@ -546,7 +583,7 @@ failed:
              pstRecAttr->enRecType);
   RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
 
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE)
+  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio())
     RKADK_RECORD_DestoryAudioChn();
 
   return -1;
@@ -601,7 +638,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return ret;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
     ret = RKADK_RECORD_DestoryAudioChn();
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_DestoryAudioChn failed, ret = %d", ret);
