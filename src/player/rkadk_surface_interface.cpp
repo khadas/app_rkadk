@@ -52,6 +52,8 @@ static RKADK_S32 RKADK_VO_CreateGFXData(RKADK_U32 u32Width, RKADK_U32 u32Height,
   RKADK_CHECK_POINTER(pMblk, RKADK_FAILURE);
   RKADK_CHECK_POINTER(buffer, RKADK_FAILURE);
 
+  rt_memset(&stFrameInfo, 0, sizeof(VO_FRAME_INFO_S));
+
   u32BuffSize =
       RK_MPI_VO_CreateGraphicsFrameBuffer(u32Width, u32Height, foramt, pMblk);
   if (u32BuffSize == 0) {
@@ -232,7 +234,7 @@ RKADK_VO_SetDispRect_Default(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                              VO_DEV voDev) {
   int ret;
   VO_PUB_ATTR_S pstAttr;
-  memset(&pstAttr, 0, sizeof(VO_SINK_CAPABILITY_S));
+  rt_memset(&pstAttr, 0, sizeof(VO_SINK_CAPABILITY_S));
 
   RKADK_CHECK_POINTER(pstLayerAttr, RK_FAILURE);
   ret = RK_MPI_VO_GetPubAttr(voDev, &pstAttr);
@@ -252,10 +254,14 @@ RKADK_VO_SetDispRect_Default(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
 static RKADK_S32 RKADK_VO_StartChnn(VO_LAYER voLayer,
                                     VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                                     VIDEO_FRAMEINFO_S stFrmInfo) {
+  int ret;
   VO_CHN_ATTR_S stChnAttr;
   VO_CHN_PARAM_S stChnParam;
   VO_BORDER_S stBorder;
-  int ret;
+
+  rt_memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
+  rt_memset(&stChnParam, 0, sizeof(VO_CHN_PARAM_S));
+  rt_memset(&stBorder, 0, sizeof(VO_BORDER_S));
 
   stChnAttr.stRect.s32X = pstLayerAttr->stDispRect.s32X;
   stChnAttr.stRect.s32Y = pstLayerAttr->stDispRect.s32Y;
@@ -323,12 +329,48 @@ RKADKSurfaceInterface::RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo)
 }
 
 INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
-  VIDEO_FRAME_INFO_S stVFrame;
+  int ret, error;
+  VIDEO_FRAME_INFO_S stVFrameInfo;
   VO_LAYER voLayer;
-  int ret;
+  RTMediaBuffer *pstMediaBuffer;
+  RtMetaData *pstMetaData;
 
   RKADK_CHECK_POINTER(buf, RKADK_FAILURE);
+
   pCbMblk = buf;
+  rt_memset(&stVFrameInfo, 0, sizeof(VIDEO_FRAME_INFO_S));
+  stVFrameInfo.stVFrame.pMbBlk = buf;
+
+  pstMediaBuffer = reinterpret_cast<RTMediaBuffer *>(buf);
+  pstMetaData = pstMediaBuffer->getMetaData();
+  pstMetaData->findInt32(kKeyFrameError, &error);
+  if (error) {
+    RKADK_LOGE("find frame error");
+    return -1;
+  }
+
+  if (!pstMetaData->findInt32(kKeyFrameW,
+                              (int *)&stVFrameInfo.stVFrame.u32VirWidth)) {
+    RKADK_LOGE("not find virtual width in meta");
+    return -1;
+  }
+  if (!pstMetaData->findInt32(kKeyFrameH,
+                              (int *)&stVFrameInfo.stVFrame.u32VirHeight)) {
+    RKADK_LOGE("not find virtual height in meta");
+    return -1;
+  }
+
+  if (!pstMetaData->findInt32(kKeyVCodecWidth,
+                              (int *)&stVFrameInfo.stVFrame.u32Width)) {
+    RKADK_LOGE("not find width in meta");
+    return -1;
+  }
+  if (!pstMetaData->findInt32(kKeyVCodecHeight,
+                              (int *)&stVFrameInfo.stVFrame.u32Height)) {
+    RKADK_LOGE("not find height in meta");
+    return -1;
+  }
+  stVFrameInfo.stVFrame.enPixelFormat = RK_FMT_YUV420SP;
 
   switch (stFrmInfo.u32VoDev) {
   case VO_DEV_HD0:
@@ -343,14 +385,19 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
   }
 
   if (!s32Flag) {
-    RTFrame frame = {0};
+    RTFrame frame;
     VO_PUB_ATTR_S stVoPubAttr;
     VO_VIDEO_LAYER_ATTR_S stLayerAttr;
-    RKADK_VOID *pMblk = RKADK_NULL;
+
+    RKADK_LOGD("stVFrame[%d, %d, %d, %d]", stVFrameInfo.stVFrame.u32Width,
+               stVFrameInfo.stVFrame.u32Height,
+               stVFrameInfo.stVFrame.u32VirWidth,
+               stVFrameInfo.stVFrame.u32VirHeight);
 
     // start
+    rt_memset(&frame, 0, sizeof(RTFrame));
     rt_memset(&stVoPubAttr, 0, sizeof(VO_PUB_ATTR_S));
-    pMblk = buf;
+    rt_memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
     /* Bind Layer */
     VO_LAYER_MODE_E mode;
@@ -416,6 +463,8 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
 
     if (VO_OUTPUT_DEFAULT == stVoPubAttr.enIntfSync) {
       ret = RKADK_VO_SetDispRect_Default(&stLayerAttr, stFrmInfo.u32VoDev);
+      RKADK_LOGD("width = %u, height = %u\n", stLayerAttr.stDispRect.u32Width,
+                 stLayerAttr.stDispRect.u32Height);
       if (ret) {
         RKADK_LOGD("SetDispRect_Default failed(%d)", ret);
         return ret;
@@ -438,27 +487,13 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
       return ret;
     }
 
-    /* Set Layer */
-    stVFrame.stVFrame.pMbBlk = pMblk;
-    ret = RK_MPI_VO_SendFrame(voLayer, stFrmInfo.u32ChnnNum, &stVFrame, 0);
-    if (ret) {
-      RKADK_LOGD("RK_MPI_VO_SendFrame failed(%d)", ret);
-      return ret;
-    }
-
     s32Flag = 1;
-  } else {
-    VO_FRAME_INFO_S stFrameInfo;
-    void *pMblk = RKADK_NULL;
-    memset(&stFrameInfo, 0, sizeof(VO_FRAME_INFO_S));
+  }
 
-    pMblk = buf;
-    stVFrame.stVFrame.pMbBlk = pMblk;
-    ret = RK_MPI_VO_SendFrame(voLayer, stFrmInfo.u32ChnnNum, &stVFrame, 0);
-    if (ret) {
-      RKADK_LOGD("RK_MPI_VO_SendFrame failed(%d)", ret);
-      return ret;
-    }
+  ret = RK_MPI_VO_SendFrame(voLayer, stFrmInfo.u32ChnnNum, &stVFrameInfo, 0);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VO_SendFrame failed(%d)", ret);
+    return ret;
   }
 
   return RKADK_SUCCESS;

@@ -100,7 +100,7 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32DispHeight = 0;
   pstFrmInfo->u32ImgWidth = 0;
   pstFrmInfo->u32ImgHeight = 0;
-  pstFrmInfo->u32VoLayerMode = 2;
+  pstFrmInfo->u32VoLayerMode = 1;
   pstFrmInfo->u32VoFormat = VO_FORMAT_NV12;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
