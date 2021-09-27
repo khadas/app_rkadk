@@ -740,6 +740,10 @@ static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName,
   }
 
   metaData.setInt64(kRetrieverFrameAtTime, 0);
+  metaData.setInt32(kKeyVMaxInputBufferCnt, 1);
+  metaData.setInt32(kKeyVMinOutputBufferCnt, 1);
+  metaData.setInt32(kKeyVMaxOutputBufferCnt, 1);
+  metaData.setInt32(kKeyUserVideoRefFrameNum, 1);
   buffer = retriever->getSingleFrameAtTime(&metaData);
   if (buffer == NULL || buffer->getMetaData() == NULL) {
     RKADK_LOGE("getSingleFrameAtTime failed");
