@@ -22,11 +22,12 @@ add_library(rkadk SHARED
                 ${DISP_SRC}
                 ${VI_SRC})
 
+set(LIB_RTSP ${CMAKE_SOURCE_DIR}/src/live/rtsp/librtsp.a)
+message("LIB_RTSP = ${LIB_RTSP}")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/param")
-target_link_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/live/rtsp")
-target_link_libraries(rkadk easymedia third_media rockit rga iniparser rtsp)
+target_link_libraries(rkadk easymedia third_media rockit rga iniparser ${LIB_RTSP})
 
 if(USE_RKAIQ)
     target_link_libraries(rkadk rkaiq)
