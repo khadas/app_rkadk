@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#ifdef ROCKIT
+
 #include "RTSurfaceInterface.h"
 #include "rkadk_common.h"
 #include "rkadk_player.h"
@@ -65,6 +67,8 @@ private:
   INT32 s32Flag;
   VIDEO_FRAMEINFO_S stFrmInfo;
 };
+
+#endif // ROCKIT
 
 #ifdef __cplusplus
 }

@@ -294,6 +294,7 @@ void *TakePhotoThread(void *para) {
   return NULL;
 }
 
+#ifdef ROCKIT
 static void GetThumbTest() {
   char *filePath = "/tmp/thm_test.jpg";
   RKADK_U32 size = 50 * 1024;
@@ -320,6 +321,7 @@ static void GetThumbTest() {
   fwrite(buffer, 1, size, file);
   fclose(file);
 }
+#endif
 
 static RKADK_S32
 GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,

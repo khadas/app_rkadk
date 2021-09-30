@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+#ifdef ROCKIT
+
 #include "rkadk_surface_interface.h"
 #include "RTMediaBuffer.h"
 #include "RTMediaData.h"
@@ -482,3 +484,5 @@ void RKADKSurfaceInterface::replay() {
   ((RTMediaBuffer *)pCbMblk)->signalBufferRelease(RKADK_TRUE);
   s32Flag = 0;
 }
+
+#endif // ROCKIT

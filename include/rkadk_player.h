@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#ifdef ROCKIT
+
 #include "rk_comm_vo.h"
 #include "rkadk_common.h"
 
@@ -204,6 +206,8 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs);
  */
 RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
                                      RKADK_PLAYER_STATE_E *penState);
+
+#endif // ROCKIT
 
 #ifdef __cplusplus
 }

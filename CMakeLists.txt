@@ -10,11 +10,15 @@ install(DIRECTORY include/ DESTINATION include/rkadk
         FILES_MATCHING PATTERN "*.h")
 
 message("RKMEDIA_HEADER_DIR = ${RKMEDIA_HEADER_DIR}")
-message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
 include_directories(${RKMEDIA_HEADER_DIR})
-include_directories(${ROCKIT_HEADER_DIR})
-include_directories(${ROCKIT_HEADER_DIR}/mpi)
 include_directories(include)
+
+if(USE_ROCKIT)
+    message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
+    include_directories(${ROCKIT_HEADER_DIR})
+    include_directories(${ROCKIT_HEADER_DIR}/mpi)
+    add_definitions(-DROCKIT)
+endif()
 
 if(USE_RKAIQ)
     find_package(RkAiq REQUIRED)

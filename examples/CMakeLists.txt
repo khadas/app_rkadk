@@ -55,6 +55,7 @@ target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_stream_test DESTINATION "bin")
 
+if(USE_ROCKIT)
 #--------------------------
 # rkadk_player_test
 #--------------------------
@@ -63,6 +64,7 @@ add_dependencies(rkadk_player_test rkadk)
 target_link_libraries(rkadk_player_test rockit rkadk pthread)
 target_include_directories(rkadk_player_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkadk_player_test DESTINATION "bin")
+endif()
 
 #--------------------------
 # rkadk_thumb_test

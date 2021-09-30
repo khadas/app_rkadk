@@ -13,6 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+
+#ifdef ROCKIT
+
 #include "rkadk_thumb.h"
 #include "RTMediaBuffer.h"
 #include "RTMetadataRetriever.h"
@@ -852,3 +855,5 @@ RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr) {
 
   return 0;
 }
+
+#endif // ROCKIT
