@@ -28,7 +28,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <utime.h>
 
 //#define DUMP_RUN_TIME
 //#define THUMB_SAVE_FILE
@@ -531,6 +534,7 @@ static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName,
   }
 
   ret = 0;
+  RKADK_LOGD("done!");
 
 exit:
   if (fd)
@@ -680,9 +684,11 @@ static RKADK_S32 ThmBufMalloc(RKADK_THUMB_ATTR_S *pstThumbAttr) {
 
 static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName,
                              RKADK_THUMB_ATTR_S *pstThumbAttr, bool bEx) {
-  int ret = 0;
+  int ret = 0, result;
   RTMediaBuffer *buffer = NULL;
   RtMetaData metaData;
+  struct stat stStatBuf;
+  struct utimbuf stTimebuf;
 
 #ifdef THUMB_SAVE_FILE
   FILE *file = NULL;
@@ -724,8 +730,24 @@ static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName,
     return -1;
   }
 
-  if (!GetThmInBox(pszFileName, pstThumbAttr, bEx))
+  memset(&stTimebuf, 0, sizeof(struct utimbuf));
+  result = stat(pszFileName, &stStatBuf);
+  if (result) {
+    RKADK_LOGW("stat[%s] failed[%d]", pszFileName, result);
+  } else {
+    stTimebuf.actime = stStatBuf.st_atime;
+    stTimebuf.modtime = stStatBuf.st_mtime;
+  }
+
+  if (!GetThmInBox(pszFileName, pstThumbAttr, bEx)) {
+    if (stTimebuf.actime != 0 && stTimebuf.modtime != 0) {
+      result = utime(pszFileName, &stTimebuf);
+      if (result)
+        RKADK_LOGW("utime[%s] failed[%d]", pszFileName, result);
+    }
+
     return 0;
+  }
 
   RTMetadataRetriever *retriever = new RTMetadataRetriever();
   if (!retriever) {
@@ -802,6 +824,12 @@ exit:
 
   if (retriever)
     delete retriever;
+
+  if (stTimebuf.actime != 0 && stTimebuf.modtime != 0) {
+    result = utime(pszFileName, &stTimebuf);
+    if (result)
+      RKADK_LOGW("utime[%s] failed[%d]", pszFileName, result);
+  }
 
 #ifdef DUMP_RUN_TIME
   gettimeofday(&tv_end, NULL);
