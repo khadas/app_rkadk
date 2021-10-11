@@ -16,7 +16,6 @@ include_directories(include)
 if(USE_ROCKIT)
     message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
     include_directories(${ROCKIT_HEADER_DIR})
-    include_directories(${ROCKIT_HEADER_DIR}/mpi)
     add_definitions(-DROCKIT)
 endif()
 

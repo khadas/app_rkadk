@@ -1806,6 +1806,7 @@ static void RKADK_PARAM_UseDefault() {
       enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
 
     RKADK_PARAM_DefRecAttr(0, enStrmType, g_stPARAMCtx.sensorPath[0]);
+    RKADK_PARAM_DefRecTime(0, enStrmType, g_stPARAMCtx.sensorPath[0]);
     RKADK_PARAM_DefVencParam(g_stPARAMCtx.sensorPath[0], 0, enStrmType);
   }
 
