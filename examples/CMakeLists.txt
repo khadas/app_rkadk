@@ -71,7 +71,10 @@ endif()
 #--------------------------
 add_executable(rkadk_thumb_test rkadk_thumb_test.c)
 add_dependencies(rkadk_thumb_test rkadk)
-target_link_libraries(rkadk_thumb_test rkadk easymedia third_media rockit)
+target_link_libraries(rkadk_thumb_test rkadk easymedia third_media)
+if(USE_ROCKIT)
+target_link_libraries(rkadk_thumb_test rockit)
+endif()
 target_include_directories(rkadk_thumb_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkadk_thumb_test DESTINATION "bin")
 
