@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-#define IQ_FILE_PATH "/etc/iqfiles"
+#define IQ_FILE_PATH "/oem/etc/iqfiles"
 
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
@@ -50,8 +50,8 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
-  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, h264, h265, mjpeg"
-         "jpeg, Default:pcm\n");
+  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, h264, h265, mjpeg,"
+         " jpeg, Default:pcm\n");
   printf("\t-o: Output path, Default:\"/tmp/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   ;

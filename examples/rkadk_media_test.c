@@ -42,7 +42,7 @@ static RKADK_CHAR optstr[] = "I:a:i:t:p:h";
 static FILE *g_vo_file = NULL;
 static FILE *g_ao_file = NULL;
 static FILE *g_pcm_file = NULL;
-#define IQ_FILE_PATH "/etc/iqfiles"
+#define IQ_FILE_PATH "/oem/etc/iqfiles"
 
 const char *g_thumb_file = "/tmp/test.mp4";
 
