@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 /* version */
-#define RKADK_PARAM_VERSION "1.1.0"
+#define RKADK_PARAM_VERSION "1.2.0"
 
 #define RKADK_BUFFER_LEN 64
 #define RKADK_PIX_FMT_LEN 10
