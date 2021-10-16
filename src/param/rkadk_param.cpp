@@ -18,6 +18,9 @@
 #include "rkadk_media_comm.h"
 #include "rkadk_param_inner.h"
 #include "rkadk_param_map.h"
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define RKISPP_SCALE0_NV12_WIDTH_MAX 2080
 #define RKISPP_SCALE1_WIDTH_MAX 1280
@@ -1829,9 +1832,50 @@ static void RKADK_PARAM_UseDefault() {
   RKADK_PARAM_DefDispCfg(0, g_stPARAMCtx.sensorPath[0]);
 }
 
+static void RKADK_PARAM_Mkdirs(char *dir) {
+  char *p = NULL;
+
+  RKADK_CHECK_POINTER_N(dir);
+  if (strlen(dir) == 0) {
+    RKADK_LOGE("strlen(dir) is 0");
+    return;
+  }
+
+  if (dir[0] == '/') {
+    p = strchr(dir + 1, '/');
+  } else {
+    p = strchr(dir, '/');
+  }
+
+  if (p) {
+    *p = '\0';
+
+    if (access(dir, F_OK)) {
+      if (mkdir(dir, 0777)) {
+        RKADK_LOGE("mkdir %s failed", dir);
+        return;
+      }
+    }
+
+    if (chdir(dir)) {
+      RKADK_LOGE("chdir %s failed", dir);
+      return;
+    }
+  } else {
+    if (access(dir, F_OK))
+      if (mkdir(dir, 0777))
+        RKADK_LOGE("mkdir %s failed", dir);
+
+    return;
+  }
+
+  RKADK_PARAM_Mkdirs(p + 1);
+}
+
 static RKADK_S32 RKADK_PARAM_LoadDefault() {
   int ret;
-  char buffer[RKADK_PATH_LEN * 2 + 4];
+  int bufLen = RKADK_PATH_LEN * 2 + 4;
+  char buffer[bufLen];
   char defSensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
@@ -1848,13 +1892,21 @@ static RKADK_S32 RKADK_PARAM_LoadDefault() {
     return ret;
   }
 
-  memset(buffer, 0, RKADK_BUFFER_LEN);
+  char *ptr = strrchr(g_stPARAMCtx.path, '/');
+  if (ptr) {
+    memset(buffer, 0, bufLen);
+    memcpy(buffer, g_stPARAMCtx.path, strlen(g_stPARAMCtx.path) - strlen(ptr));
+    if (access(buffer, F_OK))
+      RKADK_PARAM_Mkdirs(buffer);
+  }
+
+  memset(buffer, 0, bufLen);
   sprintf(buffer, "cp %s %s", RKADK_DEFPARAM_PATH, g_stPARAMCtx.path);
   RKADK_LOGD("%s", buffer);
   system(buffer);
 
   for (int i = 0; i < (int)pstCommCfg->sensor_count; i++) {
-    memset(buffer, 0, RKADK_BUFFER_LEN);
+    memset(buffer, 0, bufLen);
     sprintf(buffer, "cp %s %s", defSensorPath[i], g_stPARAMCtx.sensorPath[i]);
     RKADK_LOGD("%s", buffer);
     system(buffer);
