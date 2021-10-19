@@ -107,3 +107,13 @@ target_link_libraries(rkadk_disp_test easymedia third_media rkadk rkaiq)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_disp_test DESTINATION "bin")
+
+#--------------------------
+# rkadk_storage_test
+#--------------------------
+add_executable(rkadk_storage_test rkadk_storage_test.c)
+add_dependencies(rkadk_storage_test rkadk)
+target_link_libraries(rkadk_storage_test rkadk pthread)
+target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_storage_test DESTINATION "bin")
