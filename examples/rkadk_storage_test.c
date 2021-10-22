@@ -205,6 +205,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  RKADK_LOGI("Dev path: %s", RKADK_STORAGE_GetDevPath(pHandle));
   signal(SIGINT, SigtermHandler);
   if (CreatFileTest(&pHandle))
     RKADK_LOGW("CreatFileTest failed.");

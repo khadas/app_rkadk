@@ -72,6 +72,8 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list,
 
 RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST list);
 
+RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle);
+
 #ifdef __cplusplus
 }
 #endif

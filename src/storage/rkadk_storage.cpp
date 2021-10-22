@@ -1236,10 +1236,8 @@ RKADK_S32 RKADK_STORAGE_Init(RKADK_MW_PTR *ppHandle,
     goto failed;
   }
 
-  if (RKADK_STORAGE_AutoDeleteInit(pstHandle)) {
+  if (RKADK_STORAGE_AutoDeleteInit(pstHandle))
     RKADK_LOGE("AutoDelete init failed.");
-    goto failed;
-  }
 
   if (RKADK_STORAGE_ListenMsgInit(pstHandle)) {
     RKADK_LOGE("Listener and Msg init failed.");
@@ -1370,4 +1368,13 @@ RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST list) {
   }
 
   return 0;
+}
+
+RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle) {
+  RKADK_STORAGE_HANDLE *pstHandle = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, NULL);
+  pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
+
+  return pstHandle->stDevSta.cDevPath;
 }
