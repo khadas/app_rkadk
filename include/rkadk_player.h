@@ -21,9 +21,6 @@
 extern "C" {
 #endif
 
-#ifdef ROCKIT
-
-#include "rk_comm_vo.h"
 #include "rkadk_common.h"
 
 /** Error information of the player*/
@@ -104,6 +101,96 @@ typedef struct {
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
 } RKADK_PLAYER_CFG_S;
 
+/* Must be consistent with rockit/rk_comm_vo.h -> VO_INTF_SYNC_E */
+typedef enum {
+  RKADK_VO_OUTPUT_PAL = 0,  /* PAL standard */
+  RKADK_VO_OUTPUT_NTSC,     /* NTSC standard */
+
+  RKADK_VO_OUTPUT_1080P24,  /* 1920 x 1080 at 24 Hz. */
+  RKADK_VO_OUTPUT_1080P25,  /* 1920 x 1080 at 25 Hz. */
+  RKADK_VO_OUTPUT_1080P30,  /* 1920 x 1080 at 30 Hz. */
+
+  RKADK_VO_OUTPUT_720P50,   /* 1280 x  720 at 50 Hz. */
+  RKADK_VO_OUTPUT_720P60,   /* 1280 x  720 at 60 Hz. */
+
+  RKADK_VO_OUTPUT_1080I50,  /* 1920 x 1080 at 50 Hz, interlace. */
+  RKADK_VO_OUTPUT_1080I60,  /* 1920 x 1080 at 60 Hz, interlace. */
+  RKADK_VO_OUTPUT_1080P50,  /* 1920 x 1080 at 50 Hz. */
+  RKADK_VO_OUTPUT_1080P60,  /* 1920 x 1080 at 60 Hz. */
+
+  RKADK_VO_OUTPUT_576P50,   /* 720  x  576 at 50 Hz. */
+  RKADK_VO_OUTPUT_480P60,   /* 720  x  480 at 60 Hz. */
+
+  RKADK_VO_OUTPUT_800x600_60,   /* VESA 800 x 600 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1024x768_60,  /* VESA 1024 x 768 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1280x1024_60, /* VESA 1280 x 1024 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1366x768_60,  /* VESA 1366 x 768 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1440x900_60,  /* VESA 1440 x 900 at 60 Hz (non-interlaced) CVT Compliant */
+  RKADK_VO_OUTPUT_1280x800_60,  /* 1280*800@60Hz VGA@60Hz */
+  RKADK_VO_OUTPUT_1600x1200_60, /* VESA 1600 x 1200 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1680x1050_60, /* VESA 1680 x 1050 at 60 Hz (non-interlaced) */
+  RKADK_VO_OUTPUT_1920x1200_60, /* VESA 1920 x 1600 at 60 Hz (non-interlaced) CVT (Reduced Blanking) */
+  RKADK_VO_OUTPUT_640x480_60,   /* VESA 640 x 480 at 60 Hz (non-interlaced) CVT */
+  RKADK_VO_OUTPUT_960H_PAL,     /* ITU-R BT.1302 960 x 576 at 50 Hz (interlaced) */
+  RKADK_VO_OUTPUT_960H_NTSC,    /* ITU-R BT.1302 960 x 480 at 60 Hz (interlaced) */
+  RKADK_VO_OUTPUT_1920x2160_30, /* 1920x2160_30 */
+  RKADK_VO_OUTPUT_2560x1440_30, /* 2560x1440_30 */
+  RKADK_VO_OUTPUT_2560x1440_60, /* 2560x1440_60 */
+  RKADK_VO_OUTPUT_2560x1600_60, /* 2560x1600_60 */
+  RKADK_VO_OUTPUT_3840x2160_24, /* 3840x2160_24 */
+  RKADK_VO_OUTPUT_3840x2160_25, /* 3840x2160_25 */
+  RKADK_VO_OUTPUT_3840x2160_30, /* 3840x2160_30 */
+  RKADK_VO_OUTPUT_3840x2160_50, /* 3840x2160_50 */
+  RKADK_VO_OUTPUT_3840x2160_60, /* 3840x2160_60 */
+  RKADK_VO_OUTPUT_4096x2160_24, /* 4096x2160_24 */
+  RKADK_VO_OUTPUT_4096x2160_25, /* 4096x2160_25 */
+  RKADK_VO_OUTPUT_4096x2160_30, /* 4096x2160_30 */
+  RKADK_VO_OUTPUT_4096x2160_50, /* 4096x2160_50 */
+  RKADK_VO_OUTPUT_4096x2160_60, /* 4096x2160_60 */
+  RKADK_VO_OUTPUT_320x240_60,   /* For ota5182 at 60 Hz (8bit)  */
+  RKADK_VO_OUTPUT_320x240_50,   /* For ili9342 at 50 Hz (6bit)  */
+  RKADK_VO_OUTPUT_240x320_50,   /* For ili9341 at 50 Hz (6bit) */
+                                /* For st7789 at 50Hz(6bit) */
+  RKADK_VO_OUTPUT_240x320_60,   /* For ili9341 at 60 Hz (16bit) */
+  RKADK_VO_OUTPUT_800x600_50,   /* For LCD     at 50 Hz (24bit) */
+  RKADK_VO_OUTPUT_720x1280_60,  /* For MIPI DSI Tx 720 x1280 at 60 Hz */
+  RKADK_VO_OUTPUT_1080x1920_60, /* For MIPI DSI Tx 1080x1920 at 60 Hz */
+  RKADK_VO_OUTPUT_7680x4320_30, /* For HDMI2.1 at 30 Hz         */
+  RKADK_VO_OUTPUT_USER,         /* User timing. */
+  RKADK_VO_OUTPUT_DEFAULT,
+
+  RKADK_VO_OUTPUT_BUTT
+} RKADK_VO_INTF_SYNC_E;
+
+/* Must be consistent with rockit/rk_comm_vo.h -> VO_SYNC_INFO_S */
+typedef struct {
+    RKADK_BOOL bSynm; /* RW; sync mode(0:timing,as BT.656; 1:signal,as LCD) */
+    RKADK_BOOL bIop;  /* RW; interlaced or progressive display(0:i; 1:p) */
+
+    RKADK_U16 u16Vact;  /* RW; vertical active area */
+    RKADK_U16 u16Vbb;   /* RW; vertical back blank porch */
+    RKADK_U16 u16Vfb;   /* RW; vertical front blank porch */
+
+    RKADK_U16 u16Hact;  /* RW; horizontal active area */
+    RKADK_U16 u16Hbb;   /* RW; horizontal back blank porch */
+    RKADK_U16 u16Hfb;   /* RW; horizontal front blank porch */
+    RKADK_U16 u16Hmid;  /* RW; bottom horizontal active area */
+
+    RKADK_U16 u16Bvact; /* RW; bottom vertical active area */
+    RKADK_U16 u16Bvbb;  /* RW; bottom vertical back blank porch */
+    RKADK_U16 u16Bvfb;  /* RW; bottom vertical front blank porch */
+
+    RKADK_U16 u16Hpw; /* RW; horizontal pulse width */
+    RKADK_U16 u16Vpw; /* RW; vertical pulse width */
+
+    RKADK_BOOL bIdv;  /* RW; inverse data valid of output */
+    RKADK_BOOL bIhs;  /* RW; polarity of horizontal synch signal, 0: negative, 1: positive */
+    RKADK_BOOL bIvs;  /* RW; polarity of vertical synch signal, 0: negative, 1: positive */
+
+    RKADK_U16 u16FrameRate; /* RW; frame rate of output */
+    RKADK_U16 u16PixClock;  /* RW; pixel clock, the unit is KHZ */
+} RKADK_VO_SYNC_INFO_S;
+
 /** video output frameinfo */
 typedef struct {
   RKADK_U32 u32FrmInfoS32x;
@@ -124,8 +211,8 @@ typedef struct {
   RKADK_PLAYER_VO_DEV_E u32VoDev;
   RKADK_PLAYER_VO_INTF_TYPE_E u32EnIntfType;
   RKADK_U32 u32DispFrmRt;
-  VO_INTF_SYNC_E enIntfSync;
-  VO_SYNC_INFO_S stSyncInfo;
+  RKADK_VO_INTF_SYNC_E enIntfSync;
+  RKADK_VO_SYNC_INFO_S stSyncInfo;
 } RKADK_PLAYER_FRAMEINFO_S;
 
 /**
@@ -206,8 +293,6 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs);
  */
 RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
                                      RKADK_PLAYER_STATE_E *penState);
-
-#endif // ROCKIT
 
 #ifdef __cplusplus
 }

@@ -21,8 +21,6 @@
 extern "C" {
 #endif
 
-#ifdef ROCKIT
-
 #include "rkadk_common.h"
 
 // Default jpeg thumbnail
@@ -33,8 +31,6 @@ RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName,
                               RKADK_THUMB_ATTR_S *pstThumbAttr);
 
 RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);
-
-#endif // ROCKIT
 
 #ifdef __cplusplus
 }

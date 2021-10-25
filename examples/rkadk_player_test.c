@@ -105,7 +105,7 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
   pstFrmInfo->u32DispFrmRt = 30;
-  pstFrmInfo->enIntfSync = VO_OUTPUT_DEFAULT;
+  pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderTopWidth = 0;
   pstFrmInfo->u32BorderBottomWidth = 0;
@@ -113,11 +113,11 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32BorderRightWidth = 0;
   pstFrmInfo->u32BorderColor = 0x0000FA;
   pstFrmInfo->u32ChnnNum = 1;
-  pstFrmInfo->stSyncInfo.bIdv = RK_TRUE;
-  pstFrmInfo->stSyncInfo.bIhs = RK_TRUE;
-  pstFrmInfo->stSyncInfo.bIvs = RK_TRUE;
-  pstFrmInfo->stSyncInfo.bSynm = RK_TRUE;
-  pstFrmInfo->stSyncInfo.bIop = RK_TRUE;
+  pstFrmInfo->stSyncInfo.bIdv = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIhs = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIvs = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bSynm = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIop = RKADK_TRUE;
   pstFrmInfo->stSyncInfo.u16FrameRate = 60;
   pstFrmInfo->stSyncInfo.u16PixClock = 65000;
   pstFrmInfo->stSyncInfo.u16Hact = 1200;

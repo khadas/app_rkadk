@@ -157,11 +157,11 @@ static RKADK_S32 RKADK_VO_SetRtSyncInfo(VO_SYNC_INFO_S *pstSyncInfo,
                                         VIDEO_FRAMEINFO_S stFrmInfo) {
   RKADK_CHECK_POINTER(pstSyncInfo, RKADK_FAILURE);
 
-  pstSyncInfo->bIdv = stFrmInfo.stSyncInfo.bIdv;
-  pstSyncInfo->bIhs = stFrmInfo.stSyncInfo.bIhs;
-  pstSyncInfo->bIvs = stFrmInfo.stSyncInfo.bIvs;
-  pstSyncInfo->bSynm = stFrmInfo.stSyncInfo.bSynm;
-  pstSyncInfo->bIop = stFrmInfo.stSyncInfo.bIop;
+  pstSyncInfo->bIdv = (RK_BOOL)stFrmInfo.stSyncInfo.bIdv;
+  pstSyncInfo->bIhs = (RK_BOOL)stFrmInfo.stSyncInfo.bIhs;
+  pstSyncInfo->bIvs = (RK_BOOL)stFrmInfo.stSyncInfo.bIvs;
+  pstSyncInfo->bSynm = (RK_BOOL)stFrmInfo.stSyncInfo.bSynm;
+  pstSyncInfo->bIop = (RK_BOOL)stFrmInfo.stSyncInfo.bIop;
   pstSyncInfo->u16FrameRate = (stFrmInfo.stSyncInfo.u16FrameRate > 0)
                                   ? stFrmInfo.stSyncInfo.u16FrameRate
                                   : 60;
@@ -317,6 +317,166 @@ static RKADK_S32 RKADK_VO_StartChnn(VO_LAYER voLayer,
   return ret;
 }
 
+static VO_INTF_SYNC_E RKADK_VO_GetIntfSync(RKADK_VO_INTF_SYNC_E enIntfSync) {
+  VO_INTF_SYNC_E enVoIntfSync = VO_OUTPUT_BUTT;
+
+  switch (enIntfSync) {
+  case RKADK_VO_OUTPUT_PAL:
+    enVoIntfSync = VO_OUTPUT_PAL;
+    break;
+  case RKADK_VO_OUTPUT_NTSC:
+    enVoIntfSync = VO_OUTPUT_NTSC;
+    break;
+  case RKADK_VO_OUTPUT_1080P24:
+    enVoIntfSync = VO_OUTPUT_1080P24;
+    break;
+  case RKADK_VO_OUTPUT_1080P25:
+    enVoIntfSync = VO_OUTPUT_1080P25;
+    break;
+  case RKADK_VO_OUTPUT_1080P30:
+    enVoIntfSync = VO_OUTPUT_1080P30;
+    break;
+  case RKADK_VO_OUTPUT_720P50:
+    enVoIntfSync = VO_OUTPUT_720P50;
+    break;
+  case RKADK_VO_OUTPUT_720P60:
+    enVoIntfSync = VO_OUTPUT_720P60;
+    break;
+  case RKADK_VO_OUTPUT_1080I50:
+    enVoIntfSync = VO_OUTPUT_1080I50;
+    break;
+  case RKADK_VO_OUTPUT_1080I60:
+    enVoIntfSync = VO_OUTPUT_1080I60;
+    break;
+  case RKADK_VO_OUTPUT_1080P50:
+    enVoIntfSync = VO_OUTPUT_1080P50;
+    break;
+  case RKADK_VO_OUTPUT_1080P60:
+    enVoIntfSync = VO_OUTPUT_1080P60;
+    break;
+  case RKADK_VO_OUTPUT_576P50:
+    enVoIntfSync = VO_OUTPUT_576P50;
+    break;
+  case RKADK_VO_OUTPUT_480P60:
+    enVoIntfSync = VO_OUTPUT_480P60;
+    break;
+  case RKADK_VO_OUTPUT_800x600_60:
+    enVoIntfSync = VO_OUTPUT_800x600_60;
+    break;
+  case RKADK_VO_OUTPUT_1024x768_60:
+    enVoIntfSync = VO_OUTPUT_1024x768_60;
+    break;
+  case RKADK_VO_OUTPUT_1280x1024_60:
+    enVoIntfSync = VO_OUTPUT_1280x1024_60;
+    break;
+  case RKADK_VO_OUTPUT_1366x768_60:
+    enVoIntfSync = VO_OUTPUT_1366x768_60;
+    break;
+  case RKADK_VO_OUTPUT_1440x900_60:
+    enVoIntfSync = VO_OUTPUT_1440x900_60;
+    break;
+  case RKADK_VO_OUTPUT_1280x800_60:
+    enVoIntfSync = VO_OUTPUT_1280x800_60;
+    break;
+  case RKADK_VO_OUTPUT_1600x1200_60:
+    enVoIntfSync = VO_OUTPUT_1600x1200_60;
+    break;
+  case RKADK_VO_OUTPUT_1680x1050_60:
+    enVoIntfSync = VO_OUTPUT_1680x1050_60;
+    break;
+  case RKADK_VO_OUTPUT_1920x1200_60:
+    enVoIntfSync = VO_OUTPUT_1920x1200_60;
+    break;
+  case RKADK_VO_OUTPUT_640x480_60:
+    enVoIntfSync = VO_OUTPUT_640x480_60;
+    break;
+  case RKADK_VO_OUTPUT_960H_PAL:
+    enVoIntfSync = VO_OUTPUT_960H_PAL;
+    break;
+  case RKADK_VO_OUTPUT_960H_NTSC:
+    enVoIntfSync = VO_OUTPUT_960H_NTSC;
+    break;
+  case RKADK_VO_OUTPUT_1920x2160_30:
+    enVoIntfSync = VO_OUTPUT_1920x2160_30;
+    break;
+  case RKADK_VO_OUTPUT_2560x1440_30:
+    enVoIntfSync = VO_OUTPUT_2560x1440_30;
+    break;
+  case RKADK_VO_OUTPUT_2560x1440_60:
+    enVoIntfSync = VO_OUTPUT_2560x1440_60;
+    break;
+  case RKADK_VO_OUTPUT_2560x1600_60:
+    enVoIntfSync = VO_OUTPUT_2560x1600_60;
+    break;
+  case RKADK_VO_OUTPUT_3840x2160_24:
+    enVoIntfSync = VO_OUTPUT_3840x2160_24;
+    break;
+  case RKADK_VO_OUTPUT_3840x2160_25:
+    enVoIntfSync = VO_OUTPUT_3840x2160_25;
+    break;
+  case RKADK_VO_OUTPUT_3840x2160_30:
+    enVoIntfSync = VO_OUTPUT_3840x2160_30;
+    break;
+  case RKADK_VO_OUTPUT_3840x2160_50:
+    enVoIntfSync = VO_OUTPUT_3840x2160_50;
+    break;
+  case RKADK_VO_OUTPUT_3840x2160_60:
+    enVoIntfSync = VO_OUTPUT_3840x2160_60;
+    break;
+  case RKADK_VO_OUTPUT_4096x2160_24:
+    enVoIntfSync = VO_OUTPUT_4096x2160_24;
+    break;
+  case RKADK_VO_OUTPUT_4096x2160_25:
+    enVoIntfSync = VO_OUTPUT_4096x2160_25;
+    break;
+  case RKADK_VO_OUTPUT_4096x2160_30:
+    enVoIntfSync = VO_OUTPUT_4096x2160_30;
+    break;
+  case RKADK_VO_OUTPUT_4096x2160_50:
+    enVoIntfSync = VO_OUTPUT_4096x2160_50;
+    break;
+  case RKADK_VO_OUTPUT_4096x2160_60:
+    enVoIntfSync = VO_OUTPUT_4096x2160_60;
+    break;
+  case RKADK_VO_OUTPUT_320x240_60:
+    enVoIntfSync = VO_OUTPUT_320x240_60;
+    break;
+  case RKADK_VO_OUTPUT_320x240_50:
+    enVoIntfSync = VO_OUTPUT_320x240_50;
+    break;
+  case RKADK_VO_OUTPUT_240x320_50:
+    enVoIntfSync = VO_OUTPUT_240x320_50;
+    break;
+  case RKADK_VO_OUTPUT_240x320_60:
+    enVoIntfSync = VO_OUTPUT_240x320_60;
+    break;
+  case RKADK_VO_OUTPUT_800x600_50:
+    enVoIntfSync = VO_OUTPUT_800x600_50;
+    break;
+  case RKADK_VO_OUTPUT_720x1280_60:
+    enVoIntfSync = VO_OUTPUT_720x1280_60;
+    break;
+  case RKADK_VO_OUTPUT_1080x1920_60:
+    enVoIntfSync = VO_OUTPUT_1080x1920_60;
+    break;
+  case RKADK_VO_OUTPUT_7680x4320_30:
+    enVoIntfSync = VO_OUTPUT_7680x4320_30;
+    break;
+  case RKADK_VO_OUTPUT_USER:
+    enVoIntfSync = VO_OUTPUT_USER;
+    break;
+  case RKADK_VO_OUTPUT_DEFAULT:
+    enVoIntfSync = VO_OUTPUT_DEFAULT;
+    break;
+  default:
+    RKADK_LOGW("Invalid enIntfSync[%d], use VO_OUTPUT_DEFAULT", enIntfSync);
+    enVoIntfSync = VO_OUTPUT_DEFAULT;
+    break;
+  }
+
+  return enVoIntfSync;
+}
+
 RKADKSurfaceInterface::RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo)
     : pCbMblk(nullptr), s32Flag(0) {
   memset(&stFrmInfo, 0, sizeof(VIDEO_FRAMEINFO_S));
@@ -324,7 +484,7 @@ RKADKSurfaceInterface::RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo)
     memcpy(&stFrmInfo, pstFrmInfo, sizeof(VIDEO_FRAMEINFO_S));
   } else {
     RKADK_LOGW("don't set video frame info");
-    stFrmInfo.enIntfSync = VO_OUTPUT_DEFAULT;
+    stFrmInfo.enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   }
 }
 
@@ -439,7 +599,7 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
       RKADK_LOGD("option not set ,use HDMI default");
     }
 
-    stVoPubAttr.enIntfSync = stFrmInfo.enIntfSync;
+    stVoPubAttr.enIntfSync = RKADK_VO_GetIntfSync(stFrmInfo.enIntfSync);
     if (VO_OUTPUT_USER == stVoPubAttr.enIntfSync)
       RKADK_VO_SetRtSyncInfo(&stVoPubAttr.stSyncInfo, stFrmInfo);
 

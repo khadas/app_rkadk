@@ -20,6 +20,7 @@
 #include "RTMediaPlayer.h"
 #include "RTPlayerDef.h"
 #include "rkadk_surface_interface.h"
+#include "rk_comm_vo.h"
 #include "rt_message.h"
 #include <pthread.h>
 #include <stdio.h>

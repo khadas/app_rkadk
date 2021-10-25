@@ -24,6 +24,7 @@ extern "C" {
 #ifdef ROCKIT
 
 #include "RTSurfaceInterface.h"
+#include "rk_comm_vo.h"
 #include "rkadk_common.h"
 #include "rkadk_player.h"
 
