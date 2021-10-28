@@ -1130,9 +1130,9 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
          sizeof(RKADK_STR_FOLDER_ATTR) * pstHandle->stDevAttr.s32FolderNum);
 
   pstHandle->stDevAttr.pstFolderAttr[0].s32Limit = 50;
-  sprintf(pstHandle->stDevAttr.pstFolderAttr[0].cFolderPath, "/video0/");
+  sprintf(pstHandle->stDevAttr.pstFolderAttr[0].cFolderPath, "/video_front/");
   pstHandle->stDevAttr.pstFolderAttr[1].s32Limit = 50;
-  sprintf(pstHandle->stDevAttr.pstFolderAttr[1].cFolderPath, "/video1/");
+  sprintf(pstHandle->stDevAttr.pstFolderAttr[1].cFolderPath, "/video_back/");
 
   for (i = 0; i < pstHandle->stDevAttr.s32FolderNum; i++) {
     RKADK_LOGI(
@@ -1354,6 +1354,7 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list,
     strncpy(list->file[j].filename, tmp->filename, len);
     list->file[j].filename[len] = '\0';
     list->file[j].stSize = tmp->stSize;
+    list->file[j].stTime = tmp->stTime;
     tmp = tmp->next;
   }
 

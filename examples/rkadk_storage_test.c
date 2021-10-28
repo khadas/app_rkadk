@@ -89,9 +89,14 @@ static void *CreatFileThread(void *arg) {
     usleep(100);
     time(&timep);
     p = gmtime(&timep);
-    sprintf(name, "/mnt/sdcard/video%d/%d-%d-%d_%d-%d-%d.mp4", ch,
-            (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour,
-            p->tm_min, p->tm_sec);
+    if (ch == 0)
+      sprintf(name, "/mnt/sdcard/video_front/%d-%d-%d_%d-%d-%d.mp4",
+              (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour,
+              p->tm_min, p->tm_sec);
+    else
+      sprintf(name, "/mnt/sdcard/video_back/%d-%d-%d_%d-%d-%d.mp4",
+              (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour,
+              p->tm_min, p->tm_sec);
 
     if (CreatFile(name, FILE_SIZE)) {
       RKADK_LOGE("Create file failed.");
@@ -145,17 +150,15 @@ RKADK_S32 CreatFileTest(RKADK_MW_PTR *ppHandle) {
 }
 
 RKADK_S32 SetDevAttr(RKADK_STR_DEV_ATTR *pstDevAttr) {
-  RKADK_S32 i;
-
   RKADK_CHECK_POINTER(pstDevAttr, RKADK_FAILURE);
   RKADK_LOGD("The DevAttr will be user-defined.");
 
   memset(pstDevAttr, 0, sizeof(RKADK_STR_DEV_ATTR));
   sprintf(pstDevAttr->cMountPath, "/mnt/sdcard");
   pstDevAttr->s32AutoDel = 1;
-  pstDevAttr->s32FreeSizeDelMin = 1200;
-  pstDevAttr->s32FreeSizeDelMax = 1800;
-  pstDevAttr->s32FolderNum = 3;
+  pstDevAttr->s32FreeSizeDelMin = 200;
+  pstDevAttr->s32FreeSizeDelMax = 1000;
+  pstDevAttr->s32FolderNum = 4;
   pstDevAttr->pstFolderAttr = (RKADK_STR_FOLDER_ATTR *)malloc(
       sizeof(RKADK_STR_FOLDER_ATTR) * pstDevAttr->s32FolderNum);
 
@@ -166,10 +169,14 @@ RKADK_S32 SetDevAttr(RKADK_STR_DEV_ATTR *pstDevAttr) {
   memset(pstDevAttr->pstFolderAttr, 0,
          sizeof(RKADK_STR_FOLDER_ATTR) * pstDevAttr->s32FolderNum);
 
-  for (i = 0; i < pstDevAttr->s32FolderNum; i++) {
-    pstDevAttr->pstFolderAttr[i].s32Limit = 33;
-    sprintf(pstDevAttr->pstFolderAttr[i].cFolderPath, "/video%d/", i);
-  }
+  pstDevAttr->pstFolderAttr[0].s32Limit = 35;
+  sprintf(pstDevAttr->pstFolderAttr[0].cFolderPath, "/video_front/");
+  pstDevAttr->pstFolderAttr[1].s32Limit = 35;
+  sprintf(pstDevAttr->pstFolderAttr[1].cFolderPath, "/video_back/");
+  pstDevAttr->pstFolderAttr[2].s32Limit = 15;
+  sprintf(pstDevAttr->pstFolderAttr[2].cFolderPath, "/photo/");
+  pstDevAttr->pstFolderAttr[3].s32Limit = 15;
+  sprintf(pstDevAttr->pstFolderAttr[3].cFolderPath, "/video_urgent/");
 
   return 0;
 }
@@ -190,7 +197,7 @@ int main(int argc, char *argv[]) {
   RKADK_FILE_LIST list;
 
   memset(&list, 0, sizeof(RKADK_FILE_LIST));
-  sprintf(list.path, "/mnt/sdcard/video0/");
+  sprintf(list.path, "/mnt/sdcard/video_front/");
 
   if (argc > 0)
     RKADK_LOGI("%s run", argv[0]);
@@ -207,6 +214,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGI("Dev path: %s", RKADK_STORAGE_GetDevPath(pHandle));
   signal(SIGINT, SigtermHandler);
+  sleep(1);
   if (CreatFileTest(&pHandle))
     RKADK_LOGW("CreatFileTest failed.");
 

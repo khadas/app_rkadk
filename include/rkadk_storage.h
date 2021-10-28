@@ -40,6 +40,8 @@ typedef struct {
 typedef struct _RKADK_FILE_INFO {
   RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
   off_t stSize;
+  time_t stTime;
+  void *thumb;
 } RKADK_FILE_INFO;
 
 typedef struct {
@@ -47,6 +49,11 @@ typedef struct {
   RKADK_S32 s32FileNum;
   RKADK_FILE_INFO *file;
 } RKADK_FILE_LIST;
+
+typedef struct {
+  RKADK_S32 s32ListNum;
+  RKADK_FILE_LIST *list;
+} RKADK_FILE_LIST_ARRAY;
 
 typedef enum {
   DISK_UNMOUNTED = 0,
