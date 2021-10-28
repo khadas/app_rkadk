@@ -22,6 +22,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#define RKADK_VQE_FRAME_SAMPLE 320; // 20ms;
+#define RKADK_DEFAULT_VQE_FILE "/usr/share/rkap_3a/para/16k/RKAP_3A_Para.bin"
+
 typedef struct {
   bool bUsed;
   RKADK_S32 s32BindCnt;
@@ -106,28 +109,47 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
                                         RK_U32 u32SampleRate,
                                         RKADK_VQE_MODE_E enMode) {
   int ret;
+  AI_TALKVQE_CONFIG_S stAiVqeTalkAttr;
   AI_RECORDVQE_CONFIG_S stAiVqeRecordAttr;
 
-  if (enMode != RKADK_VQE_MODE_AI_RECORD) {
+  switch (enMode) {
+  case RKADK_VQE_MODE_AI_TALK:
+    memset(&stAiVqeTalkAttr, 0, sizeof(AI_TALKVQE_CONFIG_S));
+    stAiVqeTalkAttr.s32WorkSampleRate = u32SampleRate;
+    stAiVqeTalkAttr.s32FrameSample = RKADK_VQE_FRAME_SAMPLE;
+    strcpy(stAiVqeTalkAttr.aParamFilePath, RKADK_DEFAULT_VQE_FILE);
+    stAiVqeTalkAttr.u32OpenMask =
+        AI_TALKVQE_MASK_AEC | AI_TALKVQE_MASK_ANR | AI_TALKVQE_MASK_AGC;
+
+    ret = RK_MPI_AI_SetTalkVqeAttr(s32AiChnId, &stAiVqeTalkAttr);
+    if (ret) {
+      RKADK_LOGE("AI[%d] SetTalkVqeAttr failed: %d", s32AiChnId, ret);
+      return -1;
+    }
+    break;
+
+  case RKADK_VQE_MODE_AI_RECORD:
+    memset(&stAiVqeRecordAttr, 0, sizeof(AI_RECORDVQE_CONFIG_S));
+    stAiVqeRecordAttr.s32WorkSampleRate = u32SampleRate;
+    stAiVqeRecordAttr.s32FrameSample = RKADK_VQE_FRAME_SAMPLE;
+    stAiVqeRecordAttr.stAnrConfig.fPostAddGain = 0;
+    stAiVqeRecordAttr.stAnrConfig.fGmin = -20;
+    stAiVqeRecordAttr.stAnrConfig.fNoiseFactor = 0.98;
+    stAiVqeRecordAttr.stAnrConfig.enHpfSwitch = 0;
+    stAiVqeRecordAttr.stAnrConfig.fHpfFc = 100.0f;
+    stAiVqeRecordAttr.stAnrConfig.enLpfSwitch = 0;
+    stAiVqeRecordAttr.stAnrConfig.fLpfFc = 10000.0f;
+    stAiVqeRecordAttr.u32OpenMask = AI_RECORDVQE_MASK_ANR;
+
+    ret = RK_MPI_AI_SetRecordVqeAttr(s32AiChnId, &stAiVqeRecordAttr);
+    if (ret) {
+      RKADK_LOGE("AI[%d] SetRecordVqeAttr failed: %d", s32AiChnId, ret);
+      return -1;
+    }
+    break;
+
+  default:
     RKADK_LOGW("NonSupport enMode: %d", enMode);
-    return -1;
-  }
-
-  memset(&stAiVqeRecordAttr, 0, sizeof(AI_RECORDVQE_CONFIG_S));
-  stAiVqeRecordAttr.s32WorkSampleRate = u32SampleRate;
-  stAiVqeRecordAttr.s32FrameSample = 320;
-  stAiVqeRecordAttr.stAnrConfig.fPostAddGain = 0;
-  stAiVqeRecordAttr.stAnrConfig.fGmin = -20;
-  stAiVqeRecordAttr.stAnrConfig.fNoiseFactor = 0.98;
-  stAiVqeRecordAttr.stAnrConfig.enHpfSwitch = 0;
-  stAiVqeRecordAttr.stAnrConfig.fHpfFc = 100.0f;
-  stAiVqeRecordAttr.stAnrConfig.enLpfSwitch = 0;
-  stAiVqeRecordAttr.stAnrConfig.fLpfFc = 10000.0f;
-  stAiVqeRecordAttr.u32OpenMask = AI_RECORDVQE_MASK_ANR;
-
-  ret = RK_MPI_AI_SetRecordVqeAttr(s32AiChnId, &stAiVqeRecordAttr);
-  if (ret) {
-    RKADK_LOGE("AI[%d] SetRecordVqeAttr failed: %d", s32AiChnId, ret);
     return -1;
   }
 
