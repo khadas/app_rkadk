@@ -363,7 +363,7 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamID)) {
     // Bind AI to AENC
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
@@ -399,7 +399,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamID)) {
     // UnBind AI to AENC
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
@@ -425,6 +425,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
 static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
                                             RKADK_REC_TYPE_E enRecType,
                                             RKADK_REC_ATTR_S *pstRecAttr) {
+  bool bEnableAudio = false;
   RKADK_U32 u32Integer = 0, u32Remainder = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
@@ -443,6 +444,8 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
+
+  bEnableAudio = RKADK_REC_EnableAudio(s32CamID);
 
   pstSensorCfg = RKADK_PARAM_GetSensorCfg(s32CamID);
   if (!pstSensorCfg) {
@@ -475,7 +478,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
   stSplitAttr->stNameCallBackAttr.pcbRequestFileNames = GetRecordFileName;
 
   for (int i = 0; i < (int)pstRecAttr->u32StreamCnt; i++) {
-    pstRecAttr->astStreamAttr[i].enType = MUXER_TYPE_MP4;
+    pstRecAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
     if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
       pstRecAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].lapse_interval;
@@ -487,7 +490,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     }
 
     if (pstRecAttr->astStreamAttr[i].u32TrackCnt == RKADK_REC_TRACK_MAX_CNT)
-      if (!RKADK_REC_EnableAudio())
+      if (!bEnableAudio)
         pstRecAttr->astStreamAttr[i].u32TrackCnt = 1;
 
     // video track
@@ -511,8 +514,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
         pstRecCfg->attribute[i].height;
 
-    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE ||
-        !RKADK_REC_EnableAudio())
+    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE || !bEnableAudio)
       continue;
 
     // audio track
@@ -537,6 +539,7 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
 RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
                               RKADK_MW_PTR *ppRecorder) {
   int ret;
+  bool bEnableAudio = false;
 
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
@@ -550,8 +553,8 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;
 
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE &&
-      RKADK_REC_EnableAudio()) {
+  bEnableAudio = RKADK_REC_EnableAudio(pstRecAttr->s32CamID);
+  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
     if (RKADK_RECORD_CreateAudioChn()) {
       RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
       return -1;
@@ -583,7 +586,7 @@ failed:
              pstRecAttr->enRecType);
   RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
 
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio())
+  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && bEnableAudio)
     RKADK_RECORD_DestoryAudioChn();
 
   return -1;
@@ -638,7 +641,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return ret;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio()) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamId)) {
     ret = RKADK_RECORD_DestoryAudioChn();
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_DestoryAudioChn failed, ret = %d", ret);
