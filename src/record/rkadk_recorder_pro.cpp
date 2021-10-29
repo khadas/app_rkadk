@@ -288,7 +288,7 @@ RKADK_S32 RKADK_REC_Create(RKADK_REC_ATTR_S *pstRecAttr,
     }
 
     if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE ||
-        !RKADK_REC_EnableAudio())
+        !RKADK_REC_EnableAudio(s32CamId))
       continue;
 
     // Bind AENC to MUXER:AIDEO
@@ -340,7 +340,7 @@ RKADK_S32 RKADK_REC_Destroy(RKADK_MW_PTR pRecorder) {
     }
 
     if (stRecorder->enRecType != RKADK_REC_TYPE_LAPSE &&
-        RKADK_REC_EnableAudio()) {
+        RKADK_REC_EnableAudio(stRecorder->s32CamId)) {
       // UnBind AENC to MUXER:AIDEO
       stRecorder->stStreamAttr[i].stMuxerChn.enChnType = MUXER_CHN_TYPE_AUDIO;
       ret = RK_MPI_MUXER_UnBind(&(stRecorder->stStreamAttr[i].stAencChn),
@@ -486,8 +486,16 @@ RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
   return 0;
 }
 
-bool RKADK_REC_EnableAudio() {
+bool RKADK_REC_EnableAudio(RKADK_S32 s32CamId) {
+  bool bEnable = false;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = NULL;
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return false;
+  }
 
   pstAudioCfg = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioCfg) {
@@ -495,9 +503,22 @@ bool RKADK_REC_EnableAudio() {
     return false;
   }
 
-  if (pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3 ||
-      pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP2)
-    return true;
+  switch (pstAudioCfg->codec_type) {
+  case RKADK_CODEC_TYPE_MP3:
+    bEnable = true;
+    break;
 
-  return false;
+  case RKADK_CODEC_TYPE_MP2:
+    if (pstRecCfg->file_type == MUXER_TYPE_FLV)
+      bEnable = false;
+    else
+      bEnable = true;
+    break;
+
+  default:
+    bEnable = false;
+    break;
+  }
+
+  return bEnable;
 }

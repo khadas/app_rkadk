@@ -570,6 +570,11 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
   change = RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->record_type,
                                    RKADK_REC_TYPE_NORMAL, RKADK_REC_TYPE_LAPSE,
                                    RKADK_REC_TYPE_NORMAL, "record_type");
+
+  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->file_type,
+                                   MUXER_TYPE_MP4, MUXER_TYPE_FLV,
+                                   MUXER_TYPE_MP4, "file_type");
+
   change |= RKADK_PARAM_CheckCfgU32(
       (RKADK_U32 *)&pstRecCfg->pre_record_mode, MUXER_PRE_RECORD_NONE,
       MUXER_PRE_RECORD_NORMAL, MUXER_PRE_RECORD_NONE, "pre_record_mode");
@@ -1032,6 +1037,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
 
   memset(pstRecCfg, 0, sizeof(RKADK_PARAM_REC_CFG_S));
   pstRecCfg->record_type = RKADK_REC_TYPE_NORMAL;
+  pstRecCfg->file_type = MUXER_TYPE_MP4;
   pstRecCfg->pre_record_time = 0;
   pstRecCfg->pre_record_mode = MUXER_PRE_RECORD_NONE;
   pstRecCfg->lapse_multiple = 30;
@@ -1182,6 +1188,8 @@ static void RKADK_PARAM_Dump() {
     printf("\tRecord Config\n");
     printf("\t\tsensor[%d] stRecCfg record_type: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.record_type);
+    printf("\t\tsensor[%d] stRecCfg file_type: %d\n", i,
+           pstCfg->stMediaCfg[i].stRecCfg.file_type);
     printf("\t\tsensor[%d] stRecCfg pre_record_time: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.pre_record_time);
     printf("\t\tsensor[%d] stRecCfg pre_record_mode: %d\n", i,

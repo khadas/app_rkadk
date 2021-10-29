@@ -293,6 +293,7 @@ typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
   RKADK_REC_TYPE_E record_type;
+  MUXER_TYPE_E file_type;
   RKADK_U32 pre_record_time;
   MUXER_PRE_RECORD_MODE_E pre_record_mode;
   RKADK_U32 lapse_multiple;

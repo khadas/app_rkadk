@@ -150,7 +150,7 @@ RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
 /**
  * @brief whether to enable audio
  */
-bool RKADK_REC_EnableAudio(void);
+bool RKADK_REC_EnableAudio(RKADK_S32 s32CamId);
 
 #ifdef __cplusplus
 }

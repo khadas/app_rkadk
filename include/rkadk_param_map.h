@@ -107,6 +107,7 @@ static RKADK_SI_CONFIG_MAP_S g_stSensorCfgMapTable[] = {
 /* record map table */
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable[] = {
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, record_type),
+    DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, file_type),
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_time),
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_mode),
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_multiple),
