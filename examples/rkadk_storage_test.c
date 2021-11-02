@@ -169,12 +169,16 @@ RKADK_S32 SetDevAttr(RKADK_STR_DEV_ATTR *pstDevAttr) {
   memset(pstDevAttr->pstFolderAttr, 0,
          sizeof(RKADK_STR_FOLDER_ATTR) * pstDevAttr->s32FolderNum);
 
+  pstDevAttr->pstFolderAttr[0].bNumLimit = RKADK_FALSE;
   pstDevAttr->pstFolderAttr[0].s32Limit = 35;
   sprintf(pstDevAttr->pstFolderAttr[0].cFolderPath, "/video_front/");
+  pstDevAttr->pstFolderAttr[1].bNumLimit = RKADK_FALSE;
   pstDevAttr->pstFolderAttr[1].s32Limit = 35;
   sprintf(pstDevAttr->pstFolderAttr[1].cFolderPath, "/video_back/");
-  pstDevAttr->pstFolderAttr[2].s32Limit = 15;
+  pstDevAttr->pstFolderAttr[2].bNumLimit = RKADK_TRUE;
+  pstDevAttr->pstFolderAttr[2].s32Limit = 10;
   sprintf(pstDevAttr->pstFolderAttr[2].cFolderPath, "/photo/");
+  pstDevAttr->pstFolderAttr[3].bNumLimit = RKADK_FALSE;
   pstDevAttr->pstFolderAttr[3].s32Limit = 15;
   sprintf(pstDevAttr->pstFolderAttr[3].cFolderPath, "/video_urgent/");
 
@@ -222,7 +226,7 @@ int main(int argc, char *argv[]) {
     usleep(5000);
   }
 
-  if (!RKADK_STORAGE_GetFileList(&list, pHandle)) {
+  if (!RKADK_STORAGE_GetFileList(&list, pHandle, LIST_DESCENDING)) {
     for (i = 0; i < list.s32FileNum; i++) {
       RKADK_LOGI("%s  %lld", list.file[i].filename, list.file[i].stSize);
     }
