@@ -25,6 +25,7 @@ extern "C" {
 
 typedef struct {
   RKADK_CHAR cFolderPath[RKADK_MAX_FILE_PATH_LEN];
+  RKADK_BOOL bNumLimit;
   RKADK_S32 s32Limit;
 } RKADK_STR_FOLDER_ATTR;
 
@@ -59,7 +60,12 @@ typedef enum {
   DISK_UNMOUNTED = 0,
   DISK_MOUNTED,
   DISK_MOUNT_BUTT,
-} RKADK_ENUM_MOUNT;
+} RKADK_MOUNT_STATUS;
+
+typedef enum {
+  LIST_ASCENDING = 0,
+  LIST_DESCENDING,
+} RKADK_SORT_TYPE;
 
 RKADK_S32 RKADK_STORAGE_Init(RKADK_MW_PTR *ppHandle,
                              RKADK_STR_DEV_ATTR *pstDevAttr);
@@ -68,14 +74,14 @@ RKADK_S32 RKADK_STORAGE_Deinit(RKADK_MW_PTR pHandle);
 
 RKADK_STR_DEV_ATTR RKADK_STORAGE_GetDevAttr(RKADK_MW_PTR pHandle);
 
-RKADK_ENUM_MOUNT RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle);
+RKADK_MOUNT_STATUS RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_STORAGE_GetSdcardSize(RKADK_MW_PTR *ppHandle,
                                       RKADK_S32 *totalSize,
                                       RKADK_S32 *freeSize);
 
-RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list,
-                                    RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
+                                    RKADK_SORT_TYPE sort);
 
 RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST list);
 

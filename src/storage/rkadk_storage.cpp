@@ -67,7 +67,7 @@ typedef struct {
   RKADK_CHAR cDevPath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_CHAR cDevType[MAX_TYPE_NMSG_LEN];
   RKADK_CHAR cDevAttr1[MAX_ATTR_LEN];
-  RKADK_ENUM_MOUNT s32MountStatus;
+  RKADK_MOUNT_STATUS s32MountStatus;
   pthread_t fileScanTid;
   RKADK_S32 s32FolderNum;
   RKADK_S32 s32TotalSize;
@@ -403,17 +403,15 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
 
     while (tmp) {
       next = tmp->next;
+      totalSize += tmp->stSize;
+      totalSpace += tmp->stSpace;
+      s32FileNum++;
       if (next == NULL)
         break;
-
       if (!strcmp(next->filename, filename)) {
         tmp->next = next->next;
         free(next);
         next = tmp->next;
-      } else {
-        totalSize += tmp->stSize;
-        totalSpace += tmp->stSpace;
-        s32FileNum++;
       }
       tmp = next;
     }
@@ -619,7 +617,7 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
 
   while (pHandle->stDevSta.s32MountStatus == DISK_MOUNTED) {
     if (cnt++ > 50) {
-      RKADK_S32 proportion;
+      RKADK_S32 limit;
       off_t totalSpace = 0;
       cnt = 0;
 
@@ -645,10 +643,13 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
         for (i = 0; i < devAttr.s32FolderNum && totalSpace; i++) {
           RKADK_CHAR file[3 * RKADK_MAX_FILE_PATH_LEN];
           pthread_mutex_lock(&pHandle->stDevSta.pstFolder[i].mutex);
-          proportion =
-              pHandle->stDevSta.pstFolder[i].totalSpace * 100 / totalSpace;
+          if (devAttr.pstFolderAttr[i].bNumLimit == RKADK_FALSE)
+            limit =
+                pHandle->stDevSta.pstFolder[i].totalSpace * 100 / totalSpace;
+          else
+            limit = pHandle->stDevSta.pstFolder[i].s32FileNum;
 
-          if (proportion >= devAttr.pstFolderAttr[i].s32Limit) {
+          if (limit > devAttr.pstFolderAttr[i].s32Limit) {
             if (pHandle->stDevSta.pstFolder[i].pstFileListFirst) {
               sprintf(
                   file, "%s%s%s", devAttr.cMountPath,
@@ -665,7 +666,7 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
             }
           }
           pthread_mutex_unlock(&pHandle->stDevSta.pstFolder[i].mutex);
-          RKADK_LOGI("%s %d", pHandle->stDevSta.pstFolder[i].cpath, proportion);
+          RKADK_LOGI("%s %d", pHandle->stDevSta.pstFolder[i].cpath, limit);
         }
       }
     }
@@ -1088,6 +1089,8 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
              sizeof(RKADK_STR_FOLDER_ATTR) * pstHandle->stDevAttr.s32FolderNum);
 
       for (i = 0; i < pstDevAttr->s32FolderNum; i++) {
+        pstHandle->stDevAttr.pstFolderAttr[i].bNumLimit =
+            pstDevAttr->pstFolderAttr[i].bNumLimit;
         pstHandle->stDevAttr.pstFolderAttr[i].s32Limit =
             pstDevAttr->pstFolderAttr[i].s32Limit;
         sprintf(pstHandle->stDevAttr.pstFolderAttr[i].cFolderPath,
@@ -1280,7 +1283,7 @@ RKADK_S32 RKADK_STORAGE_Deinit(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
-RKADK_ENUM_MOUNT RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle) {
+RKADK_MOUNT_STATUS RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle) {
   RKADK_STORAGE_HANDLE *pstHandle;
 
   RKADK_CHECK_POINTER(pHandle, DISK_MOUNT_BUTT);
@@ -1316,8 +1319,8 @@ RKADK_S32 RKADK_STORAGE_GetSdcardSize(RKADK_MW_PTR *ppHandle,
   return 0;
 }
 
-RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list,
-                                    RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
+                                    RKADK_SORT_TYPE sort) {
   RKADK_S32 i, j;
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
 
@@ -1347,15 +1350,28 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list,
   }
   memset(list->file, 0, sizeof(RKADK_FILE_INFO) * list->s32FileNum);
 
-  for (j = 0; j < list->s32FileNum && tmp != NULL; j++) {
-    int len = strlen(tmp->filename) > RKADK_MAX_FILE_PATH_LEN - 1
-                  ? RKADK_MAX_FILE_PATH_LEN - 1
-                  : strlen(tmp->filename);
-    strncpy(list->file[j].filename, tmp->filename, len);
-    list->file[j].filename[len] = '\0';
-    list->file[j].stSize = tmp->stSize;
-    list->file[j].stTime = tmp->stTime;
-    tmp = tmp->next;
+  if (sort == LIST_ASCENDING) {
+    for (j = 0; j < list->s32FileNum && tmp != NULL; j++) {
+      int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
+                    ? (RKADK_MAX_FILE_PATH_LEN - 1)
+                    : strlen(tmp->filename);
+      strncpy(list->file[j].filename, tmp->filename, len);
+      list->file[j].filename[len] = '\0';
+      list->file[j].stSize = tmp->stSize;
+      list->file[j].stTime = tmp->stTime;
+      tmp = tmp->next;
+    }
+  } else {
+    for (j = list->s32FileNum - 1; j >= 0 && tmp != NULL; j--) {
+      int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
+                    ? (RKADK_MAX_FILE_PATH_LEN - 1)
+                    : strlen(tmp->filename);
+      strncpy(list->file[j].filename, tmp->filename, len);
+      list->file[j].filename[len] = '\0';
+      list->file[j].stSize = tmp->stSize;
+      list->file[j].stTime = tmp->stTime;
+      tmp = tmp->next;
+    }
   }
 
   pthread_mutex_unlock(&pstHandle->stDevSta.pstFolder[i].mutex);
