@@ -1132,8 +1132,10 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
   memset(pstHandle->stDevAttr.pstFolderAttr, 0,
          sizeof(RKADK_STR_FOLDER_ATTR) * pstHandle->stDevAttr.s32FolderNum);
 
+  pstHandle->stDevAttr.pstFolderAttr[0].bNumLimit = RKADK_FALSE;
   pstHandle->stDevAttr.pstFolderAttr[0].s32Limit = 50;
   sprintf(pstHandle->stDevAttr.pstFolderAttr[0].cFolderPath, "/video_front/");
+  pstHandle->stDevAttr.pstFolderAttr[1].bNumLimit = RKADK_FALSE;
   pstHandle->stDevAttr.pstFolderAttr[1].s32Limit = 50;
   sprintf(pstHandle->stDevAttr.pstFolderAttr[1].cFolderPath, "/video_back/");
 
@@ -1378,13 +1380,33 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
   return 0;
 }
 
-RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST list) {
-  if (list.file) {
-    free(list.file);
-    list.file = NULL;
+RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST *list) {
+  if (list->file) {
+    free(list->file);
+    list->file = NULL;
   }
 
   return 0;
+}
+
+RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath, RKADK_MW_PTR pHandle) {
+  RKADK_S32 i;
+  RKADK_STORAGE_HANDLE *pstHandle = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
+
+  for (i = 0; i < pstHandle->stDevSta.s32FolderNum; i++) {
+    if (!strcmp(fileListPath, pstHandle->stDevSta.pstFolder[i].cpath))
+      break;
+  }
+
+  if (i == pstHandle->stDevSta.s32FolderNum) {
+    RKADK_LOGE("No folder found. Please check the folder path.\n");
+    return 0;
+  }
+
+  return pstHandle->stDevSta.pstFolder[i].s32FileNum;
 }
 
 RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle) {

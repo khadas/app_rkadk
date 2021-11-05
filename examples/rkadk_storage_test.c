@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
       RKADK_LOGI("%s  %lld", list.file[i].filename, list.file[i].stSize);
     }
   }
-  RKADK_STORAGE_FreeFileList(list);
+  RKADK_STORAGE_FreeFileList(&list);
   FreeDevAttr(stDevAttr);
 
   RKADK_STORAGE_Deinit(pHandle);
