@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <utime.h>
 
 #define JPG_THM_FIND_NUM_MAX 50
 #define JPG_EXIF_FLAG_LEN 6
@@ -887,12 +891,6 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
   MB_IMAGE_INFO_S stImageInfo;
   int dstFormat;
 
-  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
-  if (!ptsThumbCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-    return -1;
-  }
-
   // Jpg Decode
   RK_MPI_SYS_Init();
 
@@ -1202,11 +1200,13 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
                                       RKADK_JPG_THUMB_TYPE_E eThmType,
                                       RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fd = NULL;
-  RKADK_S32 ret = -1;
+  RKADK_S32 ret = -1, result;
   RKADK_U16 u16Marker;
   RKADK_U8 *pu8JpgBuf;
   RKADK_U32 u32JpgBufLen = 0;
   RKADK_U32 *pu32JpgBufLen;
+  struct stat stStatBuf;
+  struct utimbuf stTimebuf;
 
   RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
@@ -1241,6 +1241,15 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
   if (!fd) {
     RKADK_LOGE("open %s failed", pszFileName);
     return -1;
+  }
+
+  memset(&stTimebuf, 0, sizeof(struct utimbuf));
+  result = stat(pszFileName, &stStatBuf);
+  if (result) {
+    RKADK_LOGW("stat[%s] failed[%d]", pszFileName, result);
+  } else {
+    stTimebuf.actime = stStatBuf.st_atime;
+    stTimebuf.modtime = stStatBuf.st_mtime;
   }
 
   ret = RKADK_PHOTO_GetThmInFile(fd, pstThumbAttr);
@@ -1310,6 +1319,12 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
 exit:
   if (fd)
     fclose(fd);
+
+  if (stTimebuf.actime != 0 && stTimebuf.modtime != 0) {
+    result = utime(pszFileName, &stTimebuf);
+    if (result)
+      RKADK_LOGW("utime[%s] failed[%d]", pszFileName, result);
+  }
 
   return ret;
 }
