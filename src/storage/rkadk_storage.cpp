@@ -1401,10 +1401,8 @@ RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath, RKADK_MW_PTR pHandl
       break;
   }
 
-  if (i == pstHandle->stDevSta.s32FolderNum) {
-    RKADK_LOGE("No folder found. Please check the folder path.\n");
+  if (i == pstHandle->stDevSta.s32FolderNum)
     return 0;
-  }
 
   return pstHandle->stDevSta.pstFolder[i].s32FileNum;
 }
