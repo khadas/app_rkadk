@@ -296,7 +296,7 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
       tmp_1 = tmp;
       tmp_1->stSize = statbuf->st_size;
       tmp_1->stSpace = statbuf->st_blocks * 512;
-      tmp_1->stTime = statbuf->st_ctime;
+      tmp_1->stTime = statbuf->st_mtime;
       tmp_1->next = NULL;
     } else {
       while (tmp->next) {
@@ -305,7 +305,7 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
           tmp->next = tmp->next->next;
           tmp_1->stSize = statbuf->st_size;
           tmp_1->stSpace = statbuf->st_blocks * 512;
-          tmp_1->stTime = statbuf->st_ctime;
+          tmp_1->stTime = statbuf->st_mtime;
           tmp_1->next = NULL;
           break;
         }
@@ -325,7 +325,7 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
       sprintf(tmp_1->filename, "%s", filename);
       tmp_1->stSize = statbuf->st_size;
       tmp_1->stSpace = statbuf->st_blocks * 512;
-      tmp_1->stTime = statbuf->st_ctime;
+      tmp_1->stTime = statbuf->st_mtime;
       tmp_1->next = NULL;
     }
 
@@ -364,7 +364,7 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
     folder->pstFileListFirst = tmp;
     tmp->stSize = statbuf->st_size;
     tmp->stSpace = statbuf->st_blocks * 512;
-    tmp->stTime = statbuf->st_ctime;
+    tmp->stTime = statbuf->st_mtime;
   }
   folder->s32FileNum = 0;
   folder->totalSize = 0;
