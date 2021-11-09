@@ -495,8 +495,10 @@ static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName,
                             RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fd = NULL;
   int ret = -1;
+  bool bBuildInThm = false;
   RKADK_U32 u32BoxSize;
   char boxHeader[THM_BOX_HEADER_LEN];
+  char largeSize[THM_BOX_HEADER_LEN];
 
   fd = fopen(pszFileName, "r+");
   if (!fd) {
@@ -504,10 +506,59 @@ static RKADK_S32 BuildInThm(RKADK_CHAR *pszFileName,
     return -1;
   }
 
-  if (fseek(fd, 0, SEEK_END)) {
-    RKADK_LOGE("seek file end failed");
-    goto exit;
+  while (!feof(fd)) {
+    if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+      if (feof(fd)) {
+        RKADK_LOGD("EOF");
+        bBuildInThm = true;
+      } else {
+        RKADK_LOGE("Can't read box header");
+      }
+      break;
+    }
+
+    u32BoxSize = boxHeader[0] << 24 | boxHeader[1] << 16 | boxHeader[2] << 8 |
+                 boxHeader[3];
+
+    if (!u32BoxSize) {
+      if (!boxHeader[4] && !boxHeader[5] && !boxHeader[6] && !boxHeader[7]) {
+        RKADK_LOGE("invalid data, cover!!!");
+
+        if (fseek(fd, -THM_BOX_HEADER_LEN, SEEK_CUR))
+          RKADK_LOGE("seek failed");
+        else
+          bBuildInThm = true;
+      } else {
+        RKADK_LOGE("u32BoxSize = %d, invalid data", u32BoxSize);
+      }
+
+      break;
+    } else if (u32BoxSize == 1) {
+      if (fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+        RKADK_LOGE("read largeSize failed");
+        break;
+      }
+
+      u32BoxSize = (RKADK_U64)largeSize[0] << 56 |
+                   (RKADK_U64)largeSize[1] << 48 |
+                   (RKADK_U64)largeSize[2] << 40 |
+                   (RKADK_U64)largeSize[3] << 32 | largeSize[4] << 24 |
+                   largeSize[5] << 16 | largeSize[6] << 8 | largeSize[7];
+
+      if (fseek(fd, u32BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
+        RKADK_LOGE("largeSize seek failed");
+        break;
+      }
+    } else {
+      if (fseek(fd, u32BoxSize - THM_BOX_HEADER_LEN, SEEK_CUR)) {
+        RKADK_LOGE("seek failed");
+        break;
+      }
+    }
   }
+
+  if (!bBuildInThm)
+    goto exit;
 
   // 8: 4bytes width + 4bytes height
   u32BoxSize = pstThumbAttr->u32BufSize + THM_BOX_HEADER_LEN + 8;
@@ -566,7 +617,11 @@ static RKADK_S32 GetThmInBox(RKADK_CHAR *pszFileName,
 
   while (!feof(fd)) {
     if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-      RKADK_LOGI("Can't read box header");
+      if (feof(fd)) {
+        RKADK_LOGD("EOF");
+      } else {
+        RKADK_LOGE("Can't read box header");
+      }
       break;
     }
 
