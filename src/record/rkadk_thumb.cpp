@@ -65,6 +65,9 @@ static int GetRgaType(RKADK_THUMB_TYPE_E enType) {
   case RKADK_THUMB_TYPE_RGB888:
     format = RK_FORMAT_RGB_888;
     break;
+  case RKADK_THUMB_TYPE_RGBA8888:
+    format = RK_FORMAT_RGBA_8888;
+    break;
   default:
     RKADK_LOGE("Invalid enType[%d]", enType);
     break;
@@ -82,6 +85,8 @@ static RKADK_U32 GetDataLen(RKADK_U32 width, RKADK_U32 height, int format) {
     u32DataLen = width * height * 2;
   else if (format == RK_FORMAT_RGB_888)
     u32DataLen = width * height * 3;
+  else if (format == RK_FORMAT_RGBA_8888)
+    u32DataLen = width * height * 4;
   else {
     RKADK_LOGE("Invalid format[%d]", format);
     return -1;
@@ -243,6 +248,8 @@ static int YuvScale(RTMediaBuffer *buffer, char *scaleBuffer,
     stDstInfo.format = RK_FORMAT_RGB_565;
   else if (enType == RKADK_THUMB_TYPE_RGB888)
     stDstInfo.format = RK_FORMAT_RGB_888;
+  else if (enType == RKADK_THUMB_TYPE_RGBA8888)
+    stDstInfo.format = RK_FORMAT_RGBA_8888;
   else
     stDstInfo.format = RK_FORMAT_YCbCr_420_SP;
   stDstInfo.virAddr = scaleBuffer;
@@ -665,6 +672,10 @@ static RKADK_S32 ThmBufMalloc(RKADK_THUMB_ATTR_S *pstThumbAttr) {
     pstThumbAttr->u32BufSize =
         pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3;
     break;
+  case RKADK_THUMB_TYPE_RGBA8888:
+    pstThumbAttr->u32BufSize =
+        pstThumbAttr->u32Width * pstThumbAttr->u32Height * 4;
+    break;
   default:
     RKADK_LOGE("Invalid enType[%d]", pstThumbAttr->enType);
     return -1;
@@ -710,7 +721,7 @@ static RKADK_S32 GetThmInMp4(RKADK_CHAR *pszFileName,
   }
 
   if (pstThumbAttr->enType < RKADK_THUMB_TYPE_NV12 ||
-      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGB888) {
+      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGBA8888) {
     RKADK_LOGE("Invalid thumb type = %d", pstThumbAttr->enType);
     return -1;
   }

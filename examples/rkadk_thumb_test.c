@@ -41,8 +41,8 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t%s [-i /tmp/xxx.mp4] [-t 0]\n", name);
   printf("\t-i: test file\n");
   printf("\t-T: thumbnail type, default JPG, options: NV12, JPG, RGB565, "
-         "RBG888\n");
-  printf("\t-t: JPG thumbnail type, default DCF, options: DCF, MPF1, MPF2\n");
+         "RBG888, RGBA8888\n");
+  printf("\t-t: JPG thumbnail type, default MFP1, options: DCF, MFP1, MFP2\n");
   printf("\t-f: file type, default mp4, options: mp4, jpg\n");
   printf("\t-W: thumbnail width, default obtained from ini\n");
   printf("\t-H: thumbnail height, default obtained from ini\n");
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
   unsigned int count = 1;
   RKADK_CHAR *pInuptPath = "/userdata/RecordTest_0.mp4";
   char filePath[RKADK_MAX_FILE_PATH_LEN];
-  RKADK_JPG_THUMB_TYPE_E eJpgThumbType = RKADK_JPG_THUMB_TYPE_DCF;
+  RKADK_JPG_THUMB_TYPE_E eJpgThumbType = RKADK_JPG_THUMB_TYPE_MFP1;
   bool bIsMp4 = true;
   const char *postfix = "jpg";
 
@@ -103,13 +103,16 @@ int main(int argc, char *argv[]) {
       } else if (strstr(optarg, "RGB888")) {
         stThumbAttr.enType = RKADK_THUMB_TYPE_RGB888;
         postfix = "rgb888";
+      } else if (strstr(optarg, "RGBA8888")) {
+        stThumbAttr.enType = RKADK_THUMB_TYPE_RGBA8888;
+        postfix = "rgba8888";
       }
       break;
 #endif
     case 't':
-      if (strstr(optarg, "MPF1"))
-        eJpgThumbType = RKADK_JPG_THUMB_TYPE_MFP1;
-      else if (strstr(optarg, "MPF2"))
+      if (strstr(optarg, "DCF"))
+        eJpgThumbType = RKADK_JPG_THUMB_TYPE_DCF;
+      else if (strstr(optarg, "MFP2"))
         eJpgThumbType = RKADK_JPG_THUMB_TYPE_MFP2;
       break;
     case 'h':
