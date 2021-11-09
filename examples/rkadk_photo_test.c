@@ -45,7 +45,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-t: data type, default NV12, options: NV12, RGB565, "
-         "RBG888\n");
+         "RBG888, RGBA8888\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -87,6 +87,8 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
     postfix = "rgb565";
   else if (enDataType == RKADK_THUMB_TYPE_RGB888)
     postfix = "rgb888";
+  else if (enDataType == RKADK_THUMB_TYPE_RGBA8888)
+    postfix = "rgba8888";
 
   if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
     RKADK_LOGD("u32Width: %d, u32Height: %d, u32BufSize: %d",
@@ -105,6 +107,8 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
     }
 
     RKADK_PHOTO_FreeData(&stDataAttr);
+  } else {
+    RKADK_LOGE("RKADK_PHOTO_GetData failed");
   }
 
   photoId++;
@@ -144,6 +148,8 @@ int main(int argc, char *argv[]) {
         enDataType = RKADK_THUMB_TYPE_RGB565;
       else if (strstr(optarg, "RGB888"))
         enDataType = RKADK_THUMB_TYPE_RGB888;
+      else if (strstr(optarg, "RGBA8888"))
+        enDataType = RKADK_THUMB_TYPE_RGBA8888;
       break;
     case 'h':
     default:

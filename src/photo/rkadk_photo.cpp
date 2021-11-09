@@ -839,6 +839,8 @@ static RKADK_S32 RKADK_PHOTO_RgaProcess(void *pSrcPtr,
     u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 2;
   else if (dstFormat == RK_FORMAT_RGB_888)
     u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 3;
+  else if (dstFormat == RK_FORMAT_RGBA_8888)
+    u32DstDataLen = pstThumbAttr->u32Width * pstThumbAttr->u32Height * 4;
   else
     return -1;
 
@@ -912,6 +914,9 @@ static RKADK_S32 RKADK_PHOTO_DataBufMalloc(RKADK_THUMB_ATTR_S *pstThumbAttr,
   case RKADK_THUMB_TYPE_RGB888:
     pstThumbAttr->u32BufSize = u32Width * u32Height * 3;
     break;
+  case RKADK_THUMB_TYPE_RGBA8888:
+    pstThumbAttr->u32BufSize = u32Width * u32Height * 4;
+    break;
   default:
     RKADK_LOGE("Invalid enType[%d]", pstThumbAttr->enType);
     return -1;
@@ -924,7 +929,8 @@ static RKADK_S32 RKADK_PHOTO_DataBufMalloc(RKADK_THUMB_ATTR_S *pstThumbAttr,
     return -1;
   }
 
-  RKADK_LOGD("malloc data buffer[%p], u32BufSize[%d]", pstThumbAttr->pu8Buf,
+  RKADK_LOGD("malloc data buffer[%p][%d x %d], u32BufSize[%d]",
+             pstThumbAttr->pu8Buf, u32Width, u32Height,
              pstThumbAttr->u32BufSize);
   return 0;
 }
@@ -995,6 +1001,8 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
     dstFormat = RK_FORMAT_RGB_565;
   else if (pstThumbAttr->enType == RKADK_THUMB_TYPE_RGB888)
     dstFormat = RK_FORMAT_RGB_888;
+  else if (pstThumbAttr->enType == RKADK_THUMB_TYPE_RGBA8888)
+    dstFormat = RK_FORMAT_RGBA_8888;
   else
     dstFormat = RK_FORMAT_YCbCr_420_SP;
 
@@ -1248,7 +1256,7 @@ static RKADK_S32 RKADK_PHOTO_GetThumb(RKADK_CHAR *pszFileName,
   }
 
   if (pstThumbAttr->enType < RKADK_THUMB_TYPE_NV12 ||
-      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGB888) {
+      pstThumbAttr->enType > RKADK_THUMB_TYPE_RGBA8888) {
     RKADK_LOGE("Invalid thumb type = %d", pstThumbAttr->enType);
     return -1;
   }
