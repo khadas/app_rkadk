@@ -47,6 +47,8 @@ typedef enum {
   RKADK_PHOTO_MPF_BUTT
 } RKADK_PHOTO_MPF_MODE_E;
 
+typedef RKADK_THUMB_ATTR_S RKADK_PHOTO_DATA_ATTR_S;
+
 /** single photo attr */
 typedef struct {
   // TODO
@@ -142,6 +144,11 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
                                     RKADK_THUMB_ATTR_S *pstThumbAttr);
 
 RKADK_S32 RKADK_PHOTO_ThumbBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);
+
+RKADK_S32 RKADK_PHOTO_GetData(RKADK_CHAR *pcFileName,
+                              RKADK_PHOTO_DATA_ATTR_S *pstDataAttr);
+
+RKADK_S32 RKADK_PHOTO_FreeData(RKADK_PHOTO_DATA_ATTR_S *pstDataAttr);
 
 #ifdef __cplusplus
 }

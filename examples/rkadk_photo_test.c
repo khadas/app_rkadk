@@ -31,18 +31,21 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:h";
+static RKADK_CHAR optstr[] = "a:I:p:t:h";
 
 #define IQ_FILE_PATH "/oem/etc/iqfiles"
 
+static RKADK_THUMB_TYPE_E enDataType = RKADK_THUMB_TYPE_NV12;
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-a /etc/iqfiles] [-I 0]\n", name);
+  printf("\t%s [-a /etc/iqfiles] [-I 0] [-t NV12]\n", name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
          "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
          "without this option aiq should run in other application\n");
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
+  printf("\t-t: data type, default NV12, options: NV12, RGB565, "
+         "RBG888\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -54,6 +57,7 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
   static RKADK_U32 photoId = 0;
   char jpegPath[128];
   FILE *file = NULL;
+  const char *postfix = "yuv";
 
   if (!pu8DataBuf || u32DataLen <= 0) {
     RKADK_LOGE("Invalid photo data, u32DataLen = %d", u32DataLen);
@@ -72,6 +76,36 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
 
   fwrite(pu8DataBuf, 1, u32DataLen, file);
   fclose(file);
+
+  RKADK_PHOTO_DATA_ATTR_S stDataAttr;
+  memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
+  stDataAttr.enType = enDataType;
+  stDataAttr.u32Width = 1280;
+  stDataAttr.u32Height = 720;
+
+  if (enDataType == RKADK_THUMB_TYPE_RGB565)
+    postfix = "rgb565";
+  else if (enDataType == RKADK_THUMB_TYPE_RGB888)
+    postfix = "rgb888";
+
+  if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
+    RKADK_LOGD("u32Width: %d, u32Height: %d, u32BufSize: %d",
+               stDataAttr.u32Width, stDataAttr.u32Height,
+               stDataAttr.u32BufSize);
+
+    memset(jpegPath, 0, 128);
+    sprintf(jpegPath, "/tmp/PhotoTest_%d.%s", photoId, postfix);
+    file = fopen(jpegPath, "w");
+    if (!file) {
+      RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
+    } else {
+      fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
+      fclose(file);
+      RKADK_LOGD("save %s done", jpegPath);
+    }
+
+    RKADK_PHOTO_FreeData(&stDataAttr);
+  }
 
   photoId++;
   if (photoId > 10)
@@ -104,6 +138,12 @@ int main(int argc, char *argv[]) {
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
+      break;
+    case 't':
+      if (strstr(optarg, "RGB565"))
+        enDataType = RKADK_THUMB_TYPE_RGB565;
+      else if (strstr(optarg, "RGB888"))
+        enDataType = RKADK_THUMB_TYPE_RGB888;
       break;
     case 'h':
     default:
