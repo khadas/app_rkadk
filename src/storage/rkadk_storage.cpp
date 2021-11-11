@@ -688,6 +688,20 @@ file_scan_out:
   return NULL;
 }
 
+static RKADK_S32 RKADK_STORAGE_FSCK(RKADK_CHAR *dev)
+{
+  if (fork() == 0) {
+    RKADK_LOGE("fsck.fat %s\n", dev);
+    if (execl("/sbin/fsck.fat", "fsck.fat", "-a", dev, NULL) < 0) {
+      RKADK_LOGE("fsck.fat failed:%s\n", strerror(errno));
+      return -1;
+    }
+    usleep(100000);
+  }
+
+  return 0;
+}
+
 static RKADK_S32 RKADK_STORAGE_DevAdd(RKADK_CHAR *dev,
                                       RKADK_STORAGE_HANDLE *pHandle) {
   RKADK_S32 ret;
@@ -719,7 +733,7 @@ static RKADK_S32 RKADK_STORAGE_DevAdd(RKADK_CHAR *dev,
     RKADK_LOGE("RKADK_STORAGE_GetMountDev failed[%d]", ret);
     return ret;
   }
-
+  RKADK_STORAGE_FSCK(pHandle->stDevSta.cDevPath);
   pHandle->stDevSta.s32MountStatus = DISK_MOUNTED;
   // usleep(10000);
   if (pthread_create(&pHandle->stDevSta.fileScanTid, NULL,
