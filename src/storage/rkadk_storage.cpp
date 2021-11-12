@@ -54,6 +54,7 @@ typedef struct _RKADK_STR_FILE {
 
 typedef struct {
   RKADK_CHAR cpath[RKADK_MAX_FILE_PATH_LEN];
+  RKADK_SORT_CONDITION s32SortCond;
   RKADK_S32 wd;
   RKADK_S32 s32FileNum;
   off_t totalSize;
@@ -277,6 +278,30 @@ exit:
   return ret;
 }
 
+static bool RKADK_STORAGE_FileCompare(RKADK_STR_FILE *existingFile,
+                                      RKADK_STR_FILE *newFile,
+                                      RKADK_SORT_CONDITION cond) {
+  bool ret = false;
+
+  switch (cond) {
+  case SORT_MODIFY_TIME: {
+    ret = (newFile->stTime <= existingFile->stTime);
+    break;
+  }
+  case SORT_FILE_NAME: {
+    ret = (strcmp(newFile->filename, existingFile->filename) <= 0);
+    break;
+  }
+  case SORT_BUTT: {
+    ret = false;
+    RKADK_LOGE("Invalid condition.");
+    break;
+  }
+  }
+
+  return ret;
+}
+
 static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
                                            RKADK_CHAR *filename,
                                            struct stat *statbuf) {
@@ -331,12 +356,13 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
 
     if (folder->pstFileListFirst) {
       tmp = folder->pstFileListFirst;
-      if (tmp_1->stTime <= tmp->stTime) {
+      if (RKADK_STORAGE_FileCompare(tmp, tmp_1, folder->s32SortCond)) {
         tmp_1->next = tmp;
         folder->pstFileListFirst = tmp_1;
       } else {
         while (tmp->next) {
-          if (tmp_1->stTime <= tmp->next->stTime) {
+          if (RKADK_STORAGE_FileCompare(tmp->next, tmp_1,
+                                        folder->s32SortCond)) {
             tmp_1->next = tmp->next;
             tmp->next = tmp_1;
             break;
@@ -560,6 +586,8 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
     for (i = 0; i < pHandle->stDevSta.s32FolderNum; i++) {
       sprintf(pHandle->stDevSta.pstFolder[i].cpath, "%s%s", devAttr.cMountPath,
               devAttr.pstFolderAttr[i].cFolderPath);
+      pHandle->stDevSta.pstFolder[i].s32SortCond =
+          devAttr.pstFolderAttr[i].s32SortCond;
       RKADK_LOGI("%s", pHandle->stDevSta.pstFolder[i].cpath);
       pthread_mutex_init(&(pHandle->stDevSta.pstFolder[i].mutex), NULL);
       if (RKADK_STORAGE_CreateFolder(pHandle->stDevSta.pstFolder[i].cpath)) {
@@ -721,7 +749,7 @@ static RKADK_S32 RKADK_STORAGE_DevAdd(RKADK_CHAR *dev,
   }
 
   pHandle->stDevSta.s32MountStatus = DISK_MOUNTED;
-  // usleep(10000);
+  usleep(10000);
   if (pthread_create(&pHandle->stDevSta.fileScanTid, NULL,
                      RKADK_STORAGE_FileScanThread, (RKADK_MW_PTR)pHandle))
     RKADK_LOGE("FileScanThread create failed.");
@@ -1089,6 +1117,8 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
              sizeof(RKADK_STR_FOLDER_ATTR) * pstHandle->stDevAttr.s32FolderNum);
 
       for (i = 0; i < pstDevAttr->s32FolderNum; i++) {
+        pstHandle->stDevAttr.pstFolderAttr[i].s32SortCond =
+            pstDevAttr->pstFolderAttr[i].s32SortCond;
         pstHandle->stDevAttr.pstFolderAttr[i].bNumLimit =
             pstDevAttr->pstFolderAttr[i].bNumLimit;
         pstHandle->stDevAttr.pstFolderAttr[i].s32Limit =
@@ -1132,9 +1162,11 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
   memset(pstHandle->stDevAttr.pstFolderAttr, 0,
          sizeof(RKADK_STR_FOLDER_ATTR) * pstHandle->stDevAttr.s32FolderNum);
 
+  pstHandle->stDevAttr.pstFolderAttr[0].s32SortCond = SORT_FILE_NAME;
   pstHandle->stDevAttr.pstFolderAttr[0].bNumLimit = RKADK_FALSE;
   pstHandle->stDevAttr.pstFolderAttr[0].s32Limit = 50;
   sprintf(pstHandle->stDevAttr.pstFolderAttr[0].cFolderPath, "/video_front/");
+  pstHandle->stDevAttr.pstFolderAttr[1].s32SortCond = SORT_FILE_NAME;
   pstHandle->stDevAttr.pstFolderAttr[1].bNumLimit = RKADK_FALSE;
   pstHandle->stDevAttr.pstFolderAttr[1].s32Limit = 50;
   sprintf(pstHandle->stDevAttr.pstFolderAttr[1].cFolderPath, "/video_back/");
@@ -1389,7 +1421,8 @@ RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST *list) {
   return 0;
 }
 
-RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath, RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath,
+                                   RKADK_MW_PTR pHandle) {
   RKADK_S32 i;
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
 
