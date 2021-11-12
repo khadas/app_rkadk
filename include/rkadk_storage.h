@@ -23,8 +23,27 @@ extern "C" {
 
 #include "rkadk_common.h"
 
+typedef enum {
+  DISK_UNMOUNTED = 0,
+  DISK_MOUNTED,
+  DISK_MOUNT_BUTT,
+} RKADK_MOUNT_STATUS;
+
+typedef enum {
+  LIST_ASCENDING = 0,
+  LIST_DESCENDING,
+  LIST_BUTT,
+} RKADK_SORT_TYPE;
+
+typedef enum {
+  SORT_MODIFY_TIME = 0,
+  SORT_FILE_NAME,
+  SORT_BUTT,
+} RKADK_SORT_CONDITION;
+
 typedef struct {
   RKADK_CHAR cFolderPath[RKADK_MAX_FILE_PATH_LEN];
+  RKADK_SORT_CONDITION s32SortCond;
   RKADK_BOOL bNumLimit;
   RKADK_S32 s32Limit;
 } RKADK_STR_FOLDER_ATTR;
@@ -38,7 +57,7 @@ typedef struct {
   RKADK_STR_FOLDER_ATTR *pstFolderAttr;
 } RKADK_STR_DEV_ATTR;
 
-typedef struct _RKADK_FILE_INFO {
+typedef struct {
   RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
   off_t stSize;
   time_t stTime;
@@ -55,17 +74,6 @@ typedef struct {
   RKADK_S32 s32ListNum;
   RKADK_FILE_LIST *list;
 } RKADK_FILE_LIST_ARRAY;
-
-typedef enum {
-  DISK_UNMOUNTED = 0,
-  DISK_MOUNTED,
-  DISK_MOUNT_BUTT,
-} RKADK_MOUNT_STATUS;
-
-typedef enum {
-  LIST_ASCENDING = 0,
-  LIST_DESCENDING,
-} RKADK_SORT_TYPE;
 
 RKADK_S32 RKADK_STORAGE_Init(RKADK_MW_PTR *ppHandle,
                              RKADK_STR_DEV_ATTR *pstDevAttr);
@@ -85,7 +93,8 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
 
 RKADK_S32 RKADK_STORAGE_FreeFileList(RKADK_FILE_LIST *list);
 
-RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath, RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath,
+                                   RKADK_MW_PTR pHandle);
 
 RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle);
 
