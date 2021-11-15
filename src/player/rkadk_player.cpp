@@ -19,8 +19,8 @@
 #include "rkadk_player.h"
 #include "RTMediaPlayer.h"
 #include "RTPlayerDef.h"
-#include "rkadk_surface_interface.h"
 #include "rk_comm_vo.h"
+#include "rkadk_surface_interface.h"
 #include "rt_message.h"
 #include <pthread.h>
 #include <stdio.h>
@@ -386,6 +386,26 @@ RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
 
   *penState = enState;
   return 0;
+}
+
+RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
+  int ret = 0;
+  RKADK_S64 duration = 0;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
+
+  RKADK_CHECK_POINTER(pDuration, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_CHECK_POINTER(pstPlayer->pMediaPlayer, RKADK_FAILURE);
+
+  ret = pstPlayer->pMediaPlayer->getDuration(&duration);
+  if (ret)
+    RKADK_LOGE("getDuration failed[%d]", ret);
+
+  RKADK_LOGD("current duration = %d(us)", duration);
+  *pDuration = duration / 1000; // ms
+
+  return ret;
 }
 
 #endif // ROCKIT

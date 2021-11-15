@@ -138,6 +138,7 @@ int main(int argc, char *argv[]) {
   char *file = "/etc/bsa_file/8k8bpsMono.wav";
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_BOOL bVideoEnable = false;
+  RKADK_U32 duration = 0;
 
   param_init(&stFrmInfo);
 
@@ -186,6 +187,10 @@ int main(int argc, char *argv[]) {
     RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
 
   RKADK_PLAYER_Prepare(pPlayer);
+
+  RKADK_PLAYER_GetDuration(pPlayer, &duration);
+  RKADK_LOGD("%s: duration = %d", file, duration);
+
   RKADK_PLAYER_Play(pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
 
