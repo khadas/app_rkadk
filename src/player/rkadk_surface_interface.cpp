@@ -68,53 +68,45 @@ static RKADK_S32 RKADK_VO_CreateGFXData(RKADK_U32 u32Width, RKADK_U32 u32Height,
 }
 
 static RKADK_S32
-RKADK_VO_StartLayer(VO_LAYER voLayer,
-                    const VO_VIDEO_LAYER_ATTR_S *pstLayerAttr) {
+RKADK_VO_EnableLayer(VO_LAYER voLayer,
+                     const VO_VIDEO_LAYER_ATTR_S *pstLayerAttr) {
   RKADK_S32 s32Ret = RKADK_SUCCESS;
 
   RKADK_CHECK_POINTER(pstLayerAttr, RKADK_FAILURE);
 
   s32Ret = RK_MPI_VO_SetLayerAttr(voLayer, pstLayerAttr);
   if (s32Ret) {
-    RKADK_LOGD("Set layer attribute failed");
+    RKADK_LOGD("RK_MPI_VO_SetLayerAttr failed[%d]", s32Ret);
     return s32Ret;
   }
 
   s32Ret = RK_MPI_VO_EnableLayer(voLayer);
   if (s32Ret) {
-    RKADK_LOGD("Enable layer failed");
+    RKADK_LOGD("RK_MPI_VO_EnableLayer failed[%d]", s32Ret);
     return s32Ret;
   }
 
   return s32Ret;
 }
 
-static RKADK_S32 RKADK_VO_StartDev(VO_DEV voDev, VO_PUB_ATTR_S *pstPubAttr) {
+static RKADK_S32 RKADK_VO_Enable(VO_DEV voDev, VO_PUB_ATTR_S *pstPubAttr) {
   RKADK_S32 s32Ret = RKADK_SUCCESS;
 
   RKADK_CHECK_POINTER(pstPubAttr, RKADK_FAILURE);
 
   s32Ret = RK_MPI_VO_SetPubAttr(voDev, pstPubAttr);
   if (s32Ret) {
-    RKADK_LOGD("Set public attribute failed");
+    RKADK_LOGD("Set public attribute failed[%d]", s32Ret);
     return s32Ret;
   }
 
   s32Ret = RK_MPI_VO_Enable(voDev);
   if (s32Ret) {
-    RKADK_LOGD("VO enable failed");
+    RKADK_LOGD("VO enable failed[%d]", s32Ret);
     return s32Ret;
   }
 
   return s32Ret;
-}
-
-static RKADK_S32 RKADK_VO_StopLayer(VO_LAYER voLayer) {
-  return RK_MPI_VO_DisableLayer(voLayer);
-}
-
-static RKADK_S32 RKADK_VO_StopDev(VO_DEV voDev) {
-  return RK_MPI_VO_Disable(voDev);
 }
 
 static PIXEL_FORMAT_E RKADK_FmtToRtfmt(RKADK_PLAYER_VO_FORMAT_E format) {
@@ -205,13 +197,13 @@ static RKADK_S32 RKADK_VO_SetDispRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
     RKADK_LOGD("positive y less than zero, use default value");
 
   if (0 < stFrmInfo.u32DispWidth &&
-      stFrmInfo.u32DispWidth < stFrmInfo.u32ImgWidth)
+      stFrmInfo.u32DispWidth <= stFrmInfo.u32ImgWidth)
     pstLayerAttr->stDispRect.u32Width = stFrmInfo.u32DispWidth;
   else
     RKADK_LOGD("DispWidth use default value");
 
   if (0 < stFrmInfo.u32DispHeight &&
-      stFrmInfo.u32DispHeight < stFrmInfo.u32ImgHeight)
+      stFrmInfo.u32DispHeight <= stFrmInfo.u32ImgHeight)
     pstLayerAttr->stDispRect.u32Height = stFrmInfo.u32DispHeight;
   else
     RKADK_LOGD("DispHeight use default value");
@@ -230,7 +222,7 @@ static RKADK_S32 RKADK_VO_SetDispRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
 }
 
 static RKADK_S32
-RKADK_VO_SetDispRect_Default(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
+RKADK_VO_SetDefaultDispRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                              VO_DEV voDev) {
   int ret;
   VO_PUB_ATTR_S pstAttr;
@@ -251,9 +243,9 @@ RKADK_VO_SetDispRect_Default(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
   return ret;
 }
 
-static RKADK_S32 RKADK_VO_StartChnn(VO_LAYER voLayer,
-                                    VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
-                                    VIDEO_FRAMEINFO_S stFrmInfo) {
+static RKADK_S32 RKADK_VO_EnableChnn(VO_LAYER voLayer,
+                                     VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
+                                     VIDEO_FRAMEINFO_S stFrmInfo) {
   int ret;
   VO_CHN_ATTR_S stChnAttr;
   VO_CHN_PARAM_S stChnParam;
@@ -267,6 +259,7 @@ static RKADK_S32 RKADK_VO_StartChnn(VO_LAYER voLayer,
   stChnAttr.stRect.s32Y = pstLayerAttr->stDispRect.s32Y;
   stChnAttr.stRect.u32Width = pstLayerAttr->stDispRect.u32Width;
   stChnAttr.stRect.u32Height = pstLayerAttr->stDispRect.u32Height;
+
   // set priority
   stChnAttr.u32Priority = 1;
   ret = RK_MPI_VO_SetChnAttr(voLayer, stFrmInfo.u32ChnnNum, &stChnAttr);
@@ -488,8 +481,44 @@ RKADKSurfaceInterface::RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo)
   }
 }
 
+RKADKSurfaceInterface::~RKADKSurfaceInterface() {
+  RKADK_S32 s32Ret = 0;
+  VO_LAYER voLayer;
+
+  switch (stFrmInfo.u32VoDev) {
+  case VO_DEV_HD0:
+    voLayer = VOP_LAYER_CLUSTER_0;
+    break;
+  case VO_DEV_HD1:
+    voLayer = VOP_LAYER_CLUSTER_1;
+    break;
+  default:
+    voLayer = VOP_LAYER_CLUSTER_0;
+    break;
+  }
+
+  s32Ret = RK_MPI_VO_DisableChn(voLayer, stFrmInfo.u32ChnnNum);
+  if (s32Ret)
+    RKADK_LOGE("RK_MPI_VO_DisableChn failed[%d]", s32Ret);
+
+  s32Ret = RK_MPI_VO_DisableLayer(voLayer);
+  if (s32Ret)
+    RKADK_LOGE("RK_MPI_VO_DisableLayer failed[%d]", s32Ret);
+
+  s32Ret = RK_MPI_VO_Disable(stFrmInfo.u32VoDev);
+  if (s32Ret)
+    RKADK_LOGE("RK_MPI_VO_Disable failed[%d]", s32Ret);
+
+  s32Ret = RK_MPI_VO_UnBindLayer(voLayer, stFrmInfo.u32VoDev);
+  if (s32Ret)
+    RKADK_LOGE("RK_MPI_VO_UnBindLayer failed[%d]", s32Ret);
+
+  s32Flag = 0;
+  RKADK_LOGD("done!");
+}
+
 INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
-  int ret, error;
+  int ret = 0, error;
   VIDEO_FRAME_INFO_S stVFrameInfo;
   VO_LAYER voLayer;
   RTMediaBuffer *pstMediaBuffer;
@@ -545,7 +574,7 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
   }
 
   if (!s32Flag) {
-    RTFrame frame;
+    VO_LAYER_MODE_E mode;
     VO_PUB_ATTR_S stVoPubAttr;
     VO_VIDEO_LAYER_ATTR_S stLayerAttr;
 
@@ -554,13 +583,10 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
                stVFrameInfo.stVFrame.u32VirWidth,
                stVFrameInfo.stVFrame.u32VirHeight);
 
-    // start
-    rt_memset(&frame, 0, sizeof(RTFrame));
     rt_memset(&stVoPubAttr, 0, sizeof(VO_PUB_ATTR_S));
     rt_memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
     /* Bind Layer */
-    VO_LAYER_MODE_E mode;
     switch (stFrmInfo.u32VoLayerMode) {
     case 0:
       mode = VO_LAYER_MODE_CURSOR;
@@ -574,10 +600,11 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
     default:
       mode = VO_LAYER_MODE_VIDEO;
     }
+
     ret = RK_MPI_VO_BindLayer(voLayer, stFrmInfo.u32VoDev, mode);
     if (ret) {
       RKADK_LOGD("RK_MPI_VO_BindLayer failed(%d)", ret);
-      return ret;
+      goto failed;
     }
 
     /* Enable VO Device */
@@ -603,48 +630,39 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
     if (VO_OUTPUT_USER == stVoPubAttr.enIntfSync)
       RKADK_VO_SetRtSyncInfo(&stVoPubAttr.stSyncInfo, stFrmInfo);
 
-    ret = RKADK_VO_StartDev(stFrmInfo.u32VoDev, &stVoPubAttr);
+    ret = RKADK_VO_Enable(stFrmInfo.u32VoDev, &stVoPubAttr);
     if (ret) {
-      RKADK_LOGD("RKADK_VO_StartDev failed(%d)", ret);
+      RKADK_LOGD("RKADK_VO_Enable failed(%d)", ret);
       return ret;
     }
 
-    RKADK_LOGD("StartDev");
-
     /* Enable Layer */
     stLayerAttr.enPixFormat = RKADK_FmtToRtfmt(stFrmInfo.u32VoFormat);
-    stLayerAttr.stDispRect.s32X = 0;
-    stLayerAttr.stDispRect.s32Y = 0;
-    stLayerAttr.stDispRect.u32Width = frame.mFrameW / 2;
-    stLayerAttr.stDispRect.u32Height = frame.mFrameH / 2;
-    stLayerAttr.stImageSize.u32Width = frame.mFrameW;
-    stLayerAttr.stImageSize.u32Height = frame.mFrameH;
-    // RKADK_VO_SetDispRect(&stLayerAttr, stFrmInfo);
 
     if (VO_OUTPUT_DEFAULT == stVoPubAttr.enIntfSync) {
-      ret = RKADK_VO_SetDispRect_Default(&stLayerAttr, stFrmInfo.u32VoDev);
-      RKADK_LOGD("width = %u, height = %u\n", stLayerAttr.stDispRect.u32Width,
+      ret = RKADK_VO_SetDefaultDispRect(&stLayerAttr, stFrmInfo.u32VoDev);
+      RKADK_LOGD("width = %u, height = %u", stLayerAttr.stDispRect.u32Width,
                  stLayerAttr.stDispRect.u32Height);
       if (ret) {
         RKADK_LOGD("SetDispRect_Default failed(%d)", ret);
-        return ret;
+        goto failed;
       }
     }
 
     RKADK_VO_SetDispRect(&stLayerAttr, stFrmInfo);
 
     stLayerAttr.u32DispFrmRt = stFrmInfo.u32DispFrmRt;
-    ret = RKADK_VO_StartLayer(voLayer, &stLayerAttr);
+    ret = RKADK_VO_EnableLayer(voLayer, &stLayerAttr);
     if (ret) {
-      RKADK_LOGD("RKADK_VO_StartLayer failed(%d)", ret);
-      return ret;
+      RKADK_LOGD("RKADK_VO_EnableLayer failed(%d)", ret);
+      goto failed;
     }
 
     /* Enable channel */
-    ret = RKADK_VO_StartChnn(voLayer, &stLayerAttr, stFrmInfo);
+    ret = RKADK_VO_EnableChnn(voLayer, &stLayerAttr, stFrmInfo);
     if (ret) {
-      RKADK_LOGD("RKADK_VO_StartChnn failed(%d)", ret);
-      return ret;
+      RKADK_LOGD("RKADK_VO_EnableChnn failed(%d)", ret);
+      goto failed;
     }
 
     s32Flag = 1;
@@ -657,12 +675,19 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
   }
 
   return RKADK_SUCCESS;
+
+failed:
+  RK_MPI_VO_DisableLayer(voLayer);
+  RK_MPI_VO_Disable(stFrmInfo.u32VoDev);
+  RK_MPI_VO_UnBindLayer(voLayer, stFrmInfo.u32VoDev);
+  return -1;
 }
 
 void RKADKSurfaceInterface::replay() {
+  VO_LAYER voLayer;
+
   ((RTMediaBuffer *)pCbMblk)->addRefs();
 
-  VO_LAYER voLayer;
   switch (stFrmInfo.u32VoDev) {
   case VO_DEV_HD0:
     voLayer = VOP_LAYER_CLUSTER_0;
@@ -674,10 +699,9 @@ void RKADKSurfaceInterface::replay() {
     voLayer = VOP_LAYER_CLUSTER_0;
     break;
   }
-  usleep(30 * 1000);
+
   RK_MPI_VO_ClearChnBuffer(voLayer, stFrmInfo.u32ChnnNum, RK_TRUE);
   ((RTMediaBuffer *)pCbMblk)->signalBufferRelease(RKADK_TRUE);
-  s32Flag = 0;
 }
 
 #endif // ROCKIT

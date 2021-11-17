@@ -402,7 +402,7 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   if (ret)
     RKADK_LOGE("getDuration failed[%d]", ret);
 
-  RKADK_LOGD("current duration = %d(us)", duration);
+  RKADK_LOGD("current duration = %lld(us)", duration);
   *pDuration = duration / 1000; // ms
 
   return ret;
