@@ -74,6 +74,12 @@ RKADK_VO_EnableLayer(VO_LAYER voLayer,
 
   RKADK_CHECK_POINTER(pstLayerAttr, RKADK_FAILURE);
 
+  s32Ret = RK_MPI_VO_SetLayerSpliceMode(voLayer, VO_SPLICE_MODE_RGA);
+  if (s32Ret) {
+    RKADK_LOGD("RK_MPI_VO_SetLayerSpliceMode failed[%d]", s32Ret);
+    return s32Ret;
+  }
+
   s32Ret = RK_MPI_VO_SetLayerAttr(voLayer, pstLayerAttr);
   if (s32Ret) {
     RKADK_LOGD("RK_MPI_VO_SetLayerAttr failed[%d]", s32Ret);
