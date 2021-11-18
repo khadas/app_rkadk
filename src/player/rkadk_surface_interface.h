@@ -35,7 +35,7 @@ typedef RKADK_PLAYER_FRAMEINFO_S VIDEO_FRAMEINFO_S;
 class RKADKSurfaceInterface : RTSurfaceInterface {
 public:
   RKADKSurfaceInterface(VIDEO_FRAMEINFO_S *pstFrmInfo);
-  ~RKADKSurfaceInterface() { RKADK_LOGD("done"); }
+  ~RKADKSurfaceInterface();
 
   INT32 connect(INT32 mode) { return 0; }
   INT32 disconnect(INT32 mode) { return 0; }
