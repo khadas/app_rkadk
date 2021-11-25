@@ -21,7 +21,6 @@
 #include "rkadk_param_inner.h"
 #include "rkmedia_api.h"
 #include "rtsp_demo.h"
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -157,15 +156,12 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
   RKADK_RTSP_HANDLE_S *pHandle = (RKADK_RTSP_HANDLE_S *)handle;
   if (!pHandle) {
     RKADK_LOGE("Can't find rtsp handle");
-    assert(pHandle);
-  }
-
-  if (!pHandle->start) {
-    if (!pHandle->bVencChnMux)
-      RK_MPI_MB_ReleaseBuffer(mb);
-
+    RK_MPI_MB_ReleaseBuffer(mb);
     return;
   }
+
+  if (!pHandle->start)
+    goto exit;
 
   s32NaluType = RK_MPI_MB_GetFlag(mb);
   if (!pHandle->bWaitIDR) {
@@ -178,9 +174,7 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
         RKADK_LOGD("wait first idr frame");
       }
 
-      if (!pHandle->bVencChnMux)
-        RK_MPI_MB_ReleaseBuffer(mb);
-      return;
+      goto exit;
     }
 
     pHandle->bWaitIDR = true;
@@ -192,6 +186,7 @@ static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
     rtsp_do_event(pHandle->stRtspHandle);
   }
 
+exit:
   if (!pHandle->bVencChnMux)
     RK_MPI_MB_ReleaseBuffer(mb);
 }

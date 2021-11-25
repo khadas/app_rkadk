@@ -20,6 +20,7 @@
 #include "rkadk_param.h"
 #include "rkadk_param_inner.h"
 #include "rkmedia_api.h"
+#include <assert.h>
 #include <malloc.h>
 #include <rga/RgaApi.h>
 #include <rga/rga.h>
@@ -56,6 +57,7 @@ typedef struct {
 
 typedef struct {
   bool init;
+  RKADK_U32 u32CamId;
   RKADK_PHOTO_DATA_RECV_FN_PTR pDataRecvFn;
 } PHOTO_INFO_S;
 
@@ -65,27 +67,24 @@ static RKADK_JPG_DE_TYPE_S g_stJpgDEType[JPG_DE_TYPE_COUNT] = {
 
 static PHOTO_INFO_S g_stPhotoInfo[RKADK_MAX_SENSOR_CNT] = {0};
 
-static void RKADK_PHOTO_VencOutCb0(MEDIA_BUFFER mb) {
-  if (!g_stPhotoInfo[0].pDataRecvFn) {
-    RKADK_LOGW("RKADK_PHOTO_PACKET_RECV_FN_PTR unregistered");
-    RK_MPI_MB_ReleaseBuffer(mb);
-    return;
+static void RKADK_PHOTO_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
+  PHOTO_INFO_S *pstPhotoInfo;
+
+  pstPhotoInfo = (PHOTO_INFO_S *)pHandle;
+  if (!pstPhotoInfo) {
+    RKADK_LOGE("Can't find photo handle");
+    goto exit;
   }
 
-  g_stPhotoInfo[0].pDataRecvFn((RKADK_U8 *)RK_MPI_MB_GetPtr(mb),
-                               RK_MPI_MB_GetSize(mb));
-  RK_MPI_MB_ReleaseBuffer(mb);
-}
-
-static void RKADK_PHOTO_VencOutCb1(MEDIA_BUFFER mb) {
-  if (!g_stPhotoInfo[1].pDataRecvFn) {
-    RKADK_LOGW("RKADK_PHOTO_PACKET_RECV_FN_PTR unregistered");
-    RK_MPI_MB_ReleaseBuffer(mb);
-    return;
+  if (!g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn) {
+    RKADK_LOGW("u32CamId[%d] don't register callback", pstPhotoInfo->u32CamId);
+    goto exit;
   }
 
-  g_stPhotoInfo[1].pDataRecvFn((RKADK_U8 *)RK_MPI_MB_GetPtr(mb),
-                               RK_MPI_MB_GetSize(mb));
+  g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn(
+      (RKADK_U8 *)RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
+
+exit:
   RK_MPI_MB_ReleaseBuffer(mb);
 }
 
@@ -163,6 +162,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   }
 
   pstPhotoInfo->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
+  pstPhotoInfo->u32CamId = pstPhotoAttr->u32CamID;
 
   RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -192,10 +192,8 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     goto failed;
   }
 
-  if (pstPhotoAttr->u32CamID == 0)
-    ret = RK_MPI_SYS_RegisterOutCb(&stVencChn, RKADK_PHOTO_VencOutCb0);
-  else
-    ret = RK_MPI_SYS_RegisterOutCb(&stVencChn, RKADK_PHOTO_VencOutCb1);
+  ret = RK_MPI_SYS_RegisterOutCbEx(&stVencChn, RKADK_PHOTO_VencOutCb,
+                                   pstPhotoInfo);
   if (ret) {
     RKADK_LOGE("Register Output callback failed! ret=%d", ret);
     goto failed;

@@ -20,7 +20,6 @@
 #include "rkadk_param.h"
 #include "rkadk_param_inner.h"
 #include "rkmedia_api.h"
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -181,17 +180,16 @@ static void RKADK_STREAM_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
   VIDEO_STREAM_INFO_S *pstVideoStream = (VIDEO_STREAM_INFO_S *)pHandle;
   if (!pstVideoStream) {
     RKADK_LOGE("Can't find video stream handle");
-    assert(pstVideoStream);
+    RK_MPI_MB_ReleaseBuffer(mb);
+    return;
   }
 
   if (!g_pstVencCB[pstVideoStream->u32CamId] && !pstVideoStream->start) {
     if (pstVideoStream->start)
-      RKADK_LOGE("Not register callback");
+      RKADK_LOGW("u32CamId[%d] don't register callback",
+                 pstVideoStream->u32CamId);
 
-    if (!pstVideoStream->bVencChnMux)
-      RK_MPI_MB_ReleaseBuffer(mb);
-
-    return;
+    goto exit;
   }
 
   s32NaluType = RK_MPI_MB_GetFlag(mb);
@@ -206,10 +204,7 @@ static void RKADK_STREAM_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
         RKADK_LOGD("wait first idr frame");
       }
 
-      if (!pstVideoStream->bVencChnMux)
-        RK_MPI_MB_ReleaseBuffer(mb);
-
-      return;
+      goto exit;
     }
 
     pstVideoStream->bWaitIDR = true;
@@ -228,6 +223,7 @@ static void RKADK_STREAM_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
   g_pstVencCB[pstVideoStream->u32CamId](&vStreamData);
   pstVideoStream->videoSeq++;
 
+exit:
   if (!pstVideoStream->bVencChnMux)
     RK_MPI_MB_ReleaseBuffer(mb);
 }
@@ -381,8 +377,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
     case RKADK_STREAM_TYPE_VIDEO_SUB:
       RKADK_LOGI("Preview and Record sub venc[%d] mux", stVencChn.s32ChnId);
       break;
-    case RKADK_STREAM_TYPE_PREVIEW:
-      RKADK_LOGI("Preview and Preview venc[%d] mux", stVencChn.s32ChnId);
+    case RKADK_STREAM_TYPE_LIVE:
+      RKADK_LOGI("Preview and Live venc[%d] mux", stVencChn.s32ChnId);
       break;
     default:
       RKADK_LOGW("Invaild venc[%d] mux, enType[%d]", stVencChn.s32ChnId,

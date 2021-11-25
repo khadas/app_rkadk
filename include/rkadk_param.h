@@ -230,7 +230,7 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
   RKADK_U32 max_width;
   RKADK_U32 max_height;
   RKADK_U32 framerate;
-  bool enable_record; /* record  enable*/
+  bool enable_record; /* record enable */
   bool enable_photo;  /* photo enable, default true */
   bool flip;          /* FLIP */
   bool mirror;        /* MIRROR */

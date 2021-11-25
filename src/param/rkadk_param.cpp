@@ -572,8 +572,8 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
                                    RKADK_REC_TYPE_NORMAL, "record_type");
 
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->file_type,
-                                   MUXER_TYPE_MP4, MUXER_TYPE_FLV,
-                                   MUXER_TYPE_MP4, "file_type");
+                                    MUXER_TYPE_MP4, MUXER_TYPE_FLV,
+                                    MUXER_TYPE_MP4, "file_type");
 
   change |= RKADK_PARAM_CheckCfgU32(
       (RKADK_U32 *)&pstRecCfg->pre_record_mode, MUXER_PRE_RECORD_NONE,
@@ -679,8 +679,10 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stViCfg[index];
 
   u32ChnId = index + (u32CamId * RKADK_ISPP_VI_NODE_CNT);
+  if (u32ChnId >= VI_MAX_CHN_NUM)
+    u32ChnId = VI_MAX_CHN_NUM - 1;
 
-  switch (u32ChnId) {
+  switch (index) {
   case 0:
     pixFmt = "FBC0";
     change =
@@ -707,11 +709,8 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
     break;
   }
 
-  if (pstViCfg->chn_id != u32ChnId) {
-    pstViCfg->chn_id = u32ChnId;
-    change = true;
-  }
-
+  change |= RKADK_PARAM_CheckCfgU32(&pstViCfg->chn_id, 0, VI_MAX_CHN_NUM,
+                                    u32ChnId, "rec venc_chn");
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->device_name, deviceName,
                                     RKADK_BUFFER_LEN, "vi device_name");
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->module, module, RKADK_BUFFER_LEN,
@@ -880,7 +879,10 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
 
   memset(pstViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   pstViCfg->chn_id = u32ViIndex + (u32CamId * RKADK_ISPP_VI_NODE_CNT);
-  switch (pstViCfg->chn_id) {
+  if (pstViCfg->chn_id >= VI_MAX_CHN_NUM)
+    pstViCfg->chn_id = VI_MAX_CHN_NUM - 1;
+
+  switch (u32ViIndex) {
   case 0:
     memcpy(pstViCfg->device_name, "rkispp_m_bypass", strlen("rkispp_m_bypass"));
     pstViCfg->buf_cnt = 4;
@@ -3621,12 +3623,12 @@ RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
   }
 
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg =
-      RKADK_PARAM_GetStreamCfg(0, RKADK_STREAM_TYPE_PREVIEW);
+      RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_PREVIEW);
   if (pstStreamCfg && (u32ChnId == pstStreamCfg->attribute.venc_chn))
     return RKADK_STREAM_TYPE_PREVIEW;
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
-      RKADK_PARAM_GetStreamCfg(0, RKADK_STREAM_TYPE_LIVE);
+      RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
   if (pstLiveCfg && (u32ChnId == pstLiveCfg->attribute.venc_chn))
     return RKADK_STREAM_TYPE_LIVE;
 
