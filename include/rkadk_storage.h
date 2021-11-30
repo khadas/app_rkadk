@@ -23,8 +23,14 @@ extern "C" {
 
 #include "rkadk_common.h"
 
+#define RKADK_MAX_FORMAT_ID_LEN    8
+#define RKADK_MAX_VOLUME_LEN    11
+
 typedef enum {
   DISK_UNMOUNTED = 0,
+  DISK_NOT_FORMATTED,
+  DISK_FORMAT_ERR,
+  DISK_SCANNING,
   DISK_MOUNTED,
   DISK_MOUNT_BUTT,
 } RKADK_MOUNT_STATUS;
@@ -49,11 +55,15 @@ typedef struct {
 } RKADK_STR_FOLDER_ATTR;
 
 typedef struct {
+  RKADK_CHAR cDevPath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_CHAR cMountPath[RKADK_MAX_FILE_PATH_LEN];
   RKADK_S32 s32FreeSizeDelMin;
   RKADK_S32 s32FreeSizeDelMax;
   RKADK_S32 s32AutoDel;
   RKADK_S32 s32FolderNum;
+  RKADK_CHAR cFormatId[RKADK_MAX_FORMAT_ID_LEN];
+  RKADK_CHAR cVolume[RKADK_MAX_VOLUME_LEN];
+  RKADK_S32 s32CheckFormatId;
   RKADK_STR_FOLDER_ATTR *pstFolderAttr;
 } RKADK_STR_DEV_ATTR;
 
@@ -97,6 +107,8 @@ RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath,
                                    RKADK_MW_PTR pHandle);
 
 RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle);
+
+RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat);
 
 #ifdef __cplusplus
 }
