@@ -116,6 +116,19 @@ RKADK_RECORD_RegisterEventCallback(
  */
 RKADK_S32 RKADK_RECORD_GetAencChn();
 
+/**
+ * @brief get single frame at time.
+ * @param[in]pszFileName : video file
+ * @param[in]pstFrameAttr : frame attribute
+ * @param[in]u32VeChn : venc channel
+ * @param[in]u64TimeUs : frame time(us)
+ * @return 0 success
+ * @return -1 failure
+ */
+RKADK_S32 RKADK_GetSingleFrameAtTime(RKADK_CHAR *pszFileName,
+                                     RKADK_FRAME_ATTR_S *pstFrameAttr,
+                                     RKADK_U32 u32VeChn, RKADK_U64 u64TimeUs);
+
 #ifdef __cplusplus
 }
 #endif

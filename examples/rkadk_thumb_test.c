@@ -89,9 +89,11 @@ int main(int argc, char *argv[]) {
 #else
     case 'W':
       stThumbAttr.u32Width = atoi(optarg);
+      stThumbAttr.u32VirWidth = stThumbAttr.u32Width;
       break;
     case 'H':
       stThumbAttr.u32Height = atoi(optarg);
+      stThumbAttr.u32VirHeight = stThumbAttr.u32Height;
       break;
     case 'T':
       if (strstr(optarg, "NV12")) {
@@ -188,8 +190,9 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     }
-    RKADK_LOGD("%s[%d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
-               stThumbAttr.u32Height, stThumbAttr.u32BufSize, count);
+    RKADK_LOGD("%s[%d, %d, %d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
+               stThumbAttr.u32Height, stThumbAttr.u32VirWidth,
+               stThumbAttr.u32VirHeight, stThumbAttr.u32BufSize, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (stThumbAttr.u32BufSize > 0) {

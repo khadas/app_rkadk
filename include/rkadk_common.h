@@ -91,9 +91,15 @@ typedef struct {
   RKADK_U32 u32Width;
   // 2 alignment
   RKADK_U32 u32Height;
+  // 4 alignment
+  RKADK_U32 u32VirWidth;
+  // 2 alignment
+  RKADK_U32 u32VirHeight;
   RKADK_U8 *pu8Buf;
   RKADK_U32 u32BufSize;
 } RKADK_THUMB_ATTR_S;
+
+typedef RKADK_THUMB_ATTR_S RKADK_FRAME_ATTR_S;
 
 typedef enum {
   RKADK_CODEC_TYPE_H264 = 0,

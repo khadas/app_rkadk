@@ -970,3 +970,91 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
 
   return 0;
 }
+
+RKADK_S32 RKADK_MEDIA_FrameBufMalloc(RKADK_FRAME_ATTR_S *pstFrameAttr) {
+  if (pstFrameAttr->pu8Buf)
+    return 0;
+
+  switch (pstFrameAttr->enType) {
+  case RKADK_THUMB_TYPE_NV12:
+    pstFrameAttr->u32BufSize =
+        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 3 / 2;
+    break;
+  case RKADK_THUMB_TYPE_JPEG:
+    pstFrameAttr->u32BufSize =
+        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight;
+    break;
+  case RKADK_THUMB_TYPE_RGB565:
+    pstFrameAttr->u32BufSize =
+        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 2;
+    break;
+  case RKADK_THUMB_TYPE_RGB888:
+    pstFrameAttr->u32BufSize =
+        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 3;
+    break;
+  case RKADK_THUMB_TYPE_RGBA8888:
+    pstFrameAttr->u32BufSize =
+        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 4;
+    break;
+
+  default:
+    RKADK_LOGE("Invalid enType[%d]", pstFrameAttr->enType);
+    return -1;
+  }
+
+  pstFrameAttr->pu8Buf = (RKADK_U8 *)malloc(pstFrameAttr->u32BufSize);
+  if (!pstFrameAttr->pu8Buf) {
+    RKADK_LOGE("malloc pu8Buf failed, u32BufSize = %d",
+               pstFrameAttr->u32BufSize);
+    return -1;
+  }
+
+  RKADK_LOGD("malloc frame buffer[%p][%d, %d, %d, %d], u32BufSize[%d]",
+             pstFrameAttr->pu8Buf, pstFrameAttr->u32Width,
+             pstFrameAttr->u32Height, pstFrameAttr->u32VirWidth,
+             pstFrameAttr->u32VirHeight, pstFrameAttr->u32BufSize);
+  return 0;
+}
+
+RKADK_S32 RKADK_MEDIA_FrameFree(RKADK_FRAME_ATTR_S *pstFrameAttr) {
+  RKADK_CHECK_POINTER(pstFrameAttr, RKADK_FAILURE);
+
+  if (pstFrameAttr->pu8Buf) {
+    RKADK_LOGD("free buffer[%p]", pstFrameAttr->pu8Buf);
+    free(pstFrameAttr->pu8Buf);
+    pstFrameAttr->pu8Buf = NULL;
+  }
+
+  return 0;
+}
+
+bool RKADK_MEDIA_CheckFrameAttr(RKADK_FRAME_ATTR_S *pstFrameAttr) {
+
+  if (pstFrameAttr->enType < RKADK_THUMB_TYPE_NV12 ||
+      pstFrameAttr->enType > RKADK_THUMB_TYPE_RGBA8888) {
+    RKADK_LOGE("Invalid thumb type = %d", pstFrameAttr->enType);
+    return false;
+  }
+
+  if (pstFrameAttr->u32Width != UPALIGNTO(pstFrameAttr->u32Width, 4)) {
+    RKADK_LOGE("Width is not 4-aligned");
+    return false;
+  }
+
+  if (pstFrameAttr->u32Height != UPALIGNTO(pstFrameAttr->u32Height, 2)) {
+    RKADK_LOGE("Height is not 2-aligned");
+    return false;
+  }
+
+  if (pstFrameAttr->u32VirWidth != UPALIGNTO(pstFrameAttr->u32VirWidth, 4)) {
+    RKADK_LOGE("VirWidth is not 4-aligned");
+    return false;
+  }
+
+  if (pstFrameAttr->u32VirHeight != UPALIGNTO(pstFrameAttr->u32VirHeight, 2)) {
+    RKADK_LOGE("VirHeight is not 2-aligned");
+    return false;
+  }
+
+  return true;
+}

@@ -82,6 +82,8 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
   stDataAttr.enType = enDataType;
   stDataAttr.u32Width = 1280;
   stDataAttr.u32Height = 720;
+  stDataAttr.u32VirWidth = 1280;
+  stDataAttr.u32VirHeight = 720;
 
   if (enDataType == RKADK_THUMB_TYPE_RGB565)
     postfix = "rgb565";
@@ -91,8 +93,9 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
     postfix = "rgba8888";
 
   if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
-    RKADK_LOGD("u32Width: %d, u32Height: %d, u32BufSize: %d",
+    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d",
                stDataAttr.u32Width, stDataAttr.u32Height,
+               stDataAttr.u32VirWidth, stDataAttr.u32VirHeight,
                stDataAttr.u32BufSize);
 
     memset(jpegPath, 0, 128);
