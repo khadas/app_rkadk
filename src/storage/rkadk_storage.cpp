@@ -318,6 +318,39 @@ static bool RKADK_STORAGE_FileCompare(RKADK_STR_FILE *existingFile,
   return ret;
 }
 
+static RKADK_S32 RKADK_STORAGE_FileListCheck(RKADK_STR_FOLDER *folder,
+                                           RKADK_CHAR *filename,
+                                           struct stat *statbuf) {
+  RKADK_S32 ret = 0;
+  RKADK_STR_FILE *tmp = NULL;
+
+  RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
+
+  pthread_mutex_lock(&folder->mutex);
+
+  if (folder->pstFileListFirst) {
+    RKADK_STR_FILE *tmp_1 = NULL;
+    tmp = folder->pstFileListFirst;
+
+    if (!strcmp(tmp->filename, filename)) {
+      ret = 1;
+    } else {
+      while (tmp->next) {
+        if (!strcmp(tmp->next->filename, filename)) {
+          ret = 1;
+          break;
+        }
+        tmp = tmp->next;
+      }
+    }
+  }
+
+  pthread_mutex_unlock(&folder->mutex);
+
+  return ret;
+}
+
 static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
                                            RKADK_CHAR *filename,
                                            struct stat *statbuf) {
@@ -346,12 +379,12 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
 
   if (folder->pstFileListFirst) {
     tmp = folder->pstFileListFirst;
-    if (tmp_1->stTime > tmp->stTime) {
+    if (tmp_1->stTime >= tmp->stTime) {
       tmp_1->next = tmp;
       folder->pstFileListFirst = tmp_1;
     } else {
       while (tmp->next) {
-        if (tmp_1->stTime > tmp->next->stTime) {
+        if (tmp_1->stTime >= tmp->next->stTime) {
           tmp_1->next = tmp->next;
           tmp->next = tmp_1;
           break;
@@ -388,6 +421,7 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
 
   pthread_mutex_lock(&folder->mutex);
 
+again:
   if (folder->pstFileListFirst) {
     RKADK_STR_FILE *tmp = folder->pstFileListFirst;
     if (!strcmp(tmp->filename, filename)) {
@@ -397,6 +431,7 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
       if (folder->pstFileListFirst == NULL) {
         folder->pstFileListLast = NULL;
       }
+      goto again;
     }
 
     while (tmp) {
@@ -404,8 +439,10 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
       totalSize += tmp->stSize;
       totalSpace += tmp->stSpace;
       s32FileNum++;
-      if (next == NULL)
+      if (next == NULL) {
+        folder->pstFileListLast = tmp;
         break;
+      }
       if (!strcmp(next->filename, filename)) {
         tmp->next = next->next;
         free(next);
@@ -415,7 +452,6 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
       }
       tmp = next;
     }
-    folder->pstFileListLast = tmp;
   }
   folder->s32FileNum = s32FileNum;
   folder->totalSize = totalSize;
@@ -636,8 +672,10 @@ static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
               if (lstat(d_name, &statbuf)) {
                 RKADK_LOGE("lstat[%s](IN_MOVED_TO) failed", d_name);
               } else {
-                if (RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
-                                              event->name, &statbuf))
+                if ((RKADK_STORAGE_FileListCheck(&pHandle->stDevSta.pstFolder[j],
+                                              event->name, &statbuf) == 0) &&
+                    RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
+                                                event->name, &statbuf))
                   RKADK_LOGE("FileListAdd failed");
               }
             }
@@ -655,8 +693,10 @@ static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
               if (lstat(d_name, &statbuf)) {
                 RKADK_LOGE("lstat[%s](IN_CLOSE_WRITE) failed", d_name);
               } else {
-                if (RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
-                                              event->name, &statbuf))
+                if ((RKADK_STORAGE_FileListCheck(&pHandle->stDevSta.pstFolder[j],
+                                              event->name, &statbuf) == 0) &&
+                    RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
+                                                event->name, &statbuf))
                   RKADK_LOGE("FileListAdd failed");
               }
             }
@@ -716,7 +756,7 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
   }
 
   if (RKADK_STORAGE_RKFSCK(pHandle, &devAttr) == RKFSCK_ID_ERR) {
-      RKADK_LOGE("RKFSCK_ID_ERR");
+    RKADK_LOGE("RKFSCK_ID_ERR");
     if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED)
       pHandle->stDevSta.s32MountStatus = DISK_FORMAT_ERR;
     goto file_scan_out;
