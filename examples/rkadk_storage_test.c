@@ -129,7 +129,7 @@ RKADK_S32 CreatFileTest(RKADK_MW_PTR *ppHandle) {
     RKADK_LOGD("sync start");
     sync();
     RKADK_LOGD("sync end");
-    RKADK_STORAGE_GetSdcardSize(ppHandle, &totalSize, &freeSize);
+    RKADK_STORAGE_GetCapacity(ppHandle, &totalSize, &freeSize);
     RKADK_LOGI("sdcard totalSize: %d, freeSize: %d", totalSize, freeSize);
 
     if (RKADK_STORAGE_GetMountStatus(*ppHandle) == DISK_UNMOUNTED)

@@ -1550,7 +1550,7 @@ RKADK_MOUNT_STATUS RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle) {
   return pstHandle->stDevSta.s32MountStatus;
 }
 
-RKADK_S32 RKADK_STORAGE_GetSdcardSize(RKADK_MW_PTR *ppHandle,
+RKADK_S32 RKADK_STORAGE_GetCapacity(RKADK_MW_PTR *ppHandle,
                                       RKADK_S32 *totalSize,
                                       RKADK_S32 *freeSize) {
   RKADK_STORAGE_HANDLE *pstHandle = NULL;

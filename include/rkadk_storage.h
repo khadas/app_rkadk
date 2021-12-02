@@ -94,7 +94,7 @@ RKADK_STR_DEV_ATTR RKADK_STORAGE_GetDevAttr(RKADK_MW_PTR pHandle);
 
 RKADK_MOUNT_STATUS RKADK_STORAGE_GetMountStatus(RKADK_MW_PTR pHandle);
 
-RKADK_S32 RKADK_STORAGE_GetSdcardSize(RKADK_MW_PTR *ppHandle,
+RKADK_S32 RKADK_STORAGE_GetCapacity(RKADK_MW_PTR *ppHandle,
                                       RKADK_S32 *totalSize,
                                       RKADK_S32 *freeSize);
 
