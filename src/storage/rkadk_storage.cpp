@@ -621,6 +621,63 @@ static RKADK_S32 RKADK_STORAGE_FileListLoad(RKADK_STR_FOLDER *pstFolder,
   return 0;
 }
 
+static RKADK_S32 RKADK_STORAGE_Repair(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_DEV_ATTR *pdevAttr)
+{
+  int i;
+  int j;
+  RKADK_S32 ret = 0;
+  RKADK_CHAR file[3 * RKADK_MAX_FILE_PATH_LEN];
+
+  for (i = 0; i < pdevAttr->s32FolderNum; i++) {
+    RKADK_STR_FOLDER *folder = &pHandle->stDevSta.pstFolder[i];
+    RKADK_STR_FILE *current = NULL;
+    RKADK_STR_FILE *next = NULL;
+
+    pthread_mutex_lock(&folder->mutex);
+    current = folder->pstFileListFirst;
+    if (current) {
+      snprintf(file, 3 * RKADK_MAX_FILE_PATH_LEN, "%s%s%s", pdevAttr->cMountPath,
+              pdevAttr->pstFolderAttr[i].cFolderPath,
+              current->filename);
+      if ((current->stSize == 0) || (repair_mp4(file) == REPA_FAIL)) {
+        RKADK_LOGE("Delete %s file. %lld", file, current->stSize);
+        if (remove(file))
+          RKADK_LOGE("Delete %s file error.", file);
+        folder->pstFileListFirst = current->next;
+        free(current);
+        if (folder->pstFileListFirst == NULL)
+          folder->pstFileListLast = NULL;
+        else if (folder->pstFileListFirst->next == NULL)
+          folder->pstFileListLast = folder->pstFileListFirst;
+        folder->s32FileNum--;
+      }
+    }
+    current = folder->pstFileListFirst;
+
+    for (j = 0; j < 8 && current && current->next; j++) {
+      snprintf(file, 3 * RKADK_MAX_FILE_PATH_LEN, "%s%s%s", pdevAttr->cMountPath,
+              pdevAttr->pstFolderAttr[i].cFolderPath,
+              current->next->filename);
+      if ((current->next->stSize == 0) || (repair_mp4(file) == REPA_FAIL)) {
+        RKADK_LOGE("Delete %s file. %lld", file, current->next->stSize);
+        if (remove(file))
+          RKADK_LOGE("Delete %s file error.", file);
+        next = current->next;
+        current->next = next->next;
+        free(next);
+        if (current->next == NULL)
+          folder->pstFileListLast = current;
+        folder->s32FileNum--;
+      }
+      current = current->next;
+    }
+    pthread_mutex_unlock(&folder->mutex);
+  }
+  sync();
+
+  return ret;
+}
+
 static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
   RKADK_STORAGE_HANDLE *pHandle = (RKADK_STORAGE_HANDLE *)arg;
   RKADK_S32 fd;
@@ -693,11 +750,15 @@ static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
               if (lstat(d_name, &statbuf)) {
                 RKADK_LOGE("lstat[%s](IN_CLOSE_WRITE) failed", d_name);
               } else {
-                if ((RKADK_STORAGE_FileListCheck(&pHandle->stDevSta.pstFolder[j],
+                if (statbuf.st_size == 0) {
+                  if (remove(d_name))
+                    RKADK_LOGE("Delete %s file error.", d_name);
+                } else if ((RKADK_STORAGE_FileListCheck(&pHandle->stDevSta.pstFolder[j],
                                               event->name, &statbuf) == 0) &&
-                    RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
-                                                event->name, &statbuf))
+                            RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
+                                              event->name, &statbuf)) {
                   RKADK_LOGE("FileListAdd failed");
+                }
               }
             }
           }
@@ -762,6 +823,8 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
     goto file_scan_out;
   }
 
+  RKADK_STORAGE_Repair(pHandle, &devAttr);
+
   if (pHandle->stDevSta.s32MountStatus == DISK_UNMOUNTED)
     goto file_scan_out;
   else
@@ -808,8 +871,14 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
               RKADK_LOGI("Delete file:%s", file);
               pthread_mutex_unlock(&pHandle->stDevSta.pstFolder[i].mutex);
 
-              if (remove(file))
+              if (remove(file)) {
+                RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
+                snprintf(filename, RKADK_MAX_FILE_PATH_LEN, "%s",
+                    pHandle->stDevSta.pstFolder[i].pstFileListLast->filename);
+                RKADK_STORAGE_FileListDel(&pHandle->stDevSta.pstFolder[i],
+                                            filename);
                 RKADK_LOGE("Delete %s file error.", file);
+              }
               usleep(100);
               cnt = 51;
               continue;
@@ -855,8 +924,14 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
                   RKADK_LOGI("Delete file:%s", file);
                   pthread_mutex_unlock(&pHandle->stDevSta.pstFolder[i].mutex);
 
-                  if (remove(file))
+                  if (remove(file)) {
+                    RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
+                    snprintf(filename, RKADK_MAX_FILE_PATH_LEN, "%s",
+                        pHandle->stDevSta.pstFolder[i].pstFileListLast->filename);
+                    RKADK_STORAGE_FileListDel(&pHandle->stDevSta.pstFolder[i],
+                                            filename);
                     RKADK_LOGE("Delete %s file error.", file);
+                  }
                   usleep(100);
                   cnt = 51;
                   continue;
@@ -916,7 +991,11 @@ static RKADK_S32 RKADK_STORAGE_RKFSCK(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
     para.folder[i].userdata = &pHandle->stDevSta.pstFolder[i];
     para.folder[i].cb = &cb;
   }
+
+  umount2(pHandle->stDevAttr.cMountPath, MNT_DETACH);
   ret = rkfsmk_fat_check(pHandle->stDevSta.cDevPath, &para);
+  sync();
+  mount(pHandle->stDevAttr.cDevPath, pHandle->stDevAttr.cMountPath, "vfat", MS_NOATIME | MS_NOSUID, NULL);
 
   return ret;
 }
@@ -993,6 +1072,7 @@ static RKADK_S32 RKADK_STORAGE_DevRemove(RKADK_CHAR *dev,
         RKADK_LOGE("FileScanThread join failed.");
       pHandle->stDevSta.fileScanTid = 0;
     }
+    umount2(pHandle->stDevAttr.cMountPath, MNT_DETACH);
   }
 
   return 0;
@@ -1373,6 +1453,7 @@ static RKADK_S32 RKADK_STORAGE_ParameterInit(RKADK_STORAGE_HANDLE *pstHandle,
 
   RKADK_LOGD("Set default device attributes.");
   sprintf(pstHandle->stDevAttr.cMountPath, "/mnt/sdcard");
+  sprintf(pstHandle->stDevAttr.cDevPath, "/dev/mmcblk2p1");
   pstHandle->stDevAttr.s32AutoDel = 1;
   pstHandle->stDevAttr.s32FreeSizeDelMin = 500;
   pstHandle->stDevAttr.s32FreeSizeDelMax = 1000;
@@ -1689,21 +1770,18 @@ RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
     if (!pstHandle->stDevAttr.cDevPath[0])
       return -1;
 
-    if (pstHandle->stDevSta.s32MountStatus != DISK_NOT_FORMATTED) {
+    if (pstHandle->stDevSta.s32MountStatus != DISK_NOT_FORMATTED)
       RKADK_STORAGE_DevRemove(pstHandle->stDevAttr.cDevPath, pstHandle);
-      ret = umount(pstHandle->stDevAttr.cMountPath);
-    }
 
-    if (ret == 0) {
-      ret = rkfsmk_format_ex(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cVolume, pstHandle->stDevAttr.cFormatId);
-      if (!ret)
-        err = -1;
-      ret = mount(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cMountPath, cFormat, MS_NOATIME | MS_NOSUID, NULL);
-      if (ret == 0)
-        RKADK_STORAGE_DevAdd(pstHandle->stDevAttr.cDevPath, pstHandle);
-      else
-        err = -1;
-    }
+    ret = rkfsmk_format_ex(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cVolume, pstHandle->stDevAttr.cFormatId);
+    if (!ret)
+      err = -1;
+    ret = mount(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cMountPath, cFormat, MS_NOATIME | MS_NOSUID, NULL);
+    if (ret == 0)
+      RKADK_STORAGE_DevAdd(pstHandle->stDevAttr.cDevPath, pstHandle);
+    else
+      err = -1;
   }
+
   return err;
 }
