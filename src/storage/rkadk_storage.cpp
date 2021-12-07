@@ -42,6 +42,7 @@
 #define MAX_TYPE_NMSG_LEN 32
 #define MAX_ATTR_LEN 256
 #define MAX_STRLINE_LEN 1024
+#define REPAIR_FILE_NUM 8
 
 #define JSON_KEY_FOLDER_NAME "FolderName"
 #define JSON_KEY_FILE_NUMBER "FileNumber"
@@ -634,8 +635,11 @@ static RKADK_S32 RKADK_STORAGE_Repair(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
     RKADK_STR_FILE *next = NULL;
 
     pthread_mutex_lock(&folder->mutex);
+    j = 0;
+again:
     current = folder->pstFileListFirst;
-    if (current) {
+    if ((current) && (j < REPAIR_FILE_NUM)) {
+      j++;
       snprintf(file, 3 * RKADK_MAX_FILE_PATH_LEN, "%s%s%s", pdevAttr->cMountPath,
               pdevAttr->pstFolderAttr[i].cFolderPath,
               current->filename);
@@ -650,11 +654,12 @@ static RKADK_S32 RKADK_STORAGE_Repair(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
         else if (folder->pstFileListFirst->next == NULL)
           folder->pstFileListLast = folder->pstFileListFirst;
         folder->s32FileNum--;
+        goto again;
       }
     }
     current = folder->pstFileListFirst;
 
-    for (j = 0; j < 8 && current && current->next; j++) {
+    for (; j < REPAIR_FILE_NUM && current && current->next; j++) {
       snprintf(file, 3 * RKADK_MAX_FILE_PATH_LEN, "%s%s%s", pdevAttr->cMountPath,
               pdevAttr->pstFolderAttr[i].cFolderPath,
               current->next->filename);
