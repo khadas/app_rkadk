@@ -306,6 +306,22 @@ int RKADK_VI_ISP_GET_FecAttrib(RKADK_U32 u32CamId, rk_aiq_fec_attrib_t *attr) {
   return ret;
 }
 
+int RKADK_VI_ISP_GET_AeExpResInfo(RKADK_U32 u32CamId,
+                                  Uapi_ExpQueryInfo_t *pstExpInfo) {
+  int ret = 0;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstExpInfo, RKADK_FAILURE);
+  RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
+
+  pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
+  memset(pstExpInfo, 0, sizeof(Uapi_ExpQueryInfo_t));
+  ret = rk_aiq_user_api_ae_queryExpResInfo(gstIspHandle[u32CamId].pstAiqCtx,
+                                           pstExpInfo);
+  pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
+  return ret;
+}
+
 int RKADK_VI_ISP_DumpExpInfo(RKADK_U32 u32CamId,
                              rk_aiq_working_mode_t WDRMode) {
   int ret = 0;
@@ -327,8 +343,9 @@ int RKADK_VI_ISP_DumpExpInfo(RKADK_U32 u32CamId,
             stExpInfo.CurExpInfo.LinearExp.exp_real_params.analog_gain,
             stExpInfo.MeanLuma, stCCT.CCT);
   } else {
-    sprintf(aStr, "S:%.0f-%.1f M:%.0f-%.1f L:%.0f-%.1f SLM:%.1f MLM:%.1f "
-                  "LLM:%.1f CT:%.1f",
+    sprintf(aStr,
+            "S:%.0f-%.1f M:%.0f-%.1f L:%.0f-%.1f SLM:%.1f MLM:%.1f "
+            "LLM:%.1f CT:%.1f",
             stExpInfo.CurExpInfo.HdrExp[0].exp_real_params.integration_time *
                 1000 * 1000,
             stExpInfo.CurExpInfo.HdrExp[0].exp_real_params.analog_gain,

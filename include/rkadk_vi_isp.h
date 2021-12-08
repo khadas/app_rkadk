@@ -33,6 +33,8 @@ int RKADK_VI_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile);
 int RKADK_VI_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable);
 int RKADK_VI_ISP_SET_FecBypass(RKADK_U32 u32CamId, bool bypass);
 int RKADK_VI_ISP_GET_FecAttrib(RKADK_U32 u32CamId, rk_aiq_fec_attrib_t *attr);
+int RKADK_VI_ISP_GET_AeExpResInfo(RKADK_U32 u32CamId,
+                                  Uapi_ExpQueryInfo_t *pstExpInfo);
 int RKADK_VI_ISP_DumpExpInfo(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode);
 int RKADK_VI_ISP_SET_FrameRate(RKADK_U32 u32CamId, unsigned int uFps);
 int RKADK_VI_ISP_EnableLdch(RKADK_U32 u32CamId, bool on, unsigned int level);
