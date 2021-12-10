@@ -272,6 +272,23 @@ static RKADK_S32 RKADK_VO_EnableChnn(VO_LAYER voLayer,
     stChnAttr.stRect.u32Height = stFrmInfo.stVoAttr.stChnRect.u32Height;
   }
 
+  stChnAttr.bMirror = (RK_BOOL)stFrmInfo.stVoAttr.bMirror;
+  stChnAttr.bFlip = (RK_BOOL)stFrmInfo.stVoAttr.bFlip;
+  switch (stFrmInfo.stVoAttr.u32Rotation) {
+  case 90:
+    stChnAttr.enRotation = ROTATION_90;
+    break;
+  case 180:
+    stChnAttr.enRotation = ROTATION_180;
+    break;
+  case 270:
+    stChnAttr.enRotation = ROTATION_270;
+    break;
+  default:
+    stChnAttr.enRotation = ROTATION_0;
+    break;
+  }
+
   // set priority
   stChnAttr.u32Priority = 1;
   ret = RK_MPI_VO_SetChnAttr(voLayer, stFrmInfo.u32ChnnNum, &stChnAttr);

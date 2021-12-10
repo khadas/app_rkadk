@@ -196,7 +196,10 @@ typedef struct {
 } RKADK_VO_SYNC_INFO_S;
 
 typedef struct {
-  RKADK_RECT_S stChnRect;
+  RKADK_BOOL bMirror;     /* RW; Mirror enable. */
+  RKADK_BOOL bFlip;       /* RW; Flip enable. */
+  RKADK_U32 u32Rotation;  /* RW; rotation: 0, 90, 180, 270 */
+  RKADK_RECT_S stChnRect; /* RW; Rectangle of video output channel */
 } RKADK_PLAYER_VO_ATTR_S;
 
 /** video output frameinfo */

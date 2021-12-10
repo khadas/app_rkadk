@@ -30,15 +30,21 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:hv";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
-  printf("\t%s [-i xxx.wav] [-v] [-x 0] [-y 0]\n", name);
+  printf("\t%s [-i xxx.mp4] [-x 180] [-y 320] [-W 360] [-H 640] [-r 90] "
+         "[-m] [-f] [-v]\n", name);
   printf("\t-i: input url, Default: /etc/bsa_file/8k8bpsMono.wav\n");
+  printf("\t-x: display x coordinate, Default: 0\n");
+  printf("\t-y: display y coordinate, Default: 0\n");
+  printf("\t-W: display width, Default: Physical screen width\n");
+  printf("\t-H: display height, Default: Physical screen height\n");
+  printf("\t-r: rotation, option: 0, 90, 180, 270, Default: 0\n");
+  printf("\t-m: mirror enable, Default: disable\n");
+  printf("\t-f: flip enable, Default: disable\n");
   printf("\t-v: video enable, Default: disable\n");
-  printf("\t-x: display position X coordinate, Default: 0\n");
-  printf("\t-y: display position y coordinate, Default: 0\n");
   printf("\t-h: help\n");
 }
 
@@ -96,12 +102,6 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
 
   memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAMEINFO_S));
 
-  //set video display rectangle, default full screen
-  //pstFrmInfo->stVoAttr.stChnRect.u32X = 180;
-  //pstFrmInfo->stVoAttr.stChnRect.u32Y = 320;
-  //pstFrmInfo->stVoAttr.stChnRect.u32Width = 360;
-  //pstFrmInfo->stVoAttr.stChnRect.u32Height = 640;
-
   pstFrmInfo->u32VoLayerMode = 1;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
@@ -145,14 +145,29 @@ int main(int argc, char *argv[]) {
     case 'i':
       file = optarg;
       break;
-    case 'v':
-      bVideoEnable = true;
-      break;
     case 'x':
-      stFrmInfo.u32FrmInfoS32x = atoi(optarg);
+      stFrmInfo.stVoAttr.stChnRect.u32X = atoi(optarg);
       break;
     case 'y':
-      stFrmInfo.u32FrmInfoS32y = atoi(optarg);
+      stFrmInfo.stVoAttr.stChnRect.u32Y = atoi(optarg);
+      break;
+    case 'W':
+      stFrmInfo.stVoAttr.stChnRect.u32Width = atoi(optarg);
+      break;
+    case 'H':
+      stFrmInfo.stVoAttr.stChnRect.u32Height = atoi(optarg);
+      break;
+    case 'r':
+      stFrmInfo.stVoAttr.u32Rotation = atoi(optarg);
+      break;
+    case 'm':
+      stFrmInfo.stVoAttr.bMirror = true;
+      break;
+    case 'f':
+      stFrmInfo.stVoAttr.bFlip = true;
+      break;
+    case 'v':
+      bVideoEnable = true;
       break;
     case 'h':
     default:
@@ -164,6 +179,14 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#play file: %s", file);
+  RKADK_LOGD("#video display rect[%d, %d, %d, %d]",
+             stFrmInfo.stVoAttr.stChnRect.u32X,
+             stFrmInfo.stVoAttr.stChnRect.u32Y,
+             stFrmInfo.stVoAttr.stChnRect.u32Width,
+             stFrmInfo.stVoAttr.stChnRect.u32Height);
+  RKADK_LOGD("#Rotation: %d", stFrmInfo.stVoAttr.u32Rotation);
+  RKADK_LOGD("#mirror: %d", stFrmInfo.stVoAttr.bMirror);
+  RKADK_LOGD("#flip: %d", stFrmInfo.stVoAttr.bFlip);
 
   signal(SIGINT, sigterm_handler);
 
