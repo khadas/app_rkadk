@@ -94,23 +94,21 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
 void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   RKADK_CHECK_POINTER_N(pstFrmInfo);
 
-  pstFrmInfo->u32FrmInfoS32x = 0;
-  pstFrmInfo->u32FrmInfoS32y = 0;
-  pstFrmInfo->u32DispWidth = 0;
-  pstFrmInfo->u32DispHeight = 0;
-  pstFrmInfo->u32ImgWidth = 0;
-  pstFrmInfo->u32ImgHeight = 0;
+  memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAMEINFO_S));
+
+  //set video display rectangle, default full screen
+  //pstFrmInfo->stVoAttr.stChnRect.u32X = 180;
+  //pstFrmInfo->stVoAttr.stChnRect.u32Y = 320;
+  //pstFrmInfo->stVoAttr.stChnRect.u32Width = 360;
+  //pstFrmInfo->stVoAttr.stChnRect.u32Height = 640;
+
   pstFrmInfo->u32VoLayerMode = 1;
-  pstFrmInfo->u32VoFormat = VO_FORMAT_NV12;
+  pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
   pstFrmInfo->u32DispFrmRt = 30;
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
-  pstFrmInfo->u32BorderTopWidth = 0;
-  pstFrmInfo->u32BorderBottomWidth = 0;
-  pstFrmInfo->u32BorderLeftWidth = 0;
-  pstFrmInfo->u32BorderRightWidth = 0;
   pstFrmInfo->u32BorderColor = 0x0000FA;
   pstFrmInfo->u32ChnnNum = 1;
   pstFrmInfo->stSyncInfo.bIdv = RKADK_TRUE;

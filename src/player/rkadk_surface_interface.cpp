@@ -182,65 +182,68 @@ static RKADK_S32 RKADK_VO_SetRtSyncInfo(VO_SYNC_INFO_S *pstSyncInfo,
   return 0;
 }
 
-static RKADK_S32 RKADK_VO_SetDispRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
-                                      VIDEO_FRAMEINFO_S stFrmInfo) {
-  RKADK_CHECK_POINTER(pstLayerAttr, RKADK_FAILURE);
-
-  if (0 < stFrmInfo.u32FrmInfoS32x)
-    pstLayerAttr->stDispRect.s32X = stFrmInfo.u32FrmInfoS32x;
-  else
-    RKADK_LOGD("positive x less than zero, use default value");
-
-  if (0 < stFrmInfo.u32FrmInfoS32y)
-    pstLayerAttr->stDispRect.s32Y = stFrmInfo.u32FrmInfoS32y;
-  else
-    RKADK_LOGD("positive y less than zero, use default value");
-
-  if (0 < stFrmInfo.u32DispWidth &&
-      stFrmInfo.u32DispWidth <= stFrmInfo.u32ImgWidth)
-    pstLayerAttr->stDispRect.u32Width = stFrmInfo.u32DispWidth;
-  else
-    RKADK_LOGD("DispWidth use default value");
-
-  if (0 < stFrmInfo.u32DispHeight &&
-      stFrmInfo.u32DispHeight <= stFrmInfo.u32ImgHeight)
-    pstLayerAttr->stDispRect.u32Height = stFrmInfo.u32DispHeight;
-  else
-    RKADK_LOGD("DispHeight use default value");
-
-  if (0 < stFrmInfo.u32ImgWidth)
-    pstLayerAttr->stImageSize.u32Width = stFrmInfo.u32ImgWidth;
-  else
-    RKADK_LOGD("ImgWidth, use default value");
-
-  if (0 < stFrmInfo.u32ImgHeight)
-    pstLayerAttr->stImageSize.u32Height = stFrmInfo.u32ImgHeight;
-  else
-    RKADK_LOGD("ImgHeight use default value");
-
-  return 0;
-}
-
-static RKADK_S32
-RKADK_VO_SetDefaultDispRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
-                             VO_DEV voDev) {
+static RKADK_S32 RKADK_VO_SetLayerRect(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
+                                       VO_DEV voDev,
+                                       VIDEO_FRAMEINFO_S stFrmInfo) {
   int ret;
   VO_PUB_ATTR_S pstAttr;
-  rt_memset(&pstAttr, 0, sizeof(VO_SINK_CAPABILITY_S));
 
-  RKADK_CHECK_POINTER(pstLayerAttr, RK_FAILURE);
+  RKADK_CHECK_POINTER(pstLayerAttr, RKADK_FAILURE);
+
+  rt_memset(&pstAttr, 0, sizeof(VO_PUB_ATTR_S));
   ret = RK_MPI_VO_GetPubAttr(voDev, &pstAttr);
   if (ret) {
-    RKADK_LOGD("GetSinkCapability failed");
+    RKADK_LOGD("RK_MPI_VO_GetPubAttr failed[%d]", ret);
     return ret;
   }
 
-  pstLayerAttr->stDispRect.u32Width = pstAttr.stSyncInfo.u16Hact;
-  pstLayerAttr->stDispRect.u32Height = pstAttr.stSyncInfo.u16Vact;
-  pstLayerAttr->stImageSize.u32Width = pstAttr.stSyncInfo.u16Hact;
-  pstLayerAttr->stImageSize.u32Height = pstAttr.stSyncInfo.u16Vact;
+  if (0 < stFrmInfo.u32FrmInfoS32x) {
+    pstLayerAttr->stDispRect.s32X = stFrmInfo.u32FrmInfoS32x;
+  } else {
+    RKADK_LOGD("Layer stDispRect x uses default value[0]");
+    pstLayerAttr->stDispRect.s32X = 0;
+  }
 
-  return ret;
+  if (0 < stFrmInfo.u32FrmInfoS32y) {
+    pstLayerAttr->stDispRect.s32Y = stFrmInfo.u32FrmInfoS32y;
+  } else {
+    RKADK_LOGD("Layer stDispRect y uses default value[0]");
+    pstLayerAttr->stDispRect.s32Y = 0;
+  }
+
+  if (0 < stFrmInfo.u32DispWidth) {
+    pstLayerAttr->stDispRect.u32Width = stFrmInfo.u32DispWidth;
+  } else {
+    pstLayerAttr->stDispRect.u32Width = pstAttr.stSyncInfo.u16Hact;
+    RKADK_LOGD("Layer stDispRect w uses default value[%d]",
+               pstLayerAttr->stDispRect.u32Width);
+  }
+
+  if (0 < stFrmInfo.u32DispHeight) {
+    pstLayerAttr->stDispRect.u32Height = stFrmInfo.u32DispHeight;
+  } else {
+    pstLayerAttr->stDispRect.u32Height = pstAttr.stSyncInfo.u16Vact;
+    RKADK_LOGD("Layer stDispRect h uses default value[%d]",
+               pstLayerAttr->stDispRect.u32Height);
+  }
+
+  if (0 < stFrmInfo.u32ImgWidth) {
+    pstLayerAttr->stImageSize.u32Width = stFrmInfo.u32ImgWidth;
+  } else {
+    pstLayerAttr->stImageSize.u32Width = pstAttr.stSyncInfo.u16Hact;
+    RKADK_LOGD("Layer stImageSize w uses default value[%d]",
+               pstLayerAttr->stImageSize.u32Width);
+  }
+
+  if (0 < stFrmInfo.u32ImgHeight) {
+    pstLayerAttr->stImageSize.u32Height = stFrmInfo.u32ImgHeight;
+  } else {
+    pstLayerAttr->stImageSize.u32Height = pstAttr.stSyncInfo.u16Vact;
+    RKADK_LOGD("Layer stImageSize h uses default value[%d]",
+               pstLayerAttr->stImageSize.u32Height);
+  }
+
+  return 0;
 }
 
 static RKADK_S32 RKADK_VO_EnableChnn(VO_LAYER voLayer,
@@ -255,10 +258,19 @@ static RKADK_S32 RKADK_VO_EnableChnn(VO_LAYER voLayer,
   rt_memset(&stChnParam, 0, sizeof(VO_CHN_PARAM_S));
   rt_memset(&stBorder, 0, sizeof(VO_BORDER_S));
 
-  stChnAttr.stRect.s32X = pstLayerAttr->stDispRect.s32X;
-  stChnAttr.stRect.s32Y = pstLayerAttr->stDispRect.s32Y;
-  stChnAttr.stRect.u32Width = pstLayerAttr->stDispRect.u32Width;
-  stChnAttr.stRect.u32Height = pstLayerAttr->stDispRect.u32Height;
+  if (!stFrmInfo.stVoAttr.stChnRect.u32Width ||
+      !stFrmInfo.stVoAttr.stChnRect.u32Height) {
+    RKADK_LOGD("VO channel rectangle uses layer stDispRect");
+    stChnAttr.stRect.s32X = pstLayerAttr->stDispRect.s32X;
+    stChnAttr.stRect.s32Y = pstLayerAttr->stDispRect.s32Y;
+    stChnAttr.stRect.u32Width = pstLayerAttr->stDispRect.u32Width;
+    stChnAttr.stRect.u32Height = pstLayerAttr->stDispRect.u32Height;
+  } else {
+    stChnAttr.stRect.s32X = stFrmInfo.stVoAttr.stChnRect.u32X;
+    stChnAttr.stRect.s32Y = stFrmInfo.stVoAttr.stChnRect.u32Y;
+    stChnAttr.stRect.u32Width = stFrmInfo.stVoAttr.stChnRect.u32Width;
+    stChnAttr.stRect.u32Height = stFrmInfo.stVoAttr.stChnRect.u32Height;
+  }
 
   // set priority
   stChnAttr.u32Priority = 1;
@@ -639,17 +651,11 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
     /* Enable Layer */
     stLayerAttr.enPixFormat = RKADK_FmtToRtfmt(stFrmInfo.u32VoFormat);
 
-    if (VO_OUTPUT_DEFAULT == stVoPubAttr.enIntfSync) {
-      ret = RKADK_VO_SetDefaultDispRect(&stLayerAttr, stFrmInfo.u32VoDev);
-      RKADK_LOGD("width = %u, height = %u", stLayerAttr.stDispRect.u32Width,
-                 stLayerAttr.stDispRect.u32Height);
-      if (ret) {
-        RKADK_LOGD("SetDispRect_Default failed(%d)", ret);
-        goto failed;
-      }
+    ret = RKADK_VO_SetLayerRect(&stLayerAttr, stFrmInfo.u32VoDev, stFrmInfo);
+    if (ret) {
+      RKADK_LOGD("RKADK_VO_SetLayerRect failed(%d)", ret);
+      goto failed;
     }
-
-    RKADK_VO_SetDispRect(&stLayerAttr, stFrmInfo);
 
     stLayerAttr.u32DispFrmRt = stFrmInfo.u32DispFrmRt;
     ret = RKADK_VO_EnableLayer(voLayer, &stLayerAttr);

@@ -195,6 +195,10 @@ typedef struct {
   RKADK_U16 u16PixClock;  /* RW; pixel clock, the unit is KHZ */
 } RKADK_VO_SYNC_INFO_S;
 
+typedef struct {
+  RKADK_RECT_S stChnRect;
+} RKADK_PLAYER_VO_ATTR_S;
+
 /** video output frameinfo */
 typedef struct {
   RKADK_U32 u32FrmInfoS32x;
@@ -217,6 +221,7 @@ typedef struct {
   RKADK_U32 u32DispFrmRt;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;
+  RKADK_PLAYER_VO_ATTR_S stVoAttr;
 } RKADK_PLAYER_FRAMEINFO_S;
 
 /**
