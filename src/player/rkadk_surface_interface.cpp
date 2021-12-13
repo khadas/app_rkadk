@@ -594,6 +594,7 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
     RKADK_LOGE("not find height in meta");
     return -1;
   }
+
   stVFrameInfo.stVFrame.enPixelFormat = RK_FMT_YUV420SP;
 
   switch (stFrmInfo.u32VoDev) {
@@ -699,7 +700,7 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
 
   ret = RK_MPI_VO_SendFrame(voLayer, stFrmInfo.u32ChnnNum, &stVFrameInfo, 0);
   if (ret) {
-    RKADK_LOGE("RK_MPI_VO_SendFrame failed(%d)", ret);
+    RKADK_LOGW("RK_MPI_VO_SendFrame failed(%d)", ret);
     return ret;
   }
 
@@ -715,8 +716,6 @@ failed:
 void RKADKSurfaceInterface::replay() {
   VO_LAYER voLayer;
 
-  ((RTMediaBuffer *)pCbMblk)->addRefs();
-
   switch (stFrmInfo.u32VoDev) {
   case VO_DEV_HD0:
     voLayer = VOP_LAYER_CLUSTER_0;
@@ -730,7 +729,6 @@ void RKADKSurfaceInterface::replay() {
   }
 
   RK_MPI_VO_ClearChnBuffer(voLayer, stFrmInfo.u32ChnnNum, RK_TRUE);
-  ((RTMediaBuffer *)pCbMblk)->signalBufferRelease(RKADK_TRUE);
 }
 
 #endif // ROCKIT
