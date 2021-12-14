@@ -596,6 +596,7 @@ INT32 RKADKSurfaceInterface::queueBuffer(void *buf, INT32 fence) {
   }
 
   stVFrameInfo.stVFrame.enPixelFormat = RK_FMT_YUV420SP;
+  stVFrameInfo.stVFrame.enCompressMode = COMPRESS_MODE_NONE;
 
   switch (stFrmInfo.u32VoDev) {
   case VO_DEV_HD0:
