@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 /* version */
-#define RKADK_PARAM_VERSION "1.2.0"
+#define RKADK_PARAM_VERSION "1.3.1"
 
 #define RKADK_BUFFER_LEN 64
 #define RKADK_PIX_FMT_LEN 10
@@ -46,7 +46,7 @@ extern "C" {
 #define AUDIO_CHANNEL 1
 #define AUDIO_BIT_REAT 64000
 /* mp2: 1152, mp3: 1024 */
-#define AUDIO_FRAME_COUNT  1152
+#define AUDIO_FRAME_COUNT 1152
 #define AUDIO_SAMPLE_FORMAT RK_SAMPLE_FMT_S16
 #define AI_DEVICE_NAME "default"
 
@@ -210,7 +210,7 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
   char pix_fmt[RKADK_PIX_FMT_LEN]; /* options: NV12/NV16/YUYV/FBC0/FBC2 */
 
   /* options: NONE/RECORD_MAIN/RECORD_SUB/PREVIEW/PHOTO/LIVE/DISP */
-  char module [RKADK_BUFFER_LEN];
+  char module[RKADK_BUFFER_LEN];
 } RKADK_PARAM_VI_CFG_S;
 
 typedef struct tagRKADK_PARAM_COMM_CFG_S {
@@ -227,6 +227,7 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
+  bool used_isp;
   RKADK_U32 max_width;
   RKADK_U32 max_height;
   RKADK_U32 framerate;
@@ -276,6 +277,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 profile;
   RKADK_CODEC_TYPE_E codec_type;
   RKADK_U32 venc_chn;
+  RKADK_U32 rga_chn;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
   RKADK_PARAM_VENC_PARAM_S venc_param;
 } RKADK_PARAM_VENC_ATTR_S;
@@ -313,6 +315,7 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 image_height;
   RKADK_U32 snap_num;
   RKADK_U32 venc_chn;
+  RKADK_U32 rga_chn;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_PHOTO_CFG_S;
 
@@ -383,26 +386,26 @@ RKADK_S32 RKADK_PARAM_Init(char *globalSetting, char **sesnorSettingArrary);
 RKADK_S32 RKADK_PARAM_Deinit(RKADK_VOID);
 
 /**
-* @brief         get cam related Item Values.
-* @param[in]     s32CamID: the specify cam id,valid value range:
-* [0,RKADK_PDT_MEDIA_VCAP_DEV_MAX_CNT]
-* @param[in]     enType: param type
-* @param[in]     pvParam: param value
-* @return 0      success,non-zero error code.
-*/
+ * @brief         get cam related Item Values.
+ * @param[in]     s32CamID: the specify cam id,valid value range:
+ * [0,RKADK_PDT_MEDIA_VCAP_DEV_MAX_CNT]
+ * @param[in]     enType: param type
+ * @param[in]     pvParam: param value
+ * @return 0      success,non-zero error code.
+ */
 RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamID,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   RKADK_VOID *pvParam);
 
 /**
-* @brief         set cam related Item Values.
-* @param[in]     enWorkMode: workmode
-* @param[in]     s32CamID: the specify cam id,valid value range:
-* [0,RKADK_PDT_MEDIA_VCAP_DEV_MAX_CNT]
-* @param[in]     enType: param type
-* @param[in]     pvParam: param value
-* @return        0 success,non-zero error code.
-*/
+ * @brief         set cam related Item Values.
+ * @param[in]     enWorkMode: workmode
+ * @param[in]     s32CamID: the specify cam id,valid value range:
+ * [0,RKADK_PDT_MEDIA_VCAP_DEV_MAX_CNT]
+ * @param[in]     enType: param type
+ * @param[in]     pvParam: param value
+ * @return        0 success,non-zero error code.
+ */
 RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamID,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   const RKADK_VOID *pvParam);

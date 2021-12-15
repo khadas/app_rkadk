@@ -92,11 +92,15 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
 
 static void RKADK_RECORD_SetVideoChn(int index,
                                      RKADK_PARAM_REC_CFG_S *pstRecCfg,
-                                     MPP_CHN_S *pstViChn,
-                                     MPP_CHN_S *pstVencChn) {
+                                     MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
+                                     MPP_CHN_S *pstRgaChn) {
   pstViChn->enModId = RK_ID_VI;
   pstViChn->s32DevId = 0;
   pstViChn->s32ChnId = pstRecCfg->vi_attr[index].u32ViChn;
+
+  pstRgaChn->enModId = RK_ID_RGA;
+  pstRgaChn->s32DevId = 0;
+  pstRgaChn->s32ChnId = pstRecCfg->attribute[index].rga_chn;
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = 0;
@@ -177,10 +181,27 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
   return 0;
 }
 
+static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
+  RKADK_U32 u32SrcWidth = pstRecCfg->vi_attr[index].stChnAttr.u32Width;
+  RKADK_U32 u32SrcHeight = pstRecCfg->vi_attr[index].stChnAttr.u32Height;
+  RKADK_U32 u32DstWidth = pstRecCfg->attribute[index].width;
+  RKADK_U32 u32DstHeight = pstRecCfg->attribute[index].height;
+
+  if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
+    return false;
+  } else {
+    RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
+               u32DstWidth, u32DstHeight);
+    return true;
+  }
+}
+
 static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
   int ret;
+  bool bUseRga = false;
   VENC_CHN_ATTR_S stVencChnAttr;
   VENC_RC_PARAM_S stVencRcParam;
+  RGA_ATTR_S stRgaAttr;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
@@ -204,10 +225,40 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
       return ret;
     }
 
+    // Create RGA
+    bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
+    if (bUseRga) {
+      memset(&stRgaAttr, 0, sizeof(stRgaAttr));
+      stRgaAttr.bEnBufPool = RK_TRUE;
+      stRgaAttr.u16BufPoolCnt = 3;
+      stRgaAttr.stImgIn.imgType = pstRecCfg->vi_attr[i].stChnAttr.enPixFmt;
+      stRgaAttr.stImgIn.u32Width = pstRecCfg->vi_attr[i].stChnAttr.u32Width;
+      stRgaAttr.stImgIn.u32Height = pstRecCfg->vi_attr[i].stChnAttr.u32Height;
+      stRgaAttr.stImgIn.u32HorStride = pstRecCfg->vi_attr[i].stChnAttr.u32Width;
+      stRgaAttr.stImgIn.u32VirStride =
+          pstRecCfg->vi_attr[i].stChnAttr.u32Height;
+      stRgaAttr.stImgOut.imgType = stRgaAttr.stImgIn.imgType;
+      stRgaAttr.stImgOut.u32Width = pstRecCfg->attribute[i].width;
+      stRgaAttr.stImgOut.u32Height = pstRecCfg->attribute[i].height;
+      stRgaAttr.stImgOut.u32HorStride = pstRecCfg->attribute[i].width;
+      stRgaAttr.stImgOut.u32VirStride = pstRecCfg->attribute[i].height;
+      ret = RKADK_MPI_RGA_Init(pstRecCfg->attribute[i].rga_chn, &stRgaAttr);
+      if (ret) {
+        RKADK_LOGE("Init Rga[%d] falied[%d]", pstRecCfg->attribute[i].rga_chn,
+                   ret);
+        RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
+        return ret;
+      }
+    }
+
     // Create VENC
     ret = RKADK_MPI_VENC_Init(pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
+
+      if (bUseRga)
+        RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
+
       RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
@@ -226,6 +277,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
 
 static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
   int ret;
+  bool bUseRga = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
@@ -240,6 +292,15 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
       return ret;
+    }
+
+    bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
+    if (bUseRga) {
+      ret = RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
+      if (ret) {
+        RKADK_LOGE("RKADK_MPI_RGA_DeInit failed[%d]", ret);
+        return ret;
+      }
     }
 
     // Destroy VI
@@ -353,8 +414,8 @@ static int RKADK_RECORD_DestoryAudioChn() {
 static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
                                 RKADK_REC_TYPE_E enRecType) {
   int ret;
-  MPP_CHN_S stSrcChn;
-  MPP_CHN_S stDestChn;
+  bool bUseRga;
+  MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
@@ -369,17 +430,37 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
-      return -1;
+      return ret;
     }
   }
 
-  // Bind VI to VENC
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn);
-    ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
-    if (ret) {
-      RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
-      return -1;
+    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn, &stRgaChn);
+
+    bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
+    if (bUseRga) {
+      // RGA Bind VENC
+      ret = RKADK_MPI_SYS_Bind(&stRgaChn, &stDestChn);
+      if (ret) {
+        RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
+                   stDestChn.s32ChnId, ret);
+        return ret;
+      }
+
+      // VI Bind RGA
+      ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stRgaChn);
+      if (ret) {
+        RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%d]", stSrcChn.s32ChnId,
+                   stRgaChn.s32ChnId, ret);
+        return ret;
+      }
+    } else {
+      // Bind VI to VENC
+      ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
+      if (ret) {
+        RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
+        return ret;
+      }
     }
   }
 
@@ -389,8 +470,8 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
 static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
                                   RKADK_REC_TYPE_E enRecType) {
   int ret;
-  MPP_CHN_S stSrcChn;
-  MPP_CHN_S stDestChn;
+  bool bUseRga = false;
+  MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
@@ -405,17 +486,37 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
-      return -1;
+      return ret;
     }
   }
 
   // UnBind VI to VENC
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn);
-    ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
-    if (ret) {
-      RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
-      return -1;
+    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn, &stRgaChn);
+
+    bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
+    if (bUseRga) {
+      // RGA UnBind VENC
+      ret = RKADK_MPI_SYS_UnBind(&stRgaChn, &stDestChn);
+      if (ret) {
+        RKADK_LOGE("UnBind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
+                   stDestChn.s32ChnId, ret);
+        return ret;
+      }
+
+      // VI UnBind RGA
+      ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stRgaChn);
+      if (ret) {
+        RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed[%d]", stSrcChn.s32ChnId,
+                   stRgaChn.s32ChnId, ret);
+        return ret;
+      }
+    } else {
+      ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
+      if (ret) {
+        RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
+        return ret;
+      }
     }
   }
 

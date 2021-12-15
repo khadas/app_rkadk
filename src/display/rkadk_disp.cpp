@@ -55,8 +55,8 @@ static bool RKADK_DISP_IsUseRga(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
       (u32InWidth != u32OutWidth || u32InHeight != u32OutHeight)) {
     RKADK_LOGD("rotaion: %d", pstDispCfg->rotaion);
     RKADK_LOGD("enInImgType: %d, enOutImgType: %d", enInImgType, enOutImgType);
-    RKADK_LOGD("u32InWidth: %d, u32InHeight: %d", u32InWidth, u32InHeight);
-    RKADK_LOGD("u32OutWidth: %d, u32OutHeight: %d", u32OutWidth, u32OutHeight);
+    RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32InWidth, u32InHeight, u32OutWidth,
+               u32OutHeight);
     return true;
   }
 
@@ -64,7 +64,8 @@ static bool RKADK_DISP_IsUseRga(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
 }
 
 static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
-                                   RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
+                                   RKADK_PARAM_DISP_CFG_S *pstDispCfg,
+                                   bool bUseRga) {
   int ret = 0;
   RGA_ATTR_S stRgaAttr;
   VO_CHN_ATTR_S stVoAttr;
@@ -78,7 +79,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
   }
 
   // Create RGA
-  if (RKADK_DISP_IsUseRga(pstDispCfg)) {
+  if (bUseRga) {
     memset(&stRgaAttr, 0, sizeof(stRgaAttr));
     stRgaAttr.bEnBufPool = (RK_BOOL)pstDispCfg->enable_buf_pool;
     stRgaAttr.u16BufPoolCnt = pstDispCfg->buf_pool_cnt;
@@ -97,9 +98,9 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
     stRgaAttr.stImgOut.u32Height = pstDispCfg->height;
     stRgaAttr.stImgOut.u32HorStride = pstDispCfg->width;
     stRgaAttr.stImgOut.u32VirStride = pstDispCfg->height;
-    ret = RK_MPI_RGA_CreateChn(pstDispCfg->rga_chn, &stRgaAttr);
+    ret = RKADK_MPI_RGA_Init(pstDispCfg->rga_chn, &stRgaAttr);
     if (ret) {
-      RKADK_LOGE("Create rga[%d] falied(%d)", pstDispCfg->rga_chn, ret);
+      RKADK_LOGE("Init rga[%d] falied[%d]", pstDispCfg->rga_chn, ret);
       RKADK_MPI_VI_DeInit(u32CamId, pstDispCfg->vi_attr.u32ViChn);
       return ret;
     }
@@ -122,7 +123,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
   ret = RK_MPI_VO_CreateChn(pstDispCfg->vo_chn, &stVoAttr);
   if (ret) {
     RKADK_LOGE("Create VO[%d] failed(%d)", pstDispCfg->vo_chn, ret);
-    RK_MPI_RGA_DestroyChn(pstDispCfg->rga_chn);
+    RKADK_MPI_RGA_DeInit(pstDispCfg->rga_chn);
     RKADK_MPI_VI_DeInit(u32CamId, pstDispCfg->vi_attr.u32ViChn);
     return ret;
   }
@@ -132,6 +133,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   int ret = 0;
+  bool bUseRga = false;
   MPP_CHN_S stViChn, stVoChn, stRgaChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -146,14 +148,16 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     return -1;
   }
 
+  bUseRga = RKADK_DISP_IsUseRga(pstDispCfg);
+
   RKADK_DISP_SetChn(pstDispCfg, &stViChn, &stVoChn, &stRgaChn);
-  ret = RKADK_DISP_Enable(u32CamId, pstDispCfg);
+  ret = RKADK_DISP_Enable(u32CamId, pstDispCfg, bUseRga);
   if (ret) {
     RKADK_LOGE("RKADK_DISP_Enable failed(%d)", ret);
     return ret;
   }
 
-  if (RKADK_DISP_IsUseRga(pstDispCfg)) {
+  if (bUseRga) {
     // Bind RGA to VO
     ret = RK_MPI_SYS_Bind(&stRgaChn, &stVoChn);
     if (ret) {
@@ -163,10 +167,11 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     }
 
     // Bind VI to RGA
-    ret = RK_MPI_SYS_Bind(&stViChn, &stRgaChn);
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
     if (ret) {
       RKADK_LOGE("Bind VI[%d] to RGA[%d] failed(%d)", stViChn.s32ChnId,
                  stRgaChn.s32ChnId, ret);
+      RK_MPI_SYS_UnBind(&stRgaChn, &stVoChn);
       goto failed;
     }
   } else {
@@ -186,8 +191,8 @@ failed:
   RKADK_LOGI("Disp u32CamId[%d] Init failed...", u32CamId);
   RK_MPI_VO_DestroyChn(stVoChn.s32ChnId);
 
-  if (RKADK_DISP_IsUseRga(pstDispCfg))
-    RK_MPI_RGA_DestroyChn(stRgaChn.s32ChnId);
+  if (bUseRga)
+    RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
   return ret;
@@ -195,6 +200,7 @@ failed:
 
 RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   int ret = 0;
+  bool bUseRga = false;
   MPP_CHN_S stViChn, stVoChn, stRgaChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -208,7 +214,8 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
 
   RKADK_DISP_SetChn(pstDispCfg, &stViChn, &stVoChn, &stRgaChn);
 
-  if (RKADK_DISP_IsUseRga(pstDispCfg)) {
+  bUseRga = RKADK_DISP_IsUseRga(pstDispCfg);
+  if (bUseRga) {
     ret = RK_MPI_SYS_UnBind(&stRgaChn, &stVoChn);
     if (ret) {
       RKADK_LOGE("UnBind RGA[%d] to VO[%d] failed(%d)", stRgaChn.s32ChnId,
@@ -216,7 +223,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
       return ret;
     }
 
-    ret = RK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
     if (ret) {
       RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed(%d)", stViChn.s32ChnId,
                  stRgaChn.s32ChnId, ret);
@@ -237,10 +244,10 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
     return ret;
   }
 
-  if (RKADK_DISP_IsUseRga(pstDispCfg)) {
-    ret = RK_MPI_RGA_DestroyChn(stRgaChn.s32ChnId);
+  if (bUseRga) {
+    ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
     if (ret) {
-      RKADK_LOGE("Destory RGA[%d] failed(%d)", stRgaChn.s32ChnId, ret);
+      RKADK_LOGE("DeInit RGA[%d] failed(%d)", stRgaChn.s32ChnId, ret);
       return ret;
     }
   }

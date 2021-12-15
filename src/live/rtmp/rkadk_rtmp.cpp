@@ -94,10 +94,15 @@ static RKADK_S32 RKADK_RTMP_SetAencAttr(RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg,
 }
 
 static void RKADK_RTMP_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
-                                   MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn) {
+                                   MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
+                                   MPP_CHN_S *pstRgaChn) {
   pstViChn->enModId = RK_ID_VI;
   pstViChn->s32DevId = 0;
   pstViChn->s32ChnId = pstLiveCfg->vi_attr.u32ViChn;
+
+  pstRgaChn->enModId = RK_ID_RGA;
+  pstRgaChn->s32DevId = 0;
+  pstRgaChn->s32ChnId = pstLiveCfg->attribute.rga_chn;
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = 0;
@@ -190,12 +195,29 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId, char *path,
   return 0;
 }
 
+static bool RKADK_RTMP_IsUseRga(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
+  RKADK_U32 u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.u32Width;
+  RKADK_U32 u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.u32Height;
+  RKADK_U32 u32DstWidth = pstLiveCfg->attribute.width;
+  RKADK_U32 u32DstHeight = pstLiveCfg->attribute.height;
+
+  if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
+    return false;
+  } else {
+    RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
+               u32DstWidth, u32DstHeight);
+    return true;
+  }
+}
+
 static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
-                                        MPP_CHN_S stVencChn,
-                                        RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
+                                        MPP_CHN_S stVencChn, MPP_CHN_S stRgaChn,
+                                        RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
+                                        bool bUseRga) {
   int ret = 0;
   VENC_RC_PARAM_S stVencRcParam;
   VENC_CHN_ATTR_S stVencChnAttr;
+  RGA_ATTR_S stRgaAttr;
 
   // Create VI
   ret = RKADK_MPI_VI_Init(u32CamId, stViChn.s32ChnId,
@@ -203,6 +225,28 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VI_Init faled %d", ret);
     return ret;
+  }
+
+  // Create RGA
+  if (bUseRga) {
+    memset(&stRgaAttr, 0, sizeof(RGA_ATTR_S));
+    stRgaAttr.bEnBufPool = RK_TRUE;
+    stRgaAttr.u16BufPoolCnt = 3;
+    stRgaAttr.stImgIn.imgType = pstLiveCfg->vi_attr.stChnAttr.enPixFmt;
+    stRgaAttr.stImgIn.u32Width = pstLiveCfg->vi_attr.stChnAttr.u32Width;
+    stRgaAttr.stImgIn.u32Height = pstLiveCfg->vi_attr.stChnAttr.u32Height;
+    stRgaAttr.stImgIn.u32HorStride = pstLiveCfg->vi_attr.stChnAttr.u32Width;
+    stRgaAttr.stImgIn.u32VirStride = pstLiveCfg->vi_attr.stChnAttr.u32Height;
+    stRgaAttr.stImgOut.imgType = stRgaAttr.stImgIn.imgType;
+    stRgaAttr.stImgOut.u32Width = pstLiveCfg->attribute.width;
+    stRgaAttr.stImgOut.u32Height = pstLiveCfg->attribute.height;
+    stRgaAttr.stImgOut.u32HorStride = pstLiveCfg->attribute.width;
+    stRgaAttr.stImgOut.u32VirStride = pstLiveCfg->attribute.height;
+    ret = RKADK_MPI_RGA_Init(stRgaChn.s32ChnId, &stRgaAttr);
+    if (ret) {
+      RKADK_LOGE("Init Rga[%d] falied[%d]", stRgaChn.s32ChnId, ret);
+      goto failed;
+    }
   }
 
   // Create VENC
@@ -227,12 +271,16 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
 
   return 0;
 failed:
+  if (bUseRga)
+    RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
+
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
   return ret;
 }
 
-static RKADK_S32 RKADK_RTMP_DisableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
-                                         MPP_CHN_S stVencChn) {
+static RKADK_S32 RKADK_RTMP_DisableVideo(RKADK_U32 u32CamId,
+                                         MPP_CHN_S stViChn, MPP_CHN_S stVencChn,
+                                         MPP_CHN_S stRgaChn, bool bUseRga) {
   int ret;
 
   // Destroy VENC before VI
@@ -240,6 +288,15 @@ static RKADK_S32 RKADK_RTMP_DisableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
     return ret;
+  }
+
+  // Destory RGA
+  if (bUseRga) {
+    ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
+    if (ret) {
+      RKADK_LOGE("DeInit RGA[%d] failed[%d]", stRgaChn.s32ChnId, ret);
+      return ret;
+    }
   }
 
   // Destroy VI
@@ -340,9 +397,9 @@ static RKADK_S32 RKADK_RTMP_EnableMuxer(RKADK_U32 u32CamId, char *path,
 RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
-  bool bEnableAudio;
+  bool bEnableAudio, bUseRga = false;
   MPP_CHN_S stAiChn, stAencChn;
-  MPP_CHN_S stViChn, stVencChn;
+  MPP_CHN_S stViChn, stVencChn, stRgaChn;
   MUXER_CHN_S stMuxerChn;
   MUXER_CHN_ATTR_S stMuxerAttr;
   RKADK_RTMP_HANDLE_S *pHandle;
@@ -367,6 +424,8 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     return -1;
   }
 
+  bUseRga = RKADK_RTMP_IsUseRga(pstLiveCfg);
+
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioCfg) {
     RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
@@ -384,8 +443,9 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   memset(pHandle, 0, sizeof(RKADK_RTMP_HANDLE_S));
   pHandle->u32CamId = u32CamId;
 
-  RKADK_RTMP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn);
-  ret = RKADK_RTMP_EnableVideo(u32CamId, stViChn, stVencChn, pstLiveCfg);
+  RKADK_RTMP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
+  ret = RKADK_RTMP_EnableVideo(u32CamId, stViChn, stVencChn, stRgaChn,
+                               pstLiveCfg, bUseRga);
   if (ret) {
     RKADK_LOGE("RKADK_RTMP_EnableVideo failed[%d]", ret);
     free(pHandle);
@@ -397,7 +457,8 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     ret = RKADK_RTMP_EnableAudio(stAiChn, stAencChn, pstAudioCfg);
     if (ret) {
       RKADK_LOGE("RKADK_RTMP_EnableAudio failed[%d]", ret);
-      RKADK_RTMP_DisableVideo(u32CamId, stViChn, stVencChn);
+      RKADK_RTMP_DisableVideo(u32CamId, stViChn, stVencChn,
+                              stRgaChn, bUseRga);
       free(pHandle);
       return ret;
     }
@@ -434,12 +495,31 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     }
   }
 
-  // Bind VI to VENC
-  ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
-  if (ret) {
-    RKADK_LOGE("Bind VI[%d] and VENC[%d] failed[%d]", stViChn.s32ChnId,
-               stVencChn.s32ChnId, ret);
-    goto unbind_muxer;
+  if (bUseRga) {
+    // RGA Bind VENC
+    ret = RKADK_MPI_SYS_Bind(&stRgaChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      goto unbind_muxer;
+    }
+
+    // VI Bind RGA
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
+    if (ret) {
+      RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%d]", stViChn.s32ChnId,
+                 stRgaChn.s32ChnId, ret);
+      RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
+      goto unbind_muxer;
+    }
+  } else {
+    // Bind VI to VENC
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("Bind VI[%d] and VENC[%d] failed[%d]", stViChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      goto unbind_muxer;
+    }
   }
 
   // Bind AI to AENC
@@ -457,7 +537,12 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   return 0;
 
 unbind:
-  RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+  if (bUseRga) {
+    RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
+    RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
+  } else {
+    RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+  }
 
 unbind_muxer:
   if (bEnableAudio) {
@@ -473,7 +558,8 @@ disable_muxer:
   RK_MPI_MUXER_DisableChn(stMuxerChn.s32ChnId);
 
 failed:
-  RKADK_RTMP_DisableVideo(u32CamId, stViChn, stVencChn);
+  RKADK_RTMP_DisableVideo(u32CamId, stViChn, stVencChn, stRgaChn,
+                          bUseRga);
 
   if (bEnableAudio)
     RKADK_RTMP_DisableAudio(stAiChn, stAencChn, pstAudioCfg);
@@ -487,9 +573,9 @@ failed:
 
 RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
-  bool bDisableAudio;
+  bool bDisableAudio, bUseRga = false;
   MPP_CHN_S stAiChn, stAencChn;
-  MPP_CHN_S stViChn, stVencChn;
+  MPP_CHN_S stViChn, stVencChn, stRgaChn;
   MUXER_CHN_S stMuxerChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
@@ -513,7 +599,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   bDisableAudio =
       pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3 ? true : false;
 
-  RKADK_RTMP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn);
+  RKADK_RTMP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
 
   if (bDisableAudio)
     RKADK_RTMP_AudioSetChn(&stAiChn, &stAencChn);
@@ -540,12 +626,31 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
     }
   }
 
-  // UnBind VI and VENC
-  ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
-  if (ret) {
-    RKADK_LOGE("UnBind VI[%d] and VENC[%d] failed[%d]", stViChn.s32ChnId,
-               stVencChn.s32ChnId, ret);
-    return ret;
+  bUseRga = RKADK_RTMP_IsUseRga(pstLiveCfg);
+  if (bUseRga) {
+    // RGA UnBind VENC
+    ret = RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("UnBind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      return ret;
+    }
+
+    // VI UnBind RGA
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed[%d]", stViChn.s32ChnId,
+                 stRgaChn.s32ChnId, ret);
+      return ret;
+    }
+  } else {
+    // UnBind VI and VENC
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VI[%d] and VENC[%d] failed[%d]", stViChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      return ret;
+    }
   }
 
   // UnBind AI and AENC
@@ -566,7 +671,8 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   // Disable Video
-  ret = RKADK_RTMP_DisableVideo(pstHandle->u32CamId, stViChn, stVencChn);
+  ret = RKADK_RTMP_DisableVideo(pstHandle->u32CamId, stViChn,
+                                stVencChn, stRgaChn, bUseRga);
   if (ret) {
     RKADK_LOGE("RKADK_RTMP_DisableVideo failed(%d)", ret);
     return ret;

@@ -53,13 +53,17 @@ typedef struct {
   pthread_mutex_t aencMutex;
   pthread_mutex_t viMutex;
   pthread_mutex_t vencMutex;
+  pthread_mutex_t rgaMutex;
   pthread_mutex_t bindMutex;
   RKADK_MEDIA_INFO_S stAiInfo[RKADK_MEDIA_AI_MAX_CNT];
   RKADK_MEDIA_INFO_S stAencInfo[RKADK_MEDIA_AENC_MAX_CNT];
   RKADK_MEDIA_INFO_S stViInfo[RKADK_MEDIA_VI_MAX_CNT];
   RKADK_MEDIA_INFO_S stVencInfo[RKADK_MEDIA_VENC_MAX_CNT];
+  RKADK_MEDIA_INFO_S stRgaInfo[RKADK_MEDIA_RGA_MAX_CNT];
   RKADK_BIND_INFO_S stAiAencInfo[RKADK_AI_AENC_MAX_BIND_CNT];
   RKADK_BIND_INFO_S stViVencInfo[RKADK_VI_VENC_MAX_BIND_CNT];
+  RKADK_BIND_INFO_S stViRgaInfo[RKADK_VI_RGA_MAX_BIND_CNT];
+  RKADK_BIND_INFO_S stRgaVencInfo[RKADK_RGA_VENC_MAX_BIND_CNT];
 } RKADK_MEDIA_CONTEXT_S;
 
 static bool g_bMediaCtxInit = false;
@@ -74,6 +78,7 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.vencMutex = PTHREAD_MUTEX_INITIALIZER;
+  g_stMediaCtx.rgaMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
   g_bMediaCtxInit = true;
 }
@@ -526,6 +531,87 @@ exit:
   return ret;
 }
 
+RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr) {
+  int ret = -1;
+  RKADK_S32 i;
+
+  RKADK_CHECK_POINTER(pstRgaAttr, RKADK_FAILURE);
+  RKADK_MEDIA_CtxInit();
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+                         s32ChnId, "RGA_INIT");
+  if (i < 0) {
+    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stRgaInfo,
+                                  RKADK_MEDIA_RGA_MAX_CNT, "RGA_INIT");
+    if (i < 0) {
+      RKADK_LOGE("not find usable index");
+      goto exit;
+    }
+  }
+
+  if (0 == g_stMediaCtx.stRgaInfo[i].s32InitCnt) {
+    ret = RK_MPI_RGA_CreateChn(s32ChnId, pstRgaAttr);
+    if (ret) {
+      RKADK_LOGE("Create RGA[%d] failed[%d]", s32ChnId, ret);
+      goto exit;
+    }
+
+    g_stMediaCtx.stRgaInfo[i].bUsed = true;
+    g_stMediaCtx.stRgaInfo[i].s32ChnId = s32ChnId;
+  }
+
+  g_stMediaCtx.stRgaInfo[i].s32InitCnt++;
+  RKADK_LOGD("rgaChnId[%d], InitCnt[%d]", s32ChnId,
+             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  return ret;
+}
+
+RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId) {
+  int ret = -1;
+  RKADK_S32 i;
+  RKADK_S32 s32InitCnt;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+                         s32ChnId, "RGA_DEINIT");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ChnId);
+    goto exit;
+  }
+
+  s32InitCnt = g_stMediaCtx.stRgaInfo[i].s32InitCnt;
+  if (0 == s32InitCnt) {
+    RKADK_LOGD("rgaChnId[%d] has already deinit", s32ChnId);
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+    return 0;
+  } else if (1 == s32InitCnt) {
+    ret = RK_MPI_RGA_DestroyChn(s32ChnId);
+    if (ret) {
+      RKADK_LOGE("Destory RGA[%d] failed[%d]", s32ChnId, ret);
+      goto exit;
+    }
+
+    g_stMediaCtx.stRgaInfo[i].bUsed = false;
+    g_stMediaCtx.stRgaInfo[i].s32ChnId = 0;
+  }
+
+  g_stMediaCtx.stRgaInfo[i].s32InitCnt--;
+  RKADK_LOGD("rgaChnId[%d], InitCnt[%d]", s32ChnId,
+             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  return ret;
+}
+
 static void *RKADK_MEDIA_GetMb(void *params) {
   MEDIA_BUFFER mb = NULL;
 
@@ -550,7 +636,7 @@ static void *RKADK_MEDIA_GetMb(void *params) {
     RK_MPI_MB_ReleaseBuffer(mb);
   }
 
-  RK_MPI_SYS_StopGetMediaBuffer(RK_ID_VDEC, pstMediaInfo->s32ChnId);
+  RK_MPI_SYS_StopGetMediaBuffer(RK_ID_VENC, pstMediaInfo->s32ChnId);
   RKADK_LOGI("Exit get mb thread");
   return NULL;
 }
@@ -683,6 +769,34 @@ static RKADK_S32 RKADK_BIND_GetIdx(RKADK_BIND_INFO_S *pstInfo, int count,
   return -1;
 }
 
+static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
+                                         const MPP_CHN_S *pstDestChn,
+                                         RKADK_BIND_INFO_S **pstInfo) {
+  RKADK_S32 s32BindCount = -1;
+
+  if (pstSrcChn->enModId == RK_ID_AI && pstDestChn->enModId == RK_ID_AENC) {
+    s32BindCount = RKADK_AI_AENC_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stAiAencInfo;
+  } else if (pstSrcChn->enModId == RK_ID_VI &&
+             pstDestChn->enModId == RK_ID_VENC) {
+    s32BindCount = RKADK_VI_VENC_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stViVencInfo;
+  } else if (pstSrcChn->enModId == RK_ID_VI &&
+             pstDestChn->enModId == RK_ID_RGA) {
+    s32BindCount = RKADK_VI_RGA_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stViRgaInfo;
+  } else if (pstSrcChn->enModId == RK_ID_RGA &&
+             pstDestChn->enModId == RK_ID_VENC) {
+    s32BindCount = RKADK_RGA_VENC_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stRgaVencInfo;
+  } else {
+    RKADK_LOGE("Nonsupport: src enModId: %d, dest enModId: %d",
+               pstSrcChn->enModId, pstDestChn->enModId);
+  }
+
+  return s32BindCount;
+}
+
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn) {
   int ret = -1, count;
@@ -692,16 +806,9 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
   RKADK_CHECK_POINTER(pstSrcChn, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstDestChn, RKADK_FAILURE);
 
-  if (pstSrcChn->enModId == RK_ID_AI && pstDestChn->enModId == RK_ID_AENC) {
-    count = RKADK_AI_AENC_MAX_BIND_CNT;
-    pstInfo = g_stMediaCtx.stAiAencInfo;
-  } else if (pstSrcChn->enModId == RK_ID_VI &&
-             pstDestChn->enModId == RK_ID_VENC) {
-    count = RKADK_VI_VENC_MAX_BIND_CNT;
-    pstInfo = g_stMediaCtx.stViVencInfo;
-  } else {
-    RKADK_LOGE("Nonsupport: src enModId: %d, dest enModId: %d",
-               pstSrcChn->enModId, pstDestChn->enModId);
+  count = RKADK_MEDIA_GetBindInfo(pstSrcChn, pstDestChn, &pstInfo);
+  if (count < 0) {
+    RKADK_LOGE("RKADK_MEDIA_GetBindInfo failed");
     return -1;
   }
 
@@ -751,15 +858,9 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
   RKADK_CHECK_POINTER(pstSrcChn, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstDestChn, RKADK_FAILURE);
 
-  if (pstSrcChn->enModId == RK_ID_AI && pstDestChn->enModId == RK_ID_AENC) {
-    count = RKADK_AI_AENC_MAX_BIND_CNT;
-    pstInfo = g_stMediaCtx.stAiAencInfo;
-  } else if (pstSrcChn->enModId == RK_ID_VI &&
-             pstDestChn->enModId == RK_ID_VENC) {
-    count = RKADK_VI_VENC_MAX_BIND_CNT;
-    pstInfo = g_stMediaCtx.stViVencInfo;
-  } else {
-    RKADK_LOGE("Nonsupport");
+  count = RKADK_MEDIA_GetBindInfo(pstSrcChn, pstDestChn, &pstInfo);
+  if (count < 0) {
+    RKADK_LOGE("RKADK_MEDIA_GetBindInfo failed");
     return -1;
   }
 

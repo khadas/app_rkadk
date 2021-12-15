@@ -34,13 +34,22 @@ extern "C" {
 #define RKADK_MEDIA_VI_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
 
 /* video encoder maximum count */
-#define RKADK_MEDIA_VENC_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_MEDIA_VENC_MAX_CNT RKADK_MEDIA_VI_MAX_CNT
+
+/* rga maximum count */
+#define RKADK_MEDIA_RGA_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
 
 /* ai aenc maximum bind count */
-#define RKADK_AI_AENC_MAX_BIND_CNT (3 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_AI_AENC_MAX_BIND_CNT RKADK_MEDIA_AENC_MAX_CNT
 
 /* vi venc maximum bind count */
-#define RKADK_VI_VENC_MAX_BIND_CNT (4 * RKADK_MAX_SENSOR_CNT)
+#define RKADK_VI_VENC_MAX_BIND_CNT RKADK_MEDIA_VENC_MAX_CNT
+
+/* vi rga maximum bind count */
+#define RKADK_VI_RGA_MAX_BIND_CNT RKADK_MEDIA_RGA_MAX_CNT
+
+/* rga venc maximum bind count */
+#define RKADK_RGA_VENC_MAX_BIND_CNT RKADK_MEDIA_RGA_MAX_CNT
 
 RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr,
                             RKADK_VQE_MODE_E enMode);
@@ -57,6 +66,10 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ChnId);
 RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr);
 RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId);
+
+RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr);
+
+RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId);
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);
