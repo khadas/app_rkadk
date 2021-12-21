@@ -34,7 +34,7 @@ extern "C" {
 #define RKADK_ISPP_VI_NODE_CNT 4
 
 // camera sensor count
-#define RKADK_MAX_SENSOR_CNT 2
+#define RKADK_MAX_SENSOR_CNT 3
 
 // simultaneous record files num
 #define RECORD_FILE_NUM_MAX 2

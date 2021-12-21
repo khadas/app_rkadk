@@ -331,7 +331,6 @@ static RKADK_S32 RKADK_STORAGE_FileListCheck(RKADK_STR_FOLDER *folder,
   pthread_mutex_lock(&folder->mutex);
 
   if (folder->pstFileListFirst) {
-    RKADK_STR_FILE *tmp_1 = NULL;
     tmp = folder->pstFileListFirst;
 
     if (!strcmp(tmp->filename, filename)) {
@@ -357,7 +356,6 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
                                            struct stat *statbuf) {
   RKADK_STR_FILE *tmp = NULL;
   RKADK_STR_FILE *tmp_1 = NULL;
-  RKADK_S32 s32FileNum = 0;
 
   RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
   RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
