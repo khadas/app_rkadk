@@ -219,7 +219,7 @@ static void RKADK_STREAM_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
   vStreamData.astPack.stDataType.enPayloadType = pstVideoStream->enCodecType;
   RKADK_STREAM_GetNaluType(pstVideoStream->enCodecType,
                            &vStreamData.astPack.stDataType, s32NaluType);
-
+  vStreamData.u32CamId = pstVideoStream->u32CamId;
   g_pstVencCB[pstVideoStream->u32CamId](&vStreamData);
   pstVideoStream->videoSeq++;
 

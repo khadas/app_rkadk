@@ -81,6 +81,7 @@ typedef struct {
   RKADK_VENC_DATA_PACK_S astPack; /* <stream pack attribute */
   RKADK_U32 u32Seq;               /* <the list number of stream */
   RKADK_BOOL bEndOfStream;        /* <frame end flag */
+  RKADK_U32 u32CamId;
 } RKADK_VIDEO_STREAM_S;
 
 typedef RKADK_S32 (*RKADK_VENC_DATA_PROC_FUNC)(
