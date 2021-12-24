@@ -1949,11 +1949,23 @@ static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
   int index = -1;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
-  for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
-    pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
-    if (strstr(pstViCfg->module, module) && pstViCfg->width == width &&
-        pstViCfg->height == height)
-      return index;
+  if (!strcmp("DISP", module)) {
+    for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
+      pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
+      if (strstr(pstViCfg->module, module)) {
+        RKADK_LOGD("Sensor[%d] %s[%d x %d] match VI[%d][%d x %d]", s32CamId,
+                   module, width, height, index, pstViCfg->width,
+                   pstViCfg->height);
+        return index;
+      }
+    }
+  } else {
+    for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
+      pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
+      if (strstr(pstViCfg->module, module) && pstViCfg->width == width &&
+          pstViCfg->height == height)
+        return index;
+    }
   }
 
   for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
