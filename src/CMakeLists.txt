@@ -26,9 +26,7 @@ add_library(rkadk SHARED
 
 set(LIB_RTSP ${CMAKE_SOURCE_DIR}/src/live/rtsp/librtsp.a)
 message("LIB_RTSP = ${LIB_RTSP}")
-target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
-target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/param")
 target_link_libraries(rkadk easymedia third_media rga iniparser cjson ${LIB_RTSP} rkfsmk)
 
 if(USE_ROCKIT)

@@ -16,7 +16,7 @@
 
 #include "rkadk_recorder_pro.h"
 #include "rkadk_log.h"
-#include "rkadk_param_inner.h"
+#include "rkadk_param.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

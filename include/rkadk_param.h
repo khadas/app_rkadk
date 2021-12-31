@@ -454,6 +454,36 @@ RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height);
 RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
                                    RKADK_STREAM_TYPE_E enStrmType);
 
+RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx(RKADK_VOID);
+
+RKADK_PARAM_COMM_CFG_S *RKADK_PARAM_GetCommCfg();
+
+RKADK_PARAM_REC_CFG_S *RKADK_PARAM_GetRecCfg(RKADK_U32 u32CamId);
+
+RKADK_PARAM_STREAM_CFG_S *
+RKADK_PARAM_GetStreamCfg(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType);
+
+RKADK_PARAM_PHOTO_CFG_S *RKADK_PARAM_GetPhotoCfg(RKADK_U32 u32CamId);
+
+RKADK_PARAM_SENSOR_CFG_S *RKADK_PARAM_GetSensorCfg(RKADK_U32 u32CamId);
+
+RKADK_PARAM_DISP_CFG_S *RKADK_PARAM_GetDispCfg(RKADK_U32 u32CamId);
+
+RKADK_PARAM_AUDIO_CFG_S *RKADK_PARAM_GetAudioCfg(RKADK_VOID);
+
+RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
+
+VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
+                                     RKADK_CODEC_TYPE_E enCodecType);
+
+RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
+                                 VENC_RC_PARAM_S *pstRcParam);
+
+RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
+                                           RKADK_U32 u32ChnId);
+
+IMAGE_TYPE_E RKADK_PARAM_GetPixFmt(char *pixFmt);
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,7 +18,6 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkadk_param_inner.h"
 #include "rkadk_recorder_pro.h"
 #include "rkadk_track_source.h"
 #include "rkmedia_api.h"

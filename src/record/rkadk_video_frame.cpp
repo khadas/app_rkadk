@@ -19,7 +19,7 @@
 #include "RTMediaBuffer.h"
 #include "RTMetadataRetriever.h"
 #include "rkadk_param.h"
-#include "rkadk_param_inner.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_record.h"
 #include "rkadk_thumb.h"
 #include "rkmedia_api.h"
@@ -790,6 +790,7 @@ RKADK_S32 RKADK_GetSingleFrameAtTime(RKADK_CHAR *pszFileName,
   metaData.setInt32(kKeyVMinOutputBufferCnt, 1);
   metaData.setInt32(kKeyVMaxOutputBufferCnt, 1);
   metaData.setInt32(kKeyUserVideoRefFrameNum, 1);
+
   buffer = retriever->getSingleFrameAtTime(&metaData);
   if (buffer == NULL || buffer->getMetaData() == NULL) {
     RKADK_LOGE("getSingleFrameAtTime failed");
