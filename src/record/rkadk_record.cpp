@@ -762,6 +762,11 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
   return RKADK_REC_Stop(pRecorder);
 }
 
+RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
+                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr) {
+  return RKADK_REC_SetFrameRate(pRecorder, stFpsAttr);
+}
+
 RKADK_S32
 RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
                          RKADK_REC_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {

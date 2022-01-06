@@ -51,6 +51,14 @@ typedef struct {
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
 } RKADK_RECORD_ATTR_S;
 
+/** record fps attribute */
+typedef struct {
+  RKADK_U32 u32Fps;      /* framerate */
+  RKADK_BOOL bSplitFile; /* stop current file, record the next file immediately
+                            at the new framerate */
+  RKADK_STREAM_TYPE_E enStreamType; /* stream type */
+} RKADK_RECORD_FPS_ATTR_S;
+
 /****************************************************************************/
 /*                            Interface Definition                          */
 /****************************************************************************/
@@ -87,6 +95,16 @@ RKADK_S32 RKADK_RECORD_Start(RKADK_MW_PTR pRecorder);
  * @return others failure
  */
 RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder);
+
+/**
+ * @brief set recorder framerate
+ * @param[in]pRecorder : pointer of recorder
+ * @param[in]stFpsAttr : fps attribute
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
+                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr);
 
 /**
  * @brief manual splite file.

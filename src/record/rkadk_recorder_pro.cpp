@@ -426,6 +426,49 @@ RKADK_S32 RKADK_REC_Stop(RKADK_MW_PTR pRecorder) {
   return 0;
 }
 
+RKADK_S32 RKADK_REC_SetFrameRate(RKADK_MW_PTR pRecorder,
+                                 RKADK_RECORD_FPS_ATTR_S stFpsAttr) {
+  RKADK_RECORDER_HANDLE_S *stRecorder;
+  int ret;
+  RKADK_U32 u32StreamIndex = 0;
+
+  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
+
+  stRecorder = (RKADK_RECORDER_HANDLE_S *)pRecorder;
+  RKADK_CHECK_STREAM_CNT(stRecorder->u32StreamCnt);
+
+  RKADK_LOGI("Record[%d, %d] Change Stream[%d] Fps[%d] Start...",
+             stRecorder->s32CamId, stRecorder->enRecType,
+             stFpsAttr.enStreamType, stFpsAttr.u32Fps);
+
+  if (stFpsAttr.enStreamType == RKADK_STREAM_TYPE_VIDEO_MAIN) {
+    u32StreamIndex = 0;
+  } else if (stFpsAttr.enStreamType == RKADK_STREAM_TYPE_VIDEO_SUB) {
+    u32StreamIndex = 1;
+  } else {
+    RKADK_LOGE("Invalid enStreamType[%d]", stFpsAttr.enStreamType);
+    return -1;
+  }
+
+  for (RKADK_U32 i = 0; i < stRecorder->u32StreamCnt; i++) {
+    if (i == u32StreamIndex) {
+      ret = RK_MPI_MUXER_SetFrameRate(
+          stRecorder->stStreamAttr[i].stMuxerChn.s32ChnId, stFpsAttr.u32Fps,
+          (RK_BOOL)stFpsAttr.bSplitFile);
+      if (ret) {
+        RKADK_LOGE("Change Fps MuxerChnId(%d) Stream(%d) failed(%d)", i,
+                   stRecorder->stStreamAttr[i].stMuxerChn.s32ChnId, ret);
+        return ret;
+      }
+    }
+  }
+
+  RKADK_LOGI("Record[%d, %d] Change Stream[%d] Fps[%d] End...",
+             stRecorder->s32CamId, stRecorder->enRecType,
+             stFpsAttr.enStreamType, stFpsAttr.u32Fps);
+  return 0;
+}
+
 RKADK_S32 RKADK_REC_ManualSplit(RKADK_MW_PTR pRecorder,
                                 RKADK_REC_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {
   RKADK_RECORDER_HANDLE_S *stRecorder;

@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-#include "rkadk_record.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
+#include "rkadk_record.h"
 #include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
@@ -464,36 +464,87 @@ record:
                               &stRecTime);
       RKADK_LOGD("Record Sub split time: %d", stRecTime.time);
     } else if (strstr(cmd, "fps")) {
-      int fpsTest = 20;
       RKADK_PARAM_GOP_S stGopCfg;
       RKADK_S32 s32VencChn;
+      RKADK_RECORD_FPS_ATTR_S stFpsAttr;
+      char *p;
+
+      memset(&stFpsAttr, 0, sizeof(RKADK_RECORD_FPS_ATTR_S));
+      stFpsAttr.u32Fps = 25;
+
+      RKADK_LOGD("set fps, cmd = %s", cmd);
+      p = strtok(cmd, ":");
+      if (p) {
+        p = strtok(NULL, ":");
+        if (p) {
+          stFpsAttr.u32Fps = atoi(p);
+          RKADK_LOGD("change fps = %d", stFpsAttr.u32Fps);
+        }
+
+        p = strtok(NULL, ":");
+        if (p) {
+          stFpsAttr.bSplitFile = (bool)atoi(p);
+          RKADK_LOGD("split file = %s",
+                     stFpsAttr.bSplitFile ? "true" : "false");
+        }
+      }
 
       // set ini fps
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS,
-                              &fpsTest);
+                              &stFpsAttr.u32Fps);
 
+      // set aiq fps
+      RKADK_VI_ISP_SET_FrameRate(stRecAttr.s32CamID, stFpsAttr.u32Fps);
+
+      // set main record fps and gop
+      RKADK_STREAM_TYPE_E enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       // set ini gop
-      stGopCfg.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-      stGopCfg.u32Gop = fpsTest;
+      stGopCfg.enStreamType = enStreamType;
+      stGopCfg.u32Gop = stFpsAttr.u32Fps;
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
                               &stGopCfg);
 
-      // set aiq fps
-      RKADK_VI_ISP_SET_FrameRate(stRecAttr.s32CamID, fpsTest);
-
       // set mpp fps and gop
-      s32VencChn = RKADK_PARAM_GetVencChnId(stRecAttr.s32CamID,
-                                            RKADK_STREAM_TYPE_VIDEO_MAIN);
+      s32VencChn = RKADK_PARAM_GetVencChnId(stRecAttr.s32CamID, enStreamType);
       RK_MPI_VENC_SetGop(s32VencChn, stGopCfg.u32Gop);
-      RK_MPI_VENC_SetFps(s32VencChn, fpsTest, 1, fpsTest, 1);
+      RK_MPI_VENC_SetFps(s32VencChn, stFpsAttr.u32Fps, 1, stFpsAttr.u32Fps, 1);
+
+      // set record fps
+      stFpsAttr.enStreamType = enStreamType;
+      RKADK_RECORD_SetFrameRate(pRecorder, stFpsAttr);
 
       // get ini fps and gop
       RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS,
-                              &fpsTest);
-      RKADK_LOGD("fps: %d", fpsTest);
+                              &stFpsAttr.u32Fps);
+      RKADK_LOGD("fps: %d", stFpsAttr.u32Fps);
       RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
                               &stGopCfg);
-      RKADK_LOGD("gop: %d", stGopCfg.u32Gop);
+      RKADK_LOGD("main gop: %d", stGopCfg.u32Gop);
+
+      // set sub record fps and gop
+      enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      // set ini gop
+      stGopCfg.enStreamType = enStreamType;
+      stGopCfg.u32Gop = stFpsAttr.u32Fps;
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
+                              &stGopCfg);
+
+      // set mpp fps and gop
+      s32VencChn = RKADK_PARAM_GetVencChnId(stRecAttr.s32CamID, enStreamType);
+      RK_MPI_VENC_SetGop(s32VencChn, stGopCfg.u32Gop);
+      RK_MPI_VENC_SetFps(s32VencChn, stFpsAttr.u32Fps, 1, stFpsAttr.u32Fps, 1);
+
+      // set record fps
+      stFpsAttr.enStreamType = enStreamType;
+      RKADK_RECORD_SetFrameRate(pRecorder, stFpsAttr);
+
+      // get ini fps and gop
+      RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS,
+                              &stFpsAttr.u32Fps);
+      RKADK_LOGD("fps: %d", stFpsAttr.u32Fps);
+      RKADK_PARAM_SetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_GOP,
+                              &stGopCfg);
+      RKADK_LOGD("sub gop: %d", stGopCfg.u32Gop);
     }
 
     if (is_quit)

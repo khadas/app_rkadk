@@ -127,6 +127,17 @@ RKADK_S32 RKADK_REC_Start(RKADK_MW_PTR pRecorder);
 RKADK_S32 RKADK_REC_Stop(RKADK_MW_PTR pRecorder);
 
 /**
+ * @brief set recorder framerate
+ * @param[in]pRecorder : pointer of recorder
+ * @param[in]stFpsAttr : fps attribute
+ * the new framerate
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_REC_SetFrameRate(RKADK_MW_PTR pRecorder,
+                                 RKADK_RECORD_FPS_ATTR_S stFpsAttr);
+
+/**
  * @brief manual splite file.
  * @param[in]pRecorder : pointer of recorder
  * @param[in]pstSplitAttr : manual split attr.
