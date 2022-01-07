@@ -40,6 +40,7 @@ typedef struct {
   RKADK_REC_TYPE_E enRecType;
   RKADK_U32 u32StreamCnt;
   RKADK_RECORDER_STREAM_ATTR_S stStreamAttr[RKADK_REC_STREAM_MAX_CNT];
+  RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;
 } RKADK_RECORDER_HANDLE_S;
 
 /* record split attribute param */
@@ -52,7 +53,9 @@ typedef struct {
 } RKADK_REC_SPLIT_ATTR_S;
 
 /* normal record attribute param */
-typedef struct { RKADK_U32 u32Rsv; /* reserve */ } RKADK_REC_NORMAL_ATTR_S;
+typedef struct {
+  RKADK_U32 u32Rsv; /* reserve */
+} RKADK_REC_NORMAL_ATTR_S;
 
 /* lapse record attribute param */
 typedef struct {
@@ -63,7 +66,7 @@ typedef struct {
 /* record stream attribute */
 typedef struct {
   RKADK_U32 u32TimeLenSec; /* record time */
-  RKADK_U32 u32TrackCnt; /* track cnt*/
+  RKADK_U32 u32TrackCnt;   /* track cnt*/
   RKADK_TRACK_SOURCE_S
   aHTrackSrcHandle[RKADK_REC_TRACK_MAX_CNT]; /* array of track source cnt */
   MUXER_TYPE_E enType;

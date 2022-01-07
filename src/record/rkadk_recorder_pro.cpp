@@ -24,8 +24,6 @@
 #define RKADK_REC_MAX_VIDEO_TRACK 1
 #define RKADK_REC_MAX_AUDIO_TRACK 1
 
-static RKADK_REC_EVENT_CALLBACK_FN g_pfnEventCallback = NULL;
-
 /** Stream Count Check */
 #define RKADK_CHECK_STREAM_CNT(cnt)                                            \
   do {                                                                         \
@@ -36,12 +34,20 @@ static RKADK_REC_EVENT_CALLBACK_FN g_pfnEventCallback = NULL;
   } while (0)
 
 static void MuxerEventCb(RKADK_VOID *pHandle, RKADK_VOID *pstEvent) {
-  if (!g_pfnEventCallback) {
+  RKADK_RECORDER_HANDLE_S *pstRecorder = (RKADK_RECORDER_HANDLE_S *)pHandle;
+
+  if (!pstRecorder) {
+    RKADK_LOGW("Invalid Recorder");
+    return;
+  }
+
+  if (!pstRecorder->pfnEventCallback) {
     RKADK_LOGW("Not Registered event callback");
     return;
   }
 
-  g_pfnEventCallback((RKADK_MW_PTR)pHandle, (RKADK_REC_EVENT_INFO_S *)pstEvent);
+  pstRecorder->pfnEventCallback((RKADK_MW_PTR)pHandle,
+                                (RKADK_REC_EVENT_INFO_S *)pstEvent);
 }
 
 static void DumpMuxerChanAttr(MUXER_CHN_ATTR_S stMuxerAttr) {
@@ -363,12 +369,12 @@ RKADK_S32 RKADK_REC_Destroy(RKADK_MW_PTR pRecorder) {
   }
 
 end:
+  stRecorder->pfnEventCallback = NULL;
+
   if (pRecorder) {
     free(pRecorder);
     pRecorder = NULL;
   }
-
-  g_pfnEventCallback = NULL;
   return ret;
 }
 
@@ -511,7 +517,10 @@ RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
   stRecorder = (RKADK_RECORDER_HANDLE_S *)pRecorder;
   RKADK_CHECK_STREAM_CNT(stRecorder->u32StreamCnt);
 
-  g_pfnEventCallback = pfnEventCallback;
+  RKADK_LOGI("Record[%d, %d] RegisterEventCallback...", stRecorder->s32CamId,
+             stRecorder->enRecType);
+
+  stRecorder->pfnEventCallback = pfnEventCallback;
 
   for (RKADK_U32 i = 0; i < stRecorder->u32StreamCnt; i++) {
     stMuxerChn.enModId = stRecorder->stStreamAttr[i].stMuxerChn.enModId;
@@ -525,6 +534,9 @@ RKADK_REC_RegisterEventCallback(RKADK_MW_PTR pRecorder,
       return ret;
     }
   }
+
+  RKADK_LOGI("Record[%d, %d] RegisterEventCallback End...",
+             stRecorder->s32CamId, stRecorder->enRecType);
 
   return 0;
 }
