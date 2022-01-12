@@ -87,6 +87,17 @@ typedef struct {
   RKADK_PHOTO_MPF_ATTR_S stMPFAttr;
 } RKADK_PHOTO_THUMB_ATTR_S;
 
+/* photo recv data */
+typedef struct {
+  RKADK_U8 *pu8DataBuf;
+  RKADK_U32 u32DataLen;
+  RKADK_U32 u32CamId;
+} RKADK_PHOTO_RECV_DATA_S;
+
+/* photo data recv extend callback */
+typedef void (*RKADK_PHOTO_DATA_RECV_EX_FN_PTR)(
+    RKADK_PHOTO_RECV_DATA_S *pstData);
+
 /* photo data recv callback */
 typedef void (*RKADK_PHOTO_DATA_RECV_FN_PTR)(RKADK_U8 *pu8DataBuf,
                                              RKADK_U32 u32DataLen);
@@ -101,23 +112,24 @@ typedef struct {
   } unPhotoTypeAttr;
   RKADK_PHOTO_THUMB_ATTR_S stThumbAttr;
   RKADK_PHOTO_DATA_RECV_FN_PTR pfnPhotoDataProc;
+  RKADK_PHOTO_DATA_RECV_EX_FN_PTR pfnPhotoDataExProc;
 } RKADK_PHOTO_ATTR_S;
 
 /****************************************************************************/
 /*                            Interface Definition                          */
 /****************************************************************************/
 /**
-* @brief init photo, it should be called first
-* @param[in] pstPhotoAttr: photo attribute
-* @return 0 success, non-zero error code.
-*/
+ * @brief init photo, it should be called first
+ * @param[in] pstPhotoAttr: photo attribute
+ * @return 0 success, non-zero error code.
+ */
 RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr);
 
 /**
-* @brief deinit photo
-* @param[in] u32CamID: camera id
-* @return 0 success, non-zero error code.
-*/
+ * @brief deinit photo
+ * @param[in] u32CamID: camera id
+ * @return 0 success, non-zero error code.
+ */
 RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID);
 
 /**

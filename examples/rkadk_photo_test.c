@@ -14,10 +14,10 @@
  *  limitations under the License.
  */
 
-#include "rkadk_photo.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
+#include "rkadk_photo.h"
 #include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
@@ -93,10 +93,9 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
     postfix = "rgba8888";
 
   if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
-    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d",
-               stDataAttr.u32Width, stDataAttr.u32Height,
-               stDataAttr.u32VirWidth, stDataAttr.u32VirHeight,
-               stDataAttr.u32BufSize);
+    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
+               stDataAttr.u32Height, stDataAttr.u32VirWidth,
+               stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
 
     memset(jpegPath, 0, 128);
     sprintf(jpegPath, "/tmp/PhotoTest_%d.%s", photoId, postfix);
@@ -113,6 +112,34 @@ static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
   } else {
     RKADK_LOGE("RKADK_PHOTO_GetData failed");
   }
+
+  photoId++;
+  if (photoId > 10)
+    photoId = 0;
+}
+
+static void PhotoDataRecvEx(RKADK_PHOTO_RECV_DATA_S *pstData) {
+  static RKADK_U32 photoId = 0;
+  char jpegPath[128];
+  FILE *file = NULL;
+
+  if (!pstData) {
+    RKADK_LOGE("Invalid photo data");
+    return;
+  }
+
+  memset(jpegPath, 0, 128);
+  sprintf(jpegPath, "/tmp/PhotoTest_%d.jpeg", photoId);
+  file = fopen(jpegPath, "w");
+  if (!file) {
+    RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
+    return;
+  }
+
+  RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
+
+  fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
+  fclose(file);
 
   photoId++;
   if (photoId > 10)
@@ -200,7 +227,14 @@ int main(int argc, char *argv[]) {
   stPhotoAttr.u32CamID = u32CamId;
   stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
   stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
+
+  // One of the two options is recommended
+#if 0
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
+#else
+  stPhotoAttr.pfnPhotoDataExProc = PhotoDataRecvEx;
+#endif
+
   stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
   stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.u8LargeThumbNum = 1;

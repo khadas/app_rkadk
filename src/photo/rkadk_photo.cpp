@@ -58,6 +58,7 @@ typedef struct {
   bool init;
   RKADK_U32 u32CamId;
   RKADK_PHOTO_DATA_RECV_FN_PTR pDataRecvFn;
+  RKADK_PHOTO_DATA_RECV_EX_FN_PTR pDataRecvExFn;
 } PHOTO_INFO_S;
 
 static RKADK_JPG_DE_TYPE_S g_stJpgDEType[JPG_DE_TYPE_COUNT] = {
@@ -75,13 +76,25 @@ static void RKADK_PHOTO_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
     goto exit;
   }
 
-  if (!g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn) {
+  if (!g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn &&
+      !g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn) {
     RKADK_LOGW("u32CamId[%d] don't register callback", pstPhotoInfo->u32CamId);
     goto exit;
   }
 
-  g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn(
-      (RKADK_U8 *)RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
+  if (g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn)
+    g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn(
+        (RKADK_U8 *)RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
+
+  if (g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn) {
+    RKADK_PHOTO_RECV_DATA_S stData;
+
+    memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
+    stData.pu8DataBuf = (RKADK_U8 *)RK_MPI_MB_GetPtr(mb);
+    stData.u32DataLen = RK_MPI_MB_GetSize(mb);
+    stData.u32CamId = pstPhotoInfo->u32CamId;
+    g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn(&stData);
+  }
 
 exit:
   RK_MPI_MB_ReleaseBuffer(mb);
@@ -180,6 +193,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   }
 
   pstPhotoInfo->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
+  pstPhotoInfo->pDataRecvExFn = pstPhotoAttr->pfnPhotoDataExProc;
   pstPhotoInfo->u32CamId = pstPhotoAttr->u32CamID;
 
   RKADK_PARAM_Init(NULL, NULL);
@@ -369,6 +383,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
   }
 
   pstPhotoInfo->pDataRecvFn = NULL;
+  pstPhotoInfo->pDataRecvExFn = NULL;
   pstPhotoInfo->init = false;
   RKADK_LOGI("Photo[%d] DeInit End...", u32CamID);
   return 0;
