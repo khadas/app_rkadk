@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include "iniparser.h"
+#include "iniparser/iniparser.h"
 #include "rkadk_common.h"
 
 #define OFFSET(struct, member) ((char *)&((struct *)0)->member - (char *)0)

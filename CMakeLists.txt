@@ -31,7 +31,8 @@ add_definitions(-Wall
 		-ffast-math
 		-Wignored-qualifiers
 		-Werror-implicit-function-declaration
-		-fPIC)
+		-fPIC
+		-Wl,-Bsymbolic)
 
 add_subdirectory(src)
 add_subdirectory(examples)

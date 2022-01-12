@@ -37,7 +37,7 @@
 #include <rkfsmk.h>
 
 #include "rkadk_storage.h"
-#include <cjson/cJSON.h>
+#include "cjson/cJSON.h"
 
 #define MAX_TYPE_NMSG_LEN 32
 #define MAX_ATTR_LEN 256
