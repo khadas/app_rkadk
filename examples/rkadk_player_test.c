@@ -102,6 +102,10 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
 
   memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAMEINFO_S));
 
+  pstFrmInfo->u32DispWidth = 720;
+  pstFrmInfo->u32DispHeight = 1280;
+  pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
+  pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
   pstFrmInfo->u32VoLayerMode = 1;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
@@ -179,11 +183,10 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#play file: %s", file);
-  RKADK_LOGD("#video display rect[%d, %d, %d, %d]",
-             stFrmInfo.stVoAttr.stChnRect.u32X,
-             stFrmInfo.stVoAttr.stChnRect.u32Y,
-             stFrmInfo.stVoAttr.stChnRect.u32Width,
-             stFrmInfo.stVoAttr.stChnRect.u32Height);
+  RKADK_LOGD(
+      "#video display rect[%d, %d, %d, %d]", stFrmInfo.stVoAttr.stChnRect.u32X,
+      stFrmInfo.stVoAttr.stChnRect.u32Y, stFrmInfo.stVoAttr.stChnRect.u32Width,
+      stFrmInfo.stVoAttr.stChnRect.u32Height);
   RKADK_LOGD("#Rotation: %d", stFrmInfo.stVoAttr.u32Rotation);
   RKADK_LOGD("#mirror: %d", stFrmInfo.stVoAttr.bMirror);
   RKADK_LOGD("#flip: %d", stFrmInfo.stVoAttr.bFlip);

@@ -278,8 +278,15 @@ static RKADK_S32 RKADK_VO_EnableChnn(VO_LAYER voLayer,
     stChnAttr.stRect.u32Height = stFrmInfo.stVoAttr.stChnRect.u32Height;
   }
 
-  stChnAttr.bMirror = (RK_BOOL)stFrmInfo.stVoAttr.bMirror;
-  stChnAttr.bFlip = (RK_BOOL)stFrmInfo.stVoAttr.bFlip;
+  if (stFrmInfo.stVoAttr.bMirror && stFrmInfo.stVoAttr.bFlip)
+    stChnAttr.enMirror = MIRROR_BOTH;
+  else if (stFrmInfo.stVoAttr.bMirror)
+    stChnAttr.enMirror = MIRROR_HORIZONTAL;
+  else if (stFrmInfo.stVoAttr.bFlip)
+    stChnAttr.enMirror = MIRROR_VERTICAL;
+  else
+    stChnAttr.enMirror = MIRROR_NONE;
+
   switch (stFrmInfo.stVoAttr.u32Rotation) {
   case 90:
     stChnAttr.enRotation = ROTATION_90;
@@ -466,29 +473,23 @@ static VO_INTF_SYNC_E RKADK_VO_GetIntfSync(RKADK_VO_INTF_SYNC_E enIntfSync) {
   case RKADK_VO_OUTPUT_4096x2160_60:
     enVoIntfSync = VO_OUTPUT_4096x2160_60;
     break;
-  case RKADK_VO_OUTPUT_320x240_60:
-    enVoIntfSync = VO_OUTPUT_320x240_60;
+  case RKADK_VO_OUTPUT_7680x4320_24:
+    enVoIntfSync = VO_OUTPUT_7680x4320_24;
     break;
-  case RKADK_VO_OUTPUT_320x240_50:
-    enVoIntfSync = VO_OUTPUT_320x240_50;
-    break;
-  case RKADK_VO_OUTPUT_240x320_50:
-    enVoIntfSync = VO_OUTPUT_240x320_50;
-    break;
-  case RKADK_VO_OUTPUT_240x320_60:
-    enVoIntfSync = VO_OUTPUT_240x320_60;
-    break;
-  case RKADK_VO_OUTPUT_800x600_50:
-    enVoIntfSync = VO_OUTPUT_800x600_50;
-    break;
-  case RKADK_VO_OUTPUT_720x1280_60:
-    enVoIntfSync = VO_OUTPUT_720x1280_60;
-    break;
-  case RKADK_VO_OUTPUT_1080x1920_60:
-    enVoIntfSync = VO_OUTPUT_1080x1920_60;
+  case RKADK_VO_OUTPUT_7680x4320_25:
+    enVoIntfSync = VO_OUTPUT_7680x4320_25;
     break;
   case RKADK_VO_OUTPUT_7680x4320_30:
     enVoIntfSync = VO_OUTPUT_7680x4320_30;
+    break;
+  case RKADK_VO_OUTPUT_7680x4320_50:
+    enVoIntfSync = VO_OUTPUT_7680x4320_50;
+    break;
+  case RKADK_VO_OUTPUT_7680x4320_60:
+    enVoIntfSync = VO_OUTPUT_7680x4320_60;
+    break;
+  case RKADK_VO_OUTPUT_3840x1080_60:
+    enVoIntfSync = VO_OUTPUT_3840x1080_60;
     break;
   case RKADK_VO_OUTPUT_USER:
     enVoIntfSync = VO_OUTPUT_USER;
