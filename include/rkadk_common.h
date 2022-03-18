@@ -24,8 +24,11 @@ extern "C" {
 #include "rkadk_log.h"
 #include <pthread.h>
 
+//#define RKADK_ENABLE_DISP
+//#define RKADK_ENABLE_RGA
+
 // dump config info for debug
-// #define RKADK_DUMP_CONFIG
+ #define RKADK_DUMP_CONFIG
 
 // dump isp process result
 //#define RKADK_DUMP_ISP_RESULT
@@ -40,6 +43,7 @@ extern "C" {
 #define RECORD_FILE_NUM_MAX 2
 
 #define RKADK_MAX_FILE_PATH_LEN 256
+#define RKADK_PIX_FMT_LEN 32
 
 typedef unsigned char RKADK_U8;
 typedef unsigned short RKADK_U16;
@@ -113,7 +117,7 @@ typedef enum {
   RKADK_CODEC_TYPE_H265,
   RKADK_CODEC_TYPE_MJPEG,
   RKADK_CODEC_TYPE_JPEG,
-  RKADK_CODEC_TYPE_MP3,
+  RKADK_CODEC_TYPE_ACC,
   RKADK_CODEC_TYPE_G711A,
   RKADK_CODEC_TYPE_G711U,
   RKADK_CODEC_TYPE_G726,

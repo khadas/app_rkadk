@@ -53,72 +53,7 @@ static void sigterm_handler(int sig) {
   is_quit = true;
 }
 
-static void PhotoDataRecv(RKADK_U8 *pu8DataBuf, RKADK_U32 u32DataLen) {
-  static RKADK_U32 photoId = 0;
-  char jpegPath[128];
-  FILE *file = NULL;
-  const char *postfix = "yuv";
-
-  if (!pu8DataBuf || u32DataLen <= 0) {
-    RKADK_LOGE("Invalid photo data, u32DataLen = %d", u32DataLen);
-    return;
-  }
-
-  memset(jpegPath, 0, 128);
-  sprintf(jpegPath, "/tmp/PhotoTest_%d.jpeg", photoId);
-  file = fopen(jpegPath, "w");
-  if (!file) {
-    RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
-    return;
-  }
-
-  RKADK_LOGD("save jpeg to %s", jpegPath);
-
-  fwrite(pu8DataBuf, 1, u32DataLen, file);
-  fclose(file);
-
-  RKADK_PHOTO_DATA_ATTR_S stDataAttr;
-  memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
-  stDataAttr.enType = enDataType;
-  stDataAttr.u32Width = 1280;
-  stDataAttr.u32Height = 720;
-  stDataAttr.u32VirWidth = 1280;
-  stDataAttr.u32VirHeight = 720;
-
-  if (enDataType == RKADK_THUMB_TYPE_RGB565)
-    postfix = "rgb565";
-  else if (enDataType == RKADK_THUMB_TYPE_RGB888)
-    postfix = "rgb888";
-  else if (enDataType == RKADK_THUMB_TYPE_RGBA8888)
-    postfix = "rgba8888";
-
-  if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
-    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
-               stDataAttr.u32Height, stDataAttr.u32VirWidth,
-               stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
-
-    memset(jpegPath, 0, 128);
-    sprintf(jpegPath, "/tmp/PhotoTest_%d.%s", photoId, postfix);
-    file = fopen(jpegPath, "w");
-    if (!file) {
-      RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
-    } else {
-      fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
-      fclose(file);
-      RKADK_LOGD("save %s done", jpegPath);
-    }
-
-    RKADK_PHOTO_FreeData(&stDataAttr);
-  } else {
-    RKADK_LOGE("RKADK_PHOTO_GetData failed");
-  }
-
-  photoId++;
-  if (photoId > 10)
-    photoId = 0;
-}
-
-static void PhotoDataRecvEx(RKADK_PHOTO_RECV_DATA_S *pstData) {
+static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   static RKADK_U32 photoId = 0;
   char jpegPath[128];
   FILE *file = NULL;
@@ -151,6 +86,8 @@ int main(int argc, char *argv[]) {
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_PHOTO_ATTR_S stPhotoAttr;
+  RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
+  RKADK_MW_PTR pHandle = NULL;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
@@ -224,24 +161,19 @@ int main(int argc, char *argv[]) {
 #endif
 
   memset(&stPhotoAttr, 0, sizeof(RKADK_PHOTO_ATTR_S));
-  stPhotoAttr.u32CamID = u32CamId;
-  stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
-  stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
-
-  // One of the two options is recommended
-#if 0
+  stPhotoAttr.u32CamId = u32CamId;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
-#else
-  stPhotoAttr.pfnPhotoDataExProc = PhotoDataRecvEx;
-#endif
-
   stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
   stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.u8LargeThumbNum = 1;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
 
-  ret = RKADK_PHOTO_Init(&stPhotoAttr);
+  memset(&stTakePhotoAttr, 0, sizeof(RKADK_TAKE_PHOTO_ATTR_S));
+  stTakePhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
+  stTakePhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
+
+  ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_Init failed(%d)", ret);
 #ifdef RKAIQ
@@ -262,7 +194,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (RKADK_PHOTO_TakePhoto(&stPhotoAttr)) {
+    if (RKADK_PHOTO_TakePhoto(stTakePhotoAttr, pHandle)) {
       RKADK_LOGE("RKADK_PHOTO_TakePhoto failed");
       break;
     }
@@ -270,7 +202,7 @@ int main(int argc, char *argv[]) {
     usleep(500000);
   }
 
-  RKADK_PHOTO_DeInit(stPhotoAttr.u32CamID);
+  RKADK_PHOTO_DeInit(pHandle);
 
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(u32CamId);

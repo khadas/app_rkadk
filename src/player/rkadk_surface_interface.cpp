@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-#ifdef ROCKIT
-
 #include "rkadk_surface_interface.h"
 #include "RTMediaBuffer.h"
 #include "RTMediaData.h"
@@ -732,5 +730,3 @@ void RKADKSurfaceInterface::replay() {
 
   RK_MPI_VO_ClearChnBuffer(voLayer, stFrmInfo.u32ChnnNum, RK_TRUE);
 }
-
-#endif // ROCKIT

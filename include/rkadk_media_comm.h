@@ -21,8 +21,15 @@
 extern "C" {
 #endif
 
+#include "rk_mpi_aenc.h"
+#include "rk_mpi_ai.h"
+#include "rk_mpi_mb.h"
+#include "rk_mpi_sys.h"
+#include "rk_mpi_venc.h"
+#include "rk_mpi_vi.h"
+#include "rk_mpi_vo.h"
+#include "rk_mpi_vpss.h"
 #include "rkadk_common.h"
-#include "rkmedia_api.h"
 
 /* audio capture maximum count */
 #define RKADK_MEDIA_AI_MAX_CNT (1)
@@ -51,9 +58,24 @@ extern "C" {
 /* rga venc maximum bind count */
 #define RKADK_RGA_VENC_MAX_BIND_CNT RKADK_MEDIA_RGA_MAX_CNT
 
-RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr,
-                            RKADK_VQE_MODE_E enMode);
-RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId, RKADK_VQE_MODE_E enMode);
+typedef struct {
+  RKADK_U32 u32ChnId;
+  VENC_STREAM_S stFrame;
+} RKADK_MEDIA_VENC_DATA_S;
+
+typedef void (*RKADK_MEDIA_VENC_DATA_PROC_FUNC)(RKADK_MEDIA_VENC_DATA_S stData,
+                                                RKADK_VOID *pHandle);
+typedef void (*RKADK_MEDIA_AENC_DATA_PROC_FUNC)(AUDIO_STREAM_S stFrame,
+                                                RKADK_VOID *pHandle);
+
+RKADK_S32 RKADK_MPI_SYS_Init();
+RKADK_S32 RKADK_MPI_SYS_Exit();
+
+AUDIO_SOUND_MODE_E RKADK_AI_GetSoundMode(RKADK_U32 ch);
+RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
+                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode);
+RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
+                              RKADK_VQE_MODE_E enMode);
 
 RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
                               AENC_CHN_ATTR_S *pstAencChnAttr);
@@ -67,33 +89,52 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr);
 RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId);
 
+#if 0
 RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr);
 
 RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId);
+#endif
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);
 RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
                                const MPP_CHN_S *pstDestChn);
 
-RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(CODEC_TYPE_E enType);
-CODEC_TYPE_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType);
+RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(RK_CODEC_ID_E enType);
+RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType);
 
 RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
                                 RKADK_U32 u32BitRate, RKADK_U32 u32SrcFrameRate,
                                 RKADK_U32 u32DstFrameRate);
 
-RKADK_S32 RKADK_MEDIA_GetMediaBuffer(MPP_CHN_S *pstChn, OutCbFuncEx pfnDataCB,
-                                     RKADK_VOID *pHandle);
+RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,
+                                    RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB,
+                                    RKADK_VOID *pHandle);
 
-RKADK_S32 RKADK_MEDIA_StopGetMediaBuffer(MPP_CHN_S *pstChn,
-                                         OutCbFuncEx pfnDataCB);
+RKADK_S32
+RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
+                              RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB);
+
+RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
+                                    RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
+                                    RKADK_VOID *pHandle);
+
+RKADK_S32
+RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
+                              RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB);
 
 RKADK_S32 RKADK_MEDIA_FrameBufMalloc(RKADK_FRAME_ATTR_S *pstFrameAttr);
 
 RKADK_S32 RKADK_MEDIA_FrameFree(RKADK_FRAME_ATTR_S *pstFrameAttr);
 
 bool RKADK_MEDIA_CheckFrameAttr(RKADK_FRAME_ATTR_S *pstFrameAttr);
+
+bool RKADK_MEDIA_CheckIdrFrame(RKADK_CODEC_TYPE_E enCodecType,
+                               VENC_DATA_TYPE_U uDataType);
+
+RKADK_U16 RKADK_MEDIA_GetAudioBitWidth(AUDIO_BIT_WIDTH_E enBitWidth);
+
+int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat, RKADK_CHAR *cPixFmt);
 
 #ifdef __cplusplus
 }

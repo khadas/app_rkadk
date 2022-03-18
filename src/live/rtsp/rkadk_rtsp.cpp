@@ -145,10 +145,10 @@ static RKADK_S32 RKADK_RTSP_RequestIDR(RKADK_U32 u32CamId, RKADK_U32 u32ChnId) {
     for (i = 0; i < (int)pstRecCfg->file_num; i++) {
       RKADK_LOGI("chn mux, venc_chn[%d] request IDR",
                  pstRecCfg->attribute[i].venc_chn);
-      ret |= RK_MPI_VENC_RequestIDR(pstRecCfg->attribute[i].venc_chn, RK_TRUE);
+      ret |= RK_MPI_VENC_RequestIDR(pstRecCfg->attribute[i].venc_chn, RK_FALSE);
     }
   } else {
-    ret = RK_MPI_VENC_RequestIDR(u32ChnId, RK_TRUE);
+    ret = RK_MPI_VENC_RequestIDR(u32ChnId, RK_FALSE);
   }
 
   return ret;
@@ -201,8 +201,8 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
   int ret = 0;
 
   if (pHandle->bVencChnMux) {
-    ret = RKADK_MEDIA_GetMediaBuffer(pstVencChn, RKADK_RTSP_VencOutCb,
-                                     (RKADK_VOID *)pHandle);
+    ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_RTSP_VencOutCb,
+                                    (RKADK_VOID *)pHandle);
   } else {
     ret = RK_MPI_SYS_RegisterOutCbEx(pstVencChn, RKADK_RTSP_VencOutCb,
                                      (RKADK_VOID *)pHandle);
@@ -259,7 +259,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     return -1;
   }
 
-  RK_MPI_SYS_Init();
+  RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
@@ -433,7 +433,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)
-    RKADK_MEDIA_StopGetMediaBuffer(&stVencChn, RKADK_RTSP_VencOutCb);
+    RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb);
 
   bUseRga = RKADK_RTSP_IsUseRga(pstLiveCfg);
 
@@ -485,6 +485,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
 
+  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Rtsp[%d] DeInit End...", pstHandle->u32CamId);
   free(pHandle);
   return 0;

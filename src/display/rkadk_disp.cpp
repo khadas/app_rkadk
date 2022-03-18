@@ -139,7 +139,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_LOGI("Disp u32CamId[%d] Init Start...", u32CamId);
 
-  RK_MPI_SYS_Init();
+  RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(u32CamId);
@@ -258,6 +258,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
     return ret;
   }
 
+  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Disp u32CamId[%d] DeInit End...", u32CamId);
   return 0;
 }

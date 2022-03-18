@@ -14,11 +14,11 @@
  *  limitations under the License.
  */
 
-#include "rkadk_stream.h"
 #include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
+#include "rkadk_stream.h"
 #include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
@@ -36,9 +36,9 @@ extern char *optarg;
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
-static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_PCM;
+static RKADK_CHAR *g_output_path = "/tmp/ai.pcm";
 
-static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
+static RKADK_CHAR optstr[] = "a:I:m:o:p:h";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -50,8 +50,6 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
-  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, h264, h265, mjpeg,"
-         " jpeg, Default:pcm\n");
   printf("\t-o: Output path, Default:\"/tmp/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   ;
@@ -73,18 +71,19 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
   return 0;
 }
 
-static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
-                     RKADK_CODEC_TYPE_E enCodecType, RKADK_CHAR *pIqfilesPath) {
+static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
   RKADK_S32 ret, fps;
+  RKADK_MW_PTR pHandle = NULL;
+  RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 
-  g_output_file = fopen(pOutPath, "w");
+  g_output_file = fopen(g_output_path, "w");
   if (!g_output_file) {
-    RKADK_LOGE("open %s file failed, exit", pOutPath);
+    RKADK_LOGE("open %s file failed, exit", g_output_path);
     return -1;
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fps);
+  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
     return -1;
@@ -92,25 +91,27 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  RKADK_VI_ISP_Start(u32CamID, hdr_mode, fec_enable, pIqfilesPath, fps);
+  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
-  RKADK_STREAM_VencRegisterCallback(u32CamID, VencDataCb);
+  memset(&stVideoAttr, 0, sizeof(RKADK_STREAM_VIDEO_ATTR_S));
+  stVideoAttr.pfnDataCB = VencDataCb;
+  stVideoAttr.u32CamId = u32CamId;
 
-  ret = RKADK_STREAM_VideoInit(u32CamID, enCodecType);
+  ret = RKADK_STREAM_VideoInit(&stVideoAttr, &pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VideoInit failed = %d", ret);
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamID);
+    RKADK_VI_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
 
-  ret = RKADK_STREAM_VencStart(u32CamID, enCodecType, -1);
+  ret = RKADK_STREAM_VencStart(pHandle, -1);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VencStart failed");
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamID);
+    RKADK_VI_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -125,52 +126,51 @@ static int VideoTest(RKADK_U32 u32CamID, RKADK_CHAR *pOutPath,
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
 
+#if 0
     if (strstr(cmd, "fps")) {
       int fpsTest = 20;
       RKADK_PARAM_GOP_S stGopCfg;
       RKADK_S32 s32VencChn;
 
       // set ini fps
-      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fpsTest);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fpsTest);
 
       // set ini gop
       stGopCfg.enStreamType = RKADK_STREAM_TYPE_PREVIEW;
       stGopCfg.u32Gop = fpsTest;
-      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_GOP, &stGopCfg);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_GOP, &stGopCfg);
 
       // set aiq fps
-      RKADK_VI_ISP_SET_FrameRate(u32CamID, fpsTest);
+      RKADK_VI_ISP_SET_FrameRate(u32CamId, fpsTest);
 
       // set mpp fps and gop
       s32VencChn =
-          RKADK_PARAM_GetVencChnId(u32CamID, RKADK_STREAM_TYPE_PREVIEW);
+          RKADK_PARAM_GetVencChnId(u32CamId, RKADK_STREAM_TYPE_PREVIEW);
       RK_MPI_VENC_SetGop(s32VencChn, stGopCfg.u32Gop);
       RK_MPI_VENC_SetFps(s32VencChn, fpsTest, 1, fpsTest, 1);
 
       // get ini fps and gop
-      RKADK_PARAM_GetCamParam(u32CamID, RKADK_PARAM_TYPE_FPS, &fpsTest);
+      RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fpsTest);
       RKADK_LOGD("fps: %d", fpsTest);
-      RKADK_PARAM_SetCamParam(u32CamID, RKADK_PARAM_TYPE_GOP, &stGopCfg);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_GOP, &stGopCfg);
       RKADK_LOGD("gop: %d", stGopCfg.u32Gop);
     }
-
+#endif
     usleep(500000);
   }
 
   RKADK_LOGD("exit!");
 
-  ret = RKADK_STREAM_VencStop(u32CamID);
+  ret = RKADK_STREAM_VencStop(pHandle);
   if (ret)
     RKADK_LOGE("RKADK_STREAM_VencStop failed");
 
-  ret = RKADK_STREAM_VideoDeInit(u32CamID);
+  ret = RKADK_STREAM_VideoDeInit(pHandle);
   if (ret)
     RKADK_LOGE("RKADK_STREAM_VideoDeInit failed = %d", ret);
 
-  RKADK_STREAM_VencUnRegisterCallback(u32CamID);
-
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(u32CamID);
+  RKADK_VI_ISP_Stop(u32CamId);
 #endif
 
   if (g_output_file) {
@@ -185,66 +185,66 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   RKADK_U8 mp3_header[7];
   RKADK_AUDIO_INFO_S audioInfo;
 
-  if (g_enCodecType == RKADK_CODEC_TYPE_MP3) {
+  if (!g_output_file) {
+    g_output_file = fopen(g_output_path, "w");
+    if (!g_output_file) {
+      RKADK_LOGE("open %s file failed, exit", g_output_path);
+      return -1;
+    }
+  }
+
+  if (pAStreamData->enType == RKADK_CODEC_TYPE_ACC) {
     if (RKADK_STREAM_GetAudioInfo(&audioInfo)) {
       RKADK_LOGE("RKADK_STREAM_GetAudioInfo failed\n");
       return -1;
     }
   }
 
-  if (g_output_file) {
-    if (g_enCodecType == RKADK_CODEC_TYPE_MP3) {
-      GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
-                   pAStreamData->u32Len);
-      fwrite(mp3_header, 1, 7, g_output_file);
-    }
-
-    fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
-    RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-               pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+  if (pAStreamData->enType == RKADK_CODEC_TYPE_ACC) {
+    GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
+                 pAStreamData->u32Len);
+    fwrite(mp3_header, 1, 7, g_output_file);
   }
+
+  fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
+  RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
 }
 
 static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
 
-  if (g_pcm_file) {
-    fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
-    RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-               pAStreamData->u64TimeStamp, pAStreamData->u32Len);
-  }
-
-  return 0;
-}
-
-static int AudioTest(RKADK_CHAR *pOutPath, RKADK_CODEC_TYPE_E enCodecType) {
-  RKADK_S32 ret;
-
-  g_output_file = fopen(pOutPath, "w");
-  if (!g_output_file) {
-    RKADK_LOGE("open %s file failed, exit", pOutPath);
-    return -1;
-  }
-  RKADK_STREAM_AencRegisterCallback(enCodecType, AencDataCb);
-
-  if (enCodecType != RKADK_CODEC_TYPE_PCM) {
+  if (!g_pcm_file) {
     g_pcm_file = fopen("/data/ai.pcm", "w");
     if (!g_pcm_file) {
       RKADK_LOGE("open /data/ai.pcm file failed, exit");
       return -1;
     }
-
-    RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_PCM, PcmDataCb);
   }
 
-  ret = RKADK_STREAM_AudioInit(enCodecType);
+  fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
+  RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+
+  return 0;
+}
+
+static int AudioTest() {
+  RKADK_S32 ret;
+  RKADK_MW_PTR pHandle = NULL;
+  RKADK_STREAM_AUDIO_ATTR_S stAudioAttr;
+
+  memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
+  stAudioAttr.pfnPcmDataCB = PcmDataCb;
+  stAudioAttr.pfnAencDataCB = AencDataCb;
+  ret = RKADK_STREAM_AudioInit(&stAudioAttr, &pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_AudioInit failed = %d", ret);
     return ret;
   }
 
-  ret = RKADK_STREAM_AencStart();
+  ret = RKADK_STREAM_AencStart(pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_AencStart failed");
     return -1;
@@ -260,80 +260,38 @@ static int AudioTest(RKADK_CHAR *pOutPath, RKADK_CODEC_TYPE_E enCodecType) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "start")) {
-      RKADK_STREAM_AencStart();
+      RKADK_STREAM_AencStart(pHandle);
     } else if (strstr(cmd, "stop")) {
-      RKADK_STREAM_AencStop();
+      RKADK_STREAM_AencStop(pHandle);
     }
 
     usleep(500000);
   }
 
-  ret = RKADK_STREAM_AencStop();
+  ret = RKADK_STREAM_AencStop(pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_AencStop failed");
   }
 
-  ret = RKADK_STREAM_AudioDeInit(enCodecType);
+  ret = RKADK_STREAM_AudioDeInit(pHandle);
   if (ret)
     RKADK_LOGE("RKADK_STREAM_AudioDeInit failed = %d", ret);
 
-  RKADK_STREAM_AencUnRegisterCallback(enCodecType);
+  if (g_pcm_file) {
+    fclose(g_pcm_file);
+    g_pcm_file = NULL;
+  }
+
   if (g_output_file) {
     fclose(g_output_file);
     g_output_file = NULL;
   }
 
-  if (enCodecType != RKADK_CODEC_TYPE_PCM) {
-    RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_PCM);
-    if (g_pcm_file) {
-      fclose(g_pcm_file);
-      g_pcm_file = NULL;
-    }
-  }
-
   return 0;
-}
-
-static RKADK_CODEC_TYPE_E GetEncoderMode(char *encoder) {
-  RKADK_CODEC_TYPE_E enCodecType = RKADK_CODEC_TYPE_PCM;
-  RKADK_CHAR *pCodecName = "PCM";
-
-  if (!strcmp(encoder, "pcm")) {
-    enCodecType = RKADK_CODEC_TYPE_PCM;
-    pCodecName = "PCM";
-  } else if (!strcmp(encoder, "mp2")) {
-    enCodecType = RKADK_CODEC_TYPE_MP2;
-    pCodecName = "MP2";
-  }  else if (!strcmp(encoder, "mp3")) {
-    enCodecType = RKADK_CODEC_TYPE_MP3;
-    pCodecName = "MP3";
-  } else if (!strcmp(encoder, "g711a")) {
-    enCodecType = RKADK_CODEC_TYPE_G711A;
-    pCodecName = "G711A";
-  } else if (!strcmp(encoder, "g711u")) {
-    enCodecType = RKADK_CODEC_TYPE_G711U;
-    pCodecName = "G711U";
-  } else if (!strcmp(encoder, "h264")) {
-    enCodecType = RKADK_CODEC_TYPE_H264;
-    pCodecName = "H264";
-  } else if (!strcmp(encoder, "h265")) {
-    enCodecType = RKADK_CODEC_TYPE_H265;
-    pCodecName = "H265";
-  } else if (!strcmp(encoder, "mjpeg")) {
-    enCodecType = RKADK_CODEC_TYPE_MJPEG;
-    pCodecName = "MJPEG";
-  } else if (!strcmp(encoder, "jpeg")) {
-    enCodecType = RKADK_CODEC_TYPE_JPEG;
-    pCodecName = "JPEG";
-  }
-
-  RKADK_LOGD("#CodecName: %s", pCodecName);
-  return enCodecType;
 }
 
 int main(int argc, char *argv[]) {
   RKADK_U32 u32CamId = 0;
-  RKADK_CHAR *pOutPath = "/tmp/ai.pcm";
   RKADK_CHAR *pMode = "audio";
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   int c;
@@ -358,11 +316,8 @@ int main(int argc, char *argv[]) {
     case 'm':
       pMode = optarg;
       break;
-    case 'e':
-      g_enCodecType = GetEncoderMode(optarg);
-      break;
     case 'o':
-      pOutPath = optarg;
+      g_output_path = optarg;
       break;
     case 'p':
       iniPath = optarg;
@@ -378,7 +333,7 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#Test mode: %s", pMode);
-  RKADK_LOGD("#Out path: %s", pOutPath);
+  RKADK_LOGD("#Out path: %s", g_output_path);
 
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
@@ -400,9 +355,9 @@ int main(int argc, char *argv[]) {
   }
 
   if (!strcmp(pMode, "audio"))
-    AudioTest(pOutPath, g_enCodecType);
+    AudioTest();
   else if (!strcmp(pMode, "video"))
-    VideoTest(u32CamId, pOutPath, g_enCodecType, pIqfilesPath);
+    VideoTest(u32CamId, pIqfilesPath);
   else {
     RKADK_LOGE("Invalid test mode: %s", pMode);
     return -1;

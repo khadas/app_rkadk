@@ -22,49 +22,15 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-
-typedef enum {
-  RKADK_H264E_NALU_BSLICE = 0,   /* B SLICE types */
-  RKADK_H264E_NALU_PSLICE = 1,   /* P SLICE types */
-  RKADK_H264E_NALU_ISLICE = 2,   /* I SLICE types */
-  RKADK_H264E_NALU_IDRSLICE = 5, /* IDR SLICE types */
-  RKADK_H264E_NALU_SEI = 6,      /* SEI types */
-  RKADK_H264E_NALU_SPS = 7,      /* SPS types */
-  RKADK_H264E_NALU_PPS = 8,      /* PPS types */
-  RKADK_H264E_NALU_BUTT
-} RKADK_H264E_NALU_TYPE_E;
-
-/* the nalu type of H265E */
-typedef enum {
-  RKADK_H265E_NALU_BSLICE = 0,    /* B SLICE types */
-  RKADK_H265E_NALU_PSLICE = 1,    /* P SLICE types */
-  RKADK_H265E_NALU_ISLICE = 2,    /* I SLICE types */
-  RKADK_H265E_NALU_IDRSLICE = 19, /* IDR SLICE types */
-  RKADK_H265E_NALU_VPS = 32,      /* VPS types */
-  RKADK_H265E_NALU_SPS = 33,      /* SPS types */
-  RKADK_H265E_NALU_PPS = 34,      /* PPS types */
-  RKADK_H265E_NALU_SEI = 39,      /* SEI types */
-  RKADK_H265E_NALU_BUTT
-} RKADK_H265E_NALU_TYPE_E;
-
-/* the pack type of JPEGE */
-typedef enum {
-  RKADK_JPEGE_PACK_ECS = 5,      /* ECS types */
-  RKADK_JPEGE_PACK_APP = 6,      /* APP types */
-  RKADK_JPEGE_PACK_VDO = 7,      /* VDO types */
-  RKADK_JPEGE_PACK_PIC = 8,      /* PIC types */
-  RKADK_JPEGE_PACK_DCF = 9,      /* DCF types */
-  RKADK_JPEGE_PACK_DCF_PIC = 10, /* DCF PIC types */
-  RKADK_JPEGE_PACK_BUTT
-} RKADK_JPEGE_PACK_TYPE_E;
+#include "rk_mpi_venc.h"
 
 /* the data type of video encode */
 typedef struct {
   RKADK_CODEC_TYPE_E enPayloadType; /* <H.264/H.265/JPEG/MJPEG */
   union {
-    RKADK_H264E_NALU_TYPE_E enH264EType; /* <H264E NALU types */
-    RKADK_H265E_NALU_TYPE_E enH265EType; /* <H265E NALU types */
-    RKADK_JPEGE_PACK_TYPE_E enJPEGEType; /* <TODO: JPEGE PACK types*/
+    H264E_NALU_TYPE_E enH264EType; /* <H264E NALU types */
+    H265E_NALU_TYPE_E enH265EType; /* <H265E NALU types */
+    JPEGE_PACK_TYPE_E enJPEGEType; /* <TODO: JPEGE PACK types*/
   };
 } RKADK_VENC_DATA_TYPE_S;
 
@@ -92,10 +58,11 @@ typedef struct {
   RKADK_U32 u32Len;       /* stream lenth, by bytes */
   RKADK_U64 u64TimeStamp; /* frame time stamp */
   RKADK_U32 u32Seq; /* frame seq, if stream is not a valid frame,u32Seq is 0 */
+  RKADK_CODEC_TYPE_E enType;
 } RKADK_AUDIO_STREAM_S;
 
 /** data proc callback function pointer */
-typedef RKADK_S32 (*RKADK_AENC_DATA_PROC_FUNC)(
+typedef RKADK_S32 (*RKADK_AUDIO_DATA_PROC_FUNC)(
     RKADK_AUDIO_STREAM_S *pAStreamData);
 
 /** Video Information */
@@ -118,39 +85,34 @@ typedef struct {
   RKADK_U16 u16SampleBitWidth;
 } RKADK_AUDIO_INFO_S;
 
-RKADK_S32
-RKADK_STREAM_VencRegisterCallback(RKADK_U32 u32CamID,
-                                  RKADK_VENC_DATA_PROC_FUNC pfnDataCB);
+typedef struct {
+  RKADK_AUDIO_DATA_PROC_FUNC pfnPcmDataCB;
+  RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;
+} RKADK_STREAM_AUDIO_ATTR_S;
 
-RKADK_S32 RKADK_STREAM_VencUnRegisterCallback(RKADK_U32 u32CamID);
+typedef struct {
+  RKADK_U32 u32CamId;
+  RKADK_VENC_DATA_PROC_FUNC pfnDataCB;
+} RKADK_STREAM_VIDEO_ATTR_S;
 
-RKADK_VOID
-RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_E enCodecType,
-                                  RKADK_AENC_DATA_PROC_FUNC pfnDataCB);
+RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr, RKADK_MW_PTR *ppHandle);
 
-RKADK_VOID RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_E enCodecType);
+RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle);
 
-RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
-                                 RKADK_CODEC_TYPE_E enCodecType);
+RKADK_S32 RKADK_STREAM_VencStart(RKADK_MW_PTR pHandle,              RKADK_S32 s32FrameCnt);
 
-RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID);
+RKADK_S32 RKADK_STREAM_VencStop(RKADK_MW_PTR pHandle);
 
-RKADK_S32 RKADK_STREAM_VencStart(RKADK_U32 u32CamID,
-                                 RKADK_CODEC_TYPE_E enCodecType,
-                                 RKADK_S32 s32FrameCnt);
-
-RKADK_S32 RKADK_STREAM_VencStop(RKADK_U32 u32CamID);
-
-RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType);
-
-RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType);
-
-RKADK_S32 RKADK_STREAM_AencStart();
-
-RKADK_S32 RKADK_STREAM_AencStop();
-
-RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamID,
+RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_MW_PTR pHandle,
                                     RKADK_VIDEO_INFO_S *pstVideoInfo);
+
+RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr, RKADK_MW_PTR *ppHandle);
+
+RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle);
+
+RKADK_S32 RKADK_STREAM_AencStart(RKADK_MW_PTR pHandle);
+
+RKADK_S32 RKADK_STREAM_AencStop(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_AUDIO_INFO_S *pstAudioInfo);
 

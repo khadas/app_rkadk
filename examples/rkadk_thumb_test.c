@@ -140,14 +140,10 @@ int main(int argc, char *argv[]) {
     size = buf_size;
 
     if (bIsMp4) {
-#ifdef ROCKIT
       if (RKADK_GetThmInMp4(pInuptPath, buffer, &size)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
         return -1;
       }
-#else
-      RKADK_LOGI("Don't enable rkadk rockit");
-#endif
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpg(pInuptPath, eJpgThumbType, buffer, &size)) {
@@ -175,14 +171,10 @@ int main(int argc, char *argv[]) {
 
 #else
     if (bIsMp4) {
-#ifdef ROCKIT
       if (RKADK_GetThmInMp4Ex(pInuptPath, &stThumbAttr)) {
         RKADK_LOGE("RKADK_GetThmInMp4Ex failed");
         return -1;
       }
-#else
-      RKADK_LOGI("Don't enable rkadk rockit");
-#endif
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpgEx(pInuptPath, eJpgThumbType, &stThumbAttr)) {
@@ -190,9 +182,10 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     }
-    RKADK_LOGD("%s[%d, %d, %d, %d]: size: %d, count: %d", postfix, stThumbAttr.u32Width,
-               stThumbAttr.u32Height, stThumbAttr.u32VirWidth,
-               stThumbAttr.u32VirHeight, stThumbAttr.u32BufSize, count);
+    RKADK_LOGD("%s[%d, %d, %d, %d]: size: %d, count: %d", postfix,
+               stThumbAttr.u32Width, stThumbAttr.u32Height,
+               stThumbAttr.u32VirWidth, stThumbAttr.u32VirHeight,
+               stThumbAttr.u32BufSize, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (stThumbAttr.u32BufSize > 0) {
@@ -211,9 +204,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     if (bIsMp4) {
-#ifdef ROCKIT
       RKADK_ThmBufFree(&stThumbAttr);
-#endif
     } else {
       RKADK_PHOTO_ThumbBufFree(&stThumbAttr);
     }

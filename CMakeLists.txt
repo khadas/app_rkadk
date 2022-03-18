@@ -6,18 +6,11 @@ cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 
 project(rkadk)
 
-install(DIRECTORY include/ DESTINATION include/rkadk
-        FILES_MATCHING PATTERN "*.h")
-
-message("RKMEDIA_HEADER_DIR = ${RKMEDIA_HEADER_DIR}")
-include_directories(${RKMEDIA_HEADER_DIR})
+install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
-if(USE_ROCKIT)
-    message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
-    include_directories(${ROCKIT_HEADER_DIR})
-    add_definitions(-DROCKIT)
-endif()
+message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
+include_directories(${ROCKIT_HEADER_DIR})
 
 if(USE_RKAIQ)
     find_package(RkAiq REQUIRED)

@@ -18,9 +18,9 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkmedia_api.h"
 #include <assert.h>
 #include <malloc.h>
+#include <pthread.h>
 #include <rga/RgaApi.h>
 #include <rga/rga.h>
 #include <stdio.h>
@@ -55,49 +55,73 @@ typedef struct {
 } RKADK_JPG_DE_TYPE_S;
 
 typedef struct {
-  bool init;
   RKADK_U32 u32CamId;
   RKADK_PHOTO_DATA_RECV_FN_PTR pDataRecvFn;
-  RKADK_PHOTO_DATA_RECV_EX_FN_PTR pDataRecvExFn;
-} PHOTO_INFO_S;
+  pthread_t tid;
+  bool bGetJpeg;
+  RKADK_U32 u32PhotoCnt;
+} RKADK_PHOTO_HANDLE_S;
 
 static RKADK_JPG_DE_TYPE_S g_stJpgDEType[JPG_DE_TYPE_COUNT] = {
     {1, 1}, {2, 1}, {3, 3}, {4, 4},  {5, 8},  {6, 1},
     {7, 1}, {8, 2}, {9, 3}, {10, 8}, {11, 4}, {12, 8}};
 
-static PHOTO_INFO_S g_stPhotoInfo[RKADK_MAX_SENSOR_CNT] = {0};
+static void *RKADK_PHOTO_GetJpeg(void *params) {
+  int ret;
+  VENC_STREAM_S stFrame;
+  RKADK_PHOTO_RECV_DATA_S stData;
 
-static void RKADK_PHOTO_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *pHandle) {
-  PHOTO_INFO_S *pstPhotoInfo;
-
-  pstPhotoInfo = (PHOTO_INFO_S *)pHandle;
-  if (!pstPhotoInfo) {
-    RKADK_LOGE("Can't find photo handle");
-    goto exit;
+  RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
+  if (!pHandle) {
+    RKADK_LOGE("Get jpeg thread invalid param");
+    return NULL;
   }
 
-  if (!g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn &&
-      !g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn) {
-    RKADK_LOGW("u32CamId[%d] don't register callback", pstPhotoInfo->u32CamId);
-    goto exit;
+  if (!pHandle->pDataRecvFn) {
+    RKADK_LOGE("u32CamId[%d] don't register callback", pHandle->u32CamId);
+    return NULL;
   }
 
-  if (g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn)
-    g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvFn(
-        (RKADK_U8 *)RK_MPI_MB_GetPtr(mb), RK_MPI_MB_GetSize(mb));
-
-  if (g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn) {
-    RKADK_PHOTO_RECV_DATA_S stData;
-
-    memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
-    stData.pu8DataBuf = (RKADK_U8 *)RK_MPI_MB_GetPtr(mb);
-    stData.u32DataLen = RK_MPI_MB_GetSize(mb);
-    stData.u32CamId = pstPhotoInfo->u32CamId;
-    g_stPhotoInfo[pstPhotoInfo->u32CamId].pDataRecvExFn(&stData);
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      RKADK_PARAM_GetPhotoCfg(pHandle->u32CamId);
+  if (!pstPhotoCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    return NULL;
   }
 
-exit:
-  RK_MPI_MB_ReleaseBuffer(mb);
+  stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
+  if (!stFrame.pstPack) {
+    RKADK_LOGE("malloc stream package buffer failed");
+    return NULL;
+  }
+
+  while (pHandle->bGetJpeg) {
+    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, -1);
+    if (ret == RK_SUCCESS) {
+      if (pHandle->u32PhotoCnt) {
+        memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
+        stData.pu8DataBuf =
+            (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
+        stData.u32DataLen = stFrame.pstPack->u32Len;
+        stData.u32CamId = pHandle->u32CamId;
+        pHandle->pDataRecvFn(&stData);
+        pHandle->u32PhotoCnt -= 1;
+      }
+
+      ret = RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
+    } else {
+      RKADK_LOGE("RK_MPI_VENC_GetStream[%d] failed[%x]", pstPhotoCfg->venc_chn,
+                 ret);
+    }
+  }
+
+  if (stFrame.pstPack)
+    free(stFrame.pstPack);
+
+  RKADK_LOGD("Exit get jpeg thread");
+  return NULL;
 }
 
 static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
@@ -106,12 +130,16 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   VENC_ATTR_JPEG_S *pstAttrJpege = &(pstVencAttr->stVencAttr.stAttrJpege);
 
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
-  pstVencAttr->stVencAttr.enType = RK_CODEC_TYPE_JPEG;
-  pstVencAttr->stVencAttr.imageType = pstPhotoCfg->vi_attr.stChnAttr.enPixFmt;
+  pstVencAttr->stVencAttr.enType = RK_VIDEO_ID_MJPEG;
+  pstVencAttr->stVencAttr.enPixelFormat =
+      pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
   pstVencAttr->stVencAttr.u32PicWidth = pstPhotoCfg->image_width;
   pstVencAttr->stVencAttr.u32PicHeight = pstPhotoCfg->image_height;
   pstVencAttr->stVencAttr.u32VirWidth = pstPhotoCfg->image_width;
   pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = 2;
+  pstVencAttr->stVencAttr.u32BufSize =
+      pstPhotoCfg->image_width * pstPhotoCfg->image_height;
 
   pstAttrJpege->bSupportDCF = (RK_BOOL)stThumbAttr.bSupportDCF;
   pstAttrJpege->stMPFCfg.u8LargeThumbNailNum =
@@ -144,24 +172,27 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
 }
 
 static void RKADK_PHOTO_SetChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
-                               MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
-                               MPP_CHN_S *pstRgaChn) {
+                               RKADK_U32 u32CamId, MPP_CHN_S *pstViChn,
+                               MPP_CHN_S *pstVencChn, MPP_CHN_S *pstRgaChn) {
   pstViChn->enModId = RK_ID_VI;
-  pstViChn->s32DevId = 0;
+  pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstPhotoCfg->vi_attr.u32ViChn;
 
+#ifdef RKADK_ENABLE_RGA
   pstRgaChn->enModId = RK_ID_RGA;
-  pstRgaChn->s32DevId = 0;
+  pstRgaChn->s32DevId = u32CamId;
   pstRgaChn->s32ChnId = pstPhotoCfg->rga_chn;
+#endif
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = 0;
+  pstVencChn->s32DevId = u32CamId;
   pstVencChn->s32ChnId = pstPhotoCfg->venc_chn;
 }
 
+#ifdef RKADK_ENABLE_RGA
 static bool RKADK_PHOTO_IsUseRga(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
-  RKADK_U32 u32ViWidth = pstPhotoCfg->vi_attr.stChnAttr.u32Width;
-  RKADK_U32 u32ViHeight = pstPhotoCfg->vi_attr.stChnAttr.u32Height;
+  RKADK_U32 u32ViWidth = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width;
+  RKADK_U32 u32ViHeight = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height;
 
   if (pstPhotoCfg->image_width == u32ViWidth &&
       pstPhotoCfg->image_height == u32ViHeight) {
@@ -172,52 +203,63 @@ static bool RKADK_PHOTO_IsUseRga(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
     return true;
   }
 }
+#endif
 
-RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
+RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr,
+                           RKADK_MW_PTR *ppHandle) {
   int ret;
-  bool bUseRga = false;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   VENC_CHN_ATTR_S stVencAttr;
+  RKADK_PHOTO_HANDLE_S *pHandle = NULL;
+
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga = false;
   RGA_ATTR_S stRgaAttr;
+#endif
 
   RKADK_CHECK_POINTER(pstPhotoAttr, RKADK_FAILURE);
-  RKADK_CHECK_CAMERAID(pstPhotoAttr->u32CamID, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(pstPhotoAttr->u32CamId, RKADK_FAILURE);
 
-  RKADK_LOGI("Photo[%d, %d] Init...", pstPhotoAttr->u32CamID,
-             pstPhotoAttr->enPhotoType);
-
-  PHOTO_INFO_S *pstPhotoInfo = &g_stPhotoInfo[pstPhotoAttr->u32CamID];
-  if (pstPhotoInfo->init) {
-    RKADK_LOGI("photo: camera[%d] has been init", pstPhotoAttr->u32CamID);
-    return 0;
+  if (*ppHandle) {
+    RKADK_LOGE("Photo[%d] has been initialized", pstPhotoAttr->u32CamId);
+    return -1;
   }
 
-  pstPhotoInfo->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
-  pstPhotoInfo->pDataRecvExFn = pstPhotoAttr->pfnPhotoDataExProc;
-  pstPhotoInfo->u32CamId = pstPhotoAttr->u32CamID;
+  RKADK_LOGI("Photo[%d] Init...", pstPhotoAttr->u32CamId);
+
+  pHandle = (RKADK_PHOTO_HANDLE_S *)malloc(sizeof(RKADK_PHOTO_HANDLE_S));
+  if (!pHandle) {
+    RKADK_LOGE("malloc photo handle failed");
+    return -1;
+  }
+  memset(pHandle, 0, sizeof(RKADK_PHOTO_HANDLE_S));
+
+  pHandle->u32CamId = pstPhotoAttr->u32CamId;
+  pHandle->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
 
   RKADK_PARAM_Init(NULL, NULL);
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
-      RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamID);
+      RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
   if (!pstPhotoCfg) {
     RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
     return -1;
   }
 
-  bUseRga = RKADK_PHOTO_IsUseRga(pstPhotoCfg);
+  RKADK_MPI_SYS_Init();
 
-  RK_MPI_SYS_Init();
-
-  RKADK_PHOTO_SetChn(pstPhotoCfg, &stViChn, &stVencChn, &stRgaChn);
+  RKADK_PHOTO_SetChn(pstPhotoCfg, pstPhotoAttr->u32CamId, &stViChn, &stVencChn,
+                     &stRgaChn);
 
   // Create VI
-  ret = RKADK_MPI_VI_Init(pstPhotoAttr->u32CamID, stViChn.s32ChnId,
+  ret = RKADK_MPI_VI_Init(pstPhotoAttr->u32CamId, stViChn.s32ChnId,
                           &(pstPhotoCfg->vi_attr.stChnAttr));
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VI_Init failed, ret = %d", ret);
     return ret;
   }
 
+#ifdef RKADK_ENABLE_RGA
+  bUseRga = RKADK_PHOTO_IsUseRga(pstPhotoCfg);
   // Create RGA
   if (bUseRga) {
     memset(&stRgaAttr, 0, sizeof(stRgaAttr));
@@ -239,38 +281,40 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
       goto failed;
     }
   }
+#endif
 
   // Create VENC
   RKADK_PHOTO_SetVencAttr(pstPhotoAttr->stThumbAttr, pstPhotoCfg, &stVencAttr);
   ret = RK_MPI_VENC_CreateChn(stVencChn.s32ChnId, &stVencAttr);
   if (ret) {
-    RKADK_LOGE("Create Venc failed! ret=%d", ret);
+    RKADK_LOGE("Create Venc failed[%x]", ret);
     goto failed;
   }
 
-  ret = RK_MPI_SYS_RegisterOutCbEx(&stVencChn, RKADK_PHOTO_VencOutCb,
-                                   pstPhotoInfo);
-  if (ret) {
-    RKADK_LOGE("Register Output callback failed! ret=%d", ret);
-    goto failed;
-  }
-
-  // The encoder defaults to continuously receiving frames from the previous
-  // stage. Before performing the bind operation, set s32RecvPicNum to 0 to
-  // make the encoding enter the pause state.
+  // must, for no streams callback running failed
   VENC_RECV_PIC_PARAM_S stRecvParam;
-  stRecvParam.s32RecvPicNum = 0;
+  stRecvParam.s32RecvPicNum = 1;
   ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
   if (ret) {
-    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed = %d", ret);
+    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
+    goto failed;
+  }
+  RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
+
+  pHandle->bGetJpeg = true;
+  ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
+  if (ret) {
+    RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamId,
+               ret);
     goto failed;
   }
 
+#ifdef RKADK_ENABLE_RGA
   if (bUseRga) {
     // RGA Bind VENC
     ret = RKADK_MPI_SYS_Bind(&stRgaChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
+      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%x]", stRgaChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       goto failed;
     }
@@ -278,60 +322,91 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     // VI Bind RGA
     ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
     if (ret) {
-      RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%d]", stViChn.s32ChnId,
+      RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%x]", stViChn.s32ChnId,
                  stRgaChn.s32ChnId, ret);
       RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
       goto failed;
     }
-  } else {
+  } else
+#endif
+  {
     // VI Bind VENC
     ret = RK_MPI_SYS_Bind(&stViChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%d]", stViChn.s32ChnId,
+      RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       goto failed;
     }
   }
 
-  pstPhotoInfo->init = true;
-  RKADK_LOGI("Photo[%d, %d] Init End...", pstPhotoAttr->u32CamID,
-             pstPhotoAttr->enPhotoType);
+  *ppHandle = (RKADK_MW_PTR)pHandle;
+  RKADK_LOGI("Photo[%d] Init End...", pstPhotoAttr->u32CamId);
   return 0;
 
 failed:
   RKADK_LOGE("failed");
   RK_MPI_VENC_DestroyChn(stVencChn.s32ChnId);
 
+#ifdef RKADK_ENABLE_RGA
   if (bUseRga)
     RKADK_MPI_RGA_DeInit(pstPhotoCfg->rga_chn);
+#endif
 
-  RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamID, stViChn.s32ChnId);
+  RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamId, stViChn.s32ChnId);
   return ret;
 }
 
-RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
+RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   int ret;
-  bool bUseRga = false;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
+  RKADK_PHOTO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga = false;
+#endif
 
-  RKADK_LOGI("Photo[%d] DeInit...", u32CamID);
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_PHOTO_HANDLE_S *)pHandle;
 
-  PHOTO_INFO_S *pstPhotoInfo = &g_stPhotoInfo[u32CamID];
-  if (!pstPhotoInfo->init) {
-    RKADK_LOGI("photo: camera[%d] has been deinit", u32CamID);
-    return 0;
-  }
+  RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
+  RKADK_LOGI("Photo[%d] DeInit...", pstHandle->u32CamId);
 
-  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(u32CamID);
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      RKADK_PARAM_GetPhotoCfg(pstHandle->u32CamId);
   if (!pstPhotoCfg) {
     RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
     return -1;
   }
 
-  RKADK_PHOTO_SetChn(pstPhotoCfg, &stViChn, &stVencChn, &stRgaChn);
+  RKADK_PHOTO_SetChn(pstPhotoCfg, pstHandle->u32CamId, &stViChn, &stVencChn,
+                     &stRgaChn);
 
+  pstHandle->bGetJpeg = false;
+#if 0
+  // The current version cannot be forced to exit
+  ret = RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
+  if (ret) {
+    RKADK_LOGE("StopRecvFrame VENC[%d] failed[%d]", stVencChn.s32ChnId, ret);
+    return ret;
+  }
+#else
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+  stRecvParam.s32RecvPicNum = 1;
+  ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
+    return ret;
+  }
+#endif
+
+  if (pstHandle->tid) {
+    ret = pthread_join(pstHandle->tid, NULL);
+    if (ret)
+      RKADK_LOGE("Exit get jpeg thread failed!");
+    pstHandle->tid = 0;
+  }
+
+#ifdef RKADK_ENABLE_RGA
   bUseRga = RKADK_PHOTO_IsUseRga(pstPhotoCfg);
   if (bUseRga) {
     // RGA UnBind VENC
@@ -349,7 +424,9 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
                  stRgaChn.s32ChnId, ret);
       return ret;
     }
-  } else {
+  } else
+#endif
+  {
     // VI UnBind VENC
     ret = RK_MPI_SYS_UnBind(&stViChn, &stVencChn);
     if (ret) {
@@ -366,6 +443,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
     return ret;
   }
 
+#ifdef RKADK_ENABLE_RGA
   // Destory RGA
   if (bUseRga) {
     ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
@@ -374,55 +452,58 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamID) {
       return ret;
     }
   }
+#endif
 
   // Destory VI
-  ret = RKADK_MPI_VI_DeInit(u32CamID, stViChn.s32ChnId);
+  ret = RKADK_MPI_VI_DeInit(pstHandle->u32CamId, stViChn.s32ChnId);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VI_DeInit failed[%d]", ret);
     return ret;
   }
 
-  pstPhotoInfo->pDataRecvFn = NULL;
-  pstPhotoInfo->pDataRecvExFn = NULL;
-  pstPhotoInfo->init = false;
-  RKADK_LOGI("Photo[%d] DeInit End...", u32CamID);
+  RKADK_MPI_SYS_Exit();
+  RKADK_LOGI("Photo[%d] DeInit End...", pstHandle->u32CamId);
+
+  if (pHandle) {
+    free(pHandle);
+    pHandle = NULL;
+  }
   return 0;
 }
 
-RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
+RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_TAKE_PHOTO_ATTR_S pstAttr,
+                                RKADK_MW_PTR pHandle) {
   VENC_RECV_PIC_PARAM_S stRecvParam;
+  RKADK_PHOTO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pstPhotoAttr, RKADK_FAILURE);
-  RKADK_CHECK_CAMERAID(pstPhotoAttr->u32CamID, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_PHOTO_HANDLE_S *)pHandle;
+  RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
-      RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamID);
+      RKADK_PARAM_GetPhotoCfg(pstHandle->u32CamId);
   if (!pstPhotoCfg) {
     RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
     return -1;
   }
 
-  if (pstPhotoAttr->enPhotoType == RKADK_PHOTO_TYPE_LAPSE) {
+  if (pstAttr.enPhotoType == RKADK_PHOTO_TYPE_LAPSE) {
     // TODO
-    RKADK_LOGI("nonsupport photo type = %d", pstPhotoAttr->enPhotoType);
+    RKADK_LOGI("nonsupport photo type = %d", pstAttr.enPhotoType);
     return -1;
   }
 
-  PHOTO_INFO_S *pstPhotoInfo = &g_stPhotoInfo[pstPhotoAttr->u32CamID];
-  if (!pstPhotoInfo->init) {
-    RKADK_LOGI("photo: camera[%d] isn't init", pstPhotoAttr->u32CamID);
-    return -1;
-  }
-
-  if (pstPhotoAttr->enPhotoType == RKADK_PHOTO_TYPE_SINGLE)
+  memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
+  if (pstAttr.enPhotoType == RKADK_PHOTO_TYPE_SINGLE)
     stRecvParam.s32RecvPicNum = 1;
   else
-    stRecvParam.s32RecvPicNum =
-        pstPhotoAttr->unPhotoTypeAttr.stMultipleAttr.s32Count;
+    stRecvParam.s32RecvPicNum = pstAttr.unPhotoTypeAttr.stMultipleAttr.s32Count;
 
+  pstHandle->u32PhotoCnt = stRecvParam.s32RecvPicNum;
   return RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
 }
 
+#if 0
 static RKADK_U16 RKADK_JPG_ReadU16(FILE *fd,
                                    RKADK_JPG_BYTE_ORDER_E eByteOrder) {
   RKADK_U16 u16Data;
@@ -1005,7 +1086,7 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
   int dstFormat;
 
   // Jpg Decode
-  RK_MPI_SYS_Init();
+  RKADK_MPI_SYS_Init();
 
   stVdecAttr.enCodecType = RK_CODEC_TYPE_JPEG;
   stVdecAttr.enMode = VIDEO_MODE_FRAME;
@@ -1107,6 +1188,7 @@ exit:
   if (mb)
     RK_MPI_MB_ReleaseBuffer(mb);
 
+  RKADK_MPI_SYS_Exit();
   return ret;
 }
 
@@ -1539,3 +1621,4 @@ RKADK_S32 RKADK_PHOTO_GetData(RKADK_CHAR *pcFileName,
 RKADK_S32 RKADK_PHOTO_FreeData(RKADK_PHOTO_DATA_ATTR_S *pstDataAttr) {
   return RKADK_MEDIA_FrameFree((RKADK_FRAME_ATTR_S *)pstDataAttr);
 }
+#endif

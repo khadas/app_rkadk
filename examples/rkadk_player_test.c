@@ -35,7 +35,8 @@ static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-i xxx.mp4] [-x 180] [-y 320] [-W 360] [-H 640] [-r 90] "
-         "[-m] [-f] [-v]\n", name);
+         "[-m] [-f] [-v]\n",
+         name);
   printf("\t-i: input url, Default: /etc/bsa_file/8k8bpsMono.wav\n");
   printf("\t-x: display x coordinate, Default: 0\n");
   printf("\t-y: display y coordinate, Default: 0\n");

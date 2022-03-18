@@ -22,14 +22,11 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rkmedia_muxer.h"
+#include "rkadk_muxer.h"
 
-typedef MUXER_MANUAL_SPLIT_ATTR_S RKADK_REC_MANUAL_SPLIT_ATTR_S;
-typedef MUXER_EVENT_INFO_S RKADK_REC_EVENT_INFO_S;
-
-/* record event callback function */
-typedef RKADK_VOID (*RKADK_REC_EVENT_CALLBACK_FN)(
-    RKADK_MW_PTR pRecorder, const RKADK_REC_EVENT_INFO_S *pstEventInfo);
+typedef RKADK_MUXER_FPS_ATTR_S RKADK_REC_FPS_ATTR_S;
+typedef RKADK_MUXER_MANUAL_SPLIT_ATTR_S RKADK_REC_MANUAL_SPLIT_ATTR_S;
+typedef RKADK_MUXER_EVENT_CALLBACK_FN RKADK_REC_EVENT_CALLBACK_FN;
 
 /* record create file function */
 typedef RKADK_S32 (*RKADK_REC_REQUEST_FILE_NAMES_FN)(
@@ -46,18 +43,10 @@ typedef enum {
 
 /** record task's attribute */
 typedef struct {
-  RKADK_S32 s32CamID;                                  /* camera id */
-  RKADK_REC_TYPE_E enRecType;                          /* record type */
+  RKADK_U32 u32CamId;                                  /* camera id */
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
-} RKADK_RECORD_ATTR_S;
-
-/** record fps attribute */
-typedef struct {
-  RKADK_U32 u32Fps;      /* framerate */
-  RKADK_BOOL bSplitFile; /* stop current file, record the next file immediately
-                            at the new framerate */
-  RKADK_STREAM_TYPE_E enStreamType; /* stream type */
-} RKADK_RECORD_FPS_ATTR_S;
+  RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
+} RKADK_REC_ATTR_S;
 
 /****************************************************************************/
 /*                            Interface Definition                          */
@@ -69,7 +58,7 @@ typedef struct {
  * @return 0 success
  * @return others failure
  */
-RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
+RKADK_S32 RKADK_RECORD_Create(RKADK_REC_ATTR_S *pstRecAttr,
                               RKADK_MW_PTR *ppRecorder);
 
 /**
@@ -104,7 +93,7 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder);
  * @return others failure
  */
 RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
-                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr);
+                                    RKADK_REC_FPS_ATTR_S stFpsAttr);
 
 /**
  * @brief manual splite file.
@@ -117,23 +106,13 @@ RKADK_S32 RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
                                    RKADK_REC_MANUAL_SPLIT_ATTR_S *pstSplitAttr);
 
 /**
- * @brief register recorder envent callback
- * @param[in]pRecorder : pointer of recorder
- * @param[in]pfnEventCallback : callback function
- * @return 0 success
- * @return others failure
- */
-RKADK_S32
-RKADK_RECORD_RegisterEventCallback(
-    RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback);
-
-/**
  * @brief get aenc chn id.
  * @return aenc chn id success
  * @return -1 failure
  */
 RKADK_S32 RKADK_RECORD_GetAencChn();
 
+#if 0
 /**
  * @brief get single frame at time.
  * @param[in]pszFileName : video file
@@ -146,6 +125,7 @@ RKADK_S32 RKADK_RECORD_GetAencChn();
 RKADK_S32 RKADK_GetSingleFrameAtTime(RKADK_CHAR *pszFileName,
                                      RKADK_FRAME_ATTR_S *pstFrameAttr,
                                      RKADK_U32 u32VeChn, RKADK_U64 u64TimeUs);
+#endif
 
 #ifdef __cplusplus
 }

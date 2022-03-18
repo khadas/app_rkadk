@@ -36,19 +36,30 @@ typedef struct {
   bool bGetBuffer;
   RKADK_S32 s32GetCnt;
   pthread_t tid;
+  RKADK_VOID *pHandle[RKADK_MEDIA_AENC_MAX_CNT];
+  RKADK_MEDIA_AENC_DATA_PROC_FUNC cbList[RKADK_MEDIA_AENC_MAX_CNT];
+} RKADK_GET_AENC_MB_ATTR_S;
+
+typedef struct {
+  bool bGetBuffer;
+  RKADK_S32 s32GetCnt;
+  pthread_t tid;
   RKADK_VOID *pHandle[RKADK_MEDIA_VENC_MAX_CNT];
-  OutCbFuncEx cbList[RKADK_MEDIA_VENC_MAX_CNT];
-} RKADK_GET_MB_ATTR_S;
+  RKADK_MEDIA_VENC_DATA_PROC_FUNC cbList[RKADK_MEDIA_VENC_MAX_CNT];
+} RKADK_GET_VENC_MB_ATTR_S;
 
 typedef struct {
   bool bUsed;
   RKADK_S32 s32InitCnt;
+  RKADK_S32 s32DevId;
   RKADK_S32 s32ChnId;
-  CODEC_TYPE_E enCodecType;
-  RKADK_GET_MB_ATTR_S stGetMBAttr;
+  RK_CODEC_ID_E enCodecType;
+  RKADK_GET_AENC_MB_ATTR_S stGetAencMBAttr;
+  RKADK_GET_VENC_MB_ATTR_S stGetVencMBAttr;
 } RKADK_MEDIA_INFO_S;
 
 typedef struct {
+  RKADK_U32 u32InitCnt;
   pthread_mutex_t aiMutex;
   pthread_mutex_t aencMutex;
   pthread_mutex_t viMutex;
@@ -96,13 +107,24 @@ static RKADK_U32 RKADK_MEDIA_FindUsableIdx(RKADK_MEDIA_INFO_S *pstInfo,
 }
 
 static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
-                                    RKADK_S32 s32ChnId, const char *mode) {
+                                    RKADK_S32 s32DevId, RKADK_S32 s32ChnId,
+                                    const char *mode) {
+  bool bMatch = false;
+
   for (int i = 0; i < count; i++) {
     if (!pstInfo[i].bUsed)
       continue;
 
-    if (pstInfo[i].s32ChnId == s32ChnId) {
-      RKADK_LOGD("%s: find matched index[%d] ChnId[%d]", mode, i, s32ChnId);
+    if (!strcmp(mode, "VI_INIT") || !strcmp(mode, "VI_DEINIT") ||
+        !strcmp(mode, "AI_INIT") || !strcmp(mode, "AI_DEINIT"))
+      bMatch =
+          pstInfo[i].s32ChnId == s32ChnId && pstInfo[i].s32DevId == s32DevId;
+    else
+      bMatch = pstInfo[i].s32ChnId == s32ChnId;
+
+    if (bMatch) {
+      RKADK_LOGD("%s: find matched index[%d] s32DevId[%d] ChnId[%d]", mode, i,
+                 s32DevId, s32ChnId);
       return i;
     }
   }
@@ -110,6 +132,41 @@ static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
   return -1;
 }
 
+RKADK_S32 RKADK_MPI_SYS_Init() {
+  int ret = 0;
+
+  RKADK_MEDIA_CtxInit();
+
+  if (!g_stMediaCtx.u32InitCnt) {
+    ret = RK_MPI_SYS_Init();
+    if (ret) {
+      RKADK_LOGE("RK_MPI_SYS_Init failed[%d]", ret);
+      return ret;
+    }
+  }
+
+  g_stMediaCtx.u32InitCnt++;
+  return 0;
+}
+
+RKADK_S32 RKADK_MPI_SYS_Exit() {
+  int ret;
+
+  if (0 == g_stMediaCtx.u32InitCnt) {
+    return 0;
+  } else if (1 == g_stMediaCtx.u32InitCnt) {
+    ret = RK_MPI_SYS_Exit();
+    if (ret) {
+      RKADK_LOGE("RK_MPI_SYS_Exit failed[%d]", ret);
+      return ret;
+    }
+  }
+
+  g_stMediaCtx.u32InitCnt--;
+  return 0;
+}
+
+#if 0
 static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
                                         RK_U32 u32SampleRate,
                                         RKADK_VQE_MODE_E enMode) {
@@ -166,18 +223,19 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
 
   return 0;
 }
+#endif
 
-RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr,
-                            RKADK_VQE_MODE_E enMode) {
+RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
+                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode) {
   int ret = -1;
   RKADK_S32 i;
 
-  RKADK_CHECK_POINTER(pstAiChnAttr, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
   RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aiMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAiInfo, RKADK_MEDIA_AI_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAiInfo, RKADK_MEDIA_AI_MAX_CNT, aiDevId,
                          s32AiChnId, "AI_INIT");
   if (i < 0) {
     i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stAiInfo, RKADK_MEDIA_AI_MAX_CNT,
@@ -189,23 +247,32 @@ RKADK_S32 RKADK_MPI_AI_Init(RKADK_S32 s32AiChnId, AI_CHN_ATTR_S *pstAiChnAttr,
   }
 
   if (0 == g_stMediaCtx.stAiInfo[i].s32InitCnt) {
-    ret = RK_MPI_AI_SetChnAttr(s32AiChnId, pstAiChnAttr);
-    if (ret) {
-      RKADK_LOGE("Set AI[%d] attribute failed(%d)", s32AiChnId, ret);
+    ret = RK_MPI_AI_SetPubAttr(aiDevId, pstAiAttr);
+    if (ret != 0) {
+      RKADK_LOGE("AI[%d] set attr failed[%x]", aiDevId, ret);
       goto exit;
     }
 
-    ret = RK_MPI_AI_EnableChn(s32AiChnId);
-    if (ret) {
-      RKADK_LOGE("Create AI[%d] failed(%d)", s32AiChnId, ret);
+    ret = RK_MPI_AI_Enable(aiDevId);
+    if (ret != 0) {
+      RKADK_LOGE("AI[%d] enable failed[%x]", aiDevId, ret);
       goto exit;
     }
 
+    ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
+    if (ret) {
+      RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
+      goto exit;
+    }
+
+#if 0
     if (enMode != RKADK_VQE_MODE_BUTT)
       RKADK_MPI_AI_EnableVqe(s32AiChnId, pstAiChnAttr->u32SampleRate, enMode);
+#endif
 
     g_stMediaCtx.stAiInfo[i].bUsed = true;
     g_stMediaCtx.stAiInfo[i].s32ChnId = s32AiChnId;
+    g_stMediaCtx.stAiInfo[i].s32DevId = aiDevId;
   }
 
   g_stMediaCtx.stAiInfo[i].s32InitCnt++;
@@ -218,14 +285,32 @@ exit:
   return ret;
 }
 
-RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId, RKADK_VQE_MODE_E enMode) {
+AUDIO_SOUND_MODE_E RKADK_AI_GetSoundMode(RKADK_U32 ch) {
+  AUDIO_SOUND_MODE_E channel = AUDIO_SOUND_MODE_BUTT;
+  switch (ch) {
+  case 1:
+    channel = AUDIO_SOUND_MODE_MONO;
+    break;
+  case 2:
+    channel = AUDIO_SOUND_MODE_STEREO;
+    break;
+  default:
+    RKADK_LOGE("channel = %d not support", ch);
+    return AUDIO_SOUND_MODE_BUTT;
+  }
+
+  return channel;
+}
+
+RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
+                              RKADK_VQE_MODE_E enMode) {
   int ret = -1;
   RKADK_S32 i;
   RKADK_S32 s32InitCnt;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aiMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAiInfo, RKADK_MEDIA_AI_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAiInfo, RKADK_MEDIA_AI_MAX_CNT, aiDevId,
                          s32AiChnId, "AI_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32AiChnId[%d]", i, s32AiChnId);
@@ -238,20 +323,28 @@ RKADK_S32 RKADK_MPI_AI_DeInit(RKADK_S32 s32AiChnId, RKADK_VQE_MODE_E enMode) {
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.aiMutex);
     return 0;
   } else if (1 == s32InitCnt) {
+#if 0
     if (enMode != RKADK_VQE_MODE_BUTT) {
       ret = RK_MPI_AI_DisableVqe(s32AiChnId);
       if (ret)
         RKADK_LOGE("AI[%d] DisableVqe failed: %d", s32AiChnId, ret);
     }
+#endif
 
-    ret = RK_MPI_AI_DisableChn(s32AiChnId);
+    ret = RK_MPI_AI_DisableChn(aiDevId, s32AiChnId);
     if (ret) {
-      RKADK_LOGE("Disable AI[%d] error %d", s32AiChnId, ret);
+      RKADK_LOGE("AI[%d, %d] disable chn failed[%x]", aiDevId, s32AiChnId, ret);
       goto exit;
     }
 
+    ret = RK_MPI_AI_Disable(aiDevId);
+    if (ret != 0) {
+      RK_LOGE("Ai[%d] disable failed[%x]", aiDevId, ret);
+      return RK_FAILURE;
+    }
     g_stMediaCtx.stAiInfo[i].bUsed = false;
-    g_stMediaCtx.stAiInfo[i].s32ChnId = 0;
+    g_stMediaCtx.stAiInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stAiInfo[i].s32DevId = -1;
   }
 
   g_stMediaCtx.stAiInfo[i].s32InitCnt--;
@@ -274,7 +367,7 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT, 0,
                          s32AencChnId, "AENC_INIT");
   if (i < 0) {
     i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stAencInfo,
@@ -284,10 +377,10 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
       goto exit;
     }
   } else {
-    if (g_stMediaCtx.stAencInfo[i].enCodecType != pstAencChnAttr->enCodecType) {
+    if (g_stMediaCtx.stAencInfo[i].enCodecType != pstAencChnAttr->enType) {
       RKADK_LOGW("find matched index[%d], but CodecType inequality[%d, %d]", i,
                  g_stMediaCtx.stAencInfo[i].enCodecType,
-                 pstAencChnAttr->enCodecType);
+                 pstAencChnAttr->enType);
     }
   }
 
@@ -300,7 +393,7 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
 
     g_stMediaCtx.stAencInfo[i].bUsed = true;
     g_stMediaCtx.stAencInfo[i].s32ChnId = s32AencChnId;
-    g_stMediaCtx.stAencInfo[i].enCodecType = pstAencChnAttr->enCodecType;
+    g_stMediaCtx.stAencInfo[i].enCodecType = pstAencChnAttr->enType;
   }
 
   g_stMediaCtx.stAencInfo[i].s32InitCnt++;
@@ -320,7 +413,7 @@ RKADK_S32 RKADK_MPI_AENC_DeInit(RKADK_S32 s32AencChnId) {
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT, 0,
                          s32AencChnId, "AENC_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32AencChnId[%d]", i, s32AencChnId);
@@ -340,7 +433,7 @@ RKADK_S32 RKADK_MPI_AENC_DeInit(RKADK_S32 s32AencChnId) {
     }
 
     g_stMediaCtx.stAencInfo[i].bUsed = false;
-    g_stMediaCtx.stAencInfo[i].s32ChnId = 0;
+    g_stMediaCtx.stAencInfo[i].s32ChnId = -1;
   }
 
   g_stMediaCtx.stAencInfo[i].s32InitCnt--;
@@ -357,6 +450,11 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
                             VI_CHN_ATTR_S *pstViChnAttr) {
   int ret = -1;
   RKADK_S32 i;
+  VI_DEV_ATTR_S stDevAttr;
+  VI_DEV_BIND_PIPE_S stBindPipe;
+
+  memset(&stDevAttr, 0, sizeof(stDevAttr));
+  memset(&stBindPipe, 0, sizeof(stBindPipe));
 
   RKADK_CHECK_POINTER(pstViChnAttr, RKADK_FAILURE);
   RKADK_MEDIA_CtxInit();
@@ -364,7 +462,7 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
   RKADK_MUTEX_LOCK(g_stMediaCtx.viMutex);
 
   i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stViInfo, RKADK_MEDIA_VI_MAX_CNT,
-                         s32ViChnId, "VI_INIT");
+                         u32CamId, s32ViChnId, "VI_INIT");
   if (i < 0) {
     i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stViInfo, RKADK_MEDIA_VI_MAX_CNT,
                                   "VI_INIT");
@@ -375,24 +473,63 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
   }
 
   if (0 == g_stMediaCtx.stViInfo[i].s32InitCnt) {
+    // 0. get dev config status
+    ret = RK_MPI_VI_GetDevAttr(u32CamId, &stDevAttr);
+    if (ret == RK_ERR_VI_NOT_CONFIG) {
+      // 0-1.config dev
+      ret = RK_MPI_VI_SetDevAttr(u32CamId, &stDevAttr);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("RK_MPI_VI_SetDevAttr failed[%x]", ret);
+        goto exit;
+      }
+    } else {
+      RKADK_LOGI("RK_MPI_VI_SetDevAttr already");
+    }
+
+    // 1.get dev enable status
+    ret = RK_MPI_VI_GetDevIsEnable(u32CamId);
+    if (ret != RK_SUCCESS) {
+      // 1-2.enable dev
+      ret = RK_MPI_VI_EnableDev(u32CamId);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("RK_MPI_VI_EnableDev failed[%x]", ret);
+        goto exit;
+      }
+
+      // 1-3.bind dev/pipe
+      stBindPipe.u32Num = 1;
+      stBindPipe.PipeId[u32CamId] = u32CamId;
+      ret = RK_MPI_VI_SetDevBindPipe(u32CamId, &stBindPipe);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("RK_MPI_VI_SetDevBindPipe failed[%x]", ret);
+        RK_MPI_VI_DisableDev(u32CamId);
+        goto exit;
+      }
+    } else {
+      RKADK_LOGI("RK_MPI_VI_EnableDev already");
+    }
+
     ret = RK_MPI_VI_SetChnAttr(u32CamId, s32ViChnId, pstViChnAttr);
     if (ret) {
-      RKADK_LOGE("Set VI[%d] attribute error %d", s32ViChnId, ret);
+      RKADK_LOGE("Set VI[%d] attribute failed[%x]", s32ViChnId, ret);
+      RK_MPI_VI_DisableDev(u32CamId);
       goto exit;
     }
 
     ret = RK_MPI_VI_EnableChn(u32CamId, s32ViChnId);
     if (ret) {
-      RKADK_LOGE("Create VI[%d] error %d", s32ViChnId, ret);
+      RKADK_LOGE("Create VI[%d] failed[%x]", s32ViChnId, ret);
+      RK_MPI_VI_DisableDev(u32CamId);
       goto exit;
     }
 
     g_stMediaCtx.stViInfo[i].bUsed = true;
     g_stMediaCtx.stViInfo[i].s32ChnId = s32ViChnId;
+    g_stMediaCtx.stViInfo[i].s32DevId = u32CamId;
   }
 
   g_stMediaCtx.stViInfo[i].s32InitCnt++;
-  RKADK_LOGD("viChnId[%d], InitCnt[%d]", s32ViChnId,
+  RKADK_LOGD("CamId[%d] viChnId[%d], InitCnt[%d]", u32CamId, s32ViChnId,
              g_stMediaCtx.stViInfo[i].s32InitCnt);
   ret = 0;
 
@@ -409,7 +546,7 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
   RKADK_MUTEX_LOCK(g_stMediaCtx.viMutex);
 
   i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stViInfo, RKADK_MEDIA_VI_MAX_CNT,
-                         s32ViChnId, "VI_DEINIT");
+                         u32CamId, s32ViChnId, "VI_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ViChnId);
     goto exit;
@@ -423,16 +560,23 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
   } else if (1 == s32InitCnt) {
     ret = RK_MPI_VI_DisableChn(u32CamId, s32ViChnId);
     if (ret) {
-      RKADK_LOGE("Destory VI[%d] failed, ret=%d", s32ViChnId, ret);
+      RKADK_LOGE("Destory VI[%d] failed[%x]", s32ViChnId, ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_VI_DisableDev(u32CamId);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VI_DisableDev[%d] failed[%x]", u32CamId, ret);
       goto exit;
     }
 
     g_stMediaCtx.stViInfo[i].bUsed = false;
-    g_stMediaCtx.stViInfo[i].s32ChnId = 0;
+    g_stMediaCtx.stViInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stViInfo[i].s32DevId = -1;
   }
 
   g_stMediaCtx.stViInfo[i].s32InitCnt--;
-  RKADK_LOGD("viChnId[%d], InitCnt[%d]", s32ViChnId,
+  RKADK_LOGD("CamId[%d] viChnId[%d], InitCnt[%d]", u32CamId, s32ViChnId,
              g_stMediaCtx.stViInfo[i].s32InitCnt);
   ret = 0;
 
@@ -451,7 +595,7 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
                          s32ChnId, "VENC_INIT");
   if (i < 0) {
     i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stVencInfo,
@@ -472,9 +616,17 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
   if (0 == g_stMediaCtx.stVencInfo[i].s32InitCnt) {
     ret = RK_MPI_VENC_CreateChn(s32ChnId, pstVencChnAttr);
     if (ret) {
-      RKADK_LOGE("Create VENC[%d] error %d", s32ChnId, ret);
+      RKADK_LOGE("Create VENC[%d] failed[%x]", s32ChnId, ret);
       goto exit;
     }
+
+    // VENC_RECV_PIC_PARAM_S stRecvParam;
+    // memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
+    // ret = RK_MPI_VENC_StartRecvFrame(s32ChnId, &stRecvParam);
+    // if (ret) {
+    //  RKADK_LOGE("RK_MPI_VENC_StartRecvFrame ChnId[%d] failed[%x]", s32ChnId,
+    //  ret); goto exit;
+    //}
 
     g_stMediaCtx.stVencInfo[i].bUsed = true;
     g_stMediaCtx.stVencInfo[i].s32ChnId = s32ChnId;
@@ -498,7 +650,7 @@ RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId) {
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
                          s32ChnId, "VENC_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ChnId);
@@ -511,14 +663,20 @@ RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId) {
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
     return 0;
   } else if (1 == s32InitCnt) {
+    // ret = RK_MPI_VENC_StopRecvFrame(s32ChnId);
+    // if (ret) {
+    //  RKADK_LOGE("RK_MPI_VENC_StopRecvFrame VENC[%d] failed[%x]", s32ChnId,
+    //  ret); goto exit;
+    //}
+
     ret = RK_MPI_VENC_DestroyChn(s32ChnId);
     if (ret) {
-      RKADK_LOGE("Destroy VENC[%d] error %d", s32ChnId, ret);
+      RKADK_LOGE("Destroy VENC[%d] failed[%x]", s32ChnId, ret);
       goto exit;
     }
 
     g_stMediaCtx.stVencInfo[i].bUsed = false;
-    g_stMediaCtx.stVencInfo[i].s32ChnId = 0;
+    g_stMediaCtx.stVencInfo[i].s32ChnId = -1;
   }
 
   g_stMediaCtx.stVencInfo[i].s32InitCnt--;
@@ -531,6 +689,7 @@ exit:
   return ret;
 }
 
+#ifdef RKADK_ENABLE_RGA
 RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr) {
   int ret = -1;
   RKADK_S32 i;
@@ -540,7 +699,7 @@ RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr) {
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT, 0,
                          s32ChnId, "RGA_INIT");
   if (i < 0) {
     i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stRgaInfo,
@@ -579,7 +738,7 @@ RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId) {
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT, 0,
                          s32ChnId, "RGA_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ChnId);
@@ -599,7 +758,7 @@ RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId) {
     }
 
     g_stMediaCtx.stRgaInfo[i].bUsed = false;
-    g_stMediaCtx.stRgaInfo[i].s32ChnId = 0;
+    g_stMediaCtx.stRgaInfo[i].s32ChnId = -1;
   }
 
   g_stMediaCtx.stRgaInfo[i].s32InitCnt--;
@@ -611,9 +770,11 @@ exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
   return ret;
 }
+#endif
 
-static void *RKADK_MEDIA_GetMb(void *params) {
-  MEDIA_BUFFER mb = NULL;
+static void *RKADK_MEDIA_GetAencMb(void *params) {
+  int ret;
+  AUDIO_STREAM_S stFrame;
 
   RKADK_MEDIA_INFO_S *pstMediaInfo = (RKADK_MEDIA_INFO_S *)params;
   if (!pstMediaInfo) {
@@ -621,35 +782,177 @@ static void *RKADK_MEDIA_GetMb(void *params) {
     return NULL;
   }
 
-  while (pstMediaInfo->stGetMBAttr.bGetBuffer) {
-    mb = RK_MPI_SYS_GetMediaBuffer(RK_ID_VENC, pstMediaInfo->s32ChnId, -1);
-    if (!mb) {
-      RKADK_LOGE("RK_MPI_SYS_GetMediaBuffer get null buffer!");
-      break;
+  while (pstMediaInfo->stGetAencMBAttr.bGetBuffer) {
+    ret = RK_MPI_AENC_GetStream(pstMediaInfo->s32ChnId, &stFrame, -1);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("AENC[%d] RK_MPI_AENC_GetStream failed[%x]",
+                 pstMediaInfo->s32ChnId, ret);
+    } else {
+      for (int i = 0; i < (int)pstMediaInfo->stGetAencMBAttr.s32GetCnt; i++)
+        if (pstMediaInfo->stGetAencMBAttr.cbList[i])
+          pstMediaInfo->stGetAencMBAttr.cbList[i](
+              stFrame, pstMediaInfo->stGetAencMBAttr.pHandle[i]);
+
+      ret = RK_MPI_AENC_ReleaseStream(pstMediaInfo->s32ChnId, &stFrame);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_AENC_ReleaseStream failed[%x]", ret);
     }
-
-    for (int i = 0; i < (int)pstMediaInfo->stGetMBAttr.s32GetCnt; i++)
-      if (pstMediaInfo->stGetMBAttr.cbList[i])
-        pstMediaInfo->stGetMBAttr.cbList[i](
-            mb, pstMediaInfo->stGetMBAttr.pHandle[i]);
-
-    RK_MPI_MB_ReleaseBuffer(mb);
   }
 
-  RK_MPI_SYS_StopGetMediaBuffer(RK_ID_VENC, pstMediaInfo->s32ChnId);
-  RKADK_LOGI("Exit get mb thread");
+  RKADK_LOGI("Exit get aenc mb thread");
   return NULL;
 }
 
-RKADK_S32 RKADK_MEDIA_GetMediaBuffer(MPP_CHN_S *pstChn, OutCbFuncEx pfnDataCB,
-                                     RKADK_VOID *pHandle) {
+RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,
+                                    RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB,
+                                    RKADK_VOID *pHandle) {
+  int ret = -1;
+  RKADK_S32 i;
+  RKADK_MEDIA_INFO_S *pstMediaInfo;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT, 0,
+                         pstChn->s32ChnId, "AENC_GET_MB");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
+    goto exit;
+  }
+
+  pstMediaInfo = &g_stMediaCtx.stAencInfo[i];
+  if (pstMediaInfo->s32InitCnt == 0) {
+    RKADK_LOGE("aencChnId[%d] don't init", pstChn->s32ChnId);
+    goto exit;
+  }
+
+  pstMediaInfo->stGetAencMBAttr
+      .cbList[pstMediaInfo->stGetAencMBAttr.s32GetCnt] = pfnDataCB;
+  pstMediaInfo->stGetAencMBAttr
+      .pHandle[pstMediaInfo->stGetAencMBAttr.s32GetCnt] = pHandle;
+  pstMediaInfo->stGetAencMBAttr.s32GetCnt++;
+
+  if (pstMediaInfo->stGetAencMBAttr.bGetBuffer) {
+    RKADK_LOGE("Get aencChnId[%d] MB thread has been created",
+               pstChn->s32ChnId);
+    ret = 0;
+    goto exit;
+  }
+
+  pstMediaInfo->stGetAencMBAttr.bGetBuffer = true;
+  ret = pthread_create(&pstMediaInfo->stGetAencMBAttr.tid, NULL,
+                       RKADK_MEDIA_GetAencMb, pstMediaInfo);
+  if (ret) {
+    RKADK_LOGE("Create get aenc mb(%d) thread failed %d", pstChn->s32ChnId,
+               ret);
+    goto exit;
+  }
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.aencMutex);
+  return ret;
+}
+
+RKADK_S32
+RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
+                              RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB) {
+  int i, ret = 0;
+  RKADK_MEDIA_INFO_S *pstMediaInfo;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
+                         pstChn->s32ChnId, "AENC_GET_MB");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
+    ret = -1;
+    goto exit;
+  }
+
+  pstMediaInfo = &g_stMediaCtx.stAencInfo[i];
+  if (pstMediaInfo->s32InitCnt == 0) {
+    RKADK_LOGE("vencChnId[%d] don't init", pstChn->s32ChnId);
+    ret = -1;
+    goto exit;
+  }
+
+  for (i = 0; i < pstMediaInfo->stGetAencMBAttr.s32GetCnt; i++) {
+    if (pstMediaInfo->stGetAencMBAttr.cbList[i] == pfnDataCB) {
+      RKADK_LOGD("remove cbList, i = %d", i);
+      pstMediaInfo->stGetAencMBAttr.cbList[i] = NULL;
+      pstMediaInfo->stGetAencMBAttr.s32GetCnt--;
+      break;
+    }
+  }
+
+  if (!pstMediaInfo->stGetAencMBAttr.s32GetCnt) {
+    pstMediaInfo->stGetAencMBAttr.bGetBuffer = false;
+    if (pstMediaInfo->stGetAencMBAttr.tid) {
+      ret = pthread_join(pstMediaInfo->stGetAencMBAttr.tid, NULL);
+      if (ret)
+        RKADK_LOGE("Exit get aenc mb thread failed!");
+      else
+        RKADK_LOGI("Exit get aenc mb thread ok");
+      pstMediaInfo->stGetAencMBAttr.tid = 0;
+    }
+  }
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.aencMutex);
+  return ret;
+}
+
+static void *RKADK_MEDIA_GetVencMb(void *params) {
+  int ret;
+  RKADK_MEDIA_VENC_DATA_S stData;
+
+  RKADK_MEDIA_INFO_S *pstMediaInfo = (RKADK_MEDIA_INFO_S *)params;
+  if (!pstMediaInfo) {
+    RKADK_LOGE("Get MB thread invalid param");
+    return NULL;
+  }
+
+  memset(&stData, 0, sizeof(RKADK_MEDIA_VENC_DATA_S));
+  stData.stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
+  if (!stData.stFrame.pstPack) {
+    RKADK_LOGE("malloc stream package buffer failed");
+    return NULL;
+  }
+
+  stData.u32ChnId = pstMediaInfo->s32ChnId;
+  while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
+    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, -1);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("VENC[%d] RK_MPI_VENC_GetStream failed[%x]",
+                 pstMediaInfo->s32ChnId, ret);
+    } else {
+      for (int i = 0; i < (int)pstMediaInfo->stGetVencMBAttr.s32GetCnt; i++)
+        if (pstMediaInfo->stGetVencMBAttr.cbList[i])
+          pstMediaInfo->stGetVencMBAttr.cbList[i](
+              stData, pstMediaInfo->stGetVencMBAttr.pHandle[i]);
+
+      ret = RK_MPI_VENC_ReleaseStream(pstMediaInfo->s32ChnId, &stData.stFrame);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
+    }
+  }
+
+  if (stData.stFrame.pstPack)
+    free(stData.stFrame.pstPack);
+
+  RKADK_LOGI("Exit get venc mb thread");
+  return NULL;
+}
+
+RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
+                                    RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
+                                    RKADK_VOID *pHandle) {
   int ret = -1;
   RKADK_S32 i;
   RKADK_MEDIA_INFO_S *pstMediaInfo;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
                          pstChn->s32ChnId, "VENC_GET_MB");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
@@ -662,22 +965,25 @@ RKADK_S32 RKADK_MEDIA_GetMediaBuffer(MPP_CHN_S *pstChn, OutCbFuncEx pfnDataCB,
     goto exit;
   }
 
-  pstMediaInfo->stGetMBAttr.cbList[pstMediaInfo->stGetMBAttr.s32GetCnt] = pfnDataCB;
-  pstMediaInfo->stGetMBAttr.pHandle[pstMediaInfo->stGetMBAttr.s32GetCnt] = pHandle;
-  pstMediaInfo->stGetMBAttr.s32GetCnt++;
+  pstMediaInfo->stGetVencMBAttr
+      .cbList[pstMediaInfo->stGetVencMBAttr.s32GetCnt] = pfnDataCB;
+  pstMediaInfo->stGetVencMBAttr
+      .pHandle[pstMediaInfo->stGetVencMBAttr.s32GetCnt] = pHandle;
+  pstMediaInfo->stGetVencMBAttr.s32GetCnt++;
 
-  if (pstMediaInfo->stGetMBAttr.bGetBuffer) {
+  if (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
     RKADK_LOGE("Get vencChnId[%d] MB thread has been created",
                pstChn->s32ChnId);
     ret = 0;
     goto exit;
   }
 
-  pstMediaInfo->stGetMBAttr.bGetBuffer = true;
-  ret = pthread_create(&pstMediaInfo->stGetMBAttr.tid, NULL, RKADK_MEDIA_GetMb,
-                       pstMediaInfo);
+  pstMediaInfo->stGetVencMBAttr.bGetBuffer = true;
+  ret = pthread_create(&pstMediaInfo->stGetVencMBAttr.tid, NULL,
+                       RKADK_MEDIA_GetVencMb, pstMediaInfo);
   if (ret) {
-    RKADK_LOGE("Create get mb(%d) thread failed %d", pstChn->s32ChnId, ret);
+    RKADK_LOGE("Create get venc mb(%d) thread failed %d", pstChn->s32ChnId,
+               ret);
     goto exit;
   }
 
@@ -686,14 +992,15 @@ exit:
   return ret;
 }
 
-RKADK_S32 RKADK_MEDIA_StopGetMediaBuffer(MPP_CHN_S *pstChn,
-                                         OutCbFuncEx pfnDataCB) {
+RKADK_S32
+RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
+                              RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB) {
   int i, ret = 0;
   RKADK_MEDIA_INFO_S *pstMediaInfo;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
                          pstChn->s32ChnId, "VENC_GET_MB");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
@@ -708,24 +1015,24 @@ RKADK_S32 RKADK_MEDIA_StopGetMediaBuffer(MPP_CHN_S *pstChn,
     goto exit;
   }
 
-  for (i = 0; i < pstMediaInfo->stGetMBAttr.s32GetCnt; i++) {
-    if (pstMediaInfo->stGetMBAttr.cbList[i] == pfnDataCB) {
+  for (i = 0; i < pstMediaInfo->stGetVencMBAttr.s32GetCnt; i++) {
+    if (pstMediaInfo->stGetVencMBAttr.cbList[i] == pfnDataCB) {
       RKADK_LOGD("remove cbList, i = %d", i);
-      pstMediaInfo->stGetMBAttr.cbList[i] = NULL;
-      pstMediaInfo->stGetMBAttr.s32GetCnt--;
+      pstMediaInfo->stGetVencMBAttr.cbList[i] = NULL;
+      pstMediaInfo->stGetVencMBAttr.s32GetCnt--;
       break;
     }
   }
 
-  if (!pstMediaInfo->stGetMBAttr.s32GetCnt) {
-    pstMediaInfo->stGetMBAttr.bGetBuffer = false;
-    if (pstMediaInfo->stGetMBAttr.tid) {
-      ret = pthread_join(pstMediaInfo->stGetMBAttr.tid, NULL);
+  if (!pstMediaInfo->stGetVencMBAttr.s32GetCnt) {
+    pstMediaInfo->stGetVencMBAttr.bGetBuffer = false;
+    if (pstMediaInfo->stGetVencMBAttr.tid) {
+      ret = pthread_join(pstMediaInfo->stGetVencMBAttr.tid, NULL);
       if (ret)
-        RKADK_LOGE("Exit get mb thread failed!");
+        RKADK_LOGE("Exit get venc mb thread failed!");
       else
-        RKADK_LOGI("Exit get mb thread ok");
-      pstMediaInfo->stGetMBAttr.tid = 0;
+        RKADK_LOGI("Exit get venc mb thread ok");
+      pstMediaInfo->stGetVencMBAttr.tid = 0;
     }
   }
 
@@ -758,8 +1065,10 @@ static RKADK_S32 RKADK_BIND_GetIdx(RKADK_BIND_INFO_S *pstInfo, int count,
 
     if (pstInfo[i].stSrcChn.s32ChnId == pstSrcChn->s32ChnId &&
         pstInfo[i].stSrcChn.enModId == pstSrcChn->enModId &&
+        pstInfo[i].stSrcChn.s32DevId == pstSrcChn->s32DevId &&
         pstInfo[i].stDestChn.s32ChnId == pstDestChn->s32ChnId &&
-        pstInfo[i].stDestChn.enModId == pstDestChn->enModId) {
+        pstInfo[i].stDestChn.enModId == pstDestChn->enModId &&
+        pstInfo[i].stDestChn.s32DevId == pstDestChn->s32DevId) {
       RKADK_LOGD("find matched index[%d]: src ChnId[%d] dest ChnId[%d]", i,
                  pstSrcChn->s32ChnId, pstDestChn->s32ChnId);
       return i;
@@ -781,15 +1090,18 @@ static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_VI_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViVencInfo;
-  } else if (pstSrcChn->enModId == RK_ID_VI &&
-             pstDestChn->enModId == RK_ID_RGA) {
+  }
+#ifdef RKADK_ENABLE_RGA
+  else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_RGA) {
     s32BindCount = RKADK_VI_RGA_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViRgaInfo;
   } else if (pstSrcChn->enModId == RK_ID_RGA &&
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_RGA_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stRgaVencInfo;
-  } else {
+  }
+#endif
+  else {
     RKADK_LOGE("Nonsupport: src enModId: %d, dest enModId: %d",
                pstSrcChn->enModId, pstDestChn->enModId);
   }
@@ -827,8 +1139,9 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
   if (0 == pstInfo[i].s32BindCnt) {
     ret = RK_MPI_SYS_Bind(pstSrcChn, pstDestChn);
     if (ret) {
-      RKADK_LOGE("Bind src[%d %d] and dest[%d %d] failed(%d)",
-                 pstSrcChn->enModId, pstSrcChn->s32ChnId, pstDestChn->enModId,
+      RKADK_LOGE("Bind src[%d, %d, %d] and dest[%d, %d, %d] failed[%x]",
+                 pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+                 pstDestChn->s32DevId, pstDestChn->enModId,
                  pstDestChn->s32ChnId, ret);
       goto exit;
     }
@@ -839,8 +1152,9 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
   }
 
   pstInfo[i].s32BindCnt++;
-  RKADK_LOGD("src[%d, %d], dest[%d, %d], BindCnt[%d]", pstSrcChn->enModId,
-             pstSrcChn->s32ChnId, pstDestChn->enModId, pstDestChn->s32ChnId,
+  RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d], BindCnt[%d]",
+             pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+             pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
              pstInfo[i].s32BindCnt);
   ret = 0;
 
@@ -874,16 +1188,17 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
   }
 
   if (0 == pstInfo[i].s32BindCnt) {
-    RKADK_LOGD("src[%d, %d], dest[%d, %d] has already UnBind",
-               pstSrcChn->enModId, pstSrcChn->s32ChnId, pstDestChn->enModId,
-               pstDestChn->s32ChnId);
+    RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d] has already UnBind",
+               pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+               pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId);
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.bindMutex);
     return 0;
   } else if (1 == pstInfo[i].s32BindCnt) {
     ret = RK_MPI_SYS_UnBind(pstSrcChn, pstDestChn);
     if (ret) {
-      RKADK_LOGE("UnBind src[%d, %d] and dest[%d, %d] failed(%d)",
-                 pstSrcChn->enModId, pstSrcChn->s32ChnId, pstDestChn->enModId,
+      RKADK_LOGE("UnBind src[%d, %d, %d] and dest[%d, %d, %d] failed[%x]",
+                 pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+                 pstDestChn->s32DevId, pstDestChn->enModId,
                  pstDestChn->s32ChnId, ret);
       goto exit;
     }
@@ -894,8 +1209,9 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
   }
 
   pstInfo[i].s32BindCnt--;
-  RKADK_LOGD("src[%d, %d], dest[%d, %d], BindCnt[%d]", pstSrcChn->enModId,
-             pstSrcChn->s32ChnId, pstDestChn->enModId, pstDestChn->s32ChnId,
+  RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d], BindCnt[%d]",
+             pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+             pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
              pstInfo[i].s32BindCnt);
   ret = 0;
 
@@ -904,89 +1220,89 @@ exit:
   return ret;
 }
 
-CODEC_TYPE_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {
-  CODEC_TYPE_E enCodecType;
+RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {
+  RK_CODEC_ID_E enCodecType;
 
   switch (enType) {
   case RKADK_CODEC_TYPE_H264:
-    enCodecType = RK_CODEC_TYPE_H264;
+    enCodecType = RK_VIDEO_ID_AVC;
     break;
 
   case RKADK_CODEC_TYPE_H265:
-    enCodecType = RK_CODEC_TYPE_H265;
+    enCodecType = RK_VIDEO_ID_HEVC;
     break;
 
   case RKADK_CODEC_TYPE_MJPEG:
-    enCodecType = RK_CODEC_TYPE_MJPEG;
+    enCodecType = RK_VIDEO_ID_MJPEG;
     break;
 
   case RKADK_CODEC_TYPE_JPEG:
-    enCodecType = RK_CODEC_TYPE_JPEG;
+    enCodecType = RK_VIDEO_ID_JPEG;
     break;
 
-  case RKADK_CODEC_TYPE_MP3:
-    enCodecType = RK_CODEC_TYPE_MP3;
+  case RKADK_CODEC_TYPE_ACC:
+    enCodecType = RK_AUDIO_ID_ACC;
     break;
 
   case RKADK_CODEC_TYPE_G711A:
-    enCodecType = RK_CODEC_TYPE_G711A;
+    enCodecType = RK_AUDIO_ID_PCM_ALAW;
     break;
 
   case RKADK_CODEC_TYPE_G711U:
-    enCodecType = RK_CODEC_TYPE_G711U;
+    enCodecType = RK_AUDIO_ID_PCM_MULAW;
     break;
 
   case RKADK_CODEC_TYPE_G726:
-    enCodecType = RK_CODEC_TYPE_G726;
+    enCodecType = RK_AUDIO_ID_ADPCM_G726;
     break;
 
   case RKADK_CODEC_TYPE_MP2:
-    enCodecType = RK_CODEC_TYPE_MP2;
+    enCodecType = RK_AUDIO_ID_MP2;
     break;
 
   default:
-    enCodecType = RK_CODEC_TYPE_NONE;
+    enCodecType = RK_VIDEO_ID_Unused;
     break;
   }
 
   return enCodecType;
 }
 
-RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(CODEC_TYPE_E enType) {
+RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(RK_CODEC_ID_E enType) {
   RKADK_CODEC_TYPE_E enCodecType;
 
   switch (enType) {
-  case RK_CODEC_TYPE_H264:
+  case RK_VIDEO_ID_AVC:
     enCodecType = RKADK_CODEC_TYPE_H264;
     break;
 
-  case RK_CODEC_TYPE_H265:
+  case RK_VIDEO_ID_HEVC:
     enCodecType = RKADK_CODEC_TYPE_H265;
     break;
 
-  case RK_CODEC_TYPE_MJPEG:
+  case RK_VIDEO_ID_MJPEG:
     enCodecType = RKADK_CODEC_TYPE_MJPEG;
     break;
 
-  case RK_CODEC_TYPE_JPEG:
+  case RK_VIDEO_ID_JPEG:
     enCodecType = RKADK_CODEC_TYPE_JPEG;
     break;
 
-  case RK_CODEC_TYPE_MP3:
-    enCodecType = RKADK_CODEC_TYPE_MP3;
+  case RK_AUDIO_ID_ACC:
+    enCodecType = RKADK_CODEC_TYPE_ACC;
     break;
-  case RK_CODEC_TYPE_G711A:
+  case RK_AUDIO_ID_PCM_ALAW:
     enCodecType = RKADK_CODEC_TYPE_G711A;
     break;
-  case RK_CODEC_TYPE_G711U:
+  case RK_AUDIO_ID_PCM_MULAW:
     enCodecType = RKADK_CODEC_TYPE_G711U;
     break;
 
-  case RK_CODEC_TYPE_G726:
+  case RK_AUDIO_ID_ADPCM_G726:
     enCodecType = RKADK_CODEC_TYPE_G726;
     break;
 
-  case RK_CODEC_TYPE_MP2:
+  case RK_AUDIO_ID_MP2:
     enCodecType = RKADK_CODEC_TYPE_MP2;
     break;
 
@@ -1012,7 +1328,7 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
     break;
   case VENC_RC_MODE_H265VBR:
     pstRcAttr->stH265Vbr.u32Gop = u32Gop;
-    pstRcAttr->stH265Vbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH265Vbr.u32BitRate = u32BitRate;
     pstRcAttr->stH265Vbr.fr32DstFrameRateDen = 1;
     pstRcAttr->stH265Vbr.fr32DstFrameRateNum = u32DstFrameRate;
     pstRcAttr->stH265Vbr.u32SrcFrameRateDen = 1;
@@ -1020,7 +1336,7 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
     break;
   case VENC_RC_MODE_H265AVBR:
     pstRcAttr->stH265Avbr.u32Gop = u32Gop;
-    pstRcAttr->stH265Avbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH265Avbr.u32BitRate = u32BitRate;
     pstRcAttr->stH265Avbr.fr32DstFrameRateDen = 1;
     pstRcAttr->stH265Avbr.fr32DstFrameRateNum = u32DstFrameRate;
     pstRcAttr->stH265Avbr.u32SrcFrameRateDen = 1;
@@ -1050,7 +1366,7 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
     break;
   case VENC_RC_MODE_H264VBR:
     pstRcAttr->stH264Vbr.u32Gop = u32Gop;
-    pstRcAttr->stH264Vbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH264Vbr.u32BitRate = u32BitRate;
     pstRcAttr->stH264Vbr.fr32DstFrameRateDen = 1;
     pstRcAttr->stH264Vbr.fr32DstFrameRateNum = u32DstFrameRate;
     pstRcAttr->stH264Vbr.u32SrcFrameRateDen = 1;
@@ -1058,7 +1374,7 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
     break;
   case VENC_RC_MODE_H264AVBR:
     pstRcAttr->stH264Avbr.u32Gop = u32Gop;
-    pstRcAttr->stH264Avbr.u32MaxBitRate = u32BitRate;
+    pstRcAttr->stH264Avbr.u32BitRate = u32BitRate;
     pstRcAttr->stH264Avbr.fr32DstFrameRateDen = 1;
     pstRcAttr->stH264Avbr.fr32DstFrameRateNum = u32DstFrameRate;
     pstRcAttr->stH264Avbr.u32SrcFrameRateDen = 1;
@@ -1158,4 +1474,72 @@ bool RKADK_MEDIA_CheckFrameAttr(RKADK_FRAME_ATTR_S *pstFrameAttr) {
   }
 
   return true;
+}
+
+bool RKADK_MEDIA_CheckIdrFrame(RKADK_CODEC_TYPE_E enCodecType,
+                               VENC_DATA_TYPE_U uDataType) {
+  bool bIdr = false;
+
+  switch (enCodecType) {
+  case RKADK_CODEC_TYPE_H264:
+    if (uDataType.enH264EType == H264E_NALU_IDRSLICE)
+      bIdr = true;
+    break;
+
+  case RKADK_CODEC_TYPE_H265:
+    if (uDataType.enH265EType == H265E_NALU_IDRSLICE)
+      bIdr = true;
+    break;
+
+  default:
+    break;
+  }
+
+  return bIdr;
+}
+
+RKADK_U16 RKADK_MEDIA_GetAudioBitWidth(AUDIO_BIT_WIDTH_E enBitWidth) {
+  RKADK_U16 bitWidth = -1;
+
+  switch (enBitWidth) {
+  case AUDIO_BIT_WIDTH_8:
+    bitWidth = 8;
+    break;
+  case AUDIO_BIT_WIDTH_16:
+    bitWidth = 16;
+    break;
+  case AUDIO_BIT_WIDTH_24:
+    bitWidth = 24;
+    break;
+  case AUDIO_BIT_WIDTH_32:
+    bitWidth = 32;
+    break;
+  case AUDIO_BIT_WIDTH_FLT:
+    bitWidth = sizeof(float);
+    break;
+  default:
+    break;
+  }
+
+  return bitWidth;
+}
+
+int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat,
+                               RKADK_CHAR *cPixFmt) {
+  int ret = 0;
+
+  switch (enPixelFormat) {
+  case RK_FMT_YUV420SP:
+    memcpy(cPixFmt, "NV12", strlen("NV12"));
+    break;
+  case RK_FMT_YUV422SP:
+    memcpy(cPixFmt, "NV16", strlen("NV16"));
+    break;
+  default:
+    RKADK_LOGE("Unsupport pixel format: %d", enPixelFormat);
+    ret = -1;
+    break;
+  }
+
+  return ret;
 }

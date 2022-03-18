@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-#ifdef ROCKIT
-
 #include "rkadk_player.h"
 #include "RTMediaPlayer.h"
 #include "RTPlayerDef.h"
@@ -407,5 +405,3 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
 
   return ret;
 }
-
-#endif // ROCKIT

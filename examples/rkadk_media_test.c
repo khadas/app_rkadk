@@ -14,14 +14,6 @@
  *  limitations under the License.
  */
 
-#include <getopt.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
 #include "rkadk_disp.h"
@@ -34,6 +26,14 @@
 #include "rkadk_stream.h"
 #include "rkadk_thumb.h"
 #include "rkadk_vi_isp.h"
+#include <getopt.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 extern int optind;
 extern char *optarg;
@@ -131,7 +131,7 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   RKADK_U8 mp3_header[7];
   RKADK_AUDIO_INFO_S audioInfo;
 
-  if (g_AudioCodecType == RKADK_CODEC_TYPE_MP3) {
+  if (g_AudioCodecType == RKADK_CODEC_TYPE_ACC) {
     if (RKADK_STREAM_GetAudioInfo(&audioInfo)) {
       RKADK_LOGE("RKADK_STREAM_GetAudioInfo failed\n");
       return -1;
@@ -139,7 +139,7 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   if (g_ao_file) {
-    if (g_AudioCodecType == RKADK_CODEC_TYPE_MP3) {
+    if (g_AudioCodecType == RKADK_CODEC_TYPE_ACC) {
       GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
                    pAStreamData->u32Len);
       fwrite(mp3_header, 1, 7, g_ao_file);
@@ -294,7 +294,6 @@ void *TakePhotoThread(void *para) {
   return NULL;
 }
 
-#ifdef ROCKIT
 static void GetThumbTest() {
   char *filePath = "/tmp/thm_test.jpg";
   RKADK_U32 size = 50 * 1024;
@@ -321,7 +320,6 @@ static void GetThumbTest() {
   fwrite(buffer, 1, size, file);
   fclose(file);
 }
-#endif
 
 static RKADK_S32
 GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
@@ -386,9 +384,6 @@ RecordEventCallback(RKADK_MW_PTR pRecorder,
 static int IspProcess(RKADK_S32 s32CamID) {
   int ret;
   bool mirror = false, flip = false;
-  RKADK_U32 ldcLevel = 0;
-  RKADK_U32 antifog = 0;
-  RKADK_U32 wdrLevel = 0;
 
   // set mirror flip
   ret = RKADK_PARAM_GetCamParam(s32CamID, RKADK_PARAM_TYPE_MIRROR, &mirror);
@@ -405,42 +400,6 @@ static int IspProcess(RKADK_S32 s32CamID) {
       RKADK_LOGW("RKADK_VI_ISP_SET_MirrorFlip failed");
   }
 
-  // set antifog
-  ret = RKADK_PARAM_GetCamParam(s32CamID, RKADK_PARAM_TYPE_ANTIFOG, &antifog);
-  if (ret) {
-    RKADK_LOGW("RKADK_PARAM_GetCamParam antifog failed");
-  } else {
-    if (antifog > 0) {
-      ret = RKADK_VI_ISP_EnableDefog(s32CamID, true, OP_MANUAL, antifog);
-      if (ret)
-        RKADK_LOGW("RKADK_VI_ISP_SET_EnableDefog failed");
-    }
-  }
-
-  // set LDCH
-  ret = RKADK_PARAM_GetCamParam(s32CamID, RKADK_PARAM_TYPE_LDC, &ldcLevel);
-  if (ret) {
-    RKADK_LOGW("RKADK_PARAM_GetCamParam ldc failed");
-  } else {
-    if (ldcLevel > 0) {
-      ret = RKADK_VI_ISP_EnableLdch(s32CamID, true, ldcLevel);
-      if (ret)
-        RKADK_LOGW("RKADK_VI_ISP_EnableLdch failed");
-    }
-  }
-
-  // WDR
-  ret = RKADK_PARAM_GetCamParam(s32CamID, RKADK_PARAM_TYPE_WDR, &wdrLevel);
-  if (ret) {
-    RKADK_LOGW("RKADK_PARAM_GetCamParam wdr failed");
-  } else {
-    if (wdrLevel > 0) {
-      ret = RKADK_VI_ISP_SET_DarkAreaBoostStrth(s32CamID, wdrLevel);
-      if (ret)
-        RKADK_LOGW("RKADK_VI_ISP_SET_DarkAreaBoostStrth failed");
-    }
-  }
-
 #ifdef RKADK_DUMP_ISP_RESULT
   // mirror flip
   ret = RKADK_VI_ISP_GET_MirrorFlip(s32CamID, &mirror, &flip);
@@ -448,31 +407,6 @@ static int IspProcess(RKADK_S32 s32CamID) {
     RKADK_LOGW("RKADK_VI_ISP_GET_MirrorFlip failed");
   else
     RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
-
-  // antifog
-  bool on;
-  ret = RKADK_VI_ISP_GET_MDhzStrth(s32CamID, &on, &ldcLevel);
-  if (ret)
-    RKADK_LOGW("RKADK_VI_ISP_GET_MDhzStrth failed");
-  else
-    RKADK_LOGD("GET antifog on = %d, ldcLevel = %d", on, ldcLevel);
-
-  // LDCH
-  rk_aiq_ldch_attrib_t attr;
-  ret = RKADK_VI_ISP_GET_LdchAttrib(s32CamID, &attr);
-  if (ret) {
-    RKADK_LOGW("RKADK_VI_ISP_GET_LdchAttrib failed");
-  } else {
-    RKADK_LOGD("LDC attr.en = %d", attr.en);
-    RKADK_LOGD("LDC attr.correct_level = %d", attr.correct_level);
-  }
-
-  // WDR
-  ret = RKADK_VI_ISP_GET_DarkAreaBoostStrth(s32CamID, &wdrLevel);
-  if (ret)
-    RKADK_LOGW("RKADK_VI_ISP_GET_DarkAreaBoostStrth failed");
-  else
-    RKADK_LOGD("WDR wdrLevel = %d", wdrLevel);
 #endif
 
   return 0;
@@ -480,7 +414,7 @@ static int IspProcess(RKADK_S32 s32CamID) {
 
 int main(int argc, char *argv[]) {
   int c, ret;
-  RKADK_RECORD_ATTR_S stRecAttr;
+  RKADK_REC_ATTR_S stRecAttr;
   RKADK_MW_PTR pRecorder = NULL;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   pthread_t tid = 0;
@@ -585,8 +519,8 @@ int main(int argc, char *argv[]) {
   VideoStartTest(g_u32CamID, "/userdata/stream.h264", RKADK_CODEC_TYPE_H264);
 
   // stream audio test
-  g_AudioCodecType = RKADK_CODEC_TYPE_MP3;
-  AudioStartTest("/userdata/aac.adts", RKADK_CODEC_TYPE_MP3);
+  g_AudioCodecType = RKADK_CODEC_TYPE_ACC;
+  AudioStartTest("/userdata/aac.adts", RKADK_CODEC_TYPE_ACC);
 
   // display test
   RKADK_DISP_Init(g_u32CamID);

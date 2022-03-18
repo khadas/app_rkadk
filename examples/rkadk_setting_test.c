@@ -63,10 +63,8 @@ static void SetCommCfg() {
   stParamCommCfg.speaker_volume = 80;
   stParamCommCfg.mic_unmute = true;
   stParamCommCfg.mic_volume = 80;
-  stParamCommCfg.osd_time_format = 0;
   stParamCommCfg.osd = true;
   stParamCommCfg.boot_sound = true;
-  stParamCommCfg.osd_speed = false;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
@@ -84,10 +82,6 @@ static void SetSensorCfg() {
   stSensorCfg.enable_photo = true;
   stSensorCfg.flip = false;
   stSensorCfg.mirror = false;
-  stSensorCfg.ldc = 0; //[0,255]
-  stSensorCfg.wdr = 0;
-  stSensorCfg.hdr = 0;
-  stSensorCfg.antifog = 0;
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
@@ -101,12 +95,11 @@ static void SetAudioCfg() {
 
   memset(&stAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
   strcpy(stAudioCfg.audio_node, AI_DEVICE_NAME);
-  stAudioCfg.sample_format = AUDIO_SAMPLE_FORMAT;
+  stAudioCfg.bit_width = AUDIO_BIT_WIDTH;
   stAudioCfg.channels = AUDIO_CHANNEL;
   stAudioCfg.samplerate = AUDIO_SAMPLE_RATE;
   stAudioCfg.samples_per_frame = AUDIO_FRAME_COUNT;
   stAudioCfg.bitrate = AUDIO_BIT_REAT;
-  stAudioCfg.ai_layout = AI_LAYOUT_NORMAL;
   stAudioCfg.vqe_mode = RKADK_VQE_MODE_BUTT;
   stAudioCfg.codec_type = RKADK_CODEC_TYPE_MP2;
 
@@ -122,7 +115,7 @@ static void SetRecCfg() {
   memset(&stParamRecCfg, 0, sizeof(RKADK_PARAM_REC_CFG_S));
   stParamRecCfg.record_type = RKADK_REC_TYPE_NORMAL;
   stParamRecCfg.pre_record_time = 0;
-  stParamRecCfg.pre_record_mode = MUXER_PRE_RECORD_NONE;
+  stParamRecCfg.pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   stParamRecCfg.lapse_multiple = 30;
   stParamRecCfg.file_num = 2;
 
@@ -137,13 +130,6 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[0].venc_chn = 0;
   strcpy(stParamRecCfg.attribute[0].rc_mode, "CBR");
-  stParamRecCfg.attribute[0].venc_param.max_qp = 48;
-  stParamRecCfg.attribute[0].venc_param.min_qp = 8;
-  stParamRecCfg.attribute[0].venc_param.full_range = true;
-  stParamRecCfg.attribute[0].venc_param.scaling_list = true;
-  stParamRecCfg.attribute[0].venc_param.hier_qp_en = true;
-  strcpy(stParamRecCfg.attribute[0].venc_param.hier_qp_delta, "-3,0,0,0");
-  strcpy(stParamRecCfg.attribute[0].venc_param.hier_frame_num, "3,0,0,0");
 
   stParamRecCfg.record_time_cfg[1].record_time = 60;
   stParamRecCfg.record_time_cfg[1].splite_time = 60;
@@ -156,31 +142,18 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[1].venc_chn = 1;
   strcpy(stParamRecCfg.attribute[1].rc_mode, "VBR");
-  stParamRecCfg.attribute[1].venc_param.max_qp = 48;
-  stParamRecCfg.attribute[1].venc_param.min_qp = 8;
-  stParamRecCfg.attribute[1].venc_param.full_range = true;
-  stParamRecCfg.attribute[1].venc_param.scaling_list = true;
-  stParamRecCfg.attribute[1].venc_param.hier_qp_en = true;
-  strcpy(stParamRecCfg.attribute[1].venc_param.hier_qp_delta, "-3,0,0,0");
-  strcpy(stParamRecCfg.attribute[1].venc_param.hier_frame_num, "3,0,0,0");
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
 
   RKADK_Struct2Ini(sensorPath, &stParamRecCfg, g_stRecCfgMapTable,
                    sizeof(g_stRecCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(sensorPath, &stParamRecCfg.attribute[0],
-                   g_stRecCfgMapTable_0, sizeof(g_stRecCfgMapTable_0) /
-                                             sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(sensorPath, &stParamRecCfg.attribute[1],
-                   g_stRecCfgMapTable_1, sizeof(g_stRecCfgMapTable_1) /
-                                             sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(sensorPath, &stParamRecCfg.attribute[0].venc_param,
-                   g_stRecParamMapTable_0, sizeof(g_stRecParamMapTable_0) /
-                                               sizeof(RKADK_SI_CONFIG_MAP_S));
-  RKADK_Struct2Ini(sensorPath, &stParamRecCfg.attribute[1].venc_param,
-                   g_stRecParamMapTable_1, sizeof(g_stRecParamMapTable_1) /
-                                               sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(
+      sensorPath, &stParamRecCfg.attribute[0], g_stRecCfgMapTable_0,
+      sizeof(g_stRecCfgMapTable_0) / sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_Struct2Ini(
+      sensorPath, &stParamRecCfg.attribute[1], g_stRecCfgMapTable_1,
+      sizeof(g_stRecCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 static void SetStreamCfg() {
@@ -196,13 +169,6 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stStreamCfg.attribute.venc_chn = 1;
   strcpy(stStreamCfg.attribute.rc_mode, "VBR");
-  stStreamCfg.attribute.venc_param.max_qp = 48;
-  stStreamCfg.attribute.venc_param.min_qp = 8;
-  stStreamCfg.attribute.venc_param.full_range = true;
-  stStreamCfg.attribute.venc_param.scaling_list = true;
-  stStreamCfg.attribute.venc_param.hier_qp_en = true;
-  strcpy(stStreamCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
-  strcpy(stStreamCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
@@ -210,10 +176,6 @@ static void SetStreamCfg() {
   RKADK_Struct2Ini(sensorPath, &stStreamCfg, g_stPreviewCfgMapTable,
                    sizeof(g_stPreviewCfgMapTable) /
                        sizeof(RKADK_SI_CONFIG_MAP_S));
-
-  RKADK_Struct2Ini(sensorPath, &stStreamCfg.attribute.venc_param,
-                   g_stPreviewParamMapTable, sizeof(g_stPreviewParamMapTable) /
-                                                 sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 static void SetLiveCfg() {
@@ -229,23 +191,12 @@ static void SetLiveCfg() {
   stLiveCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stLiveCfg.attribute.venc_chn = 1;
   strcpy(stLiveCfg.attribute.rc_mode, "VBR");
-  stLiveCfg.attribute.venc_param.max_qp = 48;
-  stLiveCfg.attribute.venc_param.min_qp = 8;
-  stLiveCfg.attribute.venc_param.full_range = true;
-  stLiveCfg.attribute.venc_param.scaling_list = true;
-  stLiveCfg.attribute.venc_param.hier_qp_en = true;
-  strcpy(stLiveCfg.attribute.venc_param.hier_qp_delta, "-3,0,0,0");
-  strcpy(stLiveCfg.attribute.venc_param.hier_frame_num, "3,0,0,0");
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
 
   RKADK_Struct2Ini(sensorPath, &stLiveCfg, g_stLiveCfgMapTable,
                    sizeof(g_stLiveCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
-
-  RKADK_Struct2Ini(sensorPath, &stLiveCfg.attribute.venc_param,
-                   g_stLiveParamMapTable, sizeof(g_stLiveParamMapTable) /
-                                              sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 static void SetPhotoCfg() {
@@ -327,6 +278,7 @@ static void SetThumbCfg() {
                        sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
+#ifdef RKADK_ENABLE_DISP
 static void SetDispCfg() {
   char sensorPath[RKADK_PATH_LEN];
   RKADK_PARAM_DISP_CFG_S stDispCfg;
@@ -351,6 +303,7 @@ static void SetDispCfg() {
   RKADK_Struct2Ini(sensorPath, &stDispCfg, g_stDispCfgMapTable,
                    sizeof(g_stDispCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
 }
+#endif
 
 int main(int argc, char *argv[]) {
 
@@ -402,7 +355,9 @@ int main(int argc, char *argv[]) {
       SetLiveCfg();
       RKADK_LOGD("SetLiveCfg done");
 
+#ifdef RKADK_ENABLE_DISP
       SetDispCfg();
+#endif
       RKADK_LOGD("SetDispCfg done");
     }
 

@@ -18,9 +18,6 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkadk_recorder_pro.h"
-#include "rkadk_track_source.h"
-#include "rkmedia_api.h"
 #include <deque>
 #include <pthread.h>
 #include <stdio.h>
@@ -30,30 +27,30 @@
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
 static std::deque<char *>
-    g_fileNameDeque[RKADK_REC_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
+    g_fileNameDeque[RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
 static pthread_mutex_t g_fileNameMutexLock = PTHREAD_MUTEX_INITIALIZER;
 
 static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
                              RKADK_U32 muxerId) {
   int index, ret;
-  RKADK_RECORDER_HANDLE_S *pstRecorder;
+  RKADK_MUXER_HANDLE_S *pstRecorder;
 
   RKADK_MUTEX_LOCK(g_fileNameMutexLock);
 
-  if (muxerId >= RKADK_REC_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT) {
+  if (muxerId >= RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT) {
     RKADK_LOGE("Incorrect file index: %d", muxerId);
     RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
   }
 
-  pstRecorder = (RKADK_RECORDER_HANDLE_S *)pHandle;
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pHandle;
   if (!pstRecorder) {
     RKADK_LOGE("pstRecorder is null");
     RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
   }
 
-  if (!g_pfnRequestFileNames[pstRecorder->s32CamId]) {
+  if (!g_pfnRequestFileNames[pstRecorder->u32CamId]) {
     RKADK_LOGE("Not Registered request name callback");
     RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
     return -1;
@@ -63,7 +60,7 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
     ARRAY_FILE_NAME fileName;
     fileName = (ARRAY_FILE_NAME)malloc(pstRecorder->u32StreamCnt *
                                        RKADK_MAX_FILE_PATH_LEN);
-    ret = g_pfnRequestFileNames[pstRecorder->s32CamId](
+    ret = g_pfnRequestFileNames[pstRecorder->u32CamId](
         pHandle, pstRecorder->u32StreamCnt, fileName);
     if (ret) {
       RKADK_LOGE("get file name failed(%d)", ret);
@@ -74,7 +71,7 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
     char *newName[pstRecorder->u32StreamCnt];
     for (int i = 0; i < (int)pstRecorder->u32StreamCnt; i++) {
       newName[i] = strdup(fileName[i]);
-      index = i + (RKADK_REC_STREAM_MAX_CNT * pstRecorder->s32CamId);
+      index = i + (RKADK_MUXER_STREAM_MAX_CNT * pstRecorder->u32CamId);
       g_fileNameDeque[index].push_back(newName[i]);
     }
     free(fileName);
@@ -89,20 +86,22 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
   return 0;
 }
 
-static void RKADK_RECORD_SetVideoChn(int index,
+static void RKADK_RECORD_SetVideoChn(int index, RKADK_U32 u32CamId,
                                      RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                      MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
                                      MPP_CHN_S *pstRgaChn) {
   pstViChn->enModId = RK_ID_VI;
-  pstViChn->s32DevId = 0;
+  pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstRecCfg->vi_attr[index].u32ViChn;
 
+#ifdef RKADK_ENABLE_RGA
   pstRgaChn->enModId = RK_ID_RGA;
-  pstRgaChn->s32DevId = 0;
+  pstRgaChn->s32DevId = u32CamId;
   pstRgaChn->s32ChnId = pstRecCfg->attribute[index].rga_chn;
+#endif
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = 0;
+  pstVencChn->s32DevId = u32CamId;
   pstVencChn->s32ChnId = pstRecCfg->attribute[index].venc_chn;
 }
 
@@ -117,7 +116,7 @@ static void RKADK_RECORD_SetAudioChn(MPP_CHN_S *pstAiChn,
   pstAencChn->s32ChnId = RECORD_AENC_CHN;
 }
 
-static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
+static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
                                      RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                      VENC_CHN_ATTR_S *pstVencAttr) {
   int ret;
@@ -128,7 +127,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
 
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(s32CamId);
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
@@ -162,24 +161,24 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_S32 s32CamId,
     return -1;
   }
 
-  if (pstRecCfg->attribute[index].codec_type == RKADK_CODEC_TYPE_H265)
-    pstVencAttr->stVencAttr.stAttrH265e.bScaleList =
-        (RK_BOOL)pstRecCfg->attribute[index].venc_param.scaling_list;
-
   pstVencAttr->stVencAttr.enType =
       RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
-  pstVencAttr->stVencAttr.imageType =
-      pstRecCfg->vi_attr[index].stChnAttr.enPixFmt;
+  pstVencAttr->stVencAttr.enPixelFormat =
+      pstRecCfg->vi_attr[index].stChnAttr.enPixelFormat;
   pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
   pstVencAttr->stVencAttr.u32PicHeight = pstRecCfg->attribute[index].height;
   pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
   pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
   pstVencAttr->stVencAttr.u32Profile = pstRecCfg->attribute[index].profile;
-  pstVencAttr->stVencAttr.bFullRange =
-      (RK_BOOL)pstRecCfg->attribute[index].venc_param.full_range;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
+  pstVencAttr->stVencAttr.u32BufSize = pstRecCfg->attribute[index].width *
+                                       pstRecCfg->attribute[index].height * 3 /
+                                       2;
+
   return 0;
 }
 
+#ifdef RKADK_ENABLE_RGA
 static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
   RKADK_U32 u32SrcWidth = pstRecCfg->vi_attr[index].stChnAttr.u32Width;
   RKADK_U32 u32SrcHeight = pstRecCfg->vi_attr[index].stChnAttr.u32Height;
@@ -194,36 +193,40 @@ static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
     return true;
   }
 }
+#endif
 
-static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
+static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   int ret;
-  bool bUseRga = false;
   VENC_CHN_ATTR_S stVencChnAttr;
-  VENC_RC_PARAM_S stVencRcParam;
-  RGA_ATTR_S stRgaAttr;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga = false;
+  RGA_ATTR_S stRgaAttr;
+#endif
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    ret = RKADK_RECORD_SetVideoAttr(i, s32CamID, pstRecCfg, &stVencChnAttr);
+    ret = RKADK_RECORD_SetVideoAttr(i, u32CamId, pstRecCfg, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_SetVideoAttr(%d) failed", i);
       return ret;
     }
 
     // Create VI
-    ret = RKADK_MPI_VI_Init(s32CamID, pstRecCfg->vi_attr[i].u32ViChn,
+    ret = RKADK_MPI_VI_Init(u32CamId, pstRecCfg->vi_attr[i].u32ViChn,
                             &(pstRecCfg->vi_attr[i].stChnAttr));
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VI_Init faile, ret = %d", ret);
       return ret;
     }
 
+#ifdef RKADK_ENABLE_RGA
     // Create RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
@@ -245,41 +248,39 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_S32 s32CamID) {
       if (ret) {
         RKADK_LOGE("Init Rga[%d] falied[%d]", pstRecCfg->attribute[i].rga_chn,
                    ret);
-        RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
+        RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
         return ret;
       }
     }
+#endif
 
     // Create VENC
     ret = RKADK_MPI_VENC_Init(pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
 
+#ifdef RKADK_ENABLE_RGA
       if (bUseRga)
         RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
+#endif
 
-      RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
+      RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
-    }
-
-    ret = RKADK_PARAM_GetRcParam(pstRecCfg->attribute[i], &stVencRcParam);
-    if (!ret) {
-      ret = RK_MPI_VENC_SetRcParam(pstRecCfg->attribute[i].venc_chn,
-                                   &stVencRcParam);
-      if (ret)
-        RKADK_LOGW("RK_MPI_VENC_SetRcParam failed(%d), use default cfg", ret);
     }
   }
 
   return 0;
 }
 
-static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
+static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
   int ret;
-  bool bUseRga = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga = false;
+#endif
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
@@ -289,23 +290,25 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
     // Destroy VENC
     ret = RKADK_MPI_VENC_DeInit(pstRecCfg->attribute[i].venc_chn);
     if (ret) {
-      RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
+      RKADK_LOGE("RKADK_MPI_VENC_DeInit failed[%x]", ret);
       return ret;
     }
 
+#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       ret = RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
       if (ret) {
-        RKADK_LOGE("RKADK_MPI_RGA_DeInit failed[%d]", ret);
+        RKADK_LOGE("RKADK_MPI_RGA_DeInit failed[%x]", ret);
         return ret;
       }
     }
+#endif
 
     // Destroy VI
-    ret = RKADK_MPI_VI_DeInit(s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
+    ret = RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
     if (ret) {
-      RKADK_LOGE("RKADK_MPI_VI_DeInit failed, ret = %d", ret);
+      RKADK_LOGE("RKADK_MPI_VI_DeInit failed[%x]", ret);
       return ret;
     }
   }
@@ -315,6 +318,9 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_S32 s32CamID) {
 
 static int RKADK_RECORD_CreateAudioChn() {
   int ret;
+  AUDIO_SOUND_MODE_E soundMode;
+  AIO_ATTR_S stAiAttr;
+  AENC_CHN_ATTR_S stAencAttr;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
@@ -324,61 +330,50 @@ static int RKADK_RECORD_CreateAudioChn() {
   }
 
   // Create AI
-  AI_CHN_ATTR_S stAiAttr;
-  stAiAttr.pcAudioNode = pstAudioParam->audio_node;
-  stAiAttr.enSampleFormat = pstAudioParam->sample_format;
-  stAiAttr.u32NbSamples = pstAudioParam->samples_per_frame;
-  stAiAttr.u32SampleRate = pstAudioParam->samplerate;
-  stAiAttr.u32Channels = pstAudioParam->channels;
-  stAiAttr.enAiLayout = pstAudioParam->ai_layout;
-  ret = RKADK_MPI_AI_Init(RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
+  memset(&stAiAttr, 0, sizeof(AIO_ATTR_S));
+  memcpy(stAiAttr.u8CardName, pstAudioParam->audio_node,
+         strlen(pstAudioParam->audio_node));
+  stAiAttr.soundCard.channels = pstAudioParam->channels;
+  stAiAttr.soundCard.sampleRate = pstAudioParam->samplerate;
+  stAiAttr.soundCard.bitWidth = pstAudioParam->bit_width;
+
+  stAiAttr.enBitwidth = pstAudioParam->bit_width;
+  stAiAttr.enSamplerate = (AUDIO_SAMPLE_RATE_E)pstAudioParam->samplerate;
+  soundMode = RKADK_AI_GetSoundMode(pstAudioParam->channels);
+  if (soundMode == AUDIO_SOUND_MODE_BUTT)
+    return -1;
+
+  stAiAttr.enSoundmode = soundMode;
+  // stAiAttr.u32FrmNum = 4; //default 4
+  stAiAttr.u32PtNumPerFrm = pstAudioParam->samples_per_frame;
+  stAiAttr.u32EXFlag = 0;
+  stAiAttr.u32ChnCnt = pstAudioParam->channels;
+
+  ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
     return ret;
   }
 
   // Create AENC
-  AENC_CHN_ATTR_S stAencAttr;
-  stAencAttr.enCodecType =
-      RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
-  stAencAttr.u32Bitrate = pstAudioParam->bitrate;
-  stAencAttr.u32Quality = 1;
+  memset(&stAencAttr, 0, sizeof(AENC_CHN_ATTR_S));
+  stAencAttr.enType = RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
+  stAencAttr.u32BufCount = 4;
+  stAencAttr.stCodecAttr.enType = stAencAttr.enType;
+  stAencAttr.stCodecAttr.u32Channels = pstAudioParam->channels;
+  stAencAttr.stCodecAttr.u32SampleRate = pstAudioParam->samplerate;
+  stAencAttr.stCodecAttr.enBitwidth = pstAudioParam->bit_width;
+  stAencAttr.stCodecAttr.pstResv = RK_NULL;
 
-  switch (pstAudioParam->codec_type) {
-  case RKADK_CODEC_TYPE_G711A:
-    stAencAttr.stAencG711A.u32Channels = pstAudioParam->channels;
-    stAencAttr.stAencG711A.u32NbSample = pstAudioParam->samples_per_frame;
-    stAencAttr.stAencG711A.u32SampleRate = pstAudioParam->samplerate;
-    break;
-  case RKADK_CODEC_TYPE_G711U:
-    stAencAttr.stAencG711U.u32Channels = pstAudioParam->channels;
-    stAencAttr.stAencG711U.u32NbSample = pstAudioParam->samples_per_frame;
-    stAencAttr.stAencG711U.u32SampleRate = pstAudioParam->samplerate;
-    break;
-  case RKADK_CODEC_TYPE_MP3:
-    stAencAttr.stAencMP3.u32Channels = pstAudioParam->channels;
-    stAencAttr.stAencMP3.u32SampleRate = pstAudioParam->samplerate;
-    break;
-  case RKADK_CODEC_TYPE_G726:
-    stAencAttr.stAencG726.u32Channels = pstAudioParam->channels;
-    stAencAttr.stAencG726.u32SampleRate = pstAudioParam->samplerate;
-    break;
-  case RKADK_CODEC_TYPE_MP2:
-    stAencAttr.stAencMP2.u32Channels = pstAudioParam->channels;
-    stAencAttr.stAencMP2.u32SampleRate = pstAudioParam->samplerate;
-    break;
-
-  default:
-    RKADK_LOGE("Nonsupport codec type(%d)", pstAudioParam->codec_type);
-    return -1;
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC) {
+    stAencAttr.stCodecAttr.u32Resv[0] = 2; // see AUDIO_OBJECT_TYPE
+    stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
-  stAencAttr.stAencMP3.u32Channels = pstAudioParam->channels;
-  stAencAttr.stAencMP3.u32SampleRate = pstAudioParam->samplerate;
   ret = RKADK_MPI_AENC_Init(RECORD_AENC_CHN, &stAencAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AENC_Init failed(%d)", ret);
-    RKADK_MPI_AI_DeInit(RECORD_AI_CHN, pstAudioParam->vqe_mode);
+    RKADK_MPI_AI_DeInit(0, RECORD_AI_CHN, pstAudioParam->vqe_mode);
     return -1;
   }
 
@@ -401,7 +396,7 @@ static int RKADK_RECORD_DestoryAudioChn() {
     return ret;
   }
 
-  ret = RKADK_MPI_AI_DeInit(RECORD_AI_CHN, pstAudioParam->vqe_mode);
+  ret = RKADK_MPI_AI_DeInit(0, RECORD_AI_CHN, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_DeInit failed(%d)", ret);
     return ret;
@@ -410,22 +405,86 @@ static int RKADK_RECORD_DestoryAudioChn() {
   return 0;
 }
 
-static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
-                                RKADK_REC_TYPE_E enRecType) {
+static int64_t fakeTime = 0;
+static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
+                                   RKADK_VOID *pHandle) {
+  // current rockit audio timestamp inaccurate, use fake time
+  fakeTime += 72000;
+  RKADK_MUXER_WriteAudioFrame(
+      (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk), stFrame.u32Len,
+      fakeTime /*stFrame.u64TimeStamp*/, pHandle);
+}
+
+static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
+                                   RKADK_VOID *pHandle) {
+  RKADK_CHAR *data =
+      (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
+
+  if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE) ||
+      (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE)) {
+    // RKADK_LOGD("write I frame");
+    RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+                                stData.stFrame.pstPack->u32Len,
+                                stData.stFrame.pstPack->u64PTS, 1, pHandle);
+  } else {
+    // RKADK_LOGD("write P frame");
+    RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+                                stData.stFrame.pstPack->u32Len,
+                                stData.stFrame.pstPack->u64PTS, 0, pHandle);
+  }
+}
+
+static RKADK_S32 RKADK_RECORD_VencGetData(RKADK_U32 u32CamId,
+                                          MPP_CHN_S *pstVencChn,
+                                          RKADK_MW_PTR pRecorder) {
+  int ret = 0;
+
+  ret =
+      RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_RECORD_VencOutCb, pRecorder);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_GetVencBuffer failed[%x]", ret);
+    return ret;
+  }
+
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+  stRecvParam.s32RecvPicNum = -1;
+  ret = RK_MPI_VENC_StartRecvFrame(pstVencChn->s32ChnId, &stRecvParam);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
+    return ret;
+  }
+
+  return ret;
+}
+
+static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
-  bool bUseRga;
   MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga;
+#endif
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamID)) {
-    // Bind AI to AENC
+  if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE &&
+      RKADK_MUXER_EnableAudio(u32CamId)) {
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
+
+    // Get aenc data
+    ret = RKADK_MEDIA_GetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb,
+                                    pRecorder);
+    if (ret) {
+      RKADK_LOGE("RKADK_MEDIA_GetAencBuffer failed[%x]", ret);
+      return ret;
+    }
+
+    // Bind AI to AENC
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
@@ -434,8 +493,14 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
   }
 
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn, &stRgaChn);
+    RKADK_RECORD_SetVideoChn(i, u32CamId, pstRecCfg, &stSrcChn, &stDestChn,
+                             &stRgaChn);
 
+    // Get venc data
+    if (RKADK_RECORD_VencGetData(u32CamId, &stDestChn, pRecorder))
+      return -1;
+
+#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       // RGA Bind VENC
@@ -453,7 +518,9 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
                    stRgaChn.s32ChnId, ret);
         return ret;
       }
-    } else {
+    } else
+#endif
+    {
       // Bind VI to VENC
       ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
       if (ret) {
@@ -466,22 +533,29 @@ static int RKADK_RECORD_BindChn(RKADK_S32 s32CamID,
   return 0;
 }
 
-static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
-                                  RKADK_REC_TYPE_E enRecType) {
+static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
   int ret;
-  bool bUseRga = false;
   MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
+#ifdef RKADK_ENABLE_RGA
+  bool bUseRga = false;
+#endif
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamID)) {
-    // UnBind AI to AENC
+  if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE &&
+      RKADK_MUXER_EnableAudio(u32CamId)) {
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
+
+    // Stop get aenc data
+    RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
+
+    // UnBind AI to AENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
@@ -489,10 +563,14 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
     }
   }
 
-  // UnBind VI to VENC
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    RKADK_RECORD_SetVideoChn(i, pstRecCfg, &stSrcChn, &stDestChn, &stRgaChn);
+    RKADK_RECORD_SetVideoChn(i, u32CamId, pstRecCfg, &stSrcChn, &stDestChn,
+                             &stRgaChn);
 
+    // Stop get venc data
+    RKADK_MEDIA_StopGetVencBuffer(&stDestChn, RKADK_RECORD_VencOutCb);
+
+#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       // RGA UnBind VENC
@@ -510,7 +588,10 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
                    stRgaChn.s32ChnId, ret);
         return ret;
       }
-    } else {
+    } else
+#endif
+    {
+      // UnBind VI to VENC
       ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
       if (ret) {
         RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
@@ -522,16 +603,15 @@ static int RKADK_RECORD_UnBindChn(RKADK_S32 s32CamID,
   return 0;
 }
 
-static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
-                                            RKADK_REC_TYPE_E enRecType,
-                                            RKADK_REC_ATTR_S *pstRecAttr) {
+static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
+                                           RKADK_MUXER_ATTR_S *pstMuxerAttr) {
   bool bEnableAudio = false;
   RKADK_U32 u32Integer = 0, u32Remainder = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
 
-  RKADK_CHECK_CAMERAID(s32CamID, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
@@ -539,69 +619,67 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     return -1;
   }
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamID);
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  bEnableAudio = RKADK_REC_EnableAudio(s32CamID);
+  bEnableAudio = RKADK_MUXER_EnableAudio(u32CamId);
 
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(s32CamID);
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
   }
 
-  memset(pstRecAttr, 0, sizeof(RKADK_REC_ATTR_S));
-
-  if (pstRecCfg->record_type != enRecType)
-    RKADK_LOGW("enRecType(%d) != param record_type(%d)", enRecType,
-               pstRecCfg->record_type);
+  memset(pstMuxerAttr, 0, sizeof(RKADK_MUXER_ATTR_S));
 
   u32Integer = pstRecCfg->attribute[0].gop / pstSensorCfg->framerate;
   u32Remainder = pstRecCfg->attribute[0].gop % pstSensorCfg->framerate;
-  pstRecAttr->stPreRecordAttr.u32PreRecCacheTime =
+  pstMuxerAttr->stPreRecordAttr.u32PreRecCacheTime =
       pstRecCfg->pre_record_time + u32Integer;
   if (u32Remainder)
-    pstRecAttr->stPreRecordAttr.u32PreRecCacheTime += 1;
+    pstMuxerAttr->stPreRecordAttr.u32PreRecCacheTime += 1;
 
-  pstRecAttr->enRecType = enRecType;
-  pstRecAttr->stRecSplitAttr.enMode = MUXER_MODE_AUTOSPLIT;
-  pstRecAttr->u32StreamCnt = pstRecCfg->file_num;
-  pstRecAttr->stPreRecordAttr.u32PreRecTimeSec = pstRecCfg->pre_record_time;
-  pstRecAttr->stPreRecordAttr.enPreRecordMode = pstRecCfg->pre_record_mode;
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE)
+    pstMuxerAttr->bLapseRecord = RK_TRUE;
+  else
+    pstMuxerAttr->bLapseRecord = RK_FALSE;
 
-  MUXER_SPLIT_ATTR_S *stSplitAttr = &(pstRecAttr->stRecSplitAttr.stSplitAttr);
-  stSplitAttr->enSplitType = MUXER_SPLIT_TYPE_TIME;
-  stSplitAttr->enSplitNameType = MUXER_SPLIT_NAME_TYPE_CALLBACK;
-  stSplitAttr->stNameCallBackAttr.pcbRequestFileNames = GetRecordFileName;
+  pstMuxerAttr->u32CamId = u32CamId;
+  pstMuxerAttr->u32StreamCnt = pstRecCfg->file_num;
+  pstMuxerAttr->stPreRecordAttr.u32PreRecTimeSec = pstRecCfg->pre_record_time;
+  pstMuxerAttr->stPreRecordAttr.enPreRecordMode = pstRecCfg->pre_record_mode;
+  pstMuxerAttr->pcbRequestFileNames = GetRecordFileName;
 
-  for (int i = 0; i < (int)pstRecAttr->u32StreamCnt; i++) {
-    pstRecAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
-    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE) {
-      pstRecAttr->astStreamAttr[i].u32TimeLenSec =
+  for (int i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
+    pstMuxerAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
+    if (pstMuxerAttr->bLapseRecord) {
+      pstMuxerAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].lapse_interval;
-      pstRecAttr->astStreamAttr[i].u32TrackCnt = 1; // only video track
+      pstMuxerAttr->astStreamAttr[i].u32TrackCnt = 1; // only video track
     } else {
-      pstRecAttr->astStreamAttr[i].u32TimeLenSec =
+      pstMuxerAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].record_time;
-      pstRecAttr->astStreamAttr[i].u32TrackCnt = RKADK_REC_TRACK_MAX_CNT;
+      pstMuxerAttr->astStreamAttr[i].u32TrackCnt = RKADK_MUXER_TRACK_MAX_CNT;
     }
 
-    if (pstRecAttr->astStreamAttr[i].u32TrackCnt == RKADK_REC_TRACK_MAX_CNT)
+    if (pstMuxerAttr->astStreamAttr[i].u32TrackCnt == RKADK_MUXER_TRACK_MAX_CNT)
       if (!bEnableAudio)
-        pstRecAttr->astStreamAttr[i].u32TrackCnt = 1;
+        pstMuxerAttr->astStreamAttr[i].u32TrackCnt = 1;
 
     // video track
-    RKADK_TRACK_SOURCE_S *aHTrackSrcHandle =
-        &(pstRecAttr->astStreamAttr[i].aHTrackSrcHandle[0]);
+    RKADK_MUXER_TRACK_SOURCE_S *aHTrackSrcHandle =
+        &(pstMuxerAttr->astStreamAttr[i].aHTrackSrcHandle[0]);
     aHTrackSrcHandle->enTrackType = RKADK_TRACK_SOURCE_TYPE_VIDEO;
-    aHTrackSrcHandle->s32PrivateHandle = pstRecCfg->attribute[i].venc_chn;
+    aHTrackSrcHandle->u32ChnId = pstRecCfg->attribute[i].venc_chn;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.enCodecType =
-        RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[i].codec_type);
-    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.enImageType =
-        pstRecCfg->vi_attr[i].stChnAttr.enPixFmt;
+        pstRecCfg->attribute[i].codec_type;
+    if (RKADK_MEDIA_GetPixelFormat(
+            pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat,
+            aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.cPixFmt))
+      return -1;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32FrameRate =
         pstSensorCfg->framerate;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Level = 41;
@@ -614,17 +692,17 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
         pstRecCfg->attribute[i].height;
 
-    if (pstRecAttr->enRecType == RKADK_REC_TYPE_LAPSE || !bEnableAudio)
+    if (pstMuxerAttr->bLapseRecord || !bEnableAudio)
       continue;
 
     // audio track
-    aHTrackSrcHandle = &(pstRecAttr->astStreamAttr[i].aHTrackSrcHandle[1]);
+    aHTrackSrcHandle = &(pstMuxerAttr->astStreamAttr[i].aHTrackSrcHandle[1]);
     aHTrackSrcHandle->enTrackType = RKADK_TRACK_SOURCE_TYPE_AUDIO;
-    aHTrackSrcHandle->s32PrivateHandle = RECORD_AENC_CHN;
+    aHTrackSrcHandle->u32ChnId = RECORD_AENC_CHN;
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.enCodecType =
-        RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
-    aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.enSampFmt =
-        pstAudioParam->sample_format;
+        pstAudioParam->codec_type;
+    aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32BitWidth =
+        RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width);
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32ChnCnt =
         pstAudioParam->channels;
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32SamplesPerFrame =
@@ -636,57 +714,64 @@ static RKADK_S32 RKADK_RECORD_SetRecordAttr(RKADK_S32 s32CamID,
   return 0;
 }
 
-RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
+RKADK_S32 RKADK_RECORD_Create(RKADK_REC_ATTR_S *pstRecAttr,
                               RKADK_MW_PTR *ppRecorder) {
   int ret;
   bool bEnableAudio = false;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
-  RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(pstRecAttr->u32CamId, RKADK_FAILURE);
 
-  RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID,
-             pstRecAttr->enRecType);
+  pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
 
-  RK_MPI_SYS_Init();
+  RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->u32CamId,
+             pstRecCfg->record_type);
+
+  RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
-  if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
+  if (RKADK_RECORD_CreateVideoChn(pstRecAttr->u32CamId))
     return -1;
 
-  bEnableAudio = RKADK_REC_EnableAudio(pstRecAttr->s32CamID);
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
+  bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->u32CamId);
+  if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
     if (RKADK_RECORD_CreateAudioChn()) {
-      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
+      RKADK_RECORD_DestoryVideoChn(pstRecAttr->u32CamId);
       return -1;
     }
   }
 
-  g_pfnRequestFileNames[pstRecAttr->s32CamID] = pstRecAttr->pfnRequestFileNames;
+  g_pfnRequestFileNames[pstRecAttr->u32CamId] = pstRecAttr->pfnRequestFileNames;
 
-  RKADK_REC_ATTR_S stRecAttr;
-  ret = RKADK_RECORD_SetRecordAttr(pstRecAttr->s32CamID, pstRecAttr->enRecType,
-                                   &stRecAttr);
+  RKADK_MUXER_ATTR_S stMuxerAttr;
+  ret = RKADK_RECORD_SetMuxerAttr(pstRecAttr->u32CamId, &stMuxerAttr);
   if (ret) {
-    RKADK_LOGE("RKADK_RECORD_SetRecordAttr failed");
+    RKADK_LOGE("RKADK_RECORD_SetMuxerAttr failed");
     goto failed;
   }
 
-  if (RKADK_REC_Create(&stRecAttr, ppRecorder, pstRecAttr->s32CamID))
+  stMuxerAttr.pfnEventCallback = pstRecAttr->pfnEventCallback;
+  if (RKADK_MUXER_Create(&stMuxerAttr, ppRecorder))
     goto failed;
 
-  if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, pstRecAttr->enRecType))
+  if (RKADK_RECORD_BindChn(pstRecAttr->u32CamId, *ppRecorder))
     goto failed;
 
-  RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->s32CamID,
-             pstRecAttr->enRecType);
+  RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->u32CamId,
+             pstRecCfg->record_type);
   return 0;
 
 failed:
-  RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->s32CamID,
-             pstRecAttr->enRecType);
-  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
+  RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->u32CamId,
+             pstRecCfg->record_type);
+  RKADK_RECORD_DestoryVideoChn(pstRecAttr->u32CamId);
 
-  if (pstRecAttr->enRecType != RKADK_REC_TYPE_LAPSE && bEnableAudio)
+  if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio)
     RKADK_RECORD_DestoryAudioChn();
 
   return -1;
@@ -694,26 +779,28 @@ failed:
 
 RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   RKADK_S32 ret, index;
-  RKADK_S32 s32CamId;
-  RKADK_REC_TYPE_E enRecType;
-  RKADK_RECORDER_HANDLE_S *stRecorder = NULL;
+  RKADK_U32 u32CamId;
+  RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
+  RKADK_MUXER_HANDLE_S *stRecorder = NULL;
 
   RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
-  stRecorder = (RKADK_RECORDER_HANDLE_S *)pRecorder;
+  stRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
   if (!stRecorder) {
     RKADK_LOGE("stRecorder is null");
     return -1;
   }
 
-  RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->s32CamId,
-             stRecorder->enRecType);
+  if (stRecorder->bLapseRecord)
+    enRecType = RKADK_REC_TYPE_LAPSE;
 
-  s32CamId = stRecorder->s32CamId;
-  enRecType = stRecorder->enRecType;
-  RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
+  RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->u32CamId,
+             enRecType);
+
+  u32CamId = stRecorder->u32CamId;
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
   for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
-    index = i + (RKADK_REC_STREAM_MAX_CNT * s32CamId);
+    index = i + (RKADK_MUXER_STREAM_MAX_CNT * u32CamId);
     while (!g_fileNameDeque[index].empty()) {
       RKADK_LOGI("clear file name deque[%d]", index);
       auto front = g_fileNameDeque[index].front();
@@ -723,25 +810,25 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     g_fileNameDeque[index].clear();
   }
 
-  ret = RKADK_REC_Destroy(pRecorder);
+  ret = RKADK_MUXER_Destroy(pRecorder);
   if (ret) {
     RKADK_LOGE("RK_REC_Destroy failed, ret = %d", ret);
     return ret;
   }
 
-  ret = RKADK_RECORD_UnBindChn(s32CamId, enRecType);
+  ret = RKADK_RECORD_UnBindChn(u32CamId);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_UnBindChn failed, ret = %d", ret);
     return ret;
   }
 
-  ret = RKADK_RECORD_DestoryVideoChn(s32CamId);
+  ret = RKADK_RECORD_DestoryVideoChn(u32CamId);
   if (ret) {
-    RKADK_LOGE("RKADK_RECORD_DestoryVideoChn failed, ret = %d", ret);
+    RKADK_LOGE("RKADK_RECORD_DestoryVideoChn failed[%x]", ret);
     return ret;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_REC_EnableAudio(s32CamId)) {
+  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_MUXER_EnableAudio(u32CamId)) {
     ret = RKADK_RECORD_DestoryAudioChn();
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_DestoryAudioChn failed, ret = %d", ret);
@@ -749,33 +836,29 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     }
   }
 
-  g_pfnRequestFileNames[s32CamId] = NULL;
-  RKADK_LOGI("Destory Record[%d, %d] End...", s32CamId, enRecType);
+  g_pfnRequestFileNames[u32CamId] = NULL;
+  RKADK_MPI_SYS_Exit();
+  RKADK_LOGI("Destory Record[%d, %d] End...", u32CamId, enRecType);
   return 0;
 }
 
 RKADK_S32 RKADK_RECORD_Start(RKADK_MW_PTR pRecorder) {
-  return RKADK_REC_Start(pRecorder);
+  return RKADK_MUXER_Start(pRecorder);
 }
 
 RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
-  return RKADK_REC_Stop(pRecorder);
+  return RKADK_MUXER_Stop(pRecorder);
 }
 
 RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
-                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr) {
-  return RKADK_REC_SetFrameRate(pRecorder, stFpsAttr);
+                                    RKADK_REC_FPS_ATTR_S stFpsAttr) {
+  return RKADK_MUXER_SetFrameRate(pRecorder, stFpsAttr);
 }
 
 RKADK_S32
 RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
                          RKADK_REC_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {
-  return RKADK_REC_ManualSplit(pRecorder, pstSplitAttr);
-}
-
-RKADK_S32 RKADK_RECORD_RegisterEventCallback(
-    RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback) {
-  return RKADK_REC_RegisterEventCallback(pRecorder, pfnEventCallback);
+  return RKADK_MUXER_ManualSplit(pRecorder, pstSplitAttr);
 }
 
 RKADK_S32 RKADK_RECORD_GetAencChn() { return RECORD_AENC_CHN; }

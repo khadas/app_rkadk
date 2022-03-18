@@ -19,10 +19,15 @@
 
 #include "rkadk_common.h"
 #include "rkadk_record.h"
-#include "rkmedia_api.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "rk_mpi_ai.h"
+#include "rk_mpi_venc.h"
+#include "rk_mpi_vi.h"
+#include "rk_mpi_vo.h"
+#include "rk_mpi_vpss.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +37,6 @@ extern "C" {
 #define RKADK_PARAM_VERSION "1.3.1"
 
 #define RKADK_BUFFER_LEN 64
-#define RKADK_PIX_FMT_LEN 10
 #define RKADK_RC_MODE_LEN 5
 #define RKADK_PATH_LEN 128
 
@@ -47,8 +51,8 @@ extern "C" {
 #define AUDIO_BIT_REAT 64000
 /* mp2: 1152, mp3: 1024 */
 #define AUDIO_FRAME_COUNT 1152
-#define AUDIO_SAMPLE_FORMAT RK_SAMPLE_FMT_S16
-#define AI_DEVICE_NAME "default"
+#define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
+#define AI_DEVICE_NAME "default:CARD=rockchiprk809co"
 
 /* video default parameters */
 #define VIDEO_GOP 30
@@ -74,7 +78,7 @@ extern "C" {
 #define RECORD_AENC_CHN 0
 
 #define PREVIEW_AI_CHN RECORD_AI_CHN
-#define PREVIEW_AENC_CHN 1
+#define PREVIEW_AENC_CHN RECORD_AENC_CHN
 
 #define LIVE_AI_CHN RECORD_AI_CHN
 #define LIVE_AENC_CHN RECORD_AENC_CHN
@@ -138,10 +142,6 @@ typedef enum {
   RKADK_PARAM_TYPE_BITRATE,         /* specify RKADK_PARAM_BITRATE_S */
   RKADK_PARAM_TYPE_FLIP,            /* bool */
   RKADK_PARAM_TYPE_MIRROR,          /* bool */
-  RKADK_PARAM_TYPE_LDC,             /* ldc level [0,255] */
-  RKADK_PARAM_TYPE_ANTIFOG,         /* antifog value, [0,10] */
-  RKADK_PARAM_TYPE_WDR,             /* wdr level, [0,10] */
-  RKADK_PARAM_TYPE_HDR,             /* 0: normal, 1: HDR2, 2: HDR3, [0,2] */
   RKADK_PARAM_TYPE_REC,             /* record  enable, bool*/
   RKADK_PARAM_TYPE_RECORD_TYPE,     /* specify RKADK_REC_TYPE_E */
   RKADK_PARAM_TYPE_RECORD_TIME,     /* specify RKADK_PARAM_REC_TIME_S, record time(s) */
@@ -161,9 +161,7 @@ typedef enum {
   RKADK_PARAM_TYPE_MIC_UNMUTE,      /* mic(mute) enable, bool */
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
   RKADK_PARAM_TYPE_OSD,             /* show osd or not, bool */
-  RKADK_PARAM_TYPE_OSD_TIME_FORMAT, /* osd format for time */
   RKADK_PARAM_TYPE_BOOTSOUND,       /* boot sound enable, bool */
-  RKADK_PARAM_TYPE_OSD_SPEED,       /* speed osd enable, bool */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 
@@ -193,7 +191,7 @@ typedef struct tagRKADK_PARAM_VERSION_S {
 
 typedef struct tagRKADK_PARAM_VI_CFG_S {
   RKADK_U32 chn_id;
-  char device_name[RKADK_BUFFER_LEN];
+  char device_name[MAX_VI_ENTITY_NAME_LEN];
   RKADK_U32 buf_cnt;
   RKADK_U32 width;
   RKADK_U32 height;
@@ -210,10 +208,8 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 speaker_volume; /* speaker volume, [0,100] */
   bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
-  RKADK_U32 osd_time_format;
   bool osd;        /* Whether to display OSD */
   bool boot_sound; /* boot sound */
-  bool osd_speed;  /* speed osd */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
@@ -225,39 +221,18 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
   bool enable_photo;  /* photo enable, default true */
   bool flip;          /* FLIP */
   bool mirror;        /* MIRROR */
-  RKADK_U32 ldc;      /* LDC level, [0,255]*/
-  RKADK_U32 wdr;      /* WDR level, [0,10] */
-  RKADK_U32 hdr;      /* hdr, [0: normal, 1: HDR2, 2: HDR3] */
-  RKADK_U32 antifog;  /* antifog value, [0,10] */
 } RKADK_PARAM_SENSOR_CFG_S;
 
 typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   char audio_node[RKADK_BUFFER_LEN];
-  SAMPLE_FORMAT_E sample_format;
+  AUDIO_BIT_WIDTH_E bit_width;
   RKADK_U32 channels;
   RKADK_U32 samplerate;
   RKADK_U32 samples_per_frame;
   RKADK_U32 bitrate;
-  AI_LAYOUT_E ai_layout;
   RKADK_VQE_MODE_E vqe_mode;
   RKADK_CODEC_TYPE_E codec_type;
 } RKADK_PARAM_AUDIO_CFG_S;
-
-typedef struct tagRKADK_PARAM_VENC_PARAM_S {
-  /* rc param */
-  RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
-  RKADK_U32 qp_step;
-  RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
-  RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
-  RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
-  RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
-  bool hier_qp_en;
-  char hier_qp_delta[RKADK_BUFFER_LEN];
-  char hier_frame_num[RKADK_BUFFER_LEN];
-
-  bool full_range;
-  bool scaling_list;
-} RKADK_PARAM_VENC_PARAM_S;
 
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 width;
@@ -269,7 +244,6 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 venc_chn;
   RKADK_U32 rga_chn;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
-  RKADK_PARAM_VENC_PARAM_S venc_param;
 } RKADK_PARAM_VENC_ATTR_S;
 
 typedef struct {
@@ -285,9 +259,9 @@ typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
   RKADK_REC_TYPE_E record_type;
-  MUXER_TYPE_E file_type;
+  RKADK_MUXER_FILE_TYPE_E file_type;
   RKADK_U32 pre_record_time;
-  MUXER_PRE_RECORD_MODE_E pre_record_mode;
+  RKADK_MUXER_PRE_RECORD_MODE_E pre_record_mode;
   RKADK_U32 lapse_multiple;
   RKADK_U32 file_num;
   RKADK_PARAM_REC_TIME_CFG_S record_time_cfg[RECORD_FILE_NUM_MAX];
@@ -319,7 +293,9 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   RKADK_U32 rga_chn;
   // vo
   char device_node[RKADK_BUFFER_LEN];
+#ifdef RKADK_ENABLE_DISP
   VO_PLANE_TYPE_E plane_type;
+#endif
   char img_type[RKADK_PIX_FMT_LEN]; /* specify IMAGE_TYPE_E: NV12/RGB888... */
   RKADK_U32 z_pos;
   RKADK_U32 vo_chn;
@@ -466,13 +442,10 @@ RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
 VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
                                      RKADK_CODEC_TYPE_E enCodecType);
 
-RKADK_S32 RKADK_PARAM_GetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr,
-                                 VENC_RC_PARAM_S *pstRcParam);
-
 RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
                                            RKADK_U32 u32ChnId);
 
-IMAGE_TYPE_E RKADK_PARAM_GetPixFmt(char *pixFmt);
+PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt, COMPRESS_MODE_E *enCompressMode);
 
 #ifdef __cplusplus
 }

@@ -22,8 +22,36 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int RKADK_Ini2Struct(char *iniFile, void *structAddr,
-                     RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
+RKADK_S32 RKADK_IniLoad(char *iniFile, dictionary *pstIni) {
+  RKADK_CHECK_POINTER(iniFile, RKADK_FAILURE);
+
+  if (access(iniFile, F_OK)) {
+    RKADK_LOGD("%s don't exist, create an empty file", iniFile);
+    FILE *file = fopen(iniFile, "w+");
+    if (file) {
+      fclose(file);
+    } else {
+      RKADK_LOGE("%s creation failed", iniFile);
+      return RKADK_FAILURE;
+    }
+  }
+
+  pstIni = iniparser_load(iniFile);
+  if (pstIni == NULL) {
+    RKADK_LOGE("can't parse file: %s", iniFile);
+    return RKADK_FAILURE;
+  }
+
+  return RKADK_SUCCESS;
+}
+
+void RKADK_IniFree(dictionary *pstIni) {
+  RKADK_CHECK_POINTER_N(pstIni);
+  iniparser_freedict(pstIni);
+}
+
+RKADK_S32 RKADK_Ini2Struct(char *iniFile, void *structAddr,
+                           RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
   char sectionKey[SI_MAX_SEARCH_STRING] = {0};
   int searchLen = 0;
 
@@ -114,11 +142,11 @@ int RKADK_Ini2Struct(char *iniFile, void *structAddr,
   }
 
   iniparser_freedict(ini);
-  return 0;
+  return RKADK_SUCCESS;
 }
 
-int RKADK_Struct2Ini(char *iniFile, void *structAddr,
-                     RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
+RKADK_S32 RKADK_Struct2Ini(char *iniFile, void *structAddr,
+                           RKADK_SI_CONFIG_MAP_S *mapTable, int mapTableSize) {
   char temp[SI_CONFIG_MAP_STR_LENGTH_MAX] = {0};
   char sectionKey[SI_MAX_SEARCH_STRING] = {0};
 
@@ -193,5 +221,5 @@ int RKADK_Struct2Ini(char *iniFile, void *structAddr,
   iniparser_freedict(ini);
   fflush(fp);
   fclose(fp);
-  return 0;
+  return RKADK_SUCCESS;
 }

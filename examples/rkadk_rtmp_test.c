@@ -14,6 +14,11 @@
  *  limitations under the License.
  */
 
+#include "rkadk_common.h"
+#include "rkadk_log.h"
+#include "rkadk_param.h"
+#include "rkadk_rtmp.h"
+#include "rkadk_vi_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,11 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "rkadk_common.h"
-#include "rkadk_log.h"
-#include "rkadk_param.h"
-#include "rkadk_rtmp.h"
-#include "rkadk_vi_isp.h"
 
 extern int optind;
 extern char *optarg;

@@ -14,12 +14,12 @@
  *  limitations under the License.
  */
 
-#ifdef ROCKIT
+#if 0
 
 #include "RTMediaBuffer.h"
 #include "RTMetadataRetriever.h"
-#include "rkadk_param.h"
 #include "rkadk_media_comm.h"
+#include "rkadk_param.h"
 #include "rkadk_record.h"
 #include "rkadk_thumb.h"
 #include "rkmedia_api.h"
@@ -419,7 +419,7 @@ static int YuvToJpg(RTMediaBuffer *buffer, RKADK_FRAME_ATTR_S *pstFrameAttr,
   }
 #endif
 
-  RK_MPI_SYS_Init();
+  RKADK_MPI_SYS_Init();
 
   memset(&vencChnAttr, 0, sizeof(vencChnAttr));
   vencChnAttr.stVencAttr.enType = RK_CODEC_TYPE_JPEG;
@@ -477,6 +477,7 @@ free_mb:
   if (mb)
     RK_MPI_MB_ReleaseBuffer(mb);
 
+  RKADK_MPI_SYS_Exit();
   return ret;
 }
 
@@ -986,4 +987,4 @@ RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr) {
   return RKADK_MEDIA_FrameFree((RKADK_FRAME_ATTR_S *)pstThumbAttr);
 }
 
-#endif // ROCKIT
+#endif
