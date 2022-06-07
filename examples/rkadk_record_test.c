@@ -56,7 +56,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
     u32FileIdx = 0;
 
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
-    sprintf(paszFilename[i], "/userdata/RecordTest_%u.mp4", u32FileIdx);
+    sprintf(paszFilename[i], "/mnt/sdcard/RecordTest_%u.mp4", u32FileIdx);
     u32FileIdx++;
   }
 

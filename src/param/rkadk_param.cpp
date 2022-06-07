@@ -760,7 +760,7 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   pstAudioCfg->samples_per_frame = AUDIO_FRAME_COUNT;
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
   pstAudioCfg->vqe_mode = RKADK_VQE_MODE_AI_RECORD;
-  pstAudioCfg->codec_type = RKADK_CODEC_TYPE_MP2;
+  pstAudioCfg->codec_type = RKADK_CODEC_TYPE_G711A;
   RKADK_PARAM_SaveAudioCfg(path);
 }
 
@@ -804,27 +804,27 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
 
   switch (u32ViIndex) {
   case 0:
-    memcpy(pstViCfg->device_name, "rkispp_m_bypass", strlen("rkispp_m_bypass"));
+    memcpy(pstViCfg->device_name, "rkisp_mainpath", strlen("rkisp_mainpath"));
     pstViCfg->buf_cnt = 4;
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
-    memcpy(pstViCfg->pix_fmt, "FBC0", strlen("FBC0"));
+    memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
     memcpy(pstViCfg->module, "RECORD_MAIN|PHOTO", strlen("RECORD_MAIN|PHOTO"));
     break;
   case 1:
-    memcpy(pstViCfg->device_name, "rkispp_scale0", strlen("rkispp_scale0"));
+    memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
     pstViCfg->buf_cnt = 4;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
     memcpy(pstViCfg->module, "RECORD_MAIN|PHOTO", strlen("RECORD_MAIN|PHOTO"));
     break;
   case 2:
-    memcpy(pstViCfg->device_name, "rkispp_scale1", strlen("rkispp_scale1"));
+    memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
     pstViCfg->buf_cnt = 4;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
     memcpy(pstViCfg->module, "NONE", strlen("NONE"));
     break;
   case 3:
-    memcpy(pstViCfg->device_name, "rkispp_scale2", strlen("rkispp_scale2"));
+    memcpy(pstViCfg->device_name, "rkisp_mainpath_4x4sampling", strlen("rkisp_mainpath_4x4sampling"));
     pstViCfg->buf_cnt = 4;
     pstViCfg->width = STREAM_VIDEO_WIDTH;
     pstViCfg->height = STREAM_VIDEO_HEIGHT;
@@ -921,7 +921,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
   pstRecCfg->pre_record_time = 0;
   pstRecCfg->pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   pstRecCfg->lapse_multiple = 30;
-  pstRecCfg->file_num = 2;
+  pstRecCfg->file_num = 1;
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
 }
 
