@@ -8,15 +8,6 @@ aux_source_directory(common/mp3_header MP3_SRC)
 
 link_directories(${CMAKE_SOURCE_DIR}/lib/arm-rockchip830-linux-gnueabihf)
 
-#-----------------------------------
-# rkadk_setting_test
-#-----------------------------------
-add_executable(rkadk_setting_test rkadk_setting_test.c)
-add_dependencies(rkadk_setting_test rkadk)
-target_link_libraries(rkadk_setting_test rkadk)
-target_include_directories(rkadk_setting_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-install(TARGETS rkadk_setting_test DESTINATION "bin")
-
 #--------------------------
 # rkadk_photo_test
 #--------------------------
@@ -28,16 +19,6 @@ target_include_directories(rkadk_photo_test PRIVATE ${CMAKE_SOURCE_DIR}/examples
 install(TARGETS rkadk_photo_test DESTINATION "bin")
 
 #--------------------------
-# rkadk_stream_test
-#--------------------------
-add_executable(rkadk_stream_test rkadk_stream_test.c ${MP3_SRC})
-add_dependencies(rkadk_stream_test rkadk)
-target_link_libraries(rkadk_stream_test rockit rkadk rkaiq)
-target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
-install(TARGETS rkadk_stream_test DESTINATION "bin")
-
-#--------------------------
 # rkadk_record_test
 #--------------------------
 add_executable(rkadk_record_test rkadk_record_test.c)
@@ -47,6 +28,7 @@ target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/include
 target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_record_test DESTINATION "bin")
 
+if(COMPILE)
 #--------------------------
 # rkadk_storage_test
 #--------------------------
@@ -57,7 +39,25 @@ target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/includ
 target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_storage_test DESTINATION "bin")
 
-if(COMPILE)
+#-----------------------------------
+# rkadk_setting_test
+#-----------------------------------
+add_executable(rkadk_setting_test rkadk_setting_test.c)
+add_dependencies(rkadk_setting_test rkadk)
+target_link_libraries(rkadk_setting_test rkadk)
+target_include_directories(rkadk_setting_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkadk_setting_test DESTINATION "bin")
+
+#--------------------------
+# rkadk_stream_test
+#--------------------------
+add_executable(rkadk_stream_test rkadk_stream_test.c ${MP3_SRC})
+add_dependencies(rkadk_stream_test rkadk)
+target_link_libraries(rkadk_stream_test rockit rkadk rkaiq)
+target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_stream_test DESTINATION "bin")
+
 #-----------------------------------
 # rkadk_media_test: record photo stream
 #-----------------------------------
