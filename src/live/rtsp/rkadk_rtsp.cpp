@@ -18,7 +18,7 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkmedia_api.h"
+//#include "rkmedia_api.h"
 #include "rtsp_demo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,20 +76,17 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
     return -1;
   }
 
-  if (pstLiveCfg->attribute.codec_type == RKADK_CODEC_TYPE_H265)
-    pstVencAttr->stVencAttr.stAttrH265e.bScaleList =
-        (RK_BOOL)pstLiveCfg->attribute.venc_param.scaling_list;
-
   pstVencAttr->stVencAttr.enType =
       RKADK_MEDIA_GetRkCodecType(pstLiveCfg->attribute.codec_type);
-  pstVencAttr->stVencAttr.imageType = pstLiveCfg->vi_attr.stChnAttr.enPixFmt;
+  pstVencAttr->stVencAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
   pstVencAttr->stVencAttr.u32PicWidth = pstLiveCfg->attribute.width;
   pstVencAttr->stVencAttr.u32PicHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32VirWidth = pstLiveCfg->attribute.width;
   pstVencAttr->stVencAttr.u32VirHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstLiveCfg->attribute.profile;
-  pstVencAttr->stVencAttr.bFullRange =
-      (RK_BOOL)pstLiveCfg->attribute.venc_param.full_range;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = 3;
+  pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.width *
+                                       pstLiveCfg->attribute.height * 3 / 2;
 
   return 0;
 }
@@ -154,45 +151,25 @@ static RKADK_S32 RKADK_RTSP_RequestIDR(RKADK_U32 u32CamId, RKADK_U32 u32ChnId) {
   return ret;
 }
 
-static void RKADK_RTSP_VencOutCb(MEDIA_BUFFER mb, RKADK_VOID *handle) {
-  RKADK_S32 s32NaluType;
-
+static void RKADK_RTSP_VencOutCb(RKADK_MEDIA_VENC_DATA_S mb, RKADK_VOID *handle) {
+  RKADK_MEDIA_VENC_DATA_S stData = mb;
   RKADK_RTSP_HANDLE_S *pHandle = (RKADK_RTSP_HANDLE_S *)handle;
+  RKADK_VOID *data;
   if (!pHandle) {
     RKADK_LOGE("Can't find rtsp handle");
-    RK_MPI_MB_ReleaseBuffer(mb);
+    RK_MPI_VENC_ReleaseStream(stData.u32ChnId, &stData.stFrame);
     return;
   }
 
   if (!pHandle->start)
-    goto exit;
+    return;
 
-  s32NaluType = RK_MPI_MB_GetFlag(mb);
-  if (!pHandle->bWaitIDR) {
-    if (s32NaluType != VENC_NALU_IDRSLICE) {
-      if (!pHandle->bRequestIDR) {
-        RKADK_LOGD("requst idr frame");
-        RKADK_RTSP_RequestIDR(pHandle->u32CamId, RK_MPI_MB_GetChannelID(mb));
-        pHandle->bRequestIDR = true;
-      } else {
-        RKADK_LOGD("wait first idr frame");
-      }
-
-      goto exit;
-    }
-
-    pHandle->bWaitIDR = true;
-  }
-
+  data = RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
   if (pHandle->stRtspHandle && pHandle->stRtspSession) {
-    rtsp_tx_video(pHandle->stRtspSession, (uint8_t *)RK_MPI_MB_GetPtr(mb),
-                  RK_MPI_MB_GetSize(mb), RK_MPI_MB_GetTimestamp(mb));
+    rtsp_tx_video(pHandle->stRtspSession, (uint8_t *)data,
+                  stData.stFrame.pstPack->u32Len, stData.stFrame.pstPack->u64PTS);
     rtsp_do_event(pHandle->stRtspHandle);
   }
-
-exit:
-  if (!pHandle->bVencChnMux)
-    RK_MPI_MB_ReleaseBuffer(mb);
 }
 
 static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
@@ -204,29 +181,29 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
     ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_RTSP_VencOutCb,
                                     (RKADK_VOID *)pHandle);
   } else {
-    ret = RK_MPI_SYS_RegisterOutCbEx(pstVencChn, RKADK_RTSP_VencOutCb,
-                                     (RKADK_VOID *)pHandle);
+    /* ret = RK_MPI_SYS_RegisterOutCbEx(pstVencChn, RKADK_RTSP_VencOutCb,
+                                     (RKADK_VOID *)pHandle); */
     if (ret) {
       RKADK_LOGE("Register output callback for VENC[%d] error %d",
                  pstVencChn->s32ChnId, ret);
       return ret;
     }
+  }
 
     VENC_RECV_PIC_PARAM_S stRecvParam;
-    stRecvParam.s32RecvPicNum = 0;
+    stRecvParam.s32RecvPicNum = -1;
     ret = RK_MPI_VENC_StartRecvFrame(pstVencChn->s32ChnId, &stRecvParam);
     if (ret) {
       RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed = %d", ret);
       return ret;
     }
-  }
 
   return ret;
 }
 
 static bool RKADK_RTSP_IsUseRga(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
-  RKADK_U32 u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.u32Width;
-  RKADK_U32 u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.u32Height;
+  RKADK_U32 u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Width;
+  RKADK_U32 u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Height;
   RKADK_U32 u32DstWidth = pstLiveCfg->attribute.width;
   RKADK_U32 u32DstHeight = pstLiveCfg->attribute.height;
 
@@ -242,11 +219,9 @@ static bool RKADK_RTSP_IsUseRga(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
 RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
-  bool bUseRga = false;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   RKADK_STREAM_TYPE_E enType;
   VENC_RC_PARAM_S stVencRcParam;
-  RGA_ATTR_S stRgaAttr;
   RKADK_RTSP_HANDLE_S *pHandle;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -286,7 +261,6 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   }
 
   RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
-
   enType = RKADK_PARAM_VencChnMux(u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_LIVE) {
     switch (enType) {
@@ -315,29 +289,6 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
-  // Create RGA
-  bUseRga = RKADK_RTSP_IsUseRga(pstLiveCfg);
-  if (bUseRga) {
-    memset(&stRgaAttr, 0, sizeof(RGA_ATTR_S));
-    stRgaAttr.bEnBufPool = RK_TRUE;
-    stRgaAttr.u16BufPoolCnt = 3;
-    stRgaAttr.stImgIn.imgType = pstLiveCfg->vi_attr.stChnAttr.enPixFmt;
-    stRgaAttr.stImgIn.u32Width = pstLiveCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32Height = pstLiveCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgIn.u32HorStride = pstLiveCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32VirStride = pstLiveCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgOut.imgType = stRgaAttr.stImgIn.imgType;
-    stRgaAttr.stImgOut.u32Width = pstLiveCfg->attribute.width;
-    stRgaAttr.stImgOut.u32Height = pstLiveCfg->attribute.height;
-    stRgaAttr.stImgOut.u32HorStride = pstLiveCfg->attribute.width;
-    stRgaAttr.stImgOut.u32VirStride = pstLiveCfg->attribute.height;
-    ret = RKADK_MPI_RGA_Init(stRgaChn.s32ChnId, &stRgaAttr);
-    if (ret) {
-      RKADK_LOGE("Init Rga[%d] falied[%d]", stRgaChn.s32ChnId, ret);
-      goto failed;
-    }
-  }
-
   // Create VENC
   VENC_CHN_ATTR_S stVencChnAttr;
   ret = RKADK_RTSP_SetVencAttr(u32CamId, pstLiveCfg, &stVencChnAttr);
@@ -352,42 +303,16 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
-  ret = RKADK_PARAM_GetRcParam(pstLiveCfg->attribute, &stVencRcParam);
-  if (!ret) {
-    ret = RK_MPI_VENC_SetRcParam(stVencChn.s32ChnId, &stVencRcParam);
-    if (ret)
-      RKADK_LOGW("RK_MPI_VENC_SetRcParam failed(%d), use default cfg", ret);
-  }
-
   ret = RKADK_RTSP_VencGetData(u32CamId, &stVencChn, pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_RTSP_VencGetData failed(%d)", ret);
     goto failed;
   }
 
-  if (bUseRga) {
-    // RGA Bind VENC
-    ret = RKADK_MPI_SYS_Bind(&stRgaChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
-                 stVencChn.s32ChnId, ret);
-      goto failed;
-    }
-
-    // VI Bind RGA
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
-    if (ret) {
-      RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%d]", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
-      RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
-      goto failed;
-    }
-  } else {
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
-      goto failed;
-    }
+  ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
+    goto failed;
   }
 
   *ppHandle = (RKADK_MW_PTR)pHandle;
@@ -397,10 +322,6 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
 failed:
   RKADK_LOGE("failed");
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
-
-  if (bUseRga) {
-    RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
-  }
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
 
@@ -415,7 +336,6 @@ failed:
 RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
-  bool bUseRga = false;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
@@ -435,45 +355,18 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   if (pstHandle->bVencChnMux)
     RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb);
 
-  bUseRga = RKADK_RTSP_IsUseRga(pstLiveCfg);
-
-  // unbind first
-  if (bUseRga) {
-    ret = RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("UnBind RGA[%d] to VENC[%d] failed[%d]", stRgaChn.s32ChnId,
-                 stVencChn.s32ChnId, ret);
-      return ret;
-    }
-
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
-    if (ret) {
-      RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed[%d]", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
-      return ret;
-    }
-  } else {
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
-      return ret;
-    }
+  ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
+    return ret;
   }
+
 
   // destroy venc before vi
   ret = RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
     return ret;
-  }
-
-  // destroy rga
-  if (bUseRga) {
-    ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
-    if (ret) {
-      RKADK_LOGE("DeInit RGA[%d] failed[%d]", stRgaChn.s32ChnId, ret);
-      return ret;
-    }
   }
 
   // destroy vi

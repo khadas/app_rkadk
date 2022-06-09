@@ -820,12 +820,6 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   case 2:
     memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
     pstViCfg->buf_cnt = 4;
-    memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
-    memcpy(pstViCfg->module, "NONE", strlen("NONE"));
-    break;
-  case 3:
-    memcpy(pstViCfg->device_name, "rkisp_mainpath_4x4sampling", strlen("rkisp_mainpath_4x4sampling"));
-    pstViCfg->buf_cnt = 4;
     pstViCfg->width = STREAM_VIDEO_WIDTH;
     pstViCfg->height = STREAM_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -966,7 +960,7 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
   }
 
   pstStreamCfg->attribute.gop = VIDEO_GOP;
-  pstStreamCfg->attribute.bitrate = 4 * 1024 * 1024;
+  pstStreamCfg->attribute.bitrate = 10 * 1024;
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
   pstStreamCfg->attribute.codec_type = RKADK_CODEC_TYPE_H264;
   memcpy(pstStreamCfg->attribute.rc_mode, "VBR", strlen("VBR"));
