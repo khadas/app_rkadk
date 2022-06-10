@@ -50,7 +50,7 @@ extern "C" {
 #define AUDIO_CHANNEL 1
 #define AUDIO_BIT_REAT 64000
 /* mp2: 1152, mp3: 1024 */
-#define AUDIO_FRAME_COUNT 1152
+#define AUDIO_FRAME_COUNT 1024
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
 #define AI_DEVICE_NAME "default:CARD=hw:0,0"
 

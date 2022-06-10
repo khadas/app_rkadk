@@ -279,19 +279,17 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
       continue;
     }
 
-#if 0
+#if 1
     // reserved
-    if (enCodecType == RKADK_CODEC_TYPE_ACC)
+    if (!strcmp(pstMuxerHandle->stAudio.codec, "ACC"));
       headerSize = 7; //AAC header size
 #endif
-
     cell->size = size - headerSize;
     cell->buf = (unsigned char *)malloc(cell->size);
     if (NULL == cell->buf) {
       RKADK_LOGE("malloc audio cell buf failed");
       return -1;
     }
-
     memcpy(cell->buf, (buf + headerSize), cell->size);
     cell->isKeyFrame = 0;
     cell->pts = pts;

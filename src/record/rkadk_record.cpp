@@ -344,11 +344,10 @@ static int RKADK_RECORD_CreateAudioChn() {
     return -1;
 
   stAiAttr.enSoundmode = soundMode;
-  // stAiAttr.u32FrmNum = 4; //default 4
+  stAiAttr.u32FrmNum = 4; //default 4
   stAiAttr.u32PtNumPerFrm = pstAudioParam->samples_per_frame;
   stAiAttr.u32EXFlag = 0;
   stAiAttr.u32ChnCnt = pstAudioParam->channels;
-
   ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
@@ -409,10 +408,11 @@ static int64_t fakeTime = 0;
 static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
                                    RKADK_VOID *pHandle) {
   // current rockit audio timestamp inaccurate, use fake time
-  fakeTime += 72000;
+  //fakeTime += 62560;
+
   RKADK_MUXER_WriteAudioFrame(
       (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk), stFrame.u32Len,
-      fakeTime /*stFrame.u64TimeStamp*/, pHandle);
+    /* fakeTime  */ stFrame.u64TimeStamp, pHandle);
 }
 
 static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
