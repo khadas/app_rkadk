@@ -6,6 +6,7 @@ file(GLOB_RECURSE STREAM_SRC "${CMAKE_SOURCE_DIR}/src/stream/*.cpp")
 file(GLOB_RECURSE PLAYER_SRC "${CMAKE_SOURCE_DIR}/src/player/*.c")
 file(GLOB_RECURSE PARAM_SRC "${CMAKE_SOURCE_DIR}/src/param/*.cpp")
 file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
+file(GLOB_RECURSE OSD_SRC "${CMAKE_SOURCE_DIR}/src/osd/*.cpp")
 #file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
 #file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
 file(GLOB_RECURSE VI_SRC "${CMAKE_SOURCE_DIR}/src/vi/*.cpp")
@@ -26,6 +27,7 @@ add_library(rkadk SHARED
 		${PARAM_SRC}
                 ${RTMP_SRC}
 		${RTSP_SRC}
+		${OSD_SRC}
                 ${DISP_SRC}
                 ${VI_SRC}
 		${STORAGE_SRC}

@@ -29,6 +29,7 @@ extern "C" {
 #include "rk_mpi_vi.h"
 #include "rk_mpi_vo.h"
 #include "rk_mpi_vpss.h"
+#include "rk_mpi_rgn.h"
 #include "rkadk_common.h"
 
 /* audio capture maximum count */

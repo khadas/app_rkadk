@@ -143,6 +143,23 @@ typedef enum {
   RKADK_STREAM_TYPE_BUTT
 } RKADK_STREAM_TYPE_E;
 
+typedef enum {
+    RKADK_FMT_ARGB1555,                                   /* 16-bit RGB               */
+    RKADK_FMT_ABGR1555,                                   /* 16-bit RGB               */
+    RKADK_FMT_RGBA5551,                                   /* 16-bit RGB               */
+    RKADK_FMT_BGRA5551,                                   /* 16-bit RGB               */
+    RKADK_FMT_ARGB4444,                                   /* 16-bit RGB               */
+    RKADK_FMT_ABGR4444,                                   /* 16-bit RGB               */
+    RKADK_FMT_RGBA4444,                                   /* 16-bit RGB               */
+    RKADK_FMT_BGRA4444,                                   /* 16-bit RGB               */
+    RKADK_FMT_ARGB8888,                                   /* 32-bit RGB               */
+    RKADK_FMT_ABGR8888,                                   /* 32-bit RGB               */
+    RKADK_FMT_RGBA8888,                                   /* 32-bit RGB               */
+    RKADK_FMT_BGRA8888,                                   /* 32-bit RGB               */
+    RKADK_FMT_2BPP,
+    RKADK_FMT_BUTT,
+} RKADK_FORMAT_E;
+
 #ifndef NULL
 #define NULL 0L
 #endif
