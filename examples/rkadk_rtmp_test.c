@@ -30,7 +30,7 @@
 extern int optind;
 extern char *optarg;
 
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static bool is_quit = false;
 static RKADK_CHAR optstr[] = "a:I:p:h";

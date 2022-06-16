@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;

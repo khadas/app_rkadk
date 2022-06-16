@@ -33,7 +33,7 @@ extern char *optarg;
 static bool is_quit = false;
 static RKADK_CHAR optstr[] = "a:I:p:t:h";
 
-#define IQ_FILE_PATH "/oem/etc/iqfiles"
+#define IQ_FILE_PATH "/etc/iqfiles"
 
 static RKADK_THUMB_TYPE_E enDataType = RKADK_THUMB_TYPE_NV12;
 static void print_usage(const RKADK_CHAR *name) {
