@@ -47,12 +47,12 @@ extern "C" {
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
 #define AUDIO_SAMPLE_RATE 16000
-#define AUDIO_CHANNEL 1
+#define AUDIO_CHANNEL 2
 #define AUDIO_BIT_REAT 64000
 /* mp2: 1152, mp3: 1024 */
 #define AUDIO_FRAME_COUNT 1024
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
-#define AI_DEVICE_NAME "default:CARD=hw:0,0"
+#define AI_DEVICE_NAME "hw:0,0"
 
 /* video default parameters */
 #define VIDEO_GOP 30

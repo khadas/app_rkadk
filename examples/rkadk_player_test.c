@@ -14,18 +14,21 @@
  *  limitations under the License.
  */
 
+#include "rkadk_common.h"
+#include "rkadk_log.h"
+#include "rkadk_param.h"
+#include "rkadk_player.h"
+
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "rkadk_common.h"
-#include "rkadk_log.h"
-#include "rkadk_player.h"
-
+#include <errno.h>
 extern int optind;
 extern char *optarg;
 
@@ -132,13 +135,14 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->stSyncInfo.u16Vbb = 200;
   pstFrmInfo->stSyncInfo.u16Vfb = 194;
   pstFrmInfo->stSyncInfo.u16Vpw = 6;
+
   return;
 }
 
 int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
-  char *file = "/etc/bsa_file/8k8bpsMono.wav";
+  char *file = "/userdata/16000_2.mp3";
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_BOOL bVideoEnable = false;
   RKADK_U32 duration = 0;
@@ -213,8 +217,8 @@ int main(int argc, char *argv[]) {
 
   RKADK_PLAYER_Prepare(pPlayer);
 
-  RKADK_PLAYER_GetDuration(pPlayer, &duration);
-  RKADK_LOGD("%s: duration = %d", file, duration);
+  //RKADK_PLAYER_GetDuration(pPlayer, &duration);
+  //RKADK_LOGD("%s: duration = %d", file, duration);
 
   RKADK_PLAYER_Play(pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s

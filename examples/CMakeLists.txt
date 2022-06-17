@@ -38,6 +38,15 @@ target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
 
+#--------------------------
+# rkadk_player_test
+#--------------------------
+add_executable(rkadk_player_test rkadk_player_test.c)
+add_dependencies(rkadk_player_test rkadk)
+target_link_libraries(rkadk_player_test rockit rkadk pthread)
+target_include_directories(rkadk_player_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkadk_player_test DESTINATION "bin")
+
 #-----------------------------------
 # rkadk_setting_test
 #-----------------------------------
@@ -77,15 +86,6 @@ target_link_libraries(rkadk_media_test rockit rkadk rkaiq pthread)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
-
-#--------------------------
-# rkadk_player_test
-#--------------------------
-add_executable(rkadk_player_test rkadk_player_test.c)
-add_dependencies(rkadk_player_test rkadk)
-target_link_libraries(rkadk_player_test rockit rkadk pthread)
-target_include_directories(rkadk_player_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-install(TARGETS rkadk_player_test DESTINATION "bin")
 
 #--------------------------
 # rkadk_thumb_test
