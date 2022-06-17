@@ -95,22 +95,24 @@ typedef struct {
 } RKADK_PHOTO_RECV_DATA_S;
 
 /* photo data recv extend callback */
+typedef void (*RKADK_PHOTO_DATA_RECV_EX_FN_PTR)(
+    RKADK_PHOTO_RECV_DATA_S *pstData);
+
+/* photo data recv callback */
 typedef void (*RKADK_PHOTO_DATA_RECV_FN_PTR)(
     RKADK_PHOTO_RECV_DATA_S *pstData);
 
 typedef struct {
+  RKADK_U32 u32CamID; /** cam id, 0--front 1--rear */
   RKADK_PHOTO_TYPE_E enPhotoType;
   union tagPhotoTypeAttr {
     RKADK_PHOTO_SINGLE_ATTR_S stSingleAttr;
     RKADK_PHOTO_LAPSE_ATTR_S stLapseAttr; // TODO
     RKADK_PHOTO_MULTIPLE_ATTR_S stMultipleAttr;
   } unPhotoTypeAttr;
-} RKADK_TAKE_PHOTO_ATTR_S;
-
-typedef struct {
-  RKADK_U32 u32CamId;
-  RKADK_PHOTO_THUMB_ATTR_S stThumbAttr; // TODO
+  RKADK_PHOTO_THUMB_ATTR_S stThumbAttr;
   RKADK_PHOTO_DATA_RECV_FN_PTR pfnPhotoDataProc;
+  RKADK_PHOTO_DATA_RECV_EX_FN_PTR pfnPhotoDataExProc;
 } RKADK_PHOTO_ATTR_S;
 
 /****************************************************************************/
@@ -121,21 +123,21 @@ typedef struct {
  * @param[in] pstPhotoAttr: photo attribute
  * @return 0 success, non-zero error code.
  */
-RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHandle);
+RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr);
 
 /**
  * @brief deinit photo
  * @param[in] u32CamId: camera id
  * @return 0 success, non-zero error code.
  */
-RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId);
 
 /**
  * @brief take photo
  * @param[in] pstPhotoAttr: photo attribute
  * @return 0 success, non-zero error code.
  */
-RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_TAKE_PHOTO_ATTR_S pstAttr, RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_PHOTO_ATTR_S *pstPhotoAttr);
 
 #if 0
 /**

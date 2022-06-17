@@ -29,6 +29,7 @@ typedef struct {
   bool bWaitIDR;
   RKADK_U32 u32CamId;
   RKADK_U32 videoSeq;
+  RKADK_CODEC_TYPE_E enCodecType;
   RKADK_VENC_DATA_PROC_FUNC pfnVencDataCB;
 } STREAM_VIDEO_HANDLE_S;
 
@@ -40,13 +41,40 @@ typedef struct {
   RKADK_U32 pcmSeq;
   MPP_CHN_S stAiChn;
   MPP_CHN_S stAencChn;
-  RKADK_AUDIO_DATA_PROC_FUNC pfnPcmDataCB;
-  RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;
+  RKADK_AENC_DATA_PROC_FUNC pfnPcmDataCB;
+  RKADK_AENC_DATA_PROC_FUNC pfnAencDataCB;
 } STREAM_AUDIO_HANDLE_S;
+
+static STREAM_VIDEO_HANDLE_S *pVideoHandle = NULL;
+static STREAM_AUDIO_HANDLE_S *pAudioHandle = NULL;
 
 /**************************************************/
 /*                     Video API                  */
 /**************************************************/
+
+RKADK_S32 RKADK_STREAM_VencRegisterCallback(RKADK_U32 u32CamID,
+                                  RKADK_VENC_DATA_PROC_FUNC pfnDataCB) {
+  RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
+  if (!pVideoHandle) {
+    RKADK_LOGE("Venc register callback fail");
+    return -1;
+  }
+  pVideoHandle->u32CamId = u32CamID;
+  pVideoHandle->pfnVencDataCB = pfnDataCB;
+  return 0;
+}
+
+RKADK_S32 RKADK_STREAM_VencUnRegisterCallback(RKADK_U32 u32CamID) {
+  RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
+  if (!pVideoHandle) {
+    RKADK_LOGE("Venc unregister callback fail");
+    return -1;
+  }
+  pVideoHandle->u32CamId = 0;
+  pVideoHandle->pfnVencDataCB = NULL;
+  return 0;
+}
+
 static RKADK_S32 RKADK_STREAM_RequestIDR(RKADK_U32 u32CamId,
                                          RKADK_U32 u32ChnId) {
   int ret = 0;
@@ -235,52 +263,49 @@ static RKADK_S32 RKADK_STREAM_VencGetData(RKADK_U32 u32CamId,
   return ret;
 }
 
-RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
-                                 RKADK_MW_PTR *ppHandle) {
+RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
+                                 RKADK_CODEC_TYPE_E enCodecType) {
   int ret = 0;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   RKADK_STREAM_TYPE_E enType;
-  STREAM_VIDEO_HANDLE_S *pHandle = NULL;
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga;
   RGA_ATTR_S stRgaAttr;
 #endif
 
-  RKADK_CHECK_POINTER(pstVideoAttr, RKADK_FAILURE);
-  RKADK_CHECK_CAMERAID(pstVideoAttr->u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
 
-  if (*ppHandle) {
+  if (pVideoHandle) {
     RKADK_LOGE("Video handle has been created");
     return -1;
   }
 
-  RKADK_LOGI("Preview[%d] Video Init...", pstVideoAttr->u32CamId);
+  RKADK_LOGI("Preview[%d] Video Init...", u32CamID);
 
-  pHandle = (STREAM_VIDEO_HANDLE_S *)malloc(sizeof(STREAM_VIDEO_HANDLE_S));
-  if (!pHandle) {
+  pVideoHandle = (STREAM_VIDEO_HANDLE_S *)malloc(sizeof(STREAM_VIDEO_HANDLE_S));
+  if (!pVideoHandle) {
     RKADK_LOGE("malloc video handle failed");
     return -1;
   }
-  memset(pHandle, 0, sizeof(STREAM_VIDEO_HANDLE_S));
-
-  pHandle->u32CamId = pstVideoAttr->u32CamId;
-  pHandle->pfnVencDataCB = pstVideoAttr->pfnDataCB;
+  memset(pVideoHandle, 0, sizeof(STREAM_VIDEO_HANDLE_S));
+  pVideoHandle->enCodecType = enCodecType;
+  pVideoHandle->u32CamId = u32CamID;
 
   RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
-      pstVideoAttr->u32CamId, RKADK_STREAM_TYPE_PREVIEW);
+      u32CamID, RKADK_STREAM_TYPE_PREVIEW);
   if (!pstStreamCfg) {
     RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
     return -1;
   }
 
-  RKADK_STREAM_VideoSetChn(pstStreamCfg, pstVideoAttr->u32CamId, &stViChn,
+  RKADK_STREAM_VideoSetChn(pstStreamCfg, u32CamID, &stViChn,
                            &stVencChn, &stRgaChn);
 
-  enType = RKADK_PARAM_VencChnMux(pstVideoAttr->u32CamId, stVencChn.s32ChnId);
+  enType = RKADK_PARAM_VencChnMux(enType, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_PREVIEW) {
     switch (enType) {
     case RKADK_STREAM_TYPE_VIDEO_MAIN:
@@ -297,11 +322,11 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
                  enType);
       break;
     }
-    pHandle->bVencChnMux = true;
+    pVideoHandle->bVencChnMux = true;
   }
 
   // Create VI
-  ret = RKADK_MPI_VI_Init(pstVideoAttr->u32CamId, stViChn.s32ChnId,
+  ret = RKADK_MPI_VI_Init(u32CamID, stViChn.s32ChnId,
                           &(pstStreamCfg->vi_attr.stChnAttr));
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VI_Init faleded[%x]", ret);
@@ -335,7 +360,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
 
   // Create VENC
   VENC_CHN_ATTR_S stVencChnAttr;
-  ret = RKADK_STREAM_SetVencAttr(pstVideoAttr->u32CamId, pstStreamCfg,
+  ret = RKADK_STREAM_SetVencAttr(u32CamID, pstStreamCfg,
                                  &stVencChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_SetVencAttr failed");
@@ -348,7 +373,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     goto failed;
   }
 
-  ret = RKADK_STREAM_VencGetData(pstVideoAttr->u32CamId, &stVencChn, pHandle);
+  ret = RKADK_STREAM_VencGetData(u32CamID, &stVencChn, pVideoHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VencGetData failed[%x]", ret);
     goto failed;
@@ -382,8 +407,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     }
   }
 
-  *ppHandle = (RKADK_MW_PTR)pHandle;
-  RKADK_LOGI("Preview[%d] Video Init End...", pstVideoAttr->u32CamId);
+  RKADK_LOGI("Preview[%d] Video Init End...", u32CamID);
   return 0;
 
 failed:
@@ -395,11 +419,11 @@ failed:
     RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
 #endif
 
-  RKADK_MPI_VI_DeInit(pstVideoAttr->u32CamId, stViChn.s32ChnId);
+  RKADK_MPI_VI_DeInit(u32CamID, stViChn.s32ChnId);
   return ret;
 }
 
-RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID) {
   int ret = 0;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   STREAM_VIDEO_HANDLE_S *pstHandle;
@@ -408,8 +432,8 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
   bool bUseRga;
 #endif
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pVideoHandle, RKADK_FAILURE);
+  pstHandle = pVideoHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   RKADK_LOGI("Preview[%d] Video DeInit...", pstHandle->u32CamId);
@@ -482,20 +506,22 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
   RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Preview[%d] Video DeInit End...", pstHandle->u32CamId);
 
-  if (pHandle) {
-    free(pHandle);
-    pHandle = NULL;
+  if (pVideoHandle) {
+    free(pVideoHandle);
+    pVideoHandle = NULL;
   }
 
   return 0;
 }
 
-RKADK_S32 RKADK_STREAM_VencStart(RKADK_MW_PTR pHandle, RKADK_S32 s32FrameCnt) {
+RKADK_S32 RKADK_STREAM_VencStart(RKADK_U32 u32CamID,
+                                 RKADK_CODEC_TYPE_E enCodecType,
+                                 RKADK_S32 s32FrameCnt) {
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = NULL;
   STREAM_VIDEO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pVideoHandle, RKADK_FAILURE);
+  pstHandle = pVideoHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   if (pstHandle->start)
@@ -522,12 +548,12 @@ RKADK_S32 RKADK_STREAM_VencStart(RKADK_MW_PTR pHandle, RKADK_S32 s32FrameCnt) {
                                     &stRecvParam);
 }
 
-RKADK_S32 RKADK_STREAM_VencStop(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STREAM_VencStop(RKADK_U32 u32CamID) {
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = NULL;
   STREAM_VIDEO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pVideoHandle, RKADK_FAILURE);
+  pstHandle = pVideoHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   if (!pstHandle->start)
@@ -552,15 +578,15 @@ RKADK_S32 RKADK_STREAM_VencStop(RKADK_MW_PTR pHandle) {
                                     &stRecvParam);
 }
 
-RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_MW_PTR pHandle,
+RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamID,
                                     RKADK_VIDEO_INFO_S *pstVideoInfo) {
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
   STREAM_VIDEO_HANDLE_S *pstHandle;
 
   RKADK_CHECK_POINTER(pstVideoInfo, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pVideoHandle, RKADK_FAILURE);
+  pstHandle = pVideoHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   RKADK_PARAM_Init(NULL, NULL);
@@ -591,6 +617,37 @@ RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_MW_PTR pHandle,
 /**************************************************/
 /*                     Audio API                  */
 /**************************************************/
+RKADK_VOID RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_E enCodecType,
+                                  RKADK_AENC_DATA_PROC_FUNC pfnDataCB) {
+  int ret = 0;
+
+  if (!pAudioHandle) {
+    RKADK_LOGE("Aenc register callback function fail");
+    return;
+  }
+
+  if (enCodecType == RKADK_CODEC_TYPE_PCM) {
+    pAudioHandle->pfnPcmDataCB = pfnDataCB;
+  } else {
+    pAudioHandle->pfnAencDataCB = pfnDataCB;
+  }
+
+  if (ret)
+    RKADK_LOGE("Create read audio thread for failed %d", ret);
+}
+
+RKADK_VOID RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_E enCodecType) {
+
+  if (!pAudioHandle) {
+    RKADK_LOGE("Aenc register callback function fail");
+    return;
+  }
+
+  if (enCodecType == RKADK_CODEC_TYPE_PCM)
+    pAudioHandle->pfnPcmDataCB = NULL;
+  else
+    pAudioHandle->pfnAencDataCB = NULL;
+}
 static void RKADK_STREAM_AencOutCb(AUDIO_STREAM_S stFrame,
                                    RKADK_VOID *pHandle) {
   RKADK_AUDIO_STREAM_S stStreamData;
@@ -771,30 +828,23 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
   return 0;
 }
 
-RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
-                                 RKADK_MW_PTR *ppHandle) {
+RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
-  STREAM_AUDIO_HANDLE_S *pHandle = NULL;
 
-  RKADK_CHECK_POINTER(pstAudioAttr, RKADK_FAILURE);
-
-  if (*ppHandle) {
+  if (pAudioHandle) {
     RKADK_LOGE("Audio handle has been created");
     return -1;
   }
 
   RKADK_LOGI("Preview Audio Init...");
 
-  pHandle = (STREAM_AUDIO_HANDLE_S *)malloc(sizeof(STREAM_AUDIO_HANDLE_S));
-  if (!pHandle) {
+  pAudioHandle = (STREAM_AUDIO_HANDLE_S *)malloc(sizeof(STREAM_AUDIO_HANDLE_S));
+  if (!pAudioHandle) {
     RKADK_LOGE("malloc audio handle failed");
     return -1;
   }
-  memset(pHandle, 0, sizeof(STREAM_AUDIO_HANDLE_S));
-
-  pHandle->pfnPcmDataCB = pstAudioAttr->pfnPcmDataCB;
-  pHandle->pfnAencDataCB = pstAudioAttr->pfnAencDataCB;
+  memset(pAudioHandle, 0, sizeof(STREAM_AUDIO_HANDLE_S));
 
   RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
@@ -807,13 +857,13 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
 
   // Create AI
   AIO_ATTR_S aiAttr;
-  ret = RKADK_STREAM_SetAiConfig(&pHandle->stAiChn, &aiAttr, pstAudioParam);
+  ret = RKADK_STREAM_SetAiConfig(&pAudioHandle->stAiChn, &aiAttr, pstAudioParam);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_SetAiConfig failed");
     return ret;
   }
 
-  ret = RKADK_MPI_AI_Init(pHandle->stAiChn.s32DevId, pHandle->stAiChn.s32ChnId,
+  ret = RKADK_MPI_AI_Init(pAudioHandle->stAiChn.s32DevId, pAudioHandle->stAiChn.s32ChnId,
                           &aiAttr, pstAudioParam->vqe_mode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile[%x]", ret);
@@ -822,56 +872,54 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
 
   if (pstAudioParam->codec_type != RKADK_CODEC_TYPE_PCM) {
     AENC_CHN_ATTR_S aencAttr;
-    if (RKADK_STREAM_SetAencConfig(&pHandle->stAencChn, &aencAttr)) {
+    if (RKADK_STREAM_SetAencConfig(&pAudioHandle->stAencChn, &aencAttr)) {
       RKADK_LOGE("StreamSetAencChnAttr failed");
       goto pcm_mode;
     }
 
-    ret = RKADK_MPI_AENC_Init(pHandle->stAencChn.s32ChnId, &aencAttr);
+    ret = RKADK_MPI_AENC_Init(pAudioHandle->stAencChn.s32ChnId, &aencAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_AENC_Init failed[%x]", ret);
       goto failed;
     }
 
-    ret = RKADK_STREAM_CreateDataThread(pHandle, pstAudioParam);
+    ret = RKADK_STREAM_CreateDataThread(pAudioHandle, pstAudioParam);
     if (ret)
       goto failed;
 
-    ret = RKADK_MPI_SYS_Bind(&pHandle->stAiChn, &pHandle->stAencChn);
+    ret = RKADK_MPI_SYS_Bind(&pAudioHandle->stAiChn, &pAudioHandle->stAencChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed[%x]", ret);
       goto failed;
     }
 
-    *ppHandle = (RKADK_MW_PTR)pHandle;
     RKADK_LOGI("Preview[%d] Audio Init End...", pstAudioParam->codec_type);
     return 0;
   }
 
 pcm_mode:
   RKADK_LOGI("PCM Mode");
-  ret = RKADK_STREAM_CreateDataThread(pHandle, pstAudioParam);
+  ret = RKADK_STREAM_CreateDataThread(pAudioHandle, pstAudioParam);
   if (ret)
     goto failed;
 
-  *ppHandle = (RKADK_MW_PTR)pHandle;
   RKADK_LOGI("Preview[%d] Audio Init End...", pstAudioParam->codec_type);
   return 0;
 
 failed:
-  RKADK_MPI_AENC_DeInit(pHandle->stAencChn.s32ChnId);
-  RKADK_MPI_AI_DeInit(pHandle->stAiChn.s32DevId, pHandle->stAiChn.s32ChnId,
+  RKADK_MPI_AENC_DeInit(pAudioHandle->stAencChn.s32ChnId);
+  RKADK_MPI_AI_DeInit(pAudioHandle->stAiChn.s32DevId, pAudioHandle->stAiChn.s32ChnId,
                       pstAudioParam->vqe_mode);
   return ret;
 }
 
-RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   STREAM_AUDIO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_AUDIO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pAudioHandle, RKADK_FAILURE);
+  pstHandle = pAudioHandle;
 
   RKADK_LOGI("Preview Audio DeInit...");
 
@@ -908,30 +956,30 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle) {
 
   RKADK_MPI_SYS_Exit();
 
-  if (pHandle) {
-    free(pHandle);
-    pHandle = NULL;
+  if (pAudioHandle) {
+    free(pAudioHandle);
+    pAudioHandle = NULL;
   }
 
   RKADK_LOGI("Preview Audio DeInit End...");
   return 0;
 }
 
-RKADK_S32 RKADK_STREAM_AencStart(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STREAM_AencStart() {
   STREAM_AUDIO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_AUDIO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pAudioHandle, RKADK_FAILURE);
+  pstHandle = pAudioHandle;
 
   pstHandle->start = true;
   return 0;
 }
 
-RKADK_S32 RKADK_STREAM_AencStop(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_STREAM_AencStop() {
   STREAM_AUDIO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (STREAM_AUDIO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(pAudioHandle, RKADK_FAILURE);
+  pstHandle = pAudioHandle;
 
   pstHandle->start = false;
   return 0;

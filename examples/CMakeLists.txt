@@ -38,7 +38,6 @@ target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
 
-if(COMPILE)
 #-----------------------------------
 # rkadk_setting_test
 #-----------------------------------
@@ -58,6 +57,7 @@ target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_stream_test DESTINATION "bin")
 
+if(COMPILE)
 #--------------------------
 # rkadk_storage_test
 #--------------------------

@@ -86,8 +86,6 @@ int main(int argc, char *argv[]) {
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_PHOTO_ATTR_S stPhotoAttr;
-  RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
-  RKADK_MW_PTR pHandle = NULL;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
@@ -161,7 +159,9 @@ int main(int argc, char *argv[]) {
 #endif
 
   memset(&stPhotoAttr, 0, sizeof(RKADK_PHOTO_ATTR_S));
-  stPhotoAttr.u32CamId = u32CamId;
+  stPhotoAttr.u32CamID = u32CamId;
+  stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
+  stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
   stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
   stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
@@ -169,11 +169,7 @@ int main(int argc, char *argv[]) {
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
 
-  memset(&stTakePhotoAttr, 0, sizeof(RKADK_TAKE_PHOTO_ATTR_S));
-  stTakePhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
-  stTakePhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
-
-  ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle);
+  ret = RKADK_PHOTO_Init(&stPhotoAttr);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_Init failed(%d)", ret);
 #ifdef RKAIQ
@@ -194,7 +190,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (RKADK_PHOTO_TakePhoto(stTakePhotoAttr, pHandle)) {
+    if (RKADK_PHOTO_TakePhoto(&stPhotoAttr)) {
       RKADK_LOGE("RKADK_PHOTO_TakePhoto failed");
       break;
     }
@@ -202,7 +198,7 @@ int main(int argc, char *argv[]) {
     usleep(500000);
   }
 
-  RKADK_PHOTO_DeInit(pHandle);
+  RKADK_PHOTO_DeInit(stPhotoAttr.u32CamID);
 
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(u32CamId);

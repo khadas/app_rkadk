@@ -144,7 +144,7 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c, ret, fps;
-  RKADK_REC_ATTR_S stRecAttr;
+  RKADK_RECORD_ATTR_S stRecAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL;
   RK_BOOL fec_enable = RK_FALSE;
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
 
   // set default value
-  stRecAttr.u32CamId = 0;
+  stRecAttr.s32CamID = 0;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
   stRecAttr.pfnEventCallback = RecordEventCallback;
 
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
         pIqfilesPath = (char *)tmp_optarg;
       break;
     case 'I':
-      stRecAttr.u32CamId = atoi(optarg);
+      stRecAttr.s32CamID = atoi(optarg);
       break;
     case 'p':
       iniPath = optarg;
@@ -205,22 +205,22 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(stRecAttr.u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
+  ret = RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
     return -1;
   }
 
-  RKADK_VI_ISP_Start(stRecAttr.u32CamId, hdr_mode, fec_enable, pIqfilesPath,
+  RKADK_VI_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
                      fps);
 
-  IspProcess(stRecAttr.u32CamId);
+  IspProcess(stRecAttr.s32CamID);
 #endif
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("Create recorder failed");
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(stRecAttr.u32CamId);
+    RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
     return -1;
   }
@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
   RKADK_RECORD_Destroy(pRecorder);
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(stRecAttr.u32CamId);
+  RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
 
   RKADK_LOGD("exit!");

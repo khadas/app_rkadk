@@ -714,42 +714,42 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
   return 0;
 }
 
-RKADK_S32 RKADK_RECORD_Create(RKADK_REC_ATTR_S *pstRecAttr,
+RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
                               RKADK_MW_PTR *ppRecorder) {
   int ret;
   bool bEnableAudio = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
-  RKADK_CHECK_CAMERAID(pstRecAttr->u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->u32CamId);
+  pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->u32CamId,
+  RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
 
   RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
-  if (RKADK_RECORD_CreateVideoChn(pstRecAttr->u32CamId))
+  if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;
 
-  bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->u32CamId);
+  bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->s32CamID);
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
     if (RKADK_RECORD_CreateAudioChn()) {
-      RKADK_RECORD_DestoryVideoChn(pstRecAttr->u32CamId);
+      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
       return -1;
     }
   }
 
-  g_pfnRequestFileNames[pstRecAttr->u32CamId] = pstRecAttr->pfnRequestFileNames;
+  g_pfnRequestFileNames[pstRecAttr->s32CamID] = pstRecAttr->pfnRequestFileNames;
 
   RKADK_MUXER_ATTR_S stMuxerAttr;
-  ret = RKADK_RECORD_SetMuxerAttr(pstRecAttr->u32CamId, &stMuxerAttr);
+  ret = RKADK_RECORD_SetMuxerAttr(pstRecAttr->s32CamID, &stMuxerAttr);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_SetMuxerAttr failed");
     goto failed;
@@ -759,17 +759,17 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_REC_ATTR_S *pstRecAttr,
   if (RKADK_MUXER_Create(&stMuxerAttr, ppRecorder))
     goto failed;
 
-  if (RKADK_RECORD_BindChn(pstRecAttr->u32CamId, *ppRecorder))
+  if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, *ppRecorder))
     goto failed;
 
-  RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->u32CamId,
+  RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
   return 0;
 
 failed:
-  RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->u32CamId,
+  RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
-  RKADK_RECORD_DestoryVideoChn(pstRecAttr->u32CamId);
+  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
 
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio)
     RKADK_RECORD_DestoryAudioChn();
@@ -851,8 +851,9 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
 }
 
 RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
-                                    RKADK_REC_FPS_ATTR_S stFpsAttr) {
-  return RKADK_MUXER_SetFrameRate(pRecorder, stFpsAttr);
+                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr) {
+  RKADK_LOGE("Settings are not supported");
+  return -1;
 }
 
 RKADK_S32
@@ -862,3 +863,24 @@ RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
 }
 
 RKADK_S32 RKADK_RECORD_GetAencChn() { return RECORD_AENC_CHN; }
+
+RKADK_S32 RKADK_RECORD_RegisterEventCallback(
+    RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback) {
+  RKADK_LOGE("unsupport toogle mirror");
+  return -1;
+
+}
+
+RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
+                                    RKADK_STREAM_TYPE_E enStrmType,
+                                    int mirror) {
+  RKADK_LOGE("unsupport toogle mirror");
+  return -1;
+}
+
+RKADK_S32 RKADK_RECORD_ToogleFlip(RKADK_MW_PTR pRecorder,
+                                  RKADK_STREAM_TYPE_E enStrmType,
+                                  int flip) {
+  RKADK_LOGE("unsupport toogle flip");
+  return -1;
+}

@@ -62,7 +62,7 @@ typedef struct {
 } RKADK_AUDIO_STREAM_S;
 
 /** data proc callback function pointer */
-typedef RKADK_S32 (*RKADK_AUDIO_DATA_PROC_FUNC)(
+typedef RKADK_S32 (*RKADK_AENC_DATA_PROC_FUNC)(
     RKADK_AUDIO_STREAM_S *pAStreamData);
 
 /** Video Information */
@@ -86,8 +86,8 @@ typedef struct {
 } RKADK_AUDIO_INFO_S;
 
 typedef struct {
-  RKADK_AUDIO_DATA_PROC_FUNC pfnPcmDataCB;
-  RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;
+  RKADK_AENC_DATA_PROC_FUNC pfnPcmDataCB;
+  RKADK_AENC_DATA_PROC_FUNC pfnAencDataCB;
 } RKADK_STREAM_AUDIO_ATTR_S;
 
 typedef struct {
@@ -95,24 +95,37 @@ typedef struct {
   RKADK_VENC_DATA_PROC_FUNC pfnDataCB;
 } RKADK_STREAM_VIDEO_ATTR_S;
 
-RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr, RKADK_MW_PTR *ppHandle);
+RKADK_S32 RKADK_STREAM_VencRegisterCallback(RKADK_U32 u32CamID,
+                                  RKADK_VENC_DATA_PROC_FUNC pfnDataCB);
 
-RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STREAM_VencUnRegisterCallback(RKADK_U32 u32CamID);
 
-RKADK_S32 RKADK_STREAM_VencStart(RKADK_MW_PTR pHandle,              RKADK_S32 s32FrameCnt);
+RKADK_VOID RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_E enCodecType,
+                                  RKADK_AENC_DATA_PROC_FUNC pfnDataCB);
 
-RKADK_S32 RKADK_STREAM_VencStop(RKADK_MW_PTR pHandle);
+RKADK_VOID RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_E enCodecType);
 
-RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_MW_PTR pHandle,
+RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
+                                 RKADK_CODEC_TYPE_E enCodecType);
+
+RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID);
+
+RKADK_S32 RKADK_STREAM_VencStart(RKADK_U32 u32CamID,
+                                 RKADK_CODEC_TYPE_E enCodecType,
+                                 RKADK_S32 s32FrameCnt);
+
+RKADK_S32 RKADK_STREAM_VencStop(RKADK_U32 u32CamID);
+
+RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamID,
                                     RKADK_VIDEO_INFO_S *pstVideoInfo);
 
-RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr, RKADK_MW_PTR *ppHandle);
+RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType);
 
-RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType);
 
-RKADK_S32 RKADK_STREAM_AencStart(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STREAM_AencStart();
 
-RKADK_S32 RKADK_STREAM_AencStop(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_STREAM_AencStop();
 
 RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_AUDIO_INFO_S *pstAudioInfo);
 
