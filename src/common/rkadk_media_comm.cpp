@@ -229,6 +229,10 @@ RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
                             AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode) {
   int ret = -1;
   RKADK_S32 i;
+  AI_CHN_PARAM_S pstParams;
+  memset(&pstParams, 0, sizeof(AI_CHN_PARAM_S));
+  pstParams.enLoopbackMode = AUDIO_LOOPBACK_NONE;
+  pstParams.s32UsrFrmDepth = -1;
 
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
   RKADK_MEDIA_CtxInit();
@@ -256,6 +260,12 @@ RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     ret = RK_MPI_AI_Enable(aiDevId);
     if (ret != 0) {
       RKADK_LOGE("AI[%d] enable failed[%x]", aiDevId, ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_AI_SetChnParam(aiDevId, s32AiChnId, &pstParams);
+    if (ret != 0) {
+      RKADK_LOGE("AI[%d] enable chn param failed[%x]", aiDevId, ret);
       goto exit;
     }
 

@@ -36,8 +36,8 @@ extern char *optarg;
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
-static RKADK_CHAR *g_output_path = "/tmp/ai.pcm";
-static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_PCM;
+static RKADK_CHAR *g_output_path = "/data/aenc.g711a";
+static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_G711A;
 
 static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
 
@@ -127,6 +127,10 @@ static int VideoTest(RKADK_U32 u32CamID,
 
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
+    if (strstr(cmd, "quit") || is_quit) {
+      RKADK_LOGD("#Get 'quit' cmd!");
+      break;
+    }
 
 #if 0
     if (strstr(cmd, "fps")) {

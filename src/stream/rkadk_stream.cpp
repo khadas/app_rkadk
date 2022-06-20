@@ -698,7 +698,7 @@ static void *RKADK_STREAM_GetPcmMB(void *params) {
 
     memset(&stStreamData, 0, sizeof(RKADK_AUDIO_STREAM_S));
     stStreamData.pStream = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(frame.pMbBlk);
-    stStreamData.u32Len = RK_MPI_MB_GetSize(frame.pMbBlk);
+    stStreamData.u32Len = frame.u32Len;
     stStreamData.u32Seq = pHandle->pcmSeq;
     stStreamData.u64TimeStamp = frame.u64TimeStamp;
     stStreamData.enType = RKADK_CODEC_TYPE_PCM;
