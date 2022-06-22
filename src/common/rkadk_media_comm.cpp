@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_media_comm.h"
+#include "rkadk_param.h"
 #include "rkadk_log.h"
 #include <pthread.h>
 #include <stdio.h>
@@ -462,6 +463,11 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
   RKADK_S32 i;
   VI_DEV_ATTR_S stDevAttr;
   VI_DEV_BIND_PIPE_S stBindPipe;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
 
   memset(&stDevAttr, 0, sizeof(stDevAttr));
   memset(&stBindPipe, 0, sizeof(stBindPipe));
@@ -524,6 +530,17 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
       RKADK_LOGE("Set VI[%d] attribute failed[%x]", s32ViChnId, ret);
       RK_MPI_VI_DisableDev(u32CamId);
       goto exit;
+    }
+
+    // set wrap mode attr
+    if (s32ViChnId == 0 && pstCommCfg->enable_wrap) {
+      VI_CHN_BUF_WRAP_S stViWrap;
+      memset(&stViWrap, 0, sizeof(VI_CHN_BUF_WRAP_S));
+      stViWrap.bEnable           = RK_TRUE;
+      stViWrap.u32BufLine        = pstCommCfg->wrap_buf_line;
+      stViWrap.u32WrapBufferSize = pstViChnAttr->stSize.u32Height * pstViChnAttr->stSize.u32Width * 3 / 2;  // nv12 (w * wrapLine *3 / 2)
+      RKADK_LOGE("set channel wrap line: %d, wrapBuffSize = %d", stViWrap.u32BufLine, stViWrap.u32WrapBufferSize);
+      RK_MPI_VI_SetChnWrapBufAttr(u32CamId, s32ViChnId, &stViWrap);
     }
 
     ret = RK_MPI_VI_EnableChn(u32CamId, s32ViChnId);
@@ -599,6 +616,11 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr) {
   int ret = -1;
   RKADK_S32 i;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
 
   RKADK_CHECK_POINTER(pstVencChnAttr, RKADK_FAILURE);
   RKADK_MEDIA_CtxInit();
@@ -628,6 +650,15 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
     if (ret) {
       RKADK_LOGE("Create VENC[%d] failed[%x]", s32ChnId, ret);
       goto exit;
+    }
+
+    if (s32ChnId == 0 && pstCommCfg->enable_wrap) {
+      VENC_CHN_BUF_WRAP_S stVencChnBufWrap;
+      memset(&stVencChnBufWrap, 0, sizeof(VENC_CHN_BUF_WRAP_S));
+      stVencChnBufWrap.bEnable = RK_TRUE;
+      stVencChnBufWrap.u32BufLine = pstCommCfg->wrap_buf_line;
+      RKADK_LOGE("set venc channel wrap line: %d", stVencChnBufWrap.u32BufLine);
+      RK_MPI_VENC_SetChnBufWrapAttr(s32ChnId, &stVencChnBufWrap);
     }
 
     // VENC_RECV_PIC_PARAM_S stRecvParam;

@@ -756,6 +756,8 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
   pstCommCfg->mic_volume = 70;
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
+  pstCommCfg->enable_wrap = true;
+  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT;
   RKADK_PARAM_SaveCommCfg(path);
 }
 
@@ -2217,6 +2219,8 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
       VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
@@ -2265,6 +2269,8 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType =
         VI_V4L2_MEMORY_TYPE_DMABUF;
+    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.stSize.u32Width = pstViCfg->width;
     pstRecCfg->vi_attr[i].stChnAttr.stSize.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
