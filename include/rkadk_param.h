@@ -142,6 +142,10 @@ typedef enum {
   RKADK_PARAM_TYPE_BITRATE,         /* specify RKADK_PARAM_BITRATE_S */
   RKADK_PARAM_TYPE_FLIP,            /* bool */
   RKADK_PARAM_TYPE_MIRROR,          /* bool */
+  RKADK_PARAM_TYPE_LDC,             /* ldc level [0,255] */
+  RKADK_PARAM_TYPE_ANTIFOG,         /* antifog value, [0,10] */
+  RKADK_PARAM_TYPE_WDR,             /* wdr level, [0,10] */
+  RKADK_PARAM_TYPE_HDR,             /* 0: normal, 1: HDR2, 2: HDR3, [0,2] */
   RKADK_PARAM_TYPE_REC,             /* record  enable, bool*/
   RKADK_PARAM_TYPE_RECORD_TYPE,     /* specify RKADK_REC_TYPE_E */
   RKADK_PARAM_TYPE_RECORD_TIME,     /* specify RKADK_PARAM_REC_TIME_S, record time(s) */
@@ -161,7 +165,9 @@ typedef enum {
   RKADK_PARAM_TYPE_MIC_UNMUTE,      /* mic(mute) enable, bool */
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
   RKADK_PARAM_TYPE_OSD,             /* show osd or not, bool */
+  RKADK_PARAM_TYPE_OSD_TIME_FORMAT, /* osd format for time */
   RKADK_PARAM_TYPE_BOOTSOUND,       /* boot sound enable, bool */
+  RKADK_PARAM_TYPE_OSD_SPEED,       /* speed osd enable, bool */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 
@@ -208,8 +214,10 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 speaker_volume; /* speaker volume, [0,100] */
   bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
+  RKADK_U32 osd_time_format;
   bool osd;        /* Whether to display OSD */
   bool boot_sound; /* boot sound */
+  bool osd_speed;  /* speed osd */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
@@ -221,6 +229,10 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
   bool enable_photo;  /* photo enable, default true */
   bool flip;          /* FLIP */
   bool mirror;        /* MIRROR */
+  RKADK_U32 ldc;      /* LDC level, [0,255]*/
+  RKADK_U32 wdr;      /* WDR level, [0,10] */
+  RKADK_U32 hdr;      /* hdr, [0: normal, 1: HDR2, 2: HDR3] */
+  RKADK_U32 antifog;  /* antifog value, [0,10] */
 } RKADK_PARAM_SENSOR_CFG_S;
 
 typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
@@ -234,6 +246,22 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_CODEC_TYPE_E codec_type;
 } RKADK_PARAM_AUDIO_CFG_S;
 
+typedef struct tagRKADK_PARAM_VENC_PARAM_S {
+  /* rc param */
+  RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
+  RKADK_U32 qp_step;
+  RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
+  RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
+  RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
+  RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
+  bool hier_qp_en;
+  char hier_qp_delta[RKADK_BUFFER_LEN];
+  char hier_frame_num[RKADK_BUFFER_LEN];
+
+  bool full_range;
+  bool scaling_list;
+} RKADK_PARAM_VENC_PARAM_S;
+
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 width;
   RKADK_U32 height;
@@ -244,6 +272,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 venc_chn;
   RKADK_U32 rga_chn;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
+  RKADK_PARAM_VENC_PARAM_S venc_param;
 } RKADK_PARAM_VENC_ATTR_S;
 
 typedef struct {
