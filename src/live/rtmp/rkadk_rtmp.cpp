@@ -68,10 +68,6 @@ static RKADK_S32 RKADK_RTMP_SetAencAttr(RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg,
     pstAencAttr->stAencG711U.u32NbSample = pstAudioCfg->samples_per_frame;
     pstAencAttr->stAencG711U.u32SampleRate = pstAudioCfg->samplerate;
     break;
-  case RKADK_CODEC_TYPE_ACC:
-    pstAencAttr->stAencMP3.u32Channels = pstAudioCfg->channels;
-    pstAencAttr->stAencMP3.u32SampleRate = pstAudioCfg->samplerate;
-    break;
   case RKADK_CODEC_TYPE_G726:
     pstAencAttr->stAencG726.u32Channels = pstAudioCfg->channels;
     pstAencAttr->stAencG726.u32SampleRate = pstAudioCfg->samplerate;
@@ -181,7 +177,7 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId, char *path,
   pstMuxerAttr->stVideoStreamParam.u32Width = pstLiveCfg->attribute.width;
   pstMuxerAttr->stVideoStreamParam.u32Height = pstLiveCfg->attribute.height;
 
-  if (pstAudioCfg->codec_type == RKADK_CODEC_TYPE_ACC) {
+  if (pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3) {
     pstMuxerAttr->stAudioStreamParam.enCodecType =
         RKADK_MEDIA_GetRkCodecType(pstAudioCfg->codec_type);
     pstMuxerAttr->stAudioStreamParam.enSampFmt = pstAudioCfg->sample_format;
@@ -431,8 +427,8 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     return -1;
   }
 
-  /* mp2 not compatible with flv */
-  bEnableAudio = pstAudioCfg->codec_type == RKADK_CODEC_TYPE_ACC ? true : false;
+  /* mp3 not compatible with flv */
+  bEnableAudio = pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3 ? false : true;
 
   pHandle = (RKADK_RTMP_HANDLE_S *)malloc(sizeof(RKADK_RTMP_HANDLE_S));
   if (!pHandle) {
@@ -594,7 +590,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   bDisableAudio =
-      pstAudioCfg->codec_type == RKADK_CODEC_TYPE_ACC ? true : false;
+      pstAudioCfg->codec_type == RKADK_CODEC_TYPE_MP3 ? true : false;
 
   RKADK_RTMP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
 

@@ -18,6 +18,7 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
+#include "rkadk_audio_mp3.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -639,7 +640,7 @@ RKADK_VOID RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_E enCodecType,
 RKADK_VOID RKADK_STREAM_AencUnRegisterCallback(RKADK_CODEC_TYPE_E enCodecType) {
 
   if (!pAudioHandle) {
-    RKADK_LOGE("Aenc register callback function fail");
+    RKADK_LOGE("Aenc register callback function is NULL");
     return;
   }
 
@@ -741,11 +742,15 @@ RKADK_STREAM_CreateDataThread(STREAM_AUDIO_HANDLE_S *pHandle,
   return 0;
 }
 
-static int RKADK_STREAM_DestoryDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
+static int
+RKADK_STREAM_DestoryDataThread(STREAM_AUDIO_HANDLE_S *pHandle,
+                               RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
   int ret = 0;
+  if (pstAudioParam->codec_type != RKADK_CODEC_TYPE_PCM) {
+    ret = RKADK_MEDIA_StopGetAencBuffer(&pHandle->stAencChn,
+                                        RKADK_STREAM_AencOutCb);
+  }
 
-  ret = RKADK_MEDIA_StopGetAencBuffer(&pHandle->stAencChn,
-                                      RKADK_STREAM_AencOutCb);
   if (ret)
     RKADK_LOGE("RKADK_MEDIA_StopGetAencBuffer failed");
 
@@ -817,8 +822,8 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
   pstAencAttr->stCodecAttr.enBitwidth = pstAudioParam->bit_width;
   pstAencAttr->stCodecAttr.pstResv = RK_NULL;
 
-  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC) {
-    pstAencAttr->stCodecAttr.u32Resv[0] = 2; // see AUDIO_OBJECT_TYPE
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    pstAencAttr->stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     pstAencAttr->stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
@@ -853,6 +858,16 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   if (!pstAudioParam) {
     RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
     return -1;
+  }
+
+  pstAudioParam->codec_type = enCodecType;
+  RKADK_LOGE("pstAudioParam enCodecType = %d", enCodecType);
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    ret = RegisterAencMp3();
+    if (ret) {
+      RKADK_LOGE("Register Mp3 encoder failed(%d)", ret);
+      return ret;
+    }
   }
 
   // Create AI
@@ -929,7 +944,7 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
     return -1;
   }
 
-  RKADK_STREAM_DestoryDataThread(pstHandle);
+  RKADK_STREAM_DestoryDataThread(pstHandle, pstAudioParam);
 
   if (pstAudioParam->codec_type != RKADK_CODEC_TYPE_PCM) {
     ret = RKADK_MPI_SYS_UnBind(&pstHandle->stAiChn, &pstHandle->stAencChn);
@@ -952,6 +967,14 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_DeInit failed[%x]", ret);
     return ret;
+  }
+
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    ret = UnRegisterAencMp3();
+    if (ret) {
+      RKADK_LOGE("UnRegister Mp3 encoder failed(%d)", ret);
+      return ret;
+    }
   }
 
   RKADK_MPI_SYS_Exit();

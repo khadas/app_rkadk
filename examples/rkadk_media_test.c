@@ -131,7 +131,7 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   RKADK_U8 mp3_header[7];
   RKADK_AUDIO_INFO_S audioInfo;
 
-  if (g_AudioCodecType == RKADK_CODEC_TYPE_ACC) {
+  if (g_AudioCodecType == RKADK_CODEC_TYPE_MP3) {
     if (RKADK_STREAM_GetAudioInfo(&audioInfo)) {
       RKADK_LOGE("RKADK_STREAM_GetAudioInfo failed\n");
       return -1;
@@ -139,12 +139,6 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   if (g_ao_file) {
-    if (g_AudioCodecType == RKADK_CODEC_TYPE_ACC) {
-      GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
-                   pAStreamData->u32Len);
-      fwrite(mp3_header, 1, 7, g_ao_file);
-    }
-
     fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_ao_file);
 
     if ((pAStreamData->u32Seq % 30) == 0)
@@ -519,8 +513,8 @@ int main(int argc, char *argv[]) {
   VideoStartTest(g_u32CamID, "/userdata/stream.h264", RKADK_CODEC_TYPE_H264);
 
   // stream audio test
-  g_AudioCodecType = RKADK_CODEC_TYPE_ACC;
-  AudioStartTest("/userdata/aac.adts", RKADK_CODEC_TYPE_ACC);
+  g_AudioCodecType = RKADK_CODEC_TYPE_MP3;
+  AudioStartTest("/userdata/audio.mp3", RKADK_CODEC_TYPE_MP3);
 
   // display test
   RKADK_DISP_Init(g_u32CamID);

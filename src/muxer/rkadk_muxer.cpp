@@ -279,11 +279,6 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
       continue;
     }
 
-#if 1
-    // reserved
-    if (!strcmp(pstMuxerHandle->stAudio.codec, "ACC"));
-      headerSize = 7; //AAC header size
-#endif
     cell->size = size - headerSize;
     cell->buf = (unsigned char *)malloc(cell->size);
     if (NULL == cell->buf) {
@@ -494,6 +489,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         pMuxerHandle->stAudio.channels = audioInfo->u32ChnCnt;
         pMuxerHandle->stAudio.frame_size = audioInfo->u32SamplesPerFrame;
         pMuxerHandle->stAudio.sample_rate = audioInfo->u32SampleRate;
+        pMuxerHandle->stAudio.bitrate = audioInfo->u32Bitrate;
 
         switch (audioInfo->u32BitWidth) {
         case 16:
@@ -508,11 +504,11 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         }
 
         switch (audioInfo->enCodecType) {
-        case RKADK_CODEC_TYPE_MP2:
+        case RKADK_CODEC_TYPE_MP3:
           memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
           break;
-        case RKADK_CODEC_TYPE_ACC:
-          memcpy(pMuxerHandle->stAudio.codec, "AAC", strlen("AAC"));
+        case RKADK_CODEC_TYPE_MP2:
+          memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
           break;
         default:
           RKADK_LOGE("not support enCodecType: %d", audioInfo->enCodecType);
@@ -722,7 +718,7 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId) {
   }
 
   switch (pstAudioCfg->codec_type) {
-  case RKADK_CODEC_TYPE_ACC:
+  case RKADK_CODEC_TYPE_MP3:
     bEnable = true;
     break;
 

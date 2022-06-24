@@ -18,11 +18,13 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
+#include "rkadk_audio_mp3.h"
 #include <deque>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
@@ -329,6 +331,14 @@ static int RKADK_RECORD_CreateAudioChn() {
     return -1;
   }
 
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    ret = RegisterAencMp3();
+    if (ret) {
+      RKADK_LOGE("Register Mp3 encoder failed(%d)", ret);
+      return ret;
+    }
+  }
+
   // Create AI
   memset(&stAiAttr, 0, sizeof(AIO_ATTR_S));
   memcpy(stAiAttr.u8CardName, pstAudioParam->audio_node,
@@ -350,7 +360,7 @@ static int RKADK_RECORD_CreateAudioChn() {
   stAiAttr.u32ChnCnt = pstAudioParam->channels;
   ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
   if (ret) {
-    RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
+    RKADK_LOGE("RKADK_MPI_AI_Init failed(%d)", ret);
     return ret;
   }
 
@@ -364,8 +374,8 @@ static int RKADK_RECORD_CreateAudioChn() {
   stAencAttr.stCodecAttr.enBitwidth = pstAudioParam->bit_width;
   stAencAttr.stCodecAttr.pstResv = RK_NULL;
 
-  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC) {
-    stAencAttr.stCodecAttr.u32Resv[0] = 2; // see AUDIO_OBJECT_TYPE
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    stAencAttr.stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
@@ -401,6 +411,13 @@ static int RKADK_RECORD_DestoryAudioChn() {
     return ret;
   }
 
+  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+    ret = UnRegisterAencMp3();
+    if (ret) {
+      RKADK_LOGE("UnRegister Mp3 encoder failed(%d)", ret);
+      return ret;
+    }
+  }
   return 0;
 }
 
@@ -709,6 +726,8 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
         pstAudioParam->samples_per_frame;
     aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32SampleRate =
         pstAudioParam->samplerate;
+    aHTrackSrcHandle->unTrackSourceAttr.stAudioInfo.u32Bitrate =
+        pstAudioParam->bitrate;
   }
 
   return 0;

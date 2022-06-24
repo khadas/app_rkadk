@@ -101,7 +101,7 @@ static void SetAudioCfg() {
   stAudioCfg.samples_per_frame = AUDIO_FRAME_COUNT;
   stAudioCfg.bitrate = AUDIO_BIT_REAT;
   stAudioCfg.vqe_mode = RKADK_VQE_MODE_BUTT;
-  stAudioCfg.codec_type = RKADK_CODEC_TYPE_MP2;
+  stAudioCfg.codec_type = RKADK_CODEC_TYPE_MP3;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stAudioCfg, g_stAudioCfgMapTable,
                    sizeof(g_stAudioCfgMapTable) /

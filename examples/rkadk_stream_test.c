@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-#include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
@@ -36,8 +35,8 @@ extern char *optarg;
 static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
-static RKADK_CHAR *g_output_path = "/data/aenc.g711a";
-static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_G711A;
+static RKADK_CHAR *g_output_path = "/data/ai.pcm";
+static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_PCM;
 
 static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
 
@@ -51,9 +50,9 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
-  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, h264, h265, mjpeg,"
+  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp3, h264, h265, mjpeg,"
          " jpeg, Default:pcm\n");
-  printf("\t-o: Output path, Default:\"/tmp/ai.pcm\"\n");
+  printf("\t-o: Output path, Default:\"/data/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   ;
 }
@@ -191,7 +190,6 @@ static int VideoTest(RKADK_U32 u32CamID,
 
 static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   RKADK_U8 mp3_header[7];
-  RKADK_AUDIO_INFO_S audioInfo;
 
   if (!g_output_file) {
     g_output_file = fopen(g_output_path, "w");
@@ -199,19 +197,6 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
       RKADK_LOGE("open %s file failed, exit", g_output_path);
       return -1;
     }
-  }
-
-  if (g_enCodecType == RKADK_CODEC_TYPE_ACC) {
-    if (RKADK_STREAM_GetAudioInfo(&audioInfo)) {
-      RKADK_LOGE("RKADK_STREAM_GetAudioInfo failed\n");
-      return -1;
-    }
-  }
-
-    if (g_enCodecType == RKADK_CODEC_TYPE_ACC) {
-    GetMp3Header(mp3_header, audioInfo.u32SampleRate, audioInfo.u32ChnCnt,
-                 pAStreamData->u32Len);
-    fwrite(mp3_header, 1, 7, g_output_file);
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
@@ -249,7 +234,7 @@ static int AudioTest(RKADK_CODEC_TYPE_E enCodecType) {
 
   RKADK_STREAM_AencRegisterCallback(enCodecType, AencDataCb);
 
-  if (enCodecType = RKADK_CODEC_TYPE_PCM) {
+  if (enCodecType == RKADK_CODEC_TYPE_PCM) {
     g_pcm_file = fopen("/data/ai.pcm", "w");
     if (!g_pcm_file) {
       RKADK_LOGE("open /data/ai.pcm file failed, exit");
@@ -335,8 +320,40 @@ int main(int argc, char *argv[]) {
     case 'm':
       pMode = optarg;
       break;
+    case 'e':
+      if (!strcmp(optarg, "pcm")) {
+        g_enCodecType = RKADK_CODEC_TYPE_PCM;
+        g_output_path = "/data/ai.pcm";
+      } else if (!strcmp(optarg, "g711a")) {
+        g_enCodecType = RKADK_CODEC_TYPE_G711A;
+        g_output_path = "/data/aenc.g711a";
+      } else if (!strcmp(optarg, "g711u")) {
+        g_enCodecType = RKADK_CODEC_TYPE_G711U;
+        g_output_path = "/data/aenc.g711u";
+      } else if (!strcmp(optarg, "mp3")) {
+        g_enCodecType = RKADK_CODEC_TYPE_MP3;
+        g_output_path = "/data/aenc.mp3";
+      } else if (!strcmp(optarg, "h264")) {
+        g_enCodecType = RKADK_CODEC_TYPE_H264;
+        g_output_path = "/data/venc.h264";
+      } else if (!strcmp(optarg, "h265")) {
+        g_enCodecType = RKADK_CODEC_TYPE_H265;
+        g_output_path = "/data/venc.h265";
+      } else if (!strcmp(optarg, "mjpeg")) {
+        g_enCodecType = RKADK_CODEC_TYPE_MJPEG;
+        g_output_path = "/data/venc.mjpeg";
+      } else if (!strcmp(optarg, "jpeg")) {
+        g_enCodecType = RKADK_CODEC_TYPE_JPEG;
+        g_output_path = "/data/venc.jpeg";
+      } else {
+        RKADK_LOGE("unknow encode type: %s", optarg);
+        return 0;
+      }
+      RKADK_LOGD("Encode type: %d", g_enCodecType);
+      break;
     case 'o':
       g_output_path = optarg;
+      RKADK_LOGD("g_output_path = %s", g_output_path);
       break;
     case 'p':
       iniPath = optarg;

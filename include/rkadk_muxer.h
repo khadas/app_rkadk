@@ -132,6 +132,7 @@ typedef struct {
   RKADK_U32 u32ChnCnt;
   RKADK_U32 u32SampleRate;
   RKADK_U32 u32SamplesPerFrame;
+  RKADK_U32 u32Bitrate;
 } RKADK_TRACK_AUDIO_SOURCE_INFO_S;
 
 typedef struct {

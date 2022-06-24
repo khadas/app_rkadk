@@ -870,7 +870,7 @@ RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stAencInfo, RKADK_MEDIA_AENC_MAX_CNT, 0,
                          pstChn->s32ChnId, "AENC_GET_MB");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, pstChn->s32ChnId);
@@ -880,7 +880,7 @@ RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
 
   pstMediaInfo = &g_stMediaCtx.stAencInfo[i];
   if (pstMediaInfo->s32InitCnt == 0) {
-    RKADK_LOGE("vencChnId[%d] don't init", pstChn->s32ChnId);
+    RKADK_LOGE("aencChnId[%d] don't init", pstChn->s32ChnId);
     ret = -1;
     goto exit;
   }
@@ -1250,10 +1250,6 @@ RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {
     enCodecType = RK_VIDEO_ID_JPEG;
     break;
 
-  case RKADK_CODEC_TYPE_ACC:
-    enCodecType = RK_AUDIO_ID_ACC;
-    break;
-
   case RKADK_CODEC_TYPE_G711A:
     enCodecType = RK_AUDIO_ID_PCM_ALAW;
     break;
@@ -1268,6 +1264,10 @@ RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {
 
   case RKADK_CODEC_TYPE_MP2:
     enCodecType = RK_AUDIO_ID_MP2;
+    break;
+
+  case RKADK_CODEC_TYPE_MP3:
+    enCodecType = RK_AUDIO_ID_MP3;
     break;
 
   default:
@@ -1298,12 +1298,10 @@ RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(RK_CODEC_ID_E enType) {
     enCodecType = RKADK_CODEC_TYPE_JPEG;
     break;
 
-  case RK_AUDIO_ID_ACC:
-    enCodecType = RKADK_CODEC_TYPE_ACC;
-    break;
   case RK_AUDIO_ID_PCM_ALAW:
     enCodecType = RKADK_CODEC_TYPE_G711A;
     break;
+
   case RK_AUDIO_ID_PCM_MULAW:
     enCodecType = RKADK_CODEC_TYPE_G711U;
     break;
@@ -1314,6 +1312,10 @@ RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(RK_CODEC_ID_E enType) {
 
   case RK_AUDIO_ID_MP2:
     enCodecType = RKADK_CODEC_TYPE_MP2;
+    break;
+
+  case RK_AUDIO_ID_MP3:
+    enCodecType = RKADK_CODEC_TYPE_MP3;
     break;
 
   default:

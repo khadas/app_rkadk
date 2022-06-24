@@ -49,9 +49,8 @@ extern "C" {
 /* g711u must be 16K, g711a can be either 8K or 16K */
 #define AUDIO_SAMPLE_RATE 16000
 #define AUDIO_CHANNEL 2
-#define AUDIO_BIT_REAT 64000
-/* mp2: 1152, mp3: 1024 */
-#define AUDIO_FRAME_COUNT 1024
+#define AUDIO_BIT_REAT 320000
+#define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
 #define AI_DEVICE_NAME "hw:0,0"
 
