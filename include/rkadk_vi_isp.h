@@ -26,19 +26,18 @@ extern "C" {
 #include <rk_aiq_user_api2_imgproc.h>
 #include <rk_aiq_user_api2_sysctl.h>
 
-
 int RKADK_VI_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
                        bool bMultiCam, const char *iq_file_dir, int fps);
 int RKADK_VI_ISP_Stop(RKADK_U32 u32CamId);
-int RKADK_VI_ISP_SET_MirrorFlip(RKADK_U32 u32CamId, bool mirror, bool flip);
-int RKADK_VI_ISP_GET_MirrorFlip(RKADK_U32 u32CamId, bool *mirror, bool *flip);
-#ifdef RKADK_ENABLE_AIQ_FUNCTION
 int RKADK_VI_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile);
 int RKADK_VI_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable);
 int RKADK_VI_ISP_SET_FecBypass(RKADK_U32 u32CamId, bool bypass);
 int RKADK_VI_ISP_GET_FecAttrib(RKADK_U32 u32CamId, rk_aiq_fec_attrib_t *attr);
 int RKADK_VI_ISP_GET_AeExpResInfo(RKADK_U32 u32CamId,
                                   Uapi_ExpQueryInfo_t *pstExpInfo);
+int RKADK_VI_ISP_GET_CCT(RKADK_U32 u32CamId, rk_aiq_wb_cct_t *pstCCT);
+int RKADK_VI_ISP_QueryWBInfo(RKADK_U32 u32CamId,
+                             rk_aiq_wb_querry_info_t *pstWbInfo);
 int RKADK_VI_ISP_DumpExpInfo(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode);
 int RKADK_VI_ISP_SET_FrameRate(RKADK_U32 u32CamId, unsigned int uFps);
 int RKADK_VI_ISP_EnableLdch(RKADK_U32 u32CamId, bool on, unsigned int level);
@@ -90,14 +89,15 @@ int RKADK_VI_ISP_GET_MDhzStrth(RKADK_U32 u32CamId, bool *on,
                                unsigned int *level);
 int RKADK_VI_ISP_SET_Correction(RKADK_U32 u32CamId, RKADK_S32 u32Mode,
                                 unsigned int u32Value);
+int RKADK_VI_ISP_SET_MirrorFlip(RKADK_U32 u32CamId, bool mirror, bool flip);
+int RKADK_VI_ISP_GET_MirrorFlip(RKADK_U32 u32CamId, bool *mirror, bool *flip);
 
 int RKADK_VI_ISP_SET_BypassStreamRotation(RKADK_U32 u32CamId, int S32Rotation);
 int RKADK_VI_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect);
-
-#endif
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 #endif
+
