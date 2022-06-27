@@ -942,6 +942,8 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
     pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
     pstPhotoCfg->venc_chn = 2;
     pstPhotoCfg->rga_chn = 2;
+    pstPhotoCfg->enable_combo = 1;
+    pstPhotoCfg->combo_venc_chn = 0;
   }
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);

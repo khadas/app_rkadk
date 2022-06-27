@@ -98,7 +98,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   }
 
   while (pHandle->bGetJpeg) {
-    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, -1);
+    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
     if (ret == RK_SUCCESS) {
       if (pHandle->u32PhotoCnt) {
         memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
@@ -113,9 +113,6 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
       ret = RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
-    } else {
-      RKADK_LOGE("RK_MPI_VENC_GetStream[%d] failed[%x]", pstPhotoCfg->venc_chn,
-                 ret);
     }
   }
 
@@ -139,9 +136,9 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   pstVencAttr->stVencAttr.u32PicHeight = pstPhotoCfg->image_height;
   pstVencAttr->stVencAttr.u32VirWidth = pstPhotoCfg->image_width;
   pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
-  pstVencAttr->stVencAttr.u32StreamBufCnt = 2;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = 1;
   pstVencAttr->stVencAttr.u32BufSize =
-      pstPhotoCfg->image_width * pstPhotoCfg->image_height;
+      pstPhotoCfg->image_width * pstPhotoCfg->image_height * 3 / 2;
 
   pstAttrJpege->bSupportDCF = (RK_BOOL)stThumbAttr.bSupportDCF;
   pstAttrJpege->stMPFCfg.u8LargeThumbNailNum =
@@ -171,6 +168,36 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
     pstAttrJpege->enReceiveMode = VENC_PIC_RECEIVE_BUTT;
     break;
   }
+}
+
+static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
+                                        VENC_CHN_ATTR_S *pstVencChnAttr,
+                                        RKADK_S32 s32ComboChnId) {
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+  VENC_CHN_BUF_WRAP_S stVencChnBufWrap;
+  VENC_COMBO_ATTR_S stComboAttr;
+  VENC_JPEG_PARAM_S stJpegParam;
+  memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
+  memset(&stVencChnBufWrap, 0, sizeof(VENC_CHN_BUF_WRAP_S));
+  memset(&stComboAttr, 0, sizeof(VENC_COMBO_ATTR_S));
+  memset(&stJpegParam, 0, sizeof(stJpegParam));
+
+  RK_MPI_VENC_CreateChn(s32ChnId, pstVencChnAttr);
+
+  stVencChnBufWrap.bEnable = RK_TRUE;
+  RK_MPI_VENC_SetChnBufWrapAttr(s32ChnId, &stVencChnBufWrap);
+
+  stRecvParam.s32RecvPicNum = 1;
+  RK_MPI_VENC_StartRecvFrame(s32ChnId, &stRecvParam);
+
+  stComboAttr.bEnable = RK_TRUE;
+  stComboAttr.s32ChnId = s32ComboChnId;
+  RK_MPI_VENC_SetComboAttr(s32ChnId, &stComboAttr);
+
+  stJpegParam.u32Qfactor = 77;
+  RK_MPI_VENC_SetJpegParam(s32ChnId, &stJpegParam);
+
+  RK_MPI_VENC_StopRecvFrame(s32ChnId);
 }
 
 static void RKADK_PHOTO_SetChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
@@ -285,6 +312,23 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
 
   // Create VENC
   RKADK_PHOTO_SetVencAttr(pstPhotoAttr->stThumbAttr, pstPhotoCfg, &stVencAttr);
+
+  if (pstPhotoCfg->enable_combo) {
+    RKADK_LOGE("Select combo mode");
+    RKADK_PHOTO_CreateVencCombo(stVencChn.s32ChnId, &stVencAttr,
+                                pstPhotoCfg->combo_venc_chn);
+    pHandle->bGetJpeg = true;
+    ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
+    if (ret) {
+      RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
+                ret);
+      goto failed;
+    }
+
+    RKADK_LOGI("Photo[%d] Init End...", pstPhotoAttr->u32CamID);
+    return 0;
+  }
+
   ret = RK_MPI_VENC_CreateChn(stVencChn.s32ChnId, &stVencAttr);
   if (ret) {
     RKADK_LOGE("Create Venc failed[%x]", ret);
@@ -381,7 +425,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
                      &stRgaChn);
 
   pstHandle->bGetJpeg = false;
-#if 0
+#if 1
   // The current version cannot be forced to exit
   ret = RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
   if (ret) {
@@ -426,12 +470,14 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
   } else
 #endif
   {
-    // VI UnBind VENC
-    ret = RK_MPI_SYS_UnBind(&stViChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("UnBind VI[%d] to VENC[%d] failed[%d]", stViChn.s32ChnId,
-                 stVencChn.s32ChnId, ret);
-      return ret;
+    if (!pstPhotoCfg->enable_combo) {
+      // VI UnBind VENC
+      ret = RK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+      if (ret) {
+        RKADK_LOGE("UnBind VI[%d] to VENC[%d] failed[%d]", stViChn.s32ChnId,
+                  stVencChn.s32ChnId, ret);
+        return ret;
+      }
     }
   }
 

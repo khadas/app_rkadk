@@ -309,6 +309,8 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 snap_num;
   RKADK_U32 venc_chn;
   RKADK_U32 rga_chn;
+  bool enable_combo;
+  RKADK_U32 combo_venc_chn;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_PHOTO_CFG_S;
 
