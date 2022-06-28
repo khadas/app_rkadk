@@ -593,7 +593,7 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
   bool change = false;
   RKADK_U32 u32ChnId;
   const char *pixFmt = "NV12";
-  const char *deviceName = "rkispp_m_bypass";
+  const char *deviceName = "rkisp_mainpath";
   const char *module = "RECORD_MAIN|PHOTO";
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
@@ -606,22 +606,32 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
 
   switch (index) {
   case 0:
-    pixFmt = "FBC0";
+    pixFmt = "NV12";
     change =
         RKADK_PARAM_CheckCfg(&pstViCfg->width, RECORD_VIDEO_WIDTH, "vi width");
     change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, RECORD_VIDEO_HEIGHT,
                                    "vi height");
     break;
   case 1:
-    deviceName = "rkispp_scale0";
+    deviceName = "rkisp_selfpath";
+    pixFmt = "NV12";
+    module = "RECORD_MAIN|PHOTO";
+    change =
+        RKADK_PARAM_CheckCfg(&pstViCfg->width, RECORD_VIDEO_WIDTH, "vi width");
+    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, RECORD_VIDEO_HEIGHT,
+                                   "vi height");
     break;
   case 2:
-    deviceName = "rkispp_scale1";
-    module = "NONE";
+    deviceName = "rkisp_bypasspath";
+    module = "RECORD_SUB|PREVIEW|LIVE|DISP";
+    change =
+        RKADK_PARAM_CheckCfg(&pstViCfg->width, STREAM_VIDEO_WIDTH, "vi width");
+    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, STREAM_VIDEO_HEIGHT,
+                                   "vi height");
     break;
   case 3:
-    deviceName = "rkispp_scale2";
-    module = "RECORD_SUB|PREVIEW|LIVE|DISP";
+    deviceName = "rkisp_mainpath_4x4sampling";
+    module = "NONE";
     change =
         RKADK_PARAM_CheckCfg(&pstViCfg->width, STREAM_VIDEO_WIDTH, "vi width");
     change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, STREAM_VIDEO_HEIGHT,
@@ -814,6 +824,8 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   case 1:
     memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
     pstViCfg->buf_cnt = 4;
+    pstViCfg->width = RECORD_VIDEO_WIDTH;
+    pstViCfg->height = RECORD_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
     memcpy(pstViCfg->module, "RECORD_MAIN|PHOTO", strlen("RECORD_MAIN|PHOTO"));
     break;
