@@ -121,6 +121,7 @@ TEST_AO_CTX_S params[AO_MAX_CHN_NUM];
 pthread_t tidSend[AO_MAX_CHN_NUM];
 pthread_t tidReceive[AO_MAX_CHN_NUM];
 char *audiobuf = NULL;
+FILE *fin = NULL;
 
 static RKADK_PLAYER_EVENT_FN g_pfnPlayerCallback = NULL;
 
@@ -321,12 +322,11 @@ void* SendDataThread(void * ptr) {
     extConfig.pu8VirAddr = srcData;
     extConfig.u64Size = size;
     RK_MPI_SYS_CreateMB(&(frame.pMbBlk), &extConfig);
-__RETRY:
+
     result = RK_MPI_AO_SendFrame(params->s32DevId, params->s32ChnIndex, &frame, s32MilliSec);
     if (result < 0) {
         RK_LOGE("send frame fail, result = %d, TimeStamp = %lld, s32MilliSec = %d",
             result, frame.u64TimeStamp, s32MilliSec);
-        goto __RETRY;
     }
     RK_MPI_MB_ReleaseMB(frame.pMbBlk);
 
@@ -577,6 +577,11 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
   RKADK_LOGI("Destory Player Start...");
+  player_push(player_test, audiobuf, 0);
+  if(fin != NULL) {
+    fclose(fin);
+    fin = NULL;
+  }
 
   ret = TestCloseDeviceAo(ctx);
   if (ret) {
@@ -653,29 +658,30 @@ RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
 
 RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
+  int push_ret = 0;
+  uint32_t len = 0;
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   player_play(player_test, cfg_test);
 
   audiobuf = (char *)malloc(audiobufsize);
-  int32_t len;
-  int push_ret;
 
-  FILE *fin = fopen(cfg_test->target, "r");
-  pthread_create(&tid, 0, DoPull, NULL);
   if (ctx->s32ChnNum > AO_MAX_CHN_NUM) {
     RKADK_LOGE("ao chn(%d) > max_chn(%d)", ctx->s32ChnNum, AO_MAX_CHN_NUM);
     return RKADK_FAILURE;
   }
+  fin = fopen(cfg_test->target, "r");
+  pthread_create(&tid, 0, DoPull, NULL);
 
-  while (fin)
-  {
+  while (fin) {
     len = fread(audiobuf, 1, audiobufsize, fin);
-    if (len <= 0)
-    {
+    if (len <= 0) {
       player_push(player_test, audiobuf, 0);
-      fclose(fin);
+      if(fin != NULL) {
+        fclose(fin);
+        fin = NULL;
+      }
       break;
     }
     push_ret = player_push(player_test, audiobuf, len);
@@ -684,6 +690,8 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
       fseek(fin, -push_ret, SEEK_SET);
     usleep(10);
   }
+
+  pthread_join(tid, NULL);
 
   for (int i = 0; i < ctx->s32ChnNum; i++) {
     pthread_join(tidSend[i], RK_NULL);
@@ -701,6 +709,11 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
+  player_push(player_test, audiobuf, 0);
+  if(fin != NULL) {
+    fclose(fin);
+    fin = NULL;
+  }
   ret = TestCloseDeviceAo(ctx);
   firstframe = 0;
   ret = player_stop(player_test);

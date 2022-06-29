@@ -32,6 +32,9 @@
 extern int optind;
 extern char *optarg;
 
+RKADK_MW_PTR pPlayer = NULL;
+int retplayer = 0;
+
 static bool is_quit = false;
 static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
 
@@ -139,11 +142,19 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   return;
 }
 
+void *AudioPlay(void *arg)
+{
+  
+  RKADK_PLAYER_Play(pPlayer);
+  if (retplayer) {
+    RKADK_LOGE("Play failed, ret = %d", retplayer);
+  }
+}
+
 int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
   char *file = "/userdata/16000_2.mp3";
-  RKADK_MW_PTR pPlayer = NULL;
   RKADK_BOOL bVideoEnable = false;
   RKADK_U32 duration = 0;
 
@@ -219,8 +230,9 @@ int main(int argc, char *argv[]) {
 
   //RKADK_PLAYER_GetDuration(pPlayer, &duration);
   //RKADK_LOGD("%s: duration = %d", file, duration);
+  pthread_t tidaudioplay;
+  pthread_create(&tidaudioplay, 0, AudioPlay, NULL);
 
-  RKADK_PLAYER_Play(pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
 
   char cmd[64];
@@ -234,24 +246,25 @@ int main(int argc, char *argv[]) {
       break;
     }
 
+    if (retplayer) {
+      RKADK_LOGE("Play failed, ret = %d", retplayer);
+      break;
+    }
     RKADK_PLAYER_Stop(pPlayer);
+    pthread_join(tidaudioplay, NULL);
+
     ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
     if (ret) {
       RKADK_LOGE("SetDataSource failed, ret = %d", ret);
       break;
     }
-
     ret = RKADK_PLAYER_Prepare(pPlayer);
     if (ret) {
       RKADK_LOGE("Prepare failed, ret = %d", ret);
       break;
     }
 
-    ret = RKADK_PLAYER_Play(pPlayer);
-    if (ret) {
-      RKADK_LOGE("Play failed, ret = %d", ret);
-      break;
-    }
+    pthread_create(&tidaudioplay, 0, AudioPlay, NULL);
 
     usleep(500 * 1000);
   }
