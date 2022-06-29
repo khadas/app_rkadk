@@ -86,6 +86,7 @@ static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_width),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_height),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, venc_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vi_chn),
 };
 
 /* sensor map table */

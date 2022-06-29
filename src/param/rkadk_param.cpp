@@ -781,6 +781,7 @@ static void RKADK_PARAM_DefThumbCfg(char *path) {
   pstThumbCfg->thumb_width = THUMB_WIDTH;
   pstThumbCfg->thumb_height = THUMB_HEIGHT;
   pstThumbCfg->venc_chn = THUMB_VENC_CHN;
+  pstThumbCfg->vi_chn = THUMB_VI_CHN;
   RKADK_PARAM_SaveThumbCfg(path);
 }
 

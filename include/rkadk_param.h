@@ -72,7 +72,8 @@ extern "C" {
 /* thumb default parameters */
 #define THUMB_WIDTH 320
 #define THUMB_HEIGHT 180
-#define THUMB_VENC_CHN (VENC_MAX_CHN_NUM - 1)
+#define THUMB_VENC_CHN 5
+#define THUMB_VI_CHN 1
 
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0
@@ -348,6 +349,7 @@ typedef struct tagRKADK_PARAM_THUMB_CFG_S {
   // 2 alignment
   RKADK_U32 thumb_height;
   RKADK_U32 venc_chn;
+  RKADK_U32 vi_chn;
 } RKADK_PARAM_THUMB_CFG_S;
 
 typedef struct tagPARAM_CFG_S {
