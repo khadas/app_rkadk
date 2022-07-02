@@ -38,6 +38,7 @@ set_target_properties(rkadk PROPERTIES LINK_FLAGS -Wl,--version-script,${CMAKE_C
 #set_target_properties(rkadk PROPERTIES COMPILE_OPTIONS -Wl,-Bsymbolic)
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
+target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
 if(CMAKE_C_COMPILER MATCHES "arm-rockchip830-linux-uclibcgnueabihf*")
 	target_link_libraries(rkadk rockit rga rkmuxer iconv rtsp z rkaudio)
