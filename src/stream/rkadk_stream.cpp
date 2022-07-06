@@ -583,23 +583,21 @@ RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamID,
                                     RKADK_VIDEO_INFO_S *pstVideoInfo) {
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
-  STREAM_VIDEO_HANDLE_S *pstHandle;
 
   RKADK_CHECK_POINTER(pstVideoInfo, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pVideoHandle, RKADK_FAILURE);
-  pstHandle = pVideoHandle;
-  RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(u32CamID, RKADK_FAILURE);
 
   RKADK_PARAM_Init(NULL, NULL);
 
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstHandle->u32CamId);
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamID);
   if (!pstStreamCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
   }
 
   pstStreamCfg =
-      RKADK_PARAM_GetStreamCfg(pstHandle->u32CamId, RKADK_STREAM_TYPE_PREVIEW);
+      RKADK_PARAM_GetStreamCfg(u32CamID, RKADK_STREAM_TYPE_PREVIEW);
   if (!pstStreamCfg) {
     RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
     return -1;
