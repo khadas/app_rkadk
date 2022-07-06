@@ -144,8 +144,7 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
 
 void *AudioPlay(void *arg)
 {
-  
-  RKADK_PLAYER_Play(pPlayer);
+  retplayer = RKADK_PLAYER_Play(pPlayer);
   if (retplayer) {
     RKADK_LOGE("Play failed, ret = %d", retplayer);
   }
@@ -243,12 +242,14 @@ int main(int argc, char *argv[]) {
     RKADK_LOGD("#Input cmd: %s", cmd);
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
+      if (retplayer) {
+        goto __FAILED;
+      }
       break;
     }
 
     if (retplayer) {
-      RKADK_LOGE("Play failed, ret = %d", retplayer);
-      break;
+      goto __FAILED;
     }
     RKADK_PLAYER_Stop(pPlayer);
     pthread_join(tidaudioplay, NULL);
@@ -269,6 +270,7 @@ int main(int argc, char *argv[]) {
     usleep(500 * 1000);
   }
 
+__FAILED:
   RKADK_PLAYER_Destroy(pPlayer);
   pPlayer = NULL;
   return 0;

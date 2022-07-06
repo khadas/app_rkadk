@@ -79,6 +79,7 @@ typedef struct _rkMpiAOCtx {
   RKADK_S32 s32ClrChnBuf;
   RKADK_S32 s32ClrPubAttr;
   RKADK_S32 s32GetPubAttr;
+  RKADK_S32 s32OpenFlag;
 } TEST_AO_CTX_S;
 
 extern int pcmout_open_impl(struct playback_device *self, playback_device_cfg_t *cfg);
@@ -216,7 +217,7 @@ RK_S32 TestOpenDeviceAo(TEST_AO_CTX_S *ctx) {
   RK_MPI_AO_SetPubAttr(aoDevId, &aoAttr);
 
   RK_MPI_AO_Enable(aoDevId);
-
+  ctx->s32OpenFlag = 1;
   return RK_SUCCESS;
 __FAILED:
   return RK_FAILURE;
@@ -260,11 +261,15 @@ RK_S32 DeinitMpiAo(AUDIO_DEV aoDevId, AO_CHN aoChn) {
 
 RK_S32 TestCloseDeviceAo(TEST_AO_CTX_S *ctx) {
   AUDIO_DEV aoDevId = ctx->s32DevId;
-  RK_S32 result = RK_MPI_AO_Disable(aoDevId);
-  if (result != 0) {
-    RK_LOGE("ao disable fail, reason = %d", result);
-    return RK_FAILURE;
+  if (ctx->s32OpenFlag == 1) {
+    RK_S32 result = RK_MPI_AO_Disable(aoDevId);
+    if (result != 0) {
+      RK_LOGE("ao disable fail, reason = %X", result);
+      return RK_FAILURE;
+    }
+    ctx->s32OpenFlag = 0;
   }
+
   return RK_SUCCESS;
 }
 
@@ -451,8 +456,8 @@ void *DoPull(void *arg)
 
   player_audio_info(player_test, &config, -1);
   ctx->s32ReSmpSampleRate = config.sample_rate;
-  ctx->s32Channel         = config.channels;
-  ctx->s32BitWidth        = config.bits;
+  ctx->s32Channel = config.channels;
+  ctx->s32BitWidth = config.bits;
 
   if (ctx->s32Channel <= 0
   || ctx->s32ReSmpSampleRate <= 0)
@@ -589,10 +594,14 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
     return ret;
   }
   ret = player_stop(player_test);
-  free(audiobuf);
-  audiobuf = NULL;
-  free(cfg_test);
-  cfg_test = NULL;
+  if (audiobuf) {
+    free(audiobuf);
+    audiobuf = NULL;
+  }
+  if (cfg_test) {
+    free(cfg_test);
+    cfg_test = NULL;
+  }
   player_destroy(player_test);
   player_test = NULL;
   player_deinit();
@@ -625,11 +634,8 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   cfg_test->target = (char *)pszfilePath;
 
   if(cfg_test->target != RKADK_NULL)
-  {
     return RKADK_SUCCESS;
-  }
-  else
-  {
+  else {
     RKADK_LOGE("SetDataSource failed");
     return RKADK_FAILURE;
   }
@@ -663,15 +669,19 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  player_play(player_test, cfg_test);
-
-  audiobuf = (char *)malloc(audiobufsize);
 
   if (ctx->s32ChnNum > AO_MAX_CHN_NUM) {
     RKADK_LOGE("ao chn(%d) > max_chn(%d)", ctx->s32ChnNum, AO_MAX_CHN_NUM);
     return RKADK_FAILURE;
   }
   fin = fopen(cfg_test->target, "r");
+
+  if(fin == NULL) {
+    RKADK_LOGE("open %s failed, file %s is NULL", cfg_test->target, cfg_test->target);
+    return RKADK_FAILURE;
+  }
+  audiobuf = (char *)malloc(audiobufsize);
+  player_play(player_test, cfg_test);
   pthread_create(&tid, 0, DoPull, NULL);
 
   while (fin) {
@@ -714,13 +724,18 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     fclose(fin);
     fin = NULL;
   }
+
   ret = TestCloseDeviceAo(ctx);
   firstframe = 0;
   ret = player_stop(player_test);
-  free(audiobuf);
-  audiobuf = NULL;
-  free(cfg_test);
-  cfg_test = NULL;
+  if (audiobuf) {
+    free(audiobuf);
+    audiobuf = NULL;
+  }
+  if (cfg_test) {
+    free(cfg_test);
+    cfg_test = NULL;
+  }
 
   if (ret) {
     RKADK_LOGE("Player stop failed(%d)", ret);
