@@ -128,7 +128,8 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
               (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
           stData.u32DataLen = stFrame.pstPack->u32Len;
           stData.u32CamId = pHandle->u32CamId;
-          pHandle->pDataRecvFn(&stData);
+          pHandle->pDataRecvFn(stData.pu8DataBuf, stData.u32DataLen,
+                              stData.u32CamId);
           pHandle->u32PhotoCnt -= 1;
         }
       }
@@ -190,7 +191,8 @@ static void *RKADK_PHOTO_GetThuJpeg(void *params) {
         stData.u32DataLen = ThumbnailPhotoData(pJpegData, JpegLen, stThuFrame, NewPhoto);
         stData.pu8DataBuf = NewPhoto;
         stData.u32CamId = pHandle->u32CamId;
-        pHandle->pDataRecvFn(&stData);
+        pHandle->pDataRecvFn(stData.pu8DataBuf, stData.u32DataLen,
+                              stData.u32CamId);
         pHandle->u32PhotoCnt -= 1;
       }
 

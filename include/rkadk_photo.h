@@ -99,8 +99,8 @@ typedef void (*RKADK_PHOTO_DATA_RECV_EX_FN_PTR)(
     RKADK_PHOTO_RECV_DATA_S *pstData);
 
 /* photo data recv callback */
-typedef void (*RKADK_PHOTO_DATA_RECV_FN_PTR)(
-    RKADK_PHOTO_RECV_DATA_S *pstData);
+typedef void (*RKADK_PHOTO_DATA_RECV_FN_PTR)(RKADK_U8 *pu8DataBuf,
+                          RKADK_U32 u32DataLen, RKADK_U32 u32CamID);
 
 typedef struct {
   RKADK_U32 u32CamID; /** cam id, 0--front 1--rear */

@@ -53,12 +53,13 @@ static void sigterm_handler(int sig) {
   is_quit = true;
 }
 
-static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
+static void PhotoDataRecv(RKADK_U8 *pu8DataBuf,
+                          RKADK_U32 u32DataLen, RKADK_U32 u32CamID) {
   static RKADK_U32 photoId = 0;
   char jpegPath[128];
   FILE *file = NULL;
 
-  if (!pstData) {
+  if (!pu8DataBuf) {
     RKADK_LOGE("Invalid photo data");
     return;
   }
@@ -71,9 +72,9 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
     return;
   }
 
-  RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
+  RKADK_LOGD("save u32CamId[%d] jpeg to %s", u32CamID, jpegPath);
 
-  fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
+  fwrite(pu8DataBuf, 1, u32DataLen, file);
   fclose(file);
 
   photoId++;
