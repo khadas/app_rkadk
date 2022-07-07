@@ -65,6 +65,8 @@ static void SetCommCfg() {
   stParamCommCfg.mic_volume = 70;
   stParamCommCfg.osd = true;
   stParamCommCfg.boot_sound = true;
+  stParamCommCfg.enable_wrap = true;
+  stParamCommCfg.wrap_buf_line = SENSOR_MAX_HEIGHT;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
@@ -259,6 +261,8 @@ static void SetPhotoCfg() {
   stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
   stPhotoCfg.rga_chn = 2;
+  stPhotoCfg.enable_combo = true;
+  stPhotoCfg.combo_venc_chn = 0;
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
@@ -327,6 +331,7 @@ static void SetThumbCfg() {
   stThumbCfg.thumb_width = THUMB_WIDTH;
   stThumbCfg.thumb_height = THUMB_HEIGHT;
   stThumbCfg.venc_chn = THUMB_VENC_CHN;
+  stThumbCfg.vi_chn = THUMB_VI_CHN;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stThumbCfg, g_stThumbCfgMapTable,
                    sizeof(g_stThumbCfgMapTable) /

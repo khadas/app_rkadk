@@ -73,7 +73,7 @@ extern "C" {
 #define THUMB_WIDTH 320
 #define THUMB_HEIGHT 180
 #define THUMB_VENC_CHN 5
-#define THUMB_VI_CHN 1
+#define THUMB_VI_CHN 2
 
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0

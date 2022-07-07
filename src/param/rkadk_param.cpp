@@ -1026,6 +1026,8 @@ static void RKADK_PARAM_Dump() {
   printf("\tmic_volume: %d\n", pstCfg->stCommCfg.mic_volume);
   printf("\tshow osd: %d\n", pstCfg->stCommCfg.osd);
   printf("\tboot_sound: %d\n", pstCfg->stCommCfg.boot_sound);
+  printf("\tenable_wrap: %d\n", pstCfg->stCommCfg.enable_wrap);
+  printf("\twrap_buf_line: %d\n", pstCfg->stCommCfg.wrap_buf_line);
 
   printf("Audio Config\n");
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
@@ -1041,6 +1043,7 @@ static void RKADK_PARAM_Dump() {
   printf("\tthumb_width: %d\n", pstCfg->stThumbCfg.thumb_width);
   printf("\tthumb_height: %d\n", pstCfg->stThumbCfg.thumb_height);
   printf("\tvenc_chn: %d\n", pstCfg->stThumbCfg.venc_chn);
+  printf("\tvi_chn: %d\n", pstCfg->stThumbCfg.vi_chn);
 
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
     printf("Sensor[%d] Config\n", i);
@@ -1126,6 +1129,10 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.venc_chn);
     printf("\t\tsensor[%d] stPhotoCfg rga_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.rga_chn);
+    printf("\t\tsensor[%d] stPhotoCfg enable_combo: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.enable_combo);
+    printf("\t\tsensor[%d] stPhotoCfg combo_venc_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.combo_venc_chn);
 
     printf("\tPreview Config\n");
     printf("\t\tsensor[%d] stStreamCfg width: %d\n", i,
