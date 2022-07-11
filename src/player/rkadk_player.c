@@ -451,6 +451,7 @@ void* CommandThread(void * ptr) {
 
 void *DoPull(void *arg)
 {
+  RKADK_MW_PTR *pPlayer = arg;
   struct audio_config config;
 
   player_audio_info(player_test, &config, -1);
@@ -470,6 +471,7 @@ void *DoPull(void *arg)
     int *ReSmpSampleRate = 0;
 
     if (TestOpenDeviceAo(ctx) != RK_SUCCESS) {
+      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
       return NULL;
     }
 
@@ -482,6 +484,7 @@ void *DoPull(void *arg)
       }
 
       if (TestInitMpiAo(&params[i]) != RK_SUCCESS) {
+        g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
         return NULL;
       }
 
@@ -618,6 +621,7 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   }
   RKADK_MPI_SYS_Exit();
 
+  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
   RKADK_LOGI("Destory Player End...");
   return 0;
 }
@@ -638,6 +642,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
     fin = fopen(cfg_test->target, "r");
 
     if (fin == NULL) {
+      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
       RKADK_LOGE("open %s failed, file %s is NULL", cfg_test->target, cfg_test->target);
       return RKADK_FAILURE;
     }
@@ -661,6 +666,8 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
+  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PREPARED, NULL);
+
   return RKADK_SUCCESS;
 }
 
@@ -678,9 +685,9 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-
+  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STARTED, NULL);
   player_play(player_test, cfg_test);
-  pthread_create(&tid, 0, DoPull, NULL);
+  pthread_create(&tid, 0, DoPull, pPlayer);
 
   while (fin) {
     len = fread(audiobuf, 1, audiobufsize, fin);
@@ -706,7 +713,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     pthread_join(tidReceive[i], RK_NULL);
     DeinitMpiAo(params[i].s32DevId, params[i].s32ChnIndex);
   }
-
+  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_EOF, NULL);
   return RKADK_SUCCESS;
 }
 
@@ -736,10 +743,12 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   }
 
   if (ret) {
+    g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
     RKADK_LOGE("Player stop failed(%d)", ret);
     return ret;
   }
 
+  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
   return ret;
 }
 
