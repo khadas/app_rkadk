@@ -43,8 +43,8 @@ extern "C" {
 #define RKADK_PATH_LEN 128
 
 /* sensor default parameters */
-#define SENSOR_MAX_WIDTH 2688
-#define SENSOR_MAX_HEIGHT 1520
+#define SENSOR_MAX_WIDTH 2560
+#define SENSOR_MAX_HEIGHT 1440
 
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
@@ -59,7 +59,7 @@ extern "C" {
 
 /* video default parameters */
 #define VIDEO_GOP 30
-#define VIDEO_FRAME_RATE 30
+#define VIDEO_FRAME_RATE 25
 #define VIDEO_PROFILE 100
 #define STREAM_VIDEO_WIDTH 1280
 #define STREAM_VIDEO_HEIGHT 720
@@ -76,7 +76,7 @@ extern "C" {
 #define THUMB_WIDTH 320
 #define THUMB_HEIGHT 180
 #define THUMB_VENC_CHN 5
-#define THUMB_VI_CHN 2
+#define THUMB_VI_CHN 1
 
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0

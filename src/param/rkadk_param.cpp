@@ -759,8 +759,8 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
   pstCommCfg->mic_volume = 70;
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
-  pstCommCfg->enable_wrap = true;
-  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT;
+  pstCommCfg->enable_wrap = false;
+  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT / 4;
   RKADK_PARAM_SaveCommCfg(path);
 }
 
@@ -822,7 +822,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   switch (u32ViIndex) {
   case 0:
     memcpy(pstViCfg->device_name, "rkisp_mainpath", strlen("rkisp_mainpath"));
-    pstViCfg->buf_cnt = 4;
+    pstViCfg->buf_cnt = 2;
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -830,7 +830,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
     break;
   case 1:
     memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
-    pstViCfg->buf_cnt = 4;
+    pstViCfg->buf_cnt = 2;
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -838,7 +838,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
     break;
   case 2:
     memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
-    pstViCfg->buf_cnt = 4;
+    pstViCfg->buf_cnt = 2;
     pstViCfg->width = STREAM_VIDEO_WIDTH;
     pstViCfg->height = STREAM_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -933,7 +933,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
   pstRecCfg->file_type = RKADK_MUXER_TYPE_MP4;
   pstRecCfg->pre_record_time = 0;
   pstRecCfg->pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
-  pstRecCfg->lapse_multiple = 30;
+  pstRecCfg->lapse_multiple = VIDEO_FRAME_RATE;
   pstRecCfg->file_num = 1;
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
 }
@@ -949,7 +949,7 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
     pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
     pstPhotoCfg->venc_chn = 2;
     pstPhotoCfg->rga_chn = 2;
-    pstPhotoCfg->enable_combo = 1;
+    pstPhotoCfg->enable_combo = false;
     pstPhotoCfg->combo_venc_chn = 0;
   }
 
