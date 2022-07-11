@@ -1554,12 +1554,14 @@ bool RKADK_MEDIA_CheckIdrFrame(RKADK_CODEC_TYPE_E enCodecType,
 
   switch (enCodecType) {
   case RKADK_CODEC_TYPE_H264:
-    if (uDataType.enH264EType == H264E_NALU_IDRSLICE)
+    if (uDataType.enH264EType == H264E_NALU_IDRSLICE ||
+        uDataType.enH264EType == H264E_NALU_ISLICE)
       bIdr = true;
     break;
 
   case RKADK_CODEC_TYPE_H265:
-    if (uDataType.enH265EType == H265E_NALU_IDRSLICE)
+    if (uDataType.enH265EType == H265E_NALU_IDRSLICE ||
+        uDataType.enH265EType == H265E_NALU_ISLICE)
       bIdr = true;
     break;
 
