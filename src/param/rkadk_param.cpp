@@ -381,6 +381,8 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
                                     AUDIO_BIT_WIDTH, "bit_width");
   change |=
       RKADK_PARAM_CheckCfg(&pstAudioCfg->channels, AUDIO_CHANNEL, "channels");
+  change |=
+      RKADK_PARAM_CheckCfg(&pstAudioCfg->mic_type, AUDIO_MIC_TYPE, "mic_type");
   change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->samplerate, AUDIO_SAMPLE_RATE,
                                  "samplerate");
   change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->samples_per_frame,
@@ -768,6 +770,7 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   memcpy(pstAudioCfg->audio_node, AI_DEVICE_NAME, strlen(AI_DEVICE_NAME));
   pstAudioCfg->bit_width = AUDIO_BIT_WIDTH;
   pstAudioCfg->channels = AUDIO_CHANNEL;
+  pstAudioCfg->mic_type = AUDIO_MIC_TYPE;
   pstAudioCfg->samplerate = AUDIO_SAMPLE_RATE;
   pstAudioCfg->samples_per_frame = AUDIO_FRAME_COUNT;
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
@@ -1033,6 +1036,7 @@ static void RKADK_PARAM_Dump() {
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
   printf("\tbit_width: %d\n", pstCfg->stAudioCfg.bit_width);
   printf("\tchannels: %d\n", pstCfg->stAudioCfg.channels);
+  printf("\tmic_type: %d\n", pstCfg->stAudioCfg.mic_type);
   printf("\tsamplerate: %d\n", pstCfg->stAudioCfg.samplerate);
   printf("\tsamples_per_frame: %d\n", pstCfg->stAudioCfg.samples_per_frame);
   printf("\tbitrate: %d\n", pstCfg->stAudioCfg.bitrate);

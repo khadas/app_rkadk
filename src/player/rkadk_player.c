@@ -193,7 +193,7 @@ RK_S32 TestOpenDeviceAo(TEST_AO_CTX_S *ctx) {
               sizeof(aoAttr.u8CardName), "%s", ctx->chCardName);
   }
 
-  aoAttr.soundCard.channels = ctx->s32DeviceChannel;
+  aoAttr.soundCard.channels = AUDIO_DEVICE_CHANNEL;
   aoAttr.soundCard.sampleRate = ctx->s32SampleRate;
   aoAttr.soundCard.bitWidth = AUDIO_BIT_WIDTH_16;
 
@@ -535,10 +535,10 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
   ctx->s32ChnNum          = 1;
   ctx->s32SampleRate      = AUDIO_SAMPLE_RATE;
   ctx->s32ReSmpSampleRate = 0;
-  ctx->s32DeviceChannel   = AUDIO_CHANNEL;
+  ctx->s32DeviceChannel   = AUDIO_DEVICE_CHANNEL;
   ctx->s32Channel         = 2;
   ctx->s32BitWidth        = AUDIO_BIT_WIDTH;
-  ctx->s32PeriodCount     = 4;
+  ctx->s32PeriodCount     = 2;
   ctx->s32PeriodSize      = AUDIO_FRAME_COUNT;
   ctx->chCardName         = RK_NULL;
   ctx->chCardName         = AI_DEVICE_NAME;

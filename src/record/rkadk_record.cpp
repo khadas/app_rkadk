@@ -343,7 +343,7 @@ static int RKADK_RECORD_CreateAudioChn() {
   memset(&stAiAttr, 0, sizeof(AIO_ATTR_S));
   memcpy(stAiAttr.u8CardName, pstAudioParam->audio_node,
          strlen(pstAudioParam->audio_node));
-  stAiAttr.soundCard.channels = pstAudioParam->channels;
+  stAiAttr.soundCard.channels = AUDIO_DEVICE_CHANNEL;
   stAiAttr.soundCard.sampleRate = pstAudioParam->samplerate;
   stAiAttr.soundCard.bitWidth = pstAudioParam->bit_width;
 
@@ -354,11 +354,12 @@ static int RKADK_RECORD_CreateAudioChn() {
     return -1;
 
   stAiAttr.enSoundmode = soundMode;
-  stAiAttr.u32FrmNum = 4; //default 4
+  stAiAttr.u32FrmNum = 2;
   stAiAttr.u32PtNumPerFrm = pstAudioParam->samples_per_frame;
   stAiAttr.u32EXFlag = 0;
   stAiAttr.u32ChnCnt = pstAudioParam->channels;
-  ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode);
+  ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode,
+                          pstAudioParam->mic_type);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init failed(%d)", ret);
     return ret;

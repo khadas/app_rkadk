@@ -776,7 +776,7 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
   memset(pstAiAttr, 0, sizeof(AIO_ATTR_S));
   memcpy(pstAiAttr->u8CardName, pstAudioParam->audio_node,
          strlen(pstAudioParam->audio_node));
-  pstAiAttr->soundCard.channels = pstAudioParam->channels;
+  pstAiAttr->soundCard.channels = AUDIO_DEVICE_CHANNEL;
   pstAiAttr->soundCard.sampleRate = pstAudioParam->samplerate;
   pstAiAttr->soundCard.bitWidth = pstAudioParam->bit_width;
 
@@ -787,7 +787,7 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
     return -1;
 
   pstAiAttr->enSoundmode = soundMode;
-  // pstAiAttr->u32FrmNum = 4; //default 4
+  pstAiAttr->u32FrmNum = 2;
   pstAiAttr->u32PtNumPerFrm = pstAudioParam->samples_per_frame;
   pstAiAttr->u32EXFlag = 0;
   pstAiAttr->u32ChnCnt = pstAudioParam->channels;
@@ -877,7 +877,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   }
 
   ret = RKADK_MPI_AI_Init(pAudioHandle->stAiChn.s32DevId, pAudioHandle->stAiChn.s32ChnId,
-                          &aiAttr, pstAudioParam->vqe_mode);
+                          &aiAttr, pstAudioParam->vqe_mode, pstAudioParam->mic_type);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile[%x]", ret);
     return ret;

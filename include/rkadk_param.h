@@ -48,7 +48,9 @@ extern "C" {
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
 #define AUDIO_SAMPLE_RATE 16000
+#define AUDIO_DEVICE_CHANNEL 2
 #define AUDIO_CHANNEL 2
+#define AUDIO_MIC_TYPE 0
 #define AUDIO_BIT_REAT 320000
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
@@ -242,6 +244,7 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   char audio_node[RKADK_BUFFER_LEN];
   AUDIO_BIT_WIDTH_E bit_width;
   RKADK_U32 channels;
+  RKADK_U32 mic_type;
   RKADK_U32 samplerate;
   RKADK_U32 samples_per_frame;
   RKADK_U32 bitrate;

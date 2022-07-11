@@ -74,7 +74,8 @@ RKADK_S32 RKADK_MPI_SYS_Exit();
 
 AUDIO_SOUND_MODE_E RKADK_AI_GetSoundMode(RKADK_U32 ch);
 RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
-                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode);
+                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode,
+                            RKADK_U32 micType);
 RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
                               RKADK_VQE_MODE_E enMode);
 

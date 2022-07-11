@@ -100,6 +100,7 @@ static void SetAudioCfg() {
   strcpy(stAudioCfg.audio_node, AI_DEVICE_NAME);
   stAudioCfg.bit_width = AUDIO_BIT_WIDTH;
   stAudioCfg.channels = AUDIO_CHANNEL;
+  stAudioCfg.mic_type = AUDIO_MIC_TYPE;
   stAudioCfg.samplerate = AUDIO_SAMPLE_RATE;
   stAudioCfg.samples_per_frame = AUDIO_FRAME_COUNT;
   stAudioCfg.bitrate = AUDIO_BIT_REAT;

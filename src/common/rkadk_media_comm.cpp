@@ -226,10 +226,12 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
 }
 #endif
 
-RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
-                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode) {
+RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
+                            AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode,
+                            RKADK_U32 micType) {
   int ret = -1;
   RKADK_S32 i;
+  RKADK_U32 s32SetTrackMode = 0;
   AI_CHN_PARAM_S pstParams;
   memset(&pstParams, 0, sizeof(AI_CHN_PARAM_S));
   pstParams.enLoopbackMode = AUDIO_LOOPBACK_NONE;
@@ -274,6 +276,33 @@ RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     if (ret) {
       RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
       goto exit;
+    }
+
+    if (pstAiAttr->u32ChnCnt == 2) {
+      if (micType == 0) {
+        s32SetTrackMode = AUDIO_TRACK_BOTH_LEFT;
+      } else if (micType == 1) {
+        s32SetTrackMode = AUDIO_TRACK_BOTH_RIGHT;
+      } else if (micType == 2) {
+        s32SetTrackMode = AUDIO_TRACK_NORMAL;
+      } else {
+        RKADK_LOGE("AI channel = %d, mic type = %d not support", pstAiAttr->u32ChnCnt, micType);
+      }
+    } else if (pstAiAttr->u32ChnCnt == 1) {
+      if (micType == 0) {
+        s32SetTrackMode = AUDIO_TRACK_FRONT_LEFT;
+      } else if (micType == 1) {
+        s32SetTrackMode = AUDIO_TRACK_FRONT_RIGHT;
+      } else {
+        RKADK_LOGE("AI channel = %d, mic type = %d not support", pstAiAttr->u32ChnCnt, micType);
+      }
+    } else {
+      RKADK_LOGE("AI channel = %d, mic type = %d not support", pstAiAttr->u32ChnCnt, micType);
+    }
+
+    ret = RK_MPI_AI_SetTrackMode(aiDevId, (AUDIO_TRACK_MODE_E)s32SetTrackMode);
+    if (ret) {
+      RKADK_LOGE("AI[%d, %d] mic type[%d] enable failed[%x]", aiDevId, s32AiChnId, micType, ret);
     }
 
 #if 0
