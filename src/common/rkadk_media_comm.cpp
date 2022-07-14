@@ -641,6 +641,27 @@ exit:
   return ret;
 }
 
+RKADK_S32 RKADK_MPI_VI_QueryCameraStatus(RKADK_U32 u32CamId) {
+  int ret;
+  VI_DEV_STATUS_S stDevStatus;
+  memset(&stDevStatus, 0, sizeof(VI_DEV_STATUS_S));
+
+  RKADK_MPI_SYS_Init();
+  ret = RK_MPI_VI_QueryDevStatus(u32CamId, &stDevStatus);
+  if (ret == RK_SUCCESS) {
+    if (stDevStatus.bProbeOk) {
+      RKADK_LOGI("Camera sensor probe success[%x]", ret);
+      return 0;
+    }
+    else {
+      RKADK_LOGI("Camera sensor probe fail[%x]", ret);
+      return -1;
+    }
+  }
+
+  return ret;
+}
+
 RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr) {
   int ret = -1;
