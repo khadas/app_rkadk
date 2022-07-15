@@ -2989,6 +2989,18 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
   case RKADK_PARAM_TYPE_MIRROR:
     *(bool *)pvParam = pstSensorCfg->mirror;
     break;
+  case RKADK_PARAM_TYPE_LDC:
+    *(RKADK_U32 *)pvParam = pstSensorCfg->ldc;
+    break;
+  case RKADK_PARAM_TYPE_ANTIFOG:
+    *(RKADK_U32 *)pvParam = pstSensorCfg->antifog;
+    break;
+  case RKADK_PARAM_TYPE_WDR:
+    *(RKADK_U32 *)pvParam = pstSensorCfg->wdr;
+    break;
+  case RKADK_PARAM_TYPE_HDR:
+    *(RKADK_U32 *)pvParam = pstSensorCfg->hdr;
+    break;
   case RKADK_PARAM_TYPE_REC:
     *(bool *)pvParam = pstSensorCfg->enable_record;
     break;
