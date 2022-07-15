@@ -16,6 +16,9 @@
 static char userdata[PHOTO_USERDATA_MAX_SIZE];
 static int userdata_len;
 
+#define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
+#define RGA_ZOOM_MAX 16
+
 typedef struct {
   uint16_t tag_no; // tag number
   uint16_t format; // data format
@@ -255,7 +258,7 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
       RKADK_LOGE("unbind %d ch venc failed", venc_chn);
   }
 
-  ret = RK_MPI_VI_DisableChn(u32CamId, vi_chn);
+  ret = RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
   if (ret) {
       RKADK_LOGE("RK_MPI_VI_DisableChn %x", ret);
   }
@@ -264,7 +267,7 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
   if (ret) {
       RKADK_LOGE("stop venc thumbnail fail %x", ret);
   }
-  ret = RK_MPI_VENC_DestroyChn(venc_chn);
+  ret = RKADK_MPI_VENC_DeInit(venc_chn);
   if (ret) {
       RKADK_LOGE("RK_MPI_VDEC_DestroyChn fail %x", ret);
   }
@@ -309,4 +312,124 @@ RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb) {
   }
 
   return 0;
+}
+
+RKADK_S32 ThumbnailBuildIn(RKADK_CHAR *pszFileName,
+                            RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  FILE *fd = NULL;
+  int ret = -1;
+  bool bBuildInThm = false;
+  RKADK_U32 u32BoxSize;
+  char boxHeader[THM_BOX_HEADER_LEN] = {0};
+  char largeSize[THM_BOX_HEADER_LEN] = {0};
+
+  fd = fopen(pszFileName, "r+");
+  if (!fd) {
+    RKADK_LOGE("open %s failed", pszFileName);
+    return -1;
+  }
+
+  while (!feof(fd)) {
+    if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+      if (feof(fd)) {
+        RKADK_LOGD("EOF");
+        bBuildInThm = true;
+      } else {
+        RKADK_LOGE("Can't read box header");
+      }
+      break;
+    }
+
+    u32BoxSize = boxHeader[0] << 24 | boxHeader[1] << 16 | boxHeader[2] << 8 |
+                 boxHeader[3];
+
+    if (!u32BoxSize) {
+      if (!boxHeader[4] && !boxHeader[5] && !boxHeader[6] && !boxHeader[7]) {
+        RKADK_LOGE("invalid data, cover!!!");
+
+        if (fseek(fd, -THM_BOX_HEADER_LEN, SEEK_CUR))
+          RKADK_LOGE("seek failed");
+        else
+          bBuildInThm = true;
+      } else {
+        RKADK_LOGE("u32BoxSize = %d, invalid data", u32BoxSize);
+      }
+
+      break;
+    } else if (u32BoxSize == 1) {
+      if (fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+        RKADK_LOGE("read largeSize failed");
+        break;
+      }
+
+      u32BoxSize = (RKADK_U64)largeSize[0] << 56 |
+                   (RKADK_U64)largeSize[1] << 48 |
+                   (RKADK_U64)largeSize[2] << 40 |
+                   (RKADK_U64)largeSize[3] << 32 | largeSize[4] << 24 |
+                   largeSize[5] << 16 | largeSize[6] << 8 | largeSize[7];
+
+      if (fseek(fd, u32BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
+        RKADK_LOGE("largeSize seek failed");
+        break;
+      }
+    } else {
+      if (fseek(fd, u32BoxSize - THM_BOX_HEADER_LEN, SEEK_CUR)) {
+        RKADK_LOGE("seek failed");
+        break;
+      }
+    }
+  }
+
+  if (!bBuildInThm)
+    goto exit;
+
+  // 16: 4bytes width + 4bytes height + 4bytes VirWidth + 4bytes VirHeight
+  u32BoxSize = pstThumbAttr->u32BufSize + THM_BOX_HEADER_LEN + 16;
+  boxHeader[0] = u32BoxSize >> 24;
+  boxHeader[1] = (u32BoxSize & 0x00FF0000) >> 16;
+  boxHeader[2] = (u32BoxSize & 0x0000FF00) >> 8;
+  boxHeader[3] = u32BoxSize & 0x000000FF;
+  boxHeader[4] = 't';
+  boxHeader[5] = 'h';
+  boxHeader[6] = 'm';
+  boxHeader[7] = pstThumbAttr->enType;
+
+  if (fwrite(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
+    RKADK_LOGE("write thm box header failed");
+    goto exit;
+  }
+
+  if (fwrite(&(pstThumbAttr->u32Width), 4, 1, fd) != 1) {
+    RKADK_LOGE("write thm width failed");
+    goto exit;
+  }
+
+  if (fwrite(&(pstThumbAttr->u32Height), 4, 1, fd) != 1) {
+    RKADK_LOGE("write thm height failed");
+    goto exit;
+  }
+
+  if (fwrite(&(pstThumbAttr->u32VirWidth), 4, 1, fd) != 1) {
+    RKADK_LOGE("write thm virtual width failed");
+    goto exit;
+  }
+
+  if (fwrite(&(pstThumbAttr->u32VirHeight), 4, 1, fd) != 1) {
+    RKADK_LOGE("write thm virtual height failed");
+    goto exit;
+  }
+
+  if (fwrite(pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, 1, fd) != 1) {
+    RKADK_LOGE("write thm box body failed");
+    goto exit;
+  }
+
+  ret = 0;
+  RKADK_LOGD("done!");
+
+exit:
+  if (fd)
+    fclose(fd);
+
+  return ret;
 }

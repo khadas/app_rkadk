@@ -15,6 +15,9 @@
  */
 
 #include "rkadk_muxer.h"
+#include "rkadk_media_comm.h"
+#include "rkadk_thumbnail_comm.h"
+#include "rkadk_param.h"
 #include "linux_list.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
@@ -70,6 +73,12 @@ typedef struct {
   struct list_head stVFree;     // video list remain size
   struct list_head stAFree;     // audio list remain size
   struct list_head stProcList;  // process list
+
+  // thumbnail list param;
+  MUXER_BUF_CELL_S stThumbCell[20]; // thumbnail list cache size
+  struct list_head stThumbFree;     // thumbnail list remain size
+  struct list_head stThumbProcList; // thumbnail process list
+
 } MUXER_HANDLE_S;
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -201,6 +210,73 @@ void RKADK_MUXER_ListDropPFrame(MUXER_HANDLE_S *pstMuxerHandle) {
     RKADK_LOGE("drop pframe fail");
 }
 
+// thumbnail list
+static void RKADK_MUXER_ThumbListInit(MUXER_HANDLE_S *pstMuxerHandle) {
+  INIT_LIST_HEAD(&pstMuxerHandle->stThumbFree);
+  INIT_LIST_HEAD(&pstMuxerHandle->stThumbProcList);
+
+  for (unsigned int i = 0; i < ARRAY_SIZE(pstMuxerHandle->stThumbCell); i++) {
+    INIT_LIST_HEAD(&pstMuxerHandle->stThumbCell[i].mark);
+    pstMuxerHandle->stThumbCell[i].pool = &pstMuxerHandle->stThumbFree;
+    list_add_tail(&pstMuxerHandle->stThumbCell[i].mark, &pstMuxerHandle->stThumbFree);
+  }
+}
+
+static void RKADK_MUXER_ThumbListRelease(MUXER_HANDLE_S *pstMuxerHandle) {
+  MUXER_BUF_CELL_S *cell = NULL;
+  MUXER_BUF_CELL_S *cell_n = NULL;
+  int ret = 0;
+
+  list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+    ret = 1;
+    list_del_init(&cell->mark);
+    RKADK_MUXER_CellFree(pstMuxerHandle, cell);
+    break;
+  }
+
+  if (ret)
+    RKADK_LOGI("lose frame");
+}
+
+static void RKADK_MUXER_ThumbCellPush(MUXER_HANDLE_S *pstMuxerHandle,
+                                 MUXER_BUF_CELL_S *one) {
+  int ret = -1;
+  MUXER_BUF_CELL_S *cell = NULL;
+  MUXER_BUF_CELL_S *cell_n = NULL;
+
+  RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
+  do {
+    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+      if (cell->pts > one->pts) {
+        list_add_tail(&one->mark, &cell->mark);
+        ret = 0;
+        break;
+      }
+    }
+    if (ret) {
+      list_add_tail(&one->mark, &pstMuxerHandle->stThumbProcList);
+    }
+  } while (0);
+  RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
+}
+
+static MUXER_BUF_CELL_S *RKADK_MUXER_ThumbCellPop(MUXER_HANDLE_S *pstMuxerHandle) {
+  MUXER_BUF_CELL_S *rst = NULL;
+  MUXER_BUF_CELL_S *cell = NULL;
+  MUXER_BUF_CELL_S *cell_n = NULL;
+
+  RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
+  do {
+    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+      list_del_init(&cell->mark);
+      rst = cell;
+      break;
+    }
+  } while (0);
+  RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
+  return rst;
+}
+
 static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
                                               RKADK_U32 chnId) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
@@ -314,11 +390,44 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
 static FILE *g_output_file = NULL;
 
 static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
+  MUXER_BUF_CELL_S *thumbCell = NULL;
+  RKADK_THUMB_ATTR_S stThumbAttr;
+  int ret;
   if (!pstMuxerHandle->bMuxering)
     return;
 
   // Stop muxer
   rkmuxer_deinit(pstMuxerHandle->muxerId);
+
+  // thumbnail
+  thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
+  if (thumbCell) {
+    memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
+    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
+      RKADK_PARAM_GetThumbCfg();
+    if (!ptsThumbCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+      return;
+    }
+    stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+    stThumbAttr.u32Width = ptsThumbCfg->thumb_width;
+    stThumbAttr.u32Height = ptsThumbCfg->thumb_height;
+    stThumbAttr.u32VirWidth = ptsThumbCfg->thumb_width;
+    stThumbAttr.u32VirHeight = ptsThumbCfg->thumb_height;
+    stThumbAttr.pu8Buf = (RKADK_U8 *)thumbCell->buf;
+    stThumbAttr.u32BufSize = thumbCell->size;
+    RKADK_LOGI("FileName = %s, buf = %p, buf_size = %d",
+    pstMuxerHandle->cFileName, stThumbAttr.pu8Buf, stThumbAttr.u32BufSize);
+    ThumbnailBuildIn(pstMuxerHandle->cFileName,
+                            &stThumbAttr);
+    RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
+  }
+  //requst thumbnai
+  if (pstMuxerHandle->vChnId == 0) {
+    ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
+    if (ret)
+      RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+  }
 
   RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
                            pstMuxerHandle->realDuration);
@@ -627,6 +736,9 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     // Release list
     RKADK_MUXER_ListRelease(pstMuxerHandle);
 
+    // Release thu list
+    RKADK_MUXER_ThumbListRelease(pstMuxerHandle);
+
     free(pstMuxer->pMuxerHandle[i]);
     pstMuxer->pMuxerHandle[i] = NULL;
   }
@@ -736,3 +848,59 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId) {
 
   return bEnable;
 }
+
+RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK_U32 size,
+                                  int64_t pts) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+
+    if (!pstMuxerHandle)
+      continue;
+
+    MUXER_BUF_CELL_S *cell =
+        RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stThumbFree);
+    if (NULL == cell) {
+      RKADK_LOGI("Lose thumbnail data");
+      continue;
+    }
+
+    cell->size = size;
+    cell->buf = (unsigned char *)malloc(cell->size);
+    if (NULL == cell->buf) {
+      RKADK_LOGE("Malloc thumbnail cell buf failed");
+      return -1;
+    }
+    memcpy(cell->buf, buf, cell->size);
+    cell->pts = pts;
+    RKADK_MUXER_ThumbCellPush(pstMuxerHandle, cell);
+  }
+
+  return 0;
+}
+
+RKADK_S32 RKADK_MUXER_CreateThumblList(RKADK_MW_PTR pHandle) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+    RKADK_MUXER_ThumbListInit(pstMuxerHandle);
+  }
+
+  RKADK_LOGI("Create thumbnail list success");
+  return 0;
+}
+

@@ -265,6 +265,11 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf, RKADK_U32 size
  */
 int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts, void *handle);
 
+RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK_U32 size,
+                              int64_t pts);
+
+RKADK_S32 RKADK_MUXER_CreateThumblList(RKADK_MW_PTR pHandle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -332,6 +332,7 @@ static void SetThumbCfg() {
   stThumbCfg.thumb_width = THUMB_WIDTH;
   stThumbCfg.thumb_height = THUMB_HEIGHT;
   stThumbCfg.venc_chn = THUMB_VENC_CHN;
+  stThumbCfg.rec_venc_chn = THUMB_REC_VENC_CHN;
   stThumbCfg.vi_chn = THUMB_VI_CHN;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stThumbCfg, g_stThumbCfgMapTable,

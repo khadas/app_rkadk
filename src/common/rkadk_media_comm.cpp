@@ -1015,6 +1015,12 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
     return NULL;
   }
 
+  //force request I frame and thumbnail
+  if (pstMediaInfo->s32ChnId == 0) {
+    RK_MPI_VENC_RequestIDR(pstMediaInfo->s32ChnId, RK_FALSE);
+    RK_MPI_VENC_ThumbnailRequest(pstMediaInfo->s32ChnId);
+  }
+
   stData.u32ChnId = pstMediaInfo->s32ChnId;
   while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
     ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1000);

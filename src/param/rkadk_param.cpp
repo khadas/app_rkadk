@@ -787,6 +787,7 @@ static void RKADK_PARAM_DefThumbCfg(char *path) {
   pstThumbCfg->thumb_width = THUMB_WIDTH;
   pstThumbCfg->thumb_height = THUMB_HEIGHT;
   pstThumbCfg->venc_chn = THUMB_VENC_CHN;
+  pstThumbCfg->rec_venc_chn = THUMB_REC_VENC_CHN;
   pstThumbCfg->vi_chn = THUMB_VI_CHN;
   RKADK_PARAM_SaveThumbCfg(path);
 }
@@ -1048,6 +1049,7 @@ static void RKADK_PARAM_Dump() {
   printf("\tthumb_width: %d\n", pstCfg->stThumbCfg.thumb_width);
   printf("\tthumb_height: %d\n", pstCfg->stThumbCfg.thumb_height);
   printf("\tvenc_chn: %d\n", pstCfg->stThumbCfg.venc_chn);
+  printf("\trec_venc_chn: %d\n", pstCfg->stThumbCfg.rec_venc_chn);
   printf("\tvi_chn: %d\n", pstCfg->stThumbCfg.vi_chn);
 
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
