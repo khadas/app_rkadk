@@ -17,6 +17,7 @@
 #include "rkadk_common.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_player.h"
 #include "rk_debug.h"
 #include "rk_defines.h"
@@ -558,7 +559,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
   ctx->s32ClrPubAttr      = 0;
   ctx->s32GetPubAttr      = 0;
 
-  RK_MPI_SYS_Init();
+  RKADK_MPI_SYS_Init();
 
   RKADK_LOGI("Create Player[%d, %d] End...", pstPlayCfg->bEnableVideo,
              pstPlayCfg->bEnableAudio);
@@ -615,7 +616,7 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
     RKADK_LOGE("Player destory failed(%d)", ret);
     return ret;
   }
-  RK_MPI_SYS_Exit();
+  RKADK_MPI_SYS_Exit();
 
   RKADK_LOGI("Destory Player End...");
   return 0;
