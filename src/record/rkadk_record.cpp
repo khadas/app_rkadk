@@ -144,13 +144,11 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
       u32DstFrameRateNum = 1;
     else if (u32DstFrameRateNum > pstSensorCfg->framerate)
       u32DstFrameRateNum = pstSensorCfg->framerate;
-
-    u32Gop = pstRecCfg->attribute[index].gop / pstRecCfg->lapse_multiple;
   } else {
     bitrate = pstRecCfg->attribute[index].bitrate;
     u32DstFrameRateNum = pstSensorCfg->framerate;
-    u32Gop = pstRecCfg->attribute[index].gop;
   }
+  u32Gop = pstRecCfg->attribute[index].gop;
 
   pstVencAttr->stRcAttr.enRcMode =
       RKADK_PARAM_GetRcMode(pstRecCfg->attribute[index].rc_mode,
@@ -435,20 +433,56 @@ static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
 
 static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
                                    RKADK_VOID *pHandle) {
+  RKADK_CHECK_POINTER_N(pHandle);
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
+  RKADK_U64 u64LapsePts;
+
+  RKADK_MUXER_HANDLE_S *pstMuxer =
+    (RKADK_MUXER_HANDLE_S *)pHandle;
+
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstMuxer->u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+    return;
+  }
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxer->u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return;
+  }
+
   RKADK_CHAR *data =
       (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
 
   if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE) ||
       (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE)) {
     // RKADK_LOGD("write I frame");
-    RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+      RKADK_U64 u64LapsePts =
+        stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
+      RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+                                stData.stFrame.pstPack->u32Len,
+                                u64LapsePts, 1, pHandle);
+    } else {
+      RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                 stData.stFrame.pstPack->u32Len,
                                 stData.stFrame.pstPack->u64PTS, 1, pHandle);
+    }
   } else {
     // RKADK_LOGD("write P frame");
-    RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+      RKADK_U64 u64LapsePts =
+        stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
+      RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                 stData.stFrame.pstPack->u32Len,
-                                stData.stFrame.pstPack->u64PTS, 0, pHandle);
+                                u64LapsePts, 1, pHandle);
+    } else {
+      RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
+                                  stData.stFrame.pstPack->u32Len,
+                                  stData.stFrame.pstPack->u64PTS, 0, pHandle);
+    }
   }
 }
 
