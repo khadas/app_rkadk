@@ -177,26 +177,21 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
                                         RKADK_RTSP_HANDLE_S *pHandle) {
   int ret = 0;
 
-  if (pHandle->bVencChnMux) {
-    ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_RTSP_VencOutCb,
-                                    (RKADK_VOID *)pHandle);
-  } else {
-    /* ret = RK_MPI_SYS_RegisterOutCbEx(pstVencChn, RKADK_RTSP_VencOutCb,
-                                     (RKADK_VOID *)pHandle); */
-    if (ret) {
-      RKADK_LOGE("Register output callback for VENC[%d] error %d",
-                 pstVencChn->s32ChnId, ret);
-      return ret;
-    }
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+  stRecvParam.s32RecvPicNum = -1;
+  ret = RK_MPI_VENC_StartRecvFrame(pstVencChn->s32ChnId, &stRecvParam);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed = %d", ret);
+    return ret;
   }
 
-    VENC_RECV_PIC_PARAM_S stRecvParam;
-    stRecvParam.s32RecvPicNum = -1;
-    ret = RK_MPI_VENC_StartRecvFrame(pstVencChn->s32ChnId, &stRecvParam);
-    if (ret) {
-      RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed = %d", ret);
-      return ret;
-    }
+  ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_RTSP_VencOutCb,
+                                (RKADK_VOID *)pHandle);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_GetVencBuffer failed = %d", ret);
+    return ret;
+  }
+
 
   return ret;
 }

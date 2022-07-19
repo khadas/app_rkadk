@@ -247,17 +247,17 @@ static RKADK_S32 RKADK_STREAM_VencGetData(RKADK_U32 u32CamId,
                                           STREAM_VIDEO_HANDLE_S *pHandle) {
   int ret = 0;
 
-  ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_STREAM_VencOutCb, pHandle);
-  if (ret) {
-    RKADK_LOGE("RKADK_MEDIA_GetVencBuffer failed[%x]", ret);
-    return ret;
-  }
-
   VENC_RECV_PIC_PARAM_S stRecvParam;
   stRecvParam.s32RecvPicNum = -1;
   ret = RK_MPI_VENC_StartRecvFrame(pstVencChn->s32ChnId, &stRecvParam);
   if (ret) {
     RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
+    return ret;
+  }
+
+  ret = RKADK_MEDIA_GetVencBuffer(pstVencChn, RKADK_STREAM_VencOutCb, pHandle);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_GetVencBuffer failed[%x]", ret);
     return ret;
   }
 
