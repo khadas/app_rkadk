@@ -37,6 +37,7 @@ typedef struct _rkTEST_AENC_CTX_S {
 } TEST_AENC_CTX_S;
 
 TEST_AENC_CTX_S *g_pMP3Ctx;
+static RKADK_S32 u32MP3InitCnt = 0;
 
 RK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
   if (pEncoderAttr == NULL) {
@@ -138,43 +139,47 @@ RK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
 }
 
 RK_S32 RegisterAencMp3(void) {
-  int ret;
-  AENC_ENCODER_S aencCtx;
-  AUDIO_SOUND_MODE_E soundMode;
-  AIO_ATTR_S stAiAttr;
-  AENC_CHN_ATTR_S stAencAttr;
-  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
-  memset(&aencCtx, 0, sizeof(AENC_ENCODER_S));
-  g_pMP3Ctx = (TEST_AENC_CTX_S *)malloc(sizeof(TEST_AENC_CTX_S));
-  memset(g_pMP3Ctx, 0, sizeof(TEST_AENC_CTX_S));
+  if (!u32MP3InitCnt) {
+    int ret;
+    AENC_ENCODER_S aencCtx;
+    AUDIO_SOUND_MODE_E soundMode;
+    AIO_ATTR_S stAiAttr;
+    AENC_CHN_ATTR_S stAencAttr;
+    RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+    memset(&aencCtx, 0, sizeof(AENC_ENCODER_S));
+    g_pMP3Ctx = (TEST_AENC_CTX_S *)malloc(sizeof(TEST_AENC_CTX_S));
+    memset(g_pMP3Ctx, 0, sizeof(TEST_AENC_CTX_S));
 
-  pstAudioParam = RKADK_PARAM_GetAudioCfg();
-  if (!pstAudioParam) {
-    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
-    return -1;
+    pstAudioParam = RKADK_PARAM_GetAudioCfg();
+    if (!pstAudioParam) {
+      RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+      return -1;
+    }
+
+    g_pMP3Ctx->s32Channel = pstAudioParam->channels;
+    g_pMP3Ctx->s32SampleRate = pstAudioParam->samplerate;
+    g_pMP3Ctx->s32NbSamples = pstAudioParam->samples_per_frame;
+    g_pMP3Ctx->s32Format = pstAudioParam->bit_width;
+    g_pMP3Ctx->s32Bitrate = pstAudioParam->bitrate;
+    g_pMP3Ctx->s32ExtCodecHandle = -1;
+
+    aencCtx.enType = RK_AUDIO_ID_MP3;
+    snprintf((RK_CHAR*)(aencCtx.aszName),
+                                sizeof(aencCtx.aszName), "rkaudio");
+    aencCtx.u32MaxFrmLen = 9216;
+    aencCtx.pfnOpenEncoder = RKAduioMp3EncoderOpen;
+    aencCtx.pfnEncodeFrm = RKAduioMp3EncoderEncode;
+    aencCtx.pfnCloseEncoder = RKAduioMp3EncoderClose;
+
+    RK_LOGD("register external aenc(%s)", aencCtx.aszName);
+    ret = RK_MPI_AENC_RegisterEncoder(&g_pMP3Ctx->s32ExtCodecHandle, &aencCtx);
+    if (ret != RK_SUCCESS) {
+      RK_LOGE("aenc %s register decoder fail", aencCtx.aszName, ret);
+      return RK_FAILURE;
+    }
   }
 
-  g_pMP3Ctx->s32Channel = pstAudioParam->channels;
-  g_pMP3Ctx->s32SampleRate = pstAudioParam->samplerate;
-  g_pMP3Ctx->s32NbSamples = pstAudioParam->samples_per_frame;
-  g_pMP3Ctx->s32Format = pstAudioParam->bit_width;
-  g_pMP3Ctx->s32Bitrate = pstAudioParam->bitrate;
-  g_pMP3Ctx->s32ExtCodecHandle = -1;
-
-  aencCtx.enType = RK_AUDIO_ID_MP3;
-  snprintf((RK_CHAR*)(aencCtx.aszName),
-                              sizeof(aencCtx.aszName), "rkaudio");
-  aencCtx.u32MaxFrmLen = 9216;
-  aencCtx.pfnOpenEncoder = RKAduioMp3EncoderOpen;
-  aencCtx.pfnEncodeFrm = RKAduioMp3EncoderEncode;
-  aencCtx.pfnCloseEncoder = RKAduioMp3EncoderClose;
-
-  RK_LOGD("register external aenc(%s)", aencCtx.aszName);
-  ret = RK_MPI_AENC_RegisterEncoder(&g_pMP3Ctx->s32ExtCodecHandle, &aencCtx);
-  if (ret != RK_SUCCESS) {
-    RK_LOGE("aenc %s register decoder fail", aencCtx.aszName, ret);
-    return RK_FAILURE;
-  }
+  u32MP3InitCnt++;
   return RK_SUCCESS;
 }
 
@@ -182,17 +187,22 @@ RK_S32 UnRegisterAencMp3(void) {
   if (g_pMP3Ctx == NULL || g_pMP3Ctx->s32ExtCodecHandle == -1) {
     return RK_SUCCESS;
   }
-  RK_LOGD("unregister external aenc");
-  RK_S32 ret = RK_MPI_AENC_UnRegisterEncoder(g_pMP3Ctx->s32ExtCodecHandle);
-  if (ret != RK_SUCCESS) {
-    RK_LOGE("aenc unregister decoder fail", ret);
-    return RK_FAILURE;
-  }
+  if (0 == u32MP3InitCnt) {
+    return 0;
+  } else if (1 == u32MP3InitCnt) {
+    RK_LOGD("unregister external aenc");
+    RK_S32 ret = RK_MPI_AENC_UnRegisterEncoder(g_pMP3Ctx->s32ExtCodecHandle);
+    if (ret != RK_SUCCESS) {
+      RK_LOGE("aenc unregister decoder fail", ret);
+      return RK_FAILURE;
+    }
 
-  g_pMP3Ctx->s32ExtCodecHandle = -1;
-  if (g_pMP3Ctx) {
-    free(g_pMP3Ctx);
-    g_pMP3Ctx = NULL;
+    g_pMP3Ctx->s32ExtCodecHandle = -1;
+    if (g_pMP3Ctx) {
+      free(g_pMP3Ctx);
+      g_pMP3Ctx = NULL;
+    }
   }
+  u32MP3InitCnt--;
   return RK_SUCCESS;
 }
