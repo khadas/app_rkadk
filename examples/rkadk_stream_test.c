@@ -233,16 +233,7 @@ static int AudioTest(RKADK_CODEC_TYPE_E enCodecType) {
   }
 
   RKADK_STREAM_AencRegisterCallback(enCodecType, AencDataCb);
-
-  if (enCodecType == RKADK_CODEC_TYPE_PCM) {
-    g_pcm_file = fopen("/data/ai.pcm", "w");
-    if (!g_pcm_file) {
-      RKADK_LOGE("open /data/ai.pcm file failed, exit");
-      return -1;
-    }
-
-    RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_PCM, PcmDataCb);
-  }
+  RKADK_STREAM_AencRegisterCallback(RKADK_CODEC_TYPE_PCM, PcmDataCb);
 
   ret = RKADK_STREAM_AencStart();
   if (ret) {
