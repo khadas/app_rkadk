@@ -143,7 +143,7 @@ void QueryAoFlowGraphStat(AUDIO_DEV aoDevId, AO_CHN aoChn) {
     RK_LOGI("total number of channel buffer : %d", pstStat.u32ChnTotalNum);
     RK_LOGI("free number of channel buffer : %d", pstStat.u32ChnFreeNum);
     RK_LOGI("busy number of channel buffer : %d", pstStat.u32ChnBusyNum);
-}
+  }
 }
 
 static AUDIO_SOUND_MODE_E FindSoundMode(RK_S32 ch) {
@@ -340,7 +340,6 @@ void* SendDataThread(void * ptr) {
         RK_LOGI("eof");
         break;
     }
-    usleep(10);
   }
 
 __EXIT:
@@ -368,7 +367,6 @@ void* CommandThread(void * ptr) {
   if (params->s32SetTrackMode) {
     RK_LOGI("test info : set track mode = %d", params->s32SetTrackMode);
     RK_MPI_AO_SetTrackMode(params->s32DevId, (AUDIO_TRACK_MODE_E)params->s32SetTrackMode);
-    params->s32SetTrackMode = 0;
   }
 
   if (params->s32GetVolume) {
@@ -463,12 +461,11 @@ void *DoPull(void *arg)
   if (ctx->s32Channel <= 0
   || ctx->s32ReSmpSampleRate <= 0)
   {
-    printf("AO create failed\n");
+    RKADK_LOGE("AO create failed");
     return NULL;
   }
 
-  if(firstframe == 0)
-  {
+  if (firstframe == 0) {
     firstframe++;
     int *ReSmpSampleRate = 0;
 
@@ -477,17 +474,19 @@ void *DoPull(void *arg)
     }
 
     for (int i = 0; i < ctx->s32ChnNum; i++) {
-    memcpy(&(params[i]), ctx, sizeof(TEST_AO_CTX_S));
-    params[i].s32ChnIndex = i;
+      memcpy(&(params[i]), ctx, sizeof(TEST_AO_CTX_S));
+      params[i].s32ChnIndex = i;
 
-    if (USE_AO_MIXER) {
-      TestSetAoChannelMode(params[i].s32DevId, params[i].s32ChnIndex);
-    }
+      if (USE_AO_MIXER) {
+        TestSetAoChannelMode(params[i].s32DevId, params[i].s32ChnIndex);
+      }
 
-    TestInitMpiAo(&params[i]);
+      if (TestInitMpiAo(&params[i]) != RK_SUCCESS) {
+        return NULL;
+      }
 
-    pthread_create(&tidSend[i], RK_NULL, SendDataThread, (void *)(&params[i]));
-    pthread_create(&tidReceive[i], RK_NULL, CommandThread, (void *)(&params[i]));
+      pthread_create(&tidSend[i], RK_NULL, SendDataThread, (void *)(&params[i]));
+      pthread_create(&tidReceive[i], RK_NULL, CommandThread, (void *)(&params[i]));
     }
   }
 
@@ -584,12 +583,13 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
 
   RKADK_LOGI("Destory Player Start...");
   player_push(player_test, audiobuf, 0);
-  if(fin != NULL) {
+  if (fin != NULL) {
     fclose(fin);
     fin = NULL;
   }
 
   ret = TestCloseDeviceAo(ctx);
+  firstframe = 0;
   if (ret) {
     RKADK_LOGE("Ao destory failed(%d)", ret);
     return ret;
@@ -634,8 +634,16 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 
   cfg_test->target = (char *)pszfilePath;
 
-  if(cfg_test->target != RKADK_NULL)
+  if (cfg_test->target != RKADK_NULL) {
+    fin = fopen(cfg_test->target, "r");
+
+    if (fin == NULL) {
+      RKADK_LOGE("open %s failed, file %s is NULL", cfg_test->target, cfg_test->target);
+      return RKADK_FAILURE;
+    }
+    audiobuf = (char *)malloc(audiobufsize);
     return RKADK_SUCCESS;
+  }
   else {
     RKADK_LOGE("SetDataSource failed");
     return RKADK_FAILURE;
@@ -671,17 +679,6 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
-  if (ctx->s32ChnNum > AO_MAX_CHN_NUM) {
-    RKADK_LOGE("ao chn(%d) > max_chn(%d)", ctx->s32ChnNum, AO_MAX_CHN_NUM);
-    return RKADK_FAILURE;
-  }
-  fin = fopen(cfg_test->target, "r");
-
-  if(fin == NULL) {
-    RKADK_LOGE("open %s failed, file %s is NULL", cfg_test->target, cfg_test->target);
-    return RKADK_FAILURE;
-  }
-  audiobuf = (char *)malloc(audiobufsize);
   player_play(player_test, cfg_test);
   pthread_create(&tid, 0, DoPull, NULL);
 
@@ -689,7 +686,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     len = fread(audiobuf, 1, audiobufsize, fin);
     if (len <= 0) {
       player_push(player_test, audiobuf, 0);
-      if(fin != NULL) {
+      if (fin != NULL) {
         fclose(fin);
         fin = NULL;
       }
@@ -721,7 +718,7 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
   player_push(player_test, audiobuf, 0);
-  if(fin != NULL) {
+  if (fin != NULL) {
     fclose(fin);
     fin = NULL;
   }

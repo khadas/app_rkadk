@@ -220,12 +220,20 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  RKADK_PLAYER_SetDataSource(pPlayer, file);
+  ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+  if (ret) {
+    RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+    return -1;
+  }
 
   if (bVideoEnable)
     RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
 
-  RKADK_PLAYER_Prepare(pPlayer);
+  ret = RKADK_PLAYER_Prepare(pPlayer);
+  if (ret) {
+    RKADK_LOGE("Prepare failed, ret = %d", ret);
+    return -1;
+  }
 
   //RKADK_PLAYER_GetDuration(pPlayer, &duration);
   //RKADK_LOGD("%s: duration = %d", file, duration);
