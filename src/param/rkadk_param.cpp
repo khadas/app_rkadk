@@ -381,8 +381,9 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
                                     AUDIO_BIT_WIDTH, "bit_width");
   change |=
       RKADK_PARAM_CheckCfg(&pstAudioCfg->channels, AUDIO_CHANNEL, "channels");
-  change |=
-      RKADK_PARAM_CheckCfg(&pstAudioCfg->mic_type, AUDIO_MIC_TYPE, "mic_type");
+  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->mic_type,
+                                    RKADK_MIC_TYPE_LEFT, RKADK_MIC_TYPE_BOTH,
+                                    RKADK_MIC_TYPE_LEFT, "mic_type");
   change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->samplerate, AUDIO_SAMPLE_RATE,
                                  "samplerate");
   change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->samples_per_frame,

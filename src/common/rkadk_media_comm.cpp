@@ -279,19 +279,19 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     }
 
     if (pstAiAttr->u32ChnCnt == 2) {
-      if (micType == 0) {
+      if (micType == RKADK_MIC_TYPE_LEFT) {
         s32SetTrackMode = AUDIO_TRACK_BOTH_LEFT;
-      } else if (micType == 1) {
+      } else if (micType == RKADK_MIC_TYPE_RIGHT) {
         s32SetTrackMode = AUDIO_TRACK_BOTH_RIGHT;
-      } else if (micType == 2) {
+      } else if (micType == RKADK_MIC_TYPE_BOTH) {
         s32SetTrackMode = AUDIO_TRACK_NORMAL;
       } else {
         RKADK_LOGE("AI channel = %d, mic type = %d not support", pstAiAttr->u32ChnCnt, micType);
       }
     } else if (pstAiAttr->u32ChnCnt == 1) {
-      if (micType == 0) {
+      if (micType == RKADK_MIC_TYPE_LEFT) {
         s32SetTrackMode = AUDIO_TRACK_FRONT_LEFT;
-      } else if (micType == 1) {
+      } else if (micType == RKADK_MIC_TYPE_RIGHT) {
         s32SetTrackMode = AUDIO_TRACK_FRONT_RIGHT;
       } else {
         RKADK_LOGE("AI channel = %d, mic type = %d not support", pstAiAttr->u32ChnCnt, micType);
