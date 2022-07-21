@@ -1011,11 +1011,8 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
 
   stData.u32ChnId = pstMediaInfo->s32ChnId;
   while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
-    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, -1);
-    if (ret != RK_SUCCESS) {
-      RKADK_LOGE("VENC[%d] RK_MPI_VENC_GetStream failed[%x]",
-                 pstMediaInfo->s32ChnId, ret);
-    } else {
+    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1000);
+    if (ret == RK_SUCCESS) {
       for (int i = 0; i < (int)pstMediaInfo->stGetVencMBAttr.s32GetCnt; i++)
         if (pstMediaInfo->stGetVencMBAttr.cbList[i])
           pstMediaInfo->stGetVencMBAttr.cbList[i](
