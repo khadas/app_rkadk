@@ -457,7 +457,7 @@ void *DoPull(void *arg)
 
   player_audio_info(player_test, &config, -1);
   ctx->s32ReSmpSampleRate = config.sample_rate;
-  ctx->s32Channel = config.channels;
+  ctx->s32Channel = AUDIO_DEVICE_CHANNEL;
   ctx->s32BitWidth = config.bits;
 
   if (ctx->s32Channel <= 0
