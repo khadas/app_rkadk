@@ -456,9 +456,11 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
   RKADK_CHAR *data =
       (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
 
-  if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE) ||
-      (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE)) {
-    // RKADK_LOGD("write I frame");
+  if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE ||
+      stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_IDRSLICE) ||
+      (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE ||
+      stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_IDRSLICE)) {
+    //RKADK_LOGD("write I frame);
     if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
       RKADK_U64 u64LapsePts =
         stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
@@ -477,7 +479,7 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
         stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                 stData.stFrame.pstPack->u32Len,
-                                u64LapsePts, 1, pHandle);
+                                u64LapsePts, 0, pHandle);
     } else {
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                   stData.stFrame.pstPack->u32Len,
