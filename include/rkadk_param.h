@@ -38,6 +38,7 @@ extern "C" {
 #define RKADK_PARAM_VERSION "1.3.1"
 
 #define RKADK_BUFFER_LEN 64
+#define RKADK_VOLUME_LEN 3
 #define RKADK_RC_MODE_LEN 5
 #define RKADK_PATH_LEN 128
 
