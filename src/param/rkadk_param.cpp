@@ -2401,7 +2401,7 @@ static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
   return ret;
 }
 
-static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
+static void RKADK_PARAM_SetMicVolume(bool mute, RKADK_U32 volume) {
   char buffer[RKADK_VOLUME_LEN];
   if (volume < 0 || volume > 100) {
     RKADK_LOGE("Set mic input volume failed. Mic input volume range is [0,100]");
@@ -2410,8 +2410,10 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   volume = (int)(volume * 2.55 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
-  RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
-  RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
+  if (mute != true) {
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
+  }
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
@@ -2446,7 +2448,7 @@ static void RKADK_PARAM_SetVolume() {
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
   RKADK_PARAM_MicMute(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
-  RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
+  RKADK_PARAM_SetMicVolume(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
 
   if (!pstCommCfg->enable_speaker)
     RKADK_PARAM_SetSpeakerVolume(0);
@@ -3293,7 +3295,7 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
 
     pstCommCfg->mic_volume = *(RKADK_U32 *)pvParam;
-    RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
+    RKADK_PARAM_SetMicVolume(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
     break;
   case RKADK_PARAM_TYPE_OSD:
     RKADK_CHECK_EQUAL(pstCommCfg->osd, *(bool *)pvParam, g_stPARAMCtx.mutexLock,
