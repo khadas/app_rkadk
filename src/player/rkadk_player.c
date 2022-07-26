@@ -127,8 +127,7 @@ FILE *fin = NULL;
 
 static RKADK_PLAYER_EVENT_FN g_pfnPlayerCallback = NULL;
 
-void PlayerCallbackTest(player_handle_t self, play_info_t info, void *userdata)
-{
+void PlayerCallbackTest(player_handle_t self, play_info_t info, void *userdata) {
   printf("Playback end\n");
   playback_end = 1;
 }
@@ -307,7 +306,6 @@ void* SendDataThread(void * ptr) {
   RK_S32 size = 0;
   RK_S32 result = 0;
   FILE *file = RK_NULL;
-  pthread_join(tid, NULL);
   RK_LOGI("params->s32ChnIndex : %d", params->s32ChnIndex);
 
   srcData = (RK_U8 *)(calloc(len, sizeof(RK_U8)));
@@ -350,7 +348,6 @@ __EXIT:
 }
 
 void* CommandThread(void * ptr) {
-  pthread_join(tid, NULL);
   TEST_AO_CTX_S *params = (TEST_AO_CTX_S *)(ptr);
 
   {
@@ -449,9 +446,7 @@ void* CommandThread(void * ptr) {
   return RK_NULL;
 }
 
-void *DoPull(void *arg)
-{
-  RKADK_MW_PTR *pPlayer = arg;
+void *DoPull(void *arg) {
   struct audio_config config;
 
   player_audio_info(player_test, &config, -1);
@@ -460,8 +455,7 @@ void *DoPull(void *arg)
   ctx->s32BitWidth = config.bits;
 
   if (ctx->s32Channel <= 0
-  || ctx->s32ReSmpSampleRate <= 0)
-  {
+  || ctx->s32ReSmpSampleRate <= 0) {
     RKADK_LOGE("AO create failed");
     return NULL;
   }
@@ -471,7 +465,7 @@ void *DoPull(void *arg)
     int *ReSmpSampleRate = 0;
 
     if (TestOpenDeviceAo(ctx) != RK_SUCCESS) {
-      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
+      g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
       return NULL;
     }
 
@@ -484,7 +478,7 @@ void *DoPull(void *arg)
       }
 
       if (TestInitMpiAo(&params[i]) != RK_SUCCESS) {
-        g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
+        g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
         return NULL;
       }
 

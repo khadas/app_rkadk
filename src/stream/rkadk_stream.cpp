@@ -858,7 +858,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   }
 
   pstAudioParam->codec_type = enCodecType;
-  RKADK_LOGE("pstAudioParam enCodecType = %d", enCodecType);
+  RKADK_LOGD("pstAudioParam enCodecType = %d", enCodecType);
   if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
     ret = RegisterAencMp3();
     if (ret) {
