@@ -672,6 +672,10 @@ RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
   return RKADK_FAILURE;
 }
 
+void *EventEOF(void *arg) {
+  g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_EOF, NULL);
+}
+
 RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
   int push_ret = 0;
@@ -707,7 +711,13 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     pthread_join(tidReceive[i], RK_NULL);
     DeinitMpiAo(params[i].s32DevId, params[i].s32ChnIndex);
   }
-  g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_EOF, NULL);
+
+  pthread_attr_t tidattr;
+  pthread_t tideof;
+  pthread_attr_init(&tidattr);
+  pthread_attr_setdetachstate(&tidattr, PTHREAD_CREATE_DETACHED);
+  pthread_create(&tideof, &tidattr, &EventEOF, pPlayer);
+  pthread_attr_destroy (&tidattr);
   return RKADK_SUCCESS;
 }
 
