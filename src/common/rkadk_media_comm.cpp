@@ -596,7 +596,7 @@ exit:
 
 RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
   int ret = -1;
-  RKADK_S32 i;
+  RKADK_S32 i, j;
   RKADK_S32 s32InitCnt;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.viMutex);
@@ -620,10 +620,19 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
       goto exit;
     }
 
-    ret = RK_MPI_VI_DisableDev(u32CamId);
-    if (ret) {
-      RKADK_LOGE("RK_MPI_VI_DisableDev[%d] failed[%x]", u32CamId, ret);
-      goto exit;
+    for (int j = 0; j < RKADK_MEDIA_VI_MAX_CNT; j++) {
+      if (j == i)
+        continue;
+      if (g_stMediaCtx.stViInfo[j].s32InitCnt > 0)
+        break;
+    }
+
+    if (j == RKADK_MEDIA_VI_MAX_CNT) {
+      ret = RK_MPI_VI_DisableDev(u32CamId);
+      if (ret) {
+        RKADK_LOGE("RK_MPI_VI_DisableDev[%d] failed[%x]", u32CamId, ret);
+        goto exit;
+      }
     }
 
     g_stMediaCtx.stViInfo[i].bUsed = false;
