@@ -658,15 +658,12 @@ RKADK_S32 RKADK_MPI_VI_QueryCameraStatus(RKADK_U32 u32CamId) {
   RKADK_MPI_SYS_Init();
   ret = RK_MPI_VI_QueryDevStatus(u32CamId, &stDevStatus);
   if (ret == RK_SUCCESS) {
-    if (stDevStatus.bProbeOk) {
-      RKADK_LOGI("Camera sensor probe success[%x]", ret);
-      return 0;
-    }
-    else {
-      RKADK_LOGI("Camera sensor probe fail[%x]", ret);
+    if (!stDevStatus.bProbeOk) {
+      RKADK_LOGE("Camera sensor probe fail");
       return -1;
     }
   }
+  RKADK_MPI_SYS_Exit();
 
   return ret;
 }
