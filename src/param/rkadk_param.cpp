@@ -3140,6 +3140,30 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
     pstSensorCfg->mirror = *(bool *)pvParam;
     bSaveSensorCfg = true;
     break;
+  case RKADK_PARAM_TYPE_LDC:
+    RKADK_CHECK_EQUAL(pstSensorCfg->ldc, *(RKADK_U32 *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstSensorCfg->ldc = *(RKADK_U32 *)pvParam;
+    bSaveSensorCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_ANTIFOG:
+    RKADK_CHECK_EQUAL(pstSensorCfg->antifog, *(RKADK_U32 *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstSensorCfg->antifog = *(RKADK_U32 *)pvParam;
+    bSaveSensorCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_WDR:
+    RKADK_CHECK_EQUAL(pstSensorCfg->wdr, *(RKADK_U32 *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstSensorCfg->wdr = *(RKADK_U32 *)pvParam;
+    bSaveSensorCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_HDR:
+    RKADK_CHECK_EQUAL(pstSensorCfg->hdr, *(RKADK_U32 *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstSensorCfg->hdr = *(RKADK_U32 *)pvParam;
+    bSaveSensorCfg = true;
+    break;
   case RKADK_PARAM_TYPE_REC:
     RKADK_CHECK_EQUAL(pstSensorCfg->enable_record, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
