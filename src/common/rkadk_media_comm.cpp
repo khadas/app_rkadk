@@ -80,10 +80,15 @@ typedef struct {
 
 static bool g_bMediaCtxInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
+static pthread_mutex_t g_mediaMutex = PTHREAD_MUTEX_INITIALIZER;
+static bool g_bVpssGrpInit[VPSS_MAX_GRP_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
-  if (g_bMediaCtxInit)
+  RKADK_MUTEX_LOCK(g_mediaMutex);
+  if (g_bMediaCtxInit) {
+    RKADK_MUTEX_UNLOCK(g_mediaMutex);
     return;
+  }
 
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -93,6 +98,57 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.rgaMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
   g_bMediaCtxInit = true;
+  RKADK_MUTEX_UNLOCK(g_mediaMutex);
+}
+
+static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp,
+                              VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
+  int ret;
+  if (g_bVpssGrpInit[s32VpssGrp])
+    return 0;
+
+  ret = RK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
+  if (ret) {
+    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+    RKADK_LOGE("RK_MPI_VPSS_SetChnAttr failed with %#x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VPSS_StartGrp(s32VpssGrp);
+  if (ret) {
+    RK_MPI_VPSS_StopGrp(s32VpssGrp);
+    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+    RKADK_LOGE("RK_MPI_VPSS_StartGrp failed with %#x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VPSS_ResetGrp(s32VpssGrp);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VPSS_ResetGrp failed with %#x", ret);
+  }
+
+  g_bVpssGrpInit[s32VpssGrp] = true;
+  return 0;
+}
+
+static RKADK_U32 RKADK_MPI_VPSS_DestroyGrp(RKADK_S32 s32VpssGrp) {
+  int ret;
+  if (!g_bVpssGrpInit[s32VpssGrp])
+    return 0;
+
+  ret = RK_MPI_VPSS_StopGrp(s32VpssGrp);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VPSS_StopGrp[%d] failed[%x]", s32VpssGrp, ret);
+  }
+
+  ret = RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
+    return ret;
+  }
+
+  g_bVpssGrpInit[s32VpssGrp] = false;
+  return 0;
 }
 
 static RKADK_U32 RKADK_MEDIA_FindUsableIdx(RKADK_MEDIA_INFO_S *pstInfo,
@@ -117,7 +173,8 @@ static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
       continue;
 
     if (!strcmp(mode, "VI_INIT") || !strcmp(mode, "VI_DEINIT") ||
-        !strcmp(mode, "AI_INIT") || !strcmp(mode, "AI_DEINIT"))
+        !strcmp(mode, "AI_INIT") || !strcmp(mode, "AI_DEINIT") ||
+        !strcmp(mode, "VPSS_INIT") || !strcmp(mode, "VPSS_DEINIT"))
       bMatch =
           pstInfo[i].s32ChnId == s32ChnId && pstInfo[i].s32DevId == s32DevId;
     else
@@ -621,10 +678,12 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
     }
 
     for (j = 0; j < RKADK_MEDIA_VI_MAX_CNT; j++) {
-      if (j == i)
-        continue;
-      if (g_stMediaCtx.stViInfo[j].s32InitCnt > 0)
-        break;
+      if (g_stMediaCtx.stViInfo[j].s32DevId == u32CamId) {
+        if (j == i)
+          continue;
+        if (g_stMediaCtx.stViInfo[j].s32InitCnt > 0)
+          break;
+      }
     }
 
     if (j == RKADK_MEDIA_VI_MAX_CNT) {
@@ -873,6 +932,121 @@ exit:
   return ret;
 }
 #endif
+
+RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
+                              VPSS_GRP_ATTR_S *pstVpssGrpAttr,
+                              VPSS_CHN_ATTR_S *pstVpssChnAttr) {
+  int ret = -1;
+  RKADK_S32 i;
+
+  RKADK_CHECK_POINTER(pstVpssGrpAttr, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstVpssChnAttr, RKADK_FAILURE);
+  RKADK_MEDIA_CtxInit();
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+                         s32VpssGrp, s32VpssChn, "VPSS_INIT");
+  if (i < 0) {
+    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+                                  "VPSS_INIT");
+    if (i < 0) {
+      RKADK_LOGE("not find usable index");
+      goto exit;
+    }
+  }
+
+  if (0 == g_stMediaCtx.stRgaInfo[i].s32InitCnt) {
+    ret = RKADK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_VPSS_CreateGrp failed [%d]", ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_VPSS_SetChnAttr(s32VpssGrp, s32VpssChn, pstVpssChnAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_SetChnAttr failed with %#x", ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_VPSS_EnableChn(s32VpssGrp, s32VpssChn);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_EnableChn failed with %#x", ret);
+      goto exit;
+    }
+
+    g_stMediaCtx.stRgaInfo[i].bUsed = true;
+    g_stMediaCtx.stRgaInfo[i].s32DevId = s32VpssGrp;
+    g_stMediaCtx.stRgaInfo[i].s32ChnId = s32VpssChn;
+  }
+
+  g_stMediaCtx.stRgaInfo[i].s32InitCnt++;
+  RKADK_LOGD("VpssGrp[%d] VpssChn[%d], InitCnt[%d]", s32VpssGrp, s32VpssChn,
+             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  return ret;
+}
+
+RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
+  int ret = -1;
+  RKADK_S32 i, j;
+  RKADK_S32 s32InitCnt;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+                         s32VpssGrp, s32VpssChn, "VPSS_DEINIT");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32VpssChn);
+    goto exit;
+  }
+
+  s32InitCnt = g_stMediaCtx.stRgaInfo[i].s32InitCnt;
+  if (0 == s32InitCnt) {
+    RKADK_LOGD("VpssChn[%d] has already deinit", s32VpssChn);
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+    return 0;
+  } else if (1 == s32InitCnt) {
+    ret = RK_MPI_VPSS_DisableChn(s32VpssGrp, s32VpssChn);
+    if (ret) {
+      RKADK_LOGE("Destory VPSS[%d] failed[%x]", s32VpssChn, ret);
+      goto exit;
+    }
+
+    for (j = 0; j < RKADK_MEDIA_RGA_MAX_CNT; j++) {
+      if (g_stMediaCtx.stRgaInfo[j].s32DevId == s32VpssGrp) {
+        if (j == i)
+          continue;
+        if (g_stMediaCtx.stRgaInfo[j].s32InitCnt > 0)
+          break;
+      }
+    }
+
+    if (j == RKADK_MEDIA_RGA_MAX_CNT) {
+      ret = RKADK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+      if (ret) {
+        RKADK_LOGE("RKADK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
+        goto exit;
+      }
+    }
+
+    g_stMediaCtx.stRgaInfo[i].bUsed = false;
+    g_stMediaCtx.stRgaInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stRgaInfo[i].s32DevId = -1;
+  }
+
+  g_stMediaCtx.stRgaInfo[i].s32InitCnt--;
+  RKADK_LOGD("VpssGrp[%d] VpssChn[%d], InitCnt[%d]", s32VpssGrp, s32VpssChn,
+             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  return ret;
+}
 
 static void *RKADK_MEDIA_GetAencMb(void *params) {
   int ret;

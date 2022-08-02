@@ -94,6 +94,11 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr);
 RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId);
 
+RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
+                              VPSS_GRP_ATTR_S *pstVpssGrpAttr, VPSS_CHN_ATTR_S *pstVpssChnAttr);
+
+RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn);
+
 #if 0
 RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr);
 
