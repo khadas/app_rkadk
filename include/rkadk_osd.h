@@ -47,6 +47,9 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_OSD_Update(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr);
 
+RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
+      RKADK_STREAM_TYPE_E enStrmType, RKADK_OSD_STREAM_ATTR_S *pstOsdStreamAttr);
+
 #ifdef __cplusplus
 }
 #endif

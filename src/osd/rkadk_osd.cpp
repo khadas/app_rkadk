@@ -93,15 +93,40 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
+
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       RKADK_PARAM_GetPhotoCfg(u32CamId);
+  if (!pstPhotoCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
+  if (!pstLiveCfg) {
+    RKADK_LOGE("Live RKADK_PARAM_GetStreamCfg Live failed");
+    return -1;
+  }
+
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
       u32CamId, RKADK_STREAM_TYPE_PREVIEW);
+  if (!pstStreamCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
+    return -1;
+  }
 
   memset(&stMppChn, 0, sizeof(MPP_CHN_S));
   stMppChn.enModId = RK_ID_VENC;
@@ -124,7 +149,7 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
       stMppChn.s32ChnId = pstLiveCfg->attribute.venc_chn;
       break;
     default:
-      RKADK_LOGE("unsuport other stream type");
+      RKADK_LOGE("Unsuport other stream type");
       break;
   }
 
@@ -138,9 +163,9 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32Y = pstOsdStreamAttr->Origin_Y;
 
   ret = RK_MPI_RGN_AttachToChn(RgnHandle, &stMppChn, &stRgnChnAttr);
-    if (RK_SUCCESS != ret) {
-      RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
-      return ret;
+  if (RK_SUCCESS != ret) {
+    RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
+    return ret;
   }
 
   return 0;
@@ -153,15 +178,40 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
+
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       RKADK_PARAM_GetPhotoCfg(u32CamId);
+  if (!pstPhotoCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    return -1;
+  }
+
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
+  if (!pstLiveCfg) {
+    RKADK_LOGE("Live RKADK_PARAM_GetStreamCfg Live failed");
+    return -1;
+  }
+
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
       u32CamId, RKADK_STREAM_TYPE_PREVIEW);
+  if (!pstStreamCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
+    return -1;
+  }
 
   memset(&stMppChn, 0, sizeof(MPP_CHN_S));
   stMppChn.enModId = RK_ID_VENC;
@@ -184,14 +234,14 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
       stMppChn.s32ChnId = pstLiveCfg->attribute.venc_chn;
       break;
     default:
-      RKADK_LOGE("unsuport other stream type");
+      RKADK_LOGE("Unsuport other stream type");
       break;
   }
 
   ret = RK_MPI_RGN_DetachFromChn(RgnHandle, &stMppChn);
-    if (RK_SUCCESS != ret) {
-      RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
-      return ret;
+  if (RK_SUCCESS != ret) {
+    RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
+    return ret;
   }
 
   return 0;
@@ -211,10 +261,99 @@ RKADK_S32 RKADK_OSD_Update(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
 
   ret = RK_MPI_RGN_SetBitMap(RgnHandle, &stBitmap);
   if (0 != ret) {
-      RK_LOGE("RK_MPI_RGN_SetBitMap failed with %#x!", ret);
-      return ret;
+    RK_LOGE("RK_MPI_RGN_SetBitMap failed with %#x!", ret);
+    return ret;
   }
 
   return 0;
 }
 
+RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
+      RKADK_STREAM_TYPE_E enStrmType, RKADK_OSD_STREAM_ATTR_S *pstOsdStreamAttr) {
+  int ret;
+  RGN_HANDLE RgnHandle = 0;
+  RGN_CHN_ATTR_S stRgnChnAttr;
+  MPP_CHN_S stMppChn;
+  RgnHandle = u32OsdId;
+
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
+
+  RKADK_PARAM_REC_CFG_S *pstRecCfg =
+      RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      RKADK_PARAM_GetPhotoCfg(u32CamId);
+  if (!pstPhotoCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    return -1;
+  }
+
+  RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
+      RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
+  if (!pstLiveCfg) {
+    RKADK_LOGE("Live RKADK_PARAM_GetStreamCfg Live failed");
+    return -1;
+  }
+
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
+      u32CamId, RKADK_STREAM_TYPE_PREVIEW);
+  if (!pstStreamCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
+    return -1;
+  }
+
+  memset(&stMppChn, 0, sizeof(MPP_CHN_S));
+  stMppChn.enModId = RK_ID_VENC;
+  stMppChn.s32DevId = 0;
+
+  switch (enStrmType) {
+    case RKADK_STREAM_TYPE_VIDEO_MAIN:
+      stMppChn.s32ChnId = pstRecCfg->attribute[0].venc_chn;
+      break;
+    case RKADK_STREAM_TYPE_VIDEO_SUB:
+      stMppChn.s32ChnId = pstRecCfg->attribute[1].venc_chn;
+      break;
+    case RKADK_STREAM_TYPE_SNAP:
+      stMppChn.s32ChnId = pstPhotoCfg->venc_chn;
+      break;
+    case RKADK_STREAM_TYPE_PREVIEW:
+      stMppChn.s32ChnId = pstStreamCfg->attribute.venc_chn;
+      break;
+    case RKADK_STREAM_TYPE_LIVE:
+      stMppChn.s32ChnId = pstLiveCfg->attribute.venc_chn;
+      break;
+    default:
+      RKADK_LOGE("Unsuport other stream type");
+      break;
+  }
+
+  ret = RK_MPI_RGN_GetDisplayAttr(RgnHandle, &stMppChn, &stRgnChnAttr);
+  if (RK_SUCCESS != ret) {
+    RKADK_LOGE("RK_MPI_RGN_GetDisplayAttr (%d)) failed with %#x!", RgnHandle, ret);
+    return ret;
+  }
+
+  if (pstCommCfg->osd)
+    stRgnChnAttr.bShow = RK_TRUE;
+  else
+    stRgnChnAttr.bShow = RK_FALSE;
+
+  stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32X = pstOsdStreamAttr->Origin_X;
+  stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32Y = pstOsdStreamAttr->Origin_Y;
+
+  ret = RK_MPI_RGN_SetDisplayAttr(RgnHandle, &stMppChn, &stRgnChnAttr);
+  if (RK_SUCCESS != ret) {
+    RKADK_LOGE("RK_MPI_RGN_SetDisplayAttr (%d)) failed with %#x!", RgnHandle, ret);
+    return ret;
+  }
+
+  return 0;
+}
