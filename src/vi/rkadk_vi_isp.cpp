@@ -1075,4 +1075,15 @@ int RKADK_VI_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   return ret;
 }
 
+int RKADK_VI_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx) {
+  int ret = 0;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
+
+  pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
+  *ppAiqCtx = (RKADK_MW_PTR)gstIspHandle[u32CamId].pstAiqCtx;
+  pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
+  return ret;
+}
 #endif

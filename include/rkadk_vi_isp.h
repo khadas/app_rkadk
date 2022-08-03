@@ -94,6 +94,8 @@ int RKADK_VI_ISP_GET_MirrorFlip(RKADK_U32 u32CamId, bool *mirror, bool *flip);
 
 int RKADK_VI_ISP_SET_BypassStreamRotation(RKADK_U32 u32CamId, int S32Rotation);
 int RKADK_VI_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect);
+
+int RKADK_VI_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx);
 #endif
 
 #ifdef __cplusplus
