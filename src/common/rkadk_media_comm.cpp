@@ -880,11 +880,8 @@ static void *RKADK_MEDIA_GetAencMb(void *params) {
   }
 
   while (pstMediaInfo->stGetAencMBAttr.bGetBuffer) {
-    ret = RK_MPI_AENC_GetStream(pstMediaInfo->s32ChnId, &stFrame, -1);
-    if (ret != RK_SUCCESS) {
-      RKADK_LOGE("AENC[%d] RK_MPI_AENC_GetStream failed[%x]",
-                 pstMediaInfo->s32ChnId, ret);
-    } else {
+    ret = RK_MPI_AENC_GetStream(pstMediaInfo->s32ChnId, &stFrame, 1000);
+    if (ret == RK_SUCCESS) {
       for (int i = 0; i < (int)pstMediaInfo->stGetAencMBAttr.s32GetCnt; i++)
         if (pstMediaInfo->stGetAencMBAttr.cbList[i])
           pstMediaInfo->stGetAencMBAttr.cbList[i](

@@ -75,6 +75,7 @@ typedef struct {
   struct list_head stProcList;  // process list
 
   // thumbnail list param;
+  bool bEnableThumb;
   MUXER_BUF_CELL_S stThumbCell[20]; // thumbnail list cache size
   struct list_head stThumbFree;     // thumbnail list remain size
   struct list_head stThumbProcList; // thumbnail process list
@@ -220,6 +221,7 @@ static void RKADK_MUXER_ThumbListInit(MUXER_HANDLE_S *pstMuxerHandle) {
     pstMuxerHandle->stThumbCell[i].pool = &pstMuxerHandle->stThumbFree;
     list_add_tail(&pstMuxerHandle->stThumbCell[i].mark, &pstMuxerHandle->stThumbFree);
   }
+  pstMuxerHandle->bEnableThumb = true;
 }
 
 static void RKADK_MUXER_ThumbListRelease(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -233,7 +235,7 @@ static void RKADK_MUXER_ThumbListRelease(MUXER_HANDLE_S *pstMuxerHandle) {
     RKADK_MUXER_CellFree(pstMuxerHandle, cell);
     break;
   }
-
+  pstMuxerHandle->bEnableThumb = false;
   if (ret)
     RKADK_LOGI("lose frame");
 }
@@ -400,33 +402,35 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   rkmuxer_deinit(pstMuxerHandle->muxerId);
 
   // thumbnail
-  thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
-  if (thumbCell) {
-    memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
-    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
-      RKADK_PARAM_GetThumbCfg();
-    if (!ptsThumbCfg) {
-      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return;
+  if (pstMuxerHandle->bEnableThumb) {
+    thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
+    if (thumbCell) {
+      memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
+      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
+        RKADK_PARAM_GetThumbCfg();
+      if (!ptsThumbCfg) {
+        RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+        return;
+      }
+      stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+      stThumbAttr.u32Width = ptsThumbCfg->thumb_width;
+      stThumbAttr.u32Height = ptsThumbCfg->thumb_height;
+      stThumbAttr.u32VirWidth = ptsThumbCfg->thumb_width;
+      stThumbAttr.u32VirHeight = ptsThumbCfg->thumb_height;
+      stThumbAttr.pu8Buf = (RKADK_U8 *)thumbCell->buf;
+      stThumbAttr.u32BufSize = thumbCell->size;
+      RKADK_LOGI("FileName = %s, buf = %p, buf_size = %d",
+      pstMuxerHandle->cFileName, stThumbAttr.pu8Buf, stThumbAttr.u32BufSize);
+      ThumbnailBuildIn(pstMuxerHandle->cFileName,
+                              &stThumbAttr);
+      RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
     }
-    stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
-    stThumbAttr.u32Width = ptsThumbCfg->thumb_width;
-    stThumbAttr.u32Height = ptsThumbCfg->thumb_height;
-    stThumbAttr.u32VirWidth = ptsThumbCfg->thumb_width;
-    stThumbAttr.u32VirHeight = ptsThumbCfg->thumb_height;
-    stThumbAttr.pu8Buf = (RKADK_U8 *)thumbCell->buf;
-    stThumbAttr.u32BufSize = thumbCell->size;
-    RKADK_LOGI("FileName = %s, buf = %p, buf_size = %d",
-    pstMuxerHandle->cFileName, stThumbAttr.pu8Buf, stThumbAttr.u32BufSize);
-    ThumbnailBuildIn(pstMuxerHandle->cFileName,
-                            &stThumbAttr);
-    RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
-  }
-  //requst thumbnai
-  if (pstMuxerHandle->vChnId == 0) {
-    ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
-    if (ret)
-      RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+    //requst thumbnai
+    if (pstMuxerHandle->vChnId == 0) {
+      ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
+      if (ret)
+        RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+    }
   }
 
   RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
@@ -737,7 +741,8 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     RKADK_MUXER_ListRelease(pstMuxerHandle);
 
     // Release thu list
-    RKADK_MUXER_ThumbListRelease(pstMuxerHandle);
+    if (pstMuxerHandle->bEnableThumb)
+      RKADK_MUXER_ThumbListRelease(pstMuxerHandle);
 
     free(pstMuxer->pMuxerHandle[i]);
     pstMuxer->pMuxerHandle[i] = NULL;
