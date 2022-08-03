@@ -235,7 +235,7 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
   AI_CHN_PARAM_S pstParams;
   memset(&pstParams, 0, sizeof(AI_CHN_PARAM_S));
   pstParams.enLoopbackMode = AUDIO_LOOPBACK_NONE;
-  pstParams.s32UsrFrmDepth = 8;
+  pstParams.s32UsrFrmDepth = -1;
 
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
   RKADK_MEDIA_CtxInit();
