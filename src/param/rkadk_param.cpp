@@ -823,7 +823,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   switch (u32ViIndex) {
   case 0:
     memcpy(pstViCfg->device_name, "rkisp_mainpath", strlen("rkisp_mainpath"));
-    pstViCfg->buf_cnt = 2;
+    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -831,7 +831,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
     break;
   case 1:
     memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
-    pstViCfg->buf_cnt = 2;
+    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -839,7 +839,7 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
     break;
   case 2:
     memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
-    pstViCfg->buf_cnt = 2;
+    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
     pstViCfg->width = STREAM_VIDEO_WIDTH;
     pstViCfg->height = STREAM_VIDEO_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
@@ -1741,8 +1741,8 @@ static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
         strcat(pstViCfg->module, "|");
         strcat(pstViCfg->module, module);
 
-        if (pstViCfg->buf_cnt < 4)
-          pstViCfg->buf_cnt = 4;
+        if (pstViCfg->buf_cnt < VIDEO_BUFFER_COUNT)
+          pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
       }
       RKADK_PARAM_SaveViCfg(g_stPARAMCtx.sensorPath[s32CamId], index, s32CamId);
       return index;
@@ -1803,8 +1803,8 @@ static RKADK_S32 RKADK_PARAM_FindClosestVi(RKADK_S32 s32CamId,
       strcat(pstViCfg->module, module);
     }
 
-    if (pstViCfg->buf_cnt < 4)
-      pstViCfg->buf_cnt = 4;
+    if (pstViCfg->buf_cnt < VIDEO_BUFFER_COUNT)
+      pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
   }
 
   RKADK_PARAM_SaveViCfg(g_stPARAMCtx.sensorPath[s32CamId], index, s32CamId);
@@ -1837,7 +1837,7 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
                height);
 
     if ((width == pstSensorCfg->max_width) &&
-        (width == pstSensorCfg->max_height)) {
+        (height == pstSensorCfg->max_height)) {
       RKADK_LOGI("rec[0] default VI[0]");
       index = 0;
     } else {
@@ -1947,8 +1947,8 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
   pstViCfg->width = width;
   pstViCfg->height = height;
 
-  if (pstViCfg->buf_cnt < 4)
-    pstViCfg->buf_cnt = 4;
+  if (pstViCfg->buf_cnt < VIDEO_BUFFER_COUNT)
+    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
 
   if (!strcmp(pstViCfg->module, "NONE")) {
     memcpy(pstViCfg->module, module, strlen(module));

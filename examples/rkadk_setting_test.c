@@ -285,7 +285,7 @@ static void SetViCfg() {
   strcpy(stViCfg.device_name, "rkisp_mainpath");
   stViCfg.width = RECORD_VIDEO_WIDTH;
   stViCfg.height = RECORD_VIDEO_HEIGHT;
-  stViCfg.buf_cnt = 2;
+  stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
   RKADK_Struct2Ini(sensorPath, &stViCfg, g_stViCfgMapTable_0,
@@ -296,7 +296,7 @@ static void SetViCfg() {
   strcpy(stViCfg.device_name, "rkisp_selfpath");
   stViCfg.width = RECORD_VIDEO_WIDTH;
   stViCfg.height = RECORD_VIDEO_HEIGHT;
-  stViCfg.buf_cnt = 2;
+  stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
   RKADK_Struct2Ini(sensorPath, &stViCfg, g_stViCfgMapTable_1,
@@ -305,7 +305,7 @@ static void SetViCfg() {
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 2;
   strcpy(stViCfg.device_name, "rkisp_bypasspath");
-  stViCfg.buf_cnt = 2;
+  stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   stViCfg.width = STREAM_VIDEO_WIDTH;
   stViCfg.height = STREAM_VIDEO_HEIGHT;
   strcpy(stViCfg.pix_fmt, "NV12");
@@ -318,7 +318,7 @@ static void SetViCfg() {
   strcpy(stViCfg.device_name, "rkisp_mainpath_4x4sampling");
   stViCfg.width = STREAM_VIDEO_WIDTH;
   stViCfg.height = STREAM_VIDEO_HEIGHT;
-  stViCfg.buf_cnt = 2;
+  stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   strcpy(stViCfg.pix_fmt, "NV12");
   strcpy(stViCfg.module, "NONE");
   RKADK_Struct2Ini(sensorPath, &stViCfg, g_stViCfgMapTable_3,
