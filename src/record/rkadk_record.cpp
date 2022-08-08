@@ -911,6 +911,9 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
 
+  RKADK_MPI_SYS_Init();
+  RKADK_PARAM_Init(NULL, NULL);
+
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
@@ -919,9 +922,6 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
 
   RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
-
-  RKADK_MPI_SYS_Init();
-  RKADK_PARAM_Init(NULL, NULL);
 
   if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;

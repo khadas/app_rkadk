@@ -620,7 +620,7 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
       goto exit;
     }
 
-    for (int j = 0; j < RKADK_MEDIA_VI_MAX_CNT; j++) {
+    for (j = 0; j < RKADK_MEDIA_VI_MAX_CNT; j++) {
       if (j == i)
         continue;
       if (g_stMediaCtx.stViInfo[j].s32InitCnt > 0)
