@@ -760,7 +760,7 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
   pstCommCfg->enable_wrap = false;
-  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT / 4;
+  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT;
   RKADK_PARAM_SaveCommCfg(path);
 }
 
@@ -832,10 +832,10 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   case 1:
     memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
     pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
-    pstViCfg->width = RECORD_VIDEO_WIDTH;
-    pstViCfg->height = RECORD_VIDEO_HEIGHT;
+    pstViCfg->width = THUMB_WIDTH;
+    pstViCfg->height = THUMB_HEIGHT;
     memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
-    memcpy(pstViCfg->module, "RECORD_MAIN|PHOTO", strlen("RECORD_MAIN|PHOTO"));
+    memcpy(pstViCfg->module, "THUMB", strlen("THUMB"));
     break;
   case 2:
     memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
@@ -1822,6 +1822,12 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg =
+      &g_stPARAMCtx.stCfg.stCommCfg;
+  RKADK_PARAM_VENC_ATTR_S *pstRecAttr =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.attribute[0];
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stPhotoCfg;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
   memset(module, 0, RKADK_BUFFER_LEN);
@@ -1836,8 +1842,15 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     RKADK_LOGI("Sensor[%d] rec[0][%d*%d] not find matched VI", s32CamId, width,
                height);
 
-    if ((width == pstSensorCfg->max_width) &&
-        (height == pstSensorCfg->max_height)) {
+    pstCommCfg->wrap_buf_line = height;
+    RKADK_PARAM_SaveCommCfg(g_stPARAMCtx.path);
+
+    pstPhotoCfg->image_width = width;
+    pstPhotoCfg->image_height = height;
+    RKADK_PARAM_SavePhotoCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
+
+    if ((width <= pstSensorCfg->max_width) &&
+        (height <= pstSensorCfg->max_height)) {
       RKADK_LOGI("rec[0] default VI[0]");
       index = 0;
     } else {
@@ -1852,11 +1865,6 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     if (index >= 0 && index < RKADK_ISPP_VI_NODE_CNT)
       return index;
 
-    RKADK_PARAM_VENC_ATTR_S *pstRecAttr =
-        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.attribute[0];
-    RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
-        &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stPhotoCfg;
-
     RKADK_LOGI("Sensor[%d] photo[%d*%d] not find matched VI", s32CamId, width,
                height);
     RKADK_LOGI("Force photo resolution = rec[0] resolution[%d*%d]",
@@ -1868,8 +1876,8 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     pstPhotoCfg->image_height = height;
     RKADK_PARAM_SavePhotoCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
 
-    if ((width == pstSensorCfg->max_width) &&
-        (height == pstSensorCfg->max_height))
+    if ((width <= pstSensorCfg->max_width) &&
+        (height <= pstSensorCfg->max_height))
       index = 0;
     else
       index = 1;
@@ -3289,6 +3297,7 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
                             enStrmType);
     if (pstSensorCfg->used_isp)
       RKADK_PARAM_SetRecViAttr(s32CamId);
+      RKADK_PARAM_SetPhotoViAttr(s32CamId);
   }
 
   if (bSavePhotoCfg) {

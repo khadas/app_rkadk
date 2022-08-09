@@ -294,11 +294,11 @@ static void SetViCfg() {
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 1;
   strcpy(stViCfg.device_name, "rkisp_selfpath");
-  stViCfg.width = RECORD_VIDEO_WIDTH;
-  stViCfg.height = RECORD_VIDEO_HEIGHT;
+  stViCfg.width = THUMB_WIDTH;
+  stViCfg.height = THUMB_HEIGHT;
   stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   strcpy(stViCfg.pix_fmt, "NV12");
-  strcpy(stViCfg.module, "RECORD_MAIN|PHOTO");
+  strcpy(stViCfg.module, "THUMB");
   RKADK_Struct2Ini(sensorPath, &stViCfg, g_stViCfgMapTable_1,
                    sizeof(g_stViCfgMapTable_1) / sizeof(RKADK_SI_CONFIG_MAP_S));
 
