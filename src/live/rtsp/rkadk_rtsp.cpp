@@ -54,7 +54,10 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
                                   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
                                   VENC_CHN_ATTR_S *pstVencAttr) {
   int ret;
+  RKADK_U32 u32DstFrameRateNum = 0;
+  RKADK_U32 u32SrcFrameRateNum = 0;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
@@ -65,12 +68,27 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
     return -1;
   }
 
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    u32SrcFrameRateNum = pstLiveCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate;
+    u32DstFrameRateNum = pstLiveCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate;
+  } else {
+    u32SrcFrameRateNum = pstSensorCfg->framerate;
+    u32DstFrameRateNum = pstSensorCfg->framerate;
+  }
+
+
   pstVencAttr->stRcAttr.enRcMode = RKADK_PARAM_GetRcMode(
       pstLiveCfg->attribute.rc_mode, pstLiveCfg->attribute.codec_type);
 
   ret = RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, pstLiveCfg->attribute.gop,
                               pstLiveCfg->attribute.bitrate,
-                              pstSensorCfg->framerate, pstSensorCfg->framerate);
+                              u32SrcFrameRateNum, u32DstFrameRateNum);
   if (ret) {
     RKADK_LOGE("RKADK_MEDIA_SetRcAttr failed");
     return -1;

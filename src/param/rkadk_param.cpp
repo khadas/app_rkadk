@@ -2163,6 +2163,8 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
+  RKADK_PARAM_REC_CFG_S *pstRecCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
@@ -2197,8 +2199,13 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstStreamCfg->vi_attr.stChnAttr.enCompressMode));
   pstStreamCfg->vi_attr.stChnAttr.u32Depth = 0;
-  pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
-  pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = pstSensorCfg->framerate;
+    pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = 1;
+  } else {
+    pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+    pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  }
   if (pstSensorCfg->flip)
     pstStreamCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
   if (pstSensorCfg->mirror)
@@ -2213,6 +2220,8 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stPhotoCfg;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
+  RKADK_PARAM_REC_CFG_S *pstRecCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
@@ -2244,8 +2253,13 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
   pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstPhotoCfg->vi_attr.stChnAttr.enCompressMode));
   pstPhotoCfg->vi_attr.stChnAttr.u32Depth = 0;
-  pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
-  pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = pstSensorCfg->framerate;
+    pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = 1;
+  } else {
+    pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+    pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  }
   if (pstSensorCfg->flip)
     pstPhotoCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
   if (pstSensorCfg->mirror)
@@ -2298,8 +2312,13 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
     pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
         pstViCfg->pix_fmt, &(pstRecCfg->vi_attr[i].stChnAttr.enCompressMode));
     pstRecCfg->vi_attr[i].stChnAttr.u32Depth = 0;
-    pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = -1;
-    pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = -1;
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+      pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = pstSensorCfg->framerate;
+      pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = 1;
+    } else {
+      pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+      pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = -1;
+    }
     if (pstSensorCfg->flip)
       pstRecCfg->vi_attr[i].stChnAttr.bFlip = RK_TRUE;
     if (pstSensorCfg->mirror)
@@ -2317,6 +2336,8 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_DISP_CFG_S *pstDispCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stDispCfg;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
@@ -2359,8 +2380,13 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
   pstDispCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstDispCfg->vi_attr.stChnAttr.enCompressMode));
   pstDispCfg->vi_attr.stChnAttr.u32Depth = 0;
-  pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
-  pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = pstSensorCfg->framerate;
+    pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = 1;
+  } else {
+    pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+    pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  }
   if (pstSensorCfg->flip)
     pstDispCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
   if (pstSensorCfg->mirror)
