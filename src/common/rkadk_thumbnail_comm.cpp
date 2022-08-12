@@ -11,11 +11,6 @@
 #include <sys/types.h>
 #include <utime.h>
 
-#define PHOTO_USERDATA_MAX_SIZE 65535
-
-static char userdata[PHOTO_USERDATA_MAX_SIZE];
-static int userdata_len;
-
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 #define RGA_ZOOM_MAX 16
 
@@ -279,22 +274,24 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
                                VENC_STREAM_S stThuFrame,
                                RKADK_U8 *pNewPhoto) {
   int ret = 0;
-  char *pThuData;
-  int ThuLen;
+  char *thumb_data;
+  int thumb_len;
   int app0_len;
   int off_set;
+  int userdata_len;
 
   //thumbnail
-  pThuData = (char *)RK_MPI_MB_Handle2VirAddr(stThuFrame.pstPack->pMbBlk);
-  ThuLen = stThuFrame.pstPack->u32Len;
-  userdata_len = PackageApp1(stIfd0, stIfd1, sizeof(stIfd0) / sizeof(IFD),
-                sizeof(stIfd1) / sizeof(IFD), userdata, pThuData, ThuLen);
+  thumb_data = (char *)RK_MPI_MB_Handle2VirAddr(stThuFrame.pstPack->pMbBlk);
+  thumb_len = stThuFrame.pstPack->u32Len;
+  RKADK_LOGI("Thumbnail seq = %d, data %p, size = %d", stThuFrame.u32Seq,
+              thumb_data, thumb_len);
 
   app0_len = pJpegdata[5];
   off_set = app0_len + 4;
   memcpy(pNewPhoto, pJpegdata, off_set);
   pNewPhoto += off_set;
-  memcpy(pNewPhoto, userdata, userdata_len);
+  userdata_len = PackageApp1(stIfd0, stIfd1, sizeof(stIfd0) / sizeof(IFD),
+                sizeof(stIfd1) / sizeof(IFD), (char *)pNewPhoto, thumb_data, thumb_len);
   pNewPhoto += userdata_len;
   memcpy(pNewPhoto, pJpegdata + off_set, JpegLen - off_set);
   pNewPhoto -= (off_set + userdata_len);
