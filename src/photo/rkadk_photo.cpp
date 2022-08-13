@@ -79,6 +79,7 @@ static RKADK_JPG_DE_TYPE_S g_stJpgDEType[JPG_DE_TYPE_COUNT] = {
 static void *RKADK_PHOTO_GetJpeg(void *params) {
   int ret;
   VENC_STREAM_S stFrame;
+  VENC_PACK_S stPack;
   RKADK_PHOTO_RECV_DATA_S stData;
 
   RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
@@ -99,18 +100,13 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
     return NULL;
   }
 
-  stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
-  if (!stFrame.pstPack) {
-    RKADK_LOGE("malloc stream package buffer failed");
-    return NULL;
-  }
-
+  stFrame.pstPack = &stPack;
   // drop first frame
-	ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
-	if (ret == RK_SUCCESS)
-		RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
-	else
-		RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
+  ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
+  if (ret == RK_SUCCESS)
+    RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
+  else
+    RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetJpeg) {
     ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
@@ -140,9 +136,6 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
     }
   }
 
-  if (stFrame.pstPack)
-    free(stFrame.pstPack);
-
   RKADK_LOGD("Exit get jpeg thread");
   return NULL;
 }
@@ -150,14 +143,10 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
 static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
   int ret;
   VENC_STREAM_S stThumbFrame;
+  VENC_PACK_S stPack;
   RKADK_PHOTO_RECV_DATA_S stData;
   int NewPhotoLen = SENSOR_MAX_WIDTH * SENSOR_MAX_HEIGHT
           * 3 / 2;
-  RKADK_U8 *NewPhoto = (RKADK_U8 *)malloc(NewPhotoLen);
-  if (!NewPhoto) {
-    RKADK_LOGE("No memory");
-    return NULL;
-  }
 
   RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
   if (!pHandle) {
@@ -176,31 +165,37 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     return NULL;
   }
 
-  stThumbFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
-  if (!stThumbFrame.pstPack) {
-    RKADK_LOGE("Malloc stream package buffer failed");
+  stThumbFrame.pstPack = &stPack;
+
+  RKADK_U8 *NewPhoto = (RKADK_U8 *)malloc(NewPhotoLen);
+  if (!NewPhoto) {
+    RKADK_LOGE("No memory");
     return NULL;
   }
 
     // drop first frame
-	ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
-	if (ret == RK_SUCCESS)
-		RK_MPI_VENC_ReleaseStream(ptsThumbCfg->venc_chn, &stThumbFrame);
-	else
-		RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
+  ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
+  if (ret == RK_SUCCESS)
+    RK_MPI_VENC_ReleaseStream(ptsThumbCfg->venc_chn, &stThumbFrame);
+  else
+    RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetThumbJpeg) {
     ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
     if (ret == RK_SUCCESS) {
-      RKADK_SIGNAL_Wait(pHandle->pSignal, 1000);
-      if (pHandle->u32PhotoCnt) {
-        memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
-        stData.u32DataLen = ThumbnailPhotoData(pHandle->pJpegData, pHandle->u32JpegLen, stThumbFrame, NewPhoto);
-        stData.pu8DataBuf = NewPhoto;
-        stData.u32CamId = pHandle->u32CamId;
-        pHandle->pDataRecvFn(stData.pu8DataBuf, stData.u32DataLen,
-                              stData.u32CamId);
-        pHandle->u32PhotoCnt -= 1;
+      ret = RKADK_SIGNAL_Wait(pHandle->pSignal, 2000);/* Lapse video record one frame per second */
+      if (ret == 0) {
+        if (pHandle->u32PhotoCnt) {
+          memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
+          stData.u32DataLen = ThumbnailPhotoData(pHandle->pJpegData, pHandle->u32JpegLen, stThumbFrame, NewPhoto);
+          stData.pu8DataBuf = NewPhoto;
+          stData.u32CamId = pHandle->u32CamId;
+          pHandle->pDataRecvFn(stData.pu8DataBuf, stData.u32DataLen,
+                                stData.u32CamId);
+          pHandle->u32PhotoCnt -= 1;
+        }
+      } else {
+        RKADK_LOGE("Lose jpeg data, take photo failed");
       }
 
       ret = RK_MPI_VENC_ReleaseStream(ptsThumbCfg->venc_chn, &stThumbFrame);
@@ -208,9 +203,6 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     }
   }
-
-  if (stThumbFrame.pstPack)
-    free(stThumbFrame.pstPack);
 
   if (NewPhoto)
     free(NewPhoto);
