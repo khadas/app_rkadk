@@ -139,7 +139,6 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId);
  */
 RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_PHOTO_ATTR_S *pstPhotoAttr);
 
-#if 0
 /**
  * @brief get thumbnail in jpg
  * @param[in] pszFileName: file name
@@ -158,6 +157,7 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
 
 RKADK_S32 RKADK_PHOTO_ThumbBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);
 
+#if 0
 RKADK_S32 RKADK_PHOTO_GetData(RKADK_CHAR *pcFileName,
                               RKADK_PHOTO_DATA_ATTR_S *pstDataAttr);
 
