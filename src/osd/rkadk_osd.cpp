@@ -94,12 +94,6 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
 
-  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
-  if (!pstCommCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return -1;
-  }
-
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -154,7 +148,7 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   }
 
   memset(&stRgnChnAttr, 0, sizeof(RGN_CHN_ATTR_S));
-  if (pstCommCfg->osd)
+  if (pstOsdStreamAttr->bEnableShow)
     stRgnChnAttr.bShow = RK_TRUE;
   else
     stRgnChnAttr.bShow = RK_FALSE;
@@ -178,12 +172,6 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
-
-  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
-  if (!pstCommCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return -1;
-  }
 
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
@@ -276,12 +264,6 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
 
-  RKADK_PARAM_COMM_CFG_S *pstCommCfg = RKADK_PARAM_GetCommCfg();
-  if (!pstCommCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return -1;
-  }
-
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -341,7 +323,7 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
     return ret;
   }
 
-  if (pstCommCfg->osd)
+  if (pstOsdStreamAttr->bEnableShow)
     stRgnChnAttr.bShow = RK_TRUE;
   else
     stRgnChnAttr.bShow = RK_FALSE;

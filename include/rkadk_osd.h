@@ -31,6 +31,7 @@ typedef struct {
 } RKADK_OSD_ATTR_S;
 
 typedef struct {
+  RKADK_BOOL bEnableShow;
   RKADK_U32 Origin_X;
   RKADK_U32 Origin_Y;
 } RKADK_OSD_STREAM_ATTR_S;
