@@ -234,7 +234,7 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 1;
   pstVencAttr->stVencAttr.u32BufSize =
-      pstPhotoCfg->image_width * pstPhotoCfg->image_height * 3 / 2;
+      pstPhotoCfg->image_width * pstPhotoCfg->image_height / 2;
 
   pstAttrJpege->bSupportDCF = (RK_BOOL)stThumbAttr.bSupportDCF;
   pstAttrJpege->stMPFCfg.u8LargeThumbNailNum =
@@ -271,10 +271,12 @@ static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
                                         RKADK_S32 s32ComboChnId) {
   VENC_RECV_PIC_PARAM_S stRecvParam;
   VENC_CHN_BUF_WRAP_S stVencChnBufWrap;
+  VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
   VENC_COMBO_ATTR_S stComboAttr;
   VENC_JPEG_PARAM_S stJpegParam;
   memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
   memset(&stVencChnBufWrap, 0, sizeof(VENC_CHN_BUF_WRAP_S));
+  memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
   memset(&stComboAttr, 0, sizeof(VENC_COMBO_ATTR_S));
   memset(&stJpegParam, 0, sizeof(stJpegParam));
 
@@ -282,6 +284,9 @@ static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
 
   stVencChnBufWrap.bEnable = RK_TRUE;
   RK_MPI_VENC_SetChnBufWrapAttr(s32ChnId, &stVencChnBufWrap);
+
+  stVencChnRefBufShare.bEnable = RK_TRUE;
+  RK_MPI_VENC_SetChnRefBufShareAttr(s32ChnId, &stVencChnRefBufShare);
 
   stRecvParam.s32RecvPicNum = 1;
   RK_MPI_VENC_StartRecvFrame(s32ChnId, &stRecvParam);
@@ -450,6 +455,11 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     RKADK_LOGE("Create Venc failed[%x]", ret);
     goto failed;
   }
+
+  VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
+  memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
+  stVencChnRefBufShare.bEnable = RK_TRUE;
+  RK_MPI_VENC_SetChnRefBufShareAttr(stVencChn.s32ChnId, &stVencChnRefBufShare);
 
   // must, for no streams callback running failed
   VENC_RECV_PIC_PARAM_S stRecvParam;

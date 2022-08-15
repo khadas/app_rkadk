@@ -254,7 +254,7 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32Profile = pstStreamCfg->attribute.profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
   pstVencAttr->stVencAttr.u32BufSize =
-      pstStreamCfg->attribute.width * pstStreamCfg->attribute.height * 3 / 2;
+      pstStreamCfg->attribute.width * pstStreamCfg->attribute.height / 2;
 
   return 0;
 }

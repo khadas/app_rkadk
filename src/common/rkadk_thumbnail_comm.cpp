@@ -126,7 +126,7 @@ static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
   int ret = 0;
   VI_CHN_ATTR_S stChnAttr;
   memset(&stChnAttr, 0, sizeof(stChnAttr));
-  stChnAttr.stIspOpt.u32BufCount = 5;
+  stChnAttr.stIspOpt.u32BufCount = 3;
   stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
   stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
   stChnAttr.u32Depth = 0;
@@ -166,9 +166,9 @@ static int RKADK_Thumbnail_Venc(RKADK_S32 ChnId,
   stAttr.stVencAttr.u32PicHeight = thumb_height;
   stAttr.stVencAttr.u32VirWidth = thumb_width;
   stAttr.stVencAttr.u32VirHeight = thumb_height;
-  stAttr.stVencAttr.u32StreamBufCnt = 5;
+  stAttr.stVencAttr.u32StreamBufCnt = 3;
   stAttr.stVencAttr.u32BufSize = thumb_width
-        * thumb_height * 3 / 2;
+        * thumb_height / 2;
 
   stIfd1[0] = {0x0100, 3, 1, thumb_width, {{.uwv = thumb_width}}}; // ImageWidth
   stIfd1[1] = {0x0100, 3, 1, thumb_height, {{.uwv = thumb_height}}}; // ImageLength

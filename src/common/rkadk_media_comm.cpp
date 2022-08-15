@@ -717,6 +717,11 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
       RK_MPI_VENC_SetChnBufWrapAttr(s32ChnId, &stVencChnBufWrap);
     }
 
+    VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
+    memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
+    stVencChnRefBufShare.bEnable = RK_TRUE;
+    RK_MPI_VENC_SetChnRefBufShareAttr(s32ChnId, &stVencChnRefBufShare);
+
     // VENC_RECV_PIC_PARAM_S stRecvParam;
     // memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
     // ret = RK_MPI_VENC_StartRecvFrame(s32ChnId, &stRecvParam);

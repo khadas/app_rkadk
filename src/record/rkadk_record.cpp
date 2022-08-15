@@ -216,7 +216,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32Profile = pstRecCfg->attribute[index].profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
   pstVencAttr->stVencAttr.u32BufSize = pstRecCfg->attribute[index].width *
-                                       pstRecCfg->attribute[index].height * 3 /
+                                       pstRecCfg->attribute[index].height /
                                        2;
 
   return 0;

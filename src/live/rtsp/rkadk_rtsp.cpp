@@ -104,7 +104,7 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32Profile = pstLiveCfg->attribute.profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3;
   pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.width *
-                                       pstLiveCfg->attribute.height * 3 / 2;
+                                       pstLiveCfg->attribute.height / 2;
 
   return 0;
 }
