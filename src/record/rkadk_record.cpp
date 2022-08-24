@@ -344,8 +344,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     }
 
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0 &&
-        pstCommCfg->enable_wrap) {
+        pstRecCfg->attribute[i].venc_chn == 0) {
       RKADK_LOGI("VI[%d] VENC[%d] Enable support thumbnail",
                   pstRecCfg->vi_attr[i].u32ViChn,
                   pstRecCfg->attribute[i].venc_chn);
@@ -411,8 +410,7 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
 #endif
     //Destroy thu vi venc
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0 &&
-        pstCommCfg->enable_wrap) {
+        pstRecCfg->attribute[i].venc_chn == 0) {
       RKADK_LOGI("VI[%d] VENC[%d] support destroy thumbnail",
                   pstRecCfg->vi_attr[i].u32ViChn,
                   pstRecCfg->attribute[i].venc_chn);
@@ -724,8 +722,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
 
     //Thumbnail
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0 &&
-        pstCommCfg->enable_wrap) {
+        pstRecCfg->attribute[i].venc_chn == 0) {
         pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)malloc(sizeof(RKADK_REC_THUMB_ATTR_S));
         pThumbAttr->bGetThumb = true;
         pThumbAttr->u32ThumbVencChn = ptsThumbCfg->rec_venc_chn;
