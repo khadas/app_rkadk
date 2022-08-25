@@ -301,7 +301,7 @@ static void RKADK_PHOTO_SetChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
   pstViChn->s32ChnId = pstPhotoCfg->vi_attr.u32ViChn;
 
 #ifdef RKADK_ENABLE_RGA
-  pstRgaChn->enModId = RK_ID_RGA;
+  pstRgaChn->enModId = RK_ID_VPSS;
   pstRgaChn->s32DevId = u32CamId;
   pstRgaChn->s32ChnId = pstPhotoCfg->rga_chn;
 #endif
@@ -335,7 +335,9 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
-  RGA_ATTR_S stRgaAttr;
+  VPSS_GRP_ATTR_S stGrpAttr;
+  VPSS_CHN_ATTR_S stChnAttr;
+  RKADK_S32 s32VpssGrp = 0;
 #endif
 
   RKADK_CHECK_POINTER(pstPhotoAttr, RKADK_FAILURE);
@@ -366,6 +368,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
 
   RKADK_PHOTO_SetChn(pstPhotoCfg, pstPhotoAttr->u32CamID, &stViChn, &stVencChn,
                      &stRgaChn);
+  RKADK_PHOTO_SetVencAttr(pstPhotoAttr->stThumbAttr, pstPhotoCfg, &stVencAttr);
 
   // Create VI
   ret = RKADK_MPI_VI_Init(pstPhotoAttr->u32CamID, stViChn.s32ChnId,
@@ -379,30 +382,37 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   bUseRga = RKADK_PHOTO_IsUseRga(pstPhotoCfg);
   // Create RGA
   if (bUseRga) {
-    memset(&stRgaAttr, 0, sizeof(stRgaAttr));
-    stRgaAttr.bEnBufPool = RK_TRUE;
-    stRgaAttr.u16BufPoolCnt = 3;
-    stRgaAttr.stImgIn.imgType = pstPhotoCfg->vi_attr.stChnAttr.enPixFmt;
-    stRgaAttr.stImgIn.u32Width = pstPhotoCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32Height = pstPhotoCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgIn.u32HorStride = pstPhotoCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32VirStride = pstPhotoCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgOut.imgType = stRgaAttr.stImgIn.imgType;
-    stRgaAttr.stImgOut.u32Width = pstPhotoCfg->image_width;
-    stRgaAttr.stImgOut.u32Height = pstPhotoCfg->image_height;
-    stRgaAttr.stImgOut.u32HorStride = pstPhotoCfg->image_width;
-    stRgaAttr.stImgOut.u32VirStride = pstPhotoCfg->image_height;
-    ret = RKADK_MPI_RGA_Init(pstPhotoCfg->rga_chn, &stRgaAttr);
+    memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
+    memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
+
+    stGrpAttr.u32MaxW = 4096;
+    stGrpAttr.u32MaxH = 4096;
+    stGrpAttr.enPixelFormat = pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
+    stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
+    stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
+    stGrpAttr.stFrameRate.s32DstFrameRate = -1;
+    stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+    stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
+    stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
+    stChnAttr.enPixelFormat = pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
+    stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+    stChnAttr.stFrameRate.s32DstFrameRate = -1;
+    stChnAttr.u32Width = pstPhotoCfg->image_width;
+    stChnAttr.u32Height = pstPhotoCfg->image_height;
+    stChnAttr.u32Depth = 0;
+
+    ret = RKADK_MPI_VPSS_Init(s32VpssGrp, pstPhotoCfg->rga_chn,
+                              &stGrpAttr, &stChnAttr);
     if (ret) {
-      RKADK_LOGE("Init Rga[%d] falied[%d]", pstPhotoCfg->rga_chn, ret);
-      goto failed;
+      RKADK_LOGE("RKADK_MPI_VPSS_Init vpssfalied[%d]",ret);
+      RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamID, pstPhotoCfg->vi_attr.u32ViChn);
+      RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstPhotoCfg->rga_chn);
+      return ret;
     }
   }
 #endif
 
   // Create VENC
-  RKADK_PHOTO_SetVencAttr(pstPhotoAttr->stThumbAttr, pstPhotoCfg, &stVencAttr);
-
   if (pstPhotoCfg->enable_combo) {
     RKADK_LOGE("Select combo mode");
     RKADK_PHOTO_CreateVencCombo(stVencChn.s32ChnId, &stVencAttr,
@@ -524,7 +534,7 @@ failed:
 
 #ifdef RKADK_ENABLE_RGA
   if (bUseRga)
-    RKADK_MPI_RGA_DeInit(pstPhotoCfg->rga_chn);
+    RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstPhotoCfg->rga_chn);
 #endif
 
   RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamID, stViChn.s32ChnId);
@@ -537,6 +547,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
+  RKADK_S32 s32VpssGrp = 0;
 #endif
 
   RKADK_PHOTO_HANDLE_S *pHandle = &g_stPhotoHandle[u32CamId];
@@ -655,9 +666,9 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
 #ifdef RKADK_ENABLE_RGA
   // Destory RGA
   if (bUseRga) {
-    ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
+    ret = RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstPhotoCfg->rga_chn);
     if (ret) {
-      RKADK_LOGE("DeInit RGA[%d] failed[%d]", stRgaChn.s32ChnId, ret);
+      RKADK_LOGE("DeInit RGA[%d] failed[%d]", pstPhotoCfg->rga_chn, ret);
       return ret;
     }
   }

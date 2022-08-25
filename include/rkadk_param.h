@@ -96,6 +96,9 @@ extern "C" {
 #define RKADK_PARAM_PATH_SENSOR_PREFIX "/data/rkadk/rkadk_setting_sensor"
 
 /* Resolution */
+#define RKADK_WIDTH_480P 848
+#define RKADK_HEIGHT_480P 480
+
 #define RKADK_WIDTH_720P 1280
 #define RKADK_HEIGHT_720P 720
 
@@ -122,6 +125,8 @@ extern "C" {
 
 #define RKADK_WIDTH_3840P 3840
 #define RKADK_HEIGHT_2160P 2160
+
+#define RKADK_ENABLE_RGA 1
 
 /* Resolution type */
 typedef enum {

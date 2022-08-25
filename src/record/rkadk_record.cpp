@@ -136,7 +136,7 @@ static void RKADK_RECORD_SetVideoChn(int index, RKADK_U32 u32CamId,
   pstViChn->s32ChnId = pstRecCfg->vi_attr[index].u32ViChn;
 
 #ifdef RKADK_ENABLE_RGA
-  pstRgaChn->enModId = RK_ID_RGA;
+  pstRgaChn->enModId = RK_ID_VPSS;
   pstRgaChn->s32DevId = u32CamId;
   pstRgaChn->s32ChnId = pstRecCfg->attribute[index].rga_chn;
 #endif
@@ -204,10 +204,17 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
       RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
   pstVencAttr->stVencAttr.enPixelFormat =
       pstRecCfg->vi_attr[index].stChnAttr.enPixelFormat;
-  pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
-  pstVencAttr->stVencAttr.u32PicHeight = pstRecCfg->attribute[index].height;
-  pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
-  pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
+  if (index == 0) {
+    pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
+    pstVencAttr->stVencAttr.u32PicHeight = pstRecCfg->attribute[index].height;
+    pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
+    pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
+  } else {
+    pstVencAttr->stVencAttr.u32PicWidth = RKADK_WIDTH_480P;
+    pstVencAttr->stVencAttr.u32PicHeight = RKADK_HEIGHT_480P;
+    pstVencAttr->stVencAttr.u32VirWidth = RKADK_WIDTH_480P;
+    pstVencAttr->stVencAttr.u32VirHeight = RKADK_HEIGHT_480P;
+  }
   pstVencAttr->stVencAttr.u32Profile = pstRecCfg->attribute[index].profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
   pstVencAttr->stVencAttr.u32BufSize = pstRecCfg->attribute[index].width *
@@ -219,10 +226,18 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
 
 #ifdef RKADK_ENABLE_RGA
 static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
-  RKADK_U32 u32SrcWidth = pstRecCfg->vi_attr[index].stChnAttr.u32Width;
-  RKADK_U32 u32SrcHeight = pstRecCfg->vi_attr[index].stChnAttr.u32Height;
-  RKADK_U32 u32DstWidth = pstRecCfg->attribute[index].width;
-  RKADK_U32 u32DstHeight = pstRecCfg->attribute[index].height;
+  RKADK_U32 u32SrcWidth, u32SrcHeight;
+  RKADK_U32 u32DstWidth, u32DstHeight;
+
+  u32SrcWidth= pstRecCfg->vi_attr[index].stChnAttr.stSize.u32Width;
+  u32SrcHeight = pstRecCfg->vi_attr[index].stChnAttr.stSize.u32Height;
+  if (index == 0) {
+    u32DstWidth = pstRecCfg->attribute[index].width;
+    u32DstHeight = pstRecCfg->attribute[index].height;
+  } else {
+    u32DstWidth = RKADK_WIDTH_480P;
+    u32DstHeight = RKADK_HEIGHT_480P;
+  }
 
   if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
     return false;
@@ -243,7 +258,9 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
-  RGA_ATTR_S stRgaAttr;
+  VPSS_GRP_ATTR_S stGrpAttr;
+  VPSS_CHN_ATTR_S stChnAttr;
+  RKADK_S32 s32VpssGrp;
 #endif
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
@@ -282,25 +299,32 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     // Create RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
-      memset(&stRgaAttr, 0, sizeof(stRgaAttr));
-      stRgaAttr.bEnBufPool = RK_TRUE;
-      stRgaAttr.u16BufPoolCnt = 3;
-      stRgaAttr.stImgIn.imgType = pstRecCfg->vi_attr[i].stChnAttr.enPixFmt;
-      stRgaAttr.stImgIn.u32Width = pstRecCfg->vi_attr[i].stChnAttr.u32Width;
-      stRgaAttr.stImgIn.u32Height = pstRecCfg->vi_attr[i].stChnAttr.u32Height;
-      stRgaAttr.stImgIn.u32HorStride = pstRecCfg->vi_attr[i].stChnAttr.u32Width;
-      stRgaAttr.stImgIn.u32VirStride =
-          pstRecCfg->vi_attr[i].stChnAttr.u32Height;
-      stRgaAttr.stImgOut.imgType = stRgaAttr.stImgIn.imgType;
-      stRgaAttr.stImgOut.u32Width = pstRecCfg->attribute[i].width;
-      stRgaAttr.stImgOut.u32Height = pstRecCfg->attribute[i].height;
-      stRgaAttr.stImgOut.u32HorStride = pstRecCfg->attribute[i].width;
-      stRgaAttr.stImgOut.u32VirStride = pstRecCfg->attribute[i].height;
-      ret = RKADK_MPI_RGA_Init(pstRecCfg->attribute[i].rga_chn, &stRgaAttr);
+      memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
+      memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
+
+      s32VpssGrp = 0;
+      stGrpAttr.u32MaxW = 4096;
+      stGrpAttr.u32MaxH = 4096;
+      stGrpAttr.enPixelFormat = pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat;
+      stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
+      stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
+      stGrpAttr.stFrameRate.s32DstFrameRate = -1;
+      stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+      stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
+      stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
+      stChnAttr.enPixelFormat = pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat;
+      stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+      stChnAttr.stFrameRate.s32DstFrameRate = -1;
+      stChnAttr.u32Width = RKADK_WIDTH_480P;
+      stChnAttr.u32Height = RKADK_HEIGHT_480P;
+      stChnAttr.u32Depth = 0;
+
+      ret = RKADK_MPI_VPSS_Init(s32VpssGrp, pstRecCfg->attribute[i].rga_chn,
+                                &stGrpAttr, &stChnAttr);
       if (ret) {
-        RKADK_LOGE("Init Rga[%d] falied[%d]", pstRecCfg->attribute[i].rga_chn,
-                   ret);
+        RKADK_LOGE("RKADK_MPI_VPSS_Init vpssfalied[%d]",ret);
         RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
+        RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstRecCfg->attribute[i].rga_chn);
         return ret;
       }
     }
@@ -313,12 +337,12 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 
 #ifdef RKADK_ENABLE_RGA
       if (bUseRga)
-        RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
+        RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstRecCfg->attribute[i].rga_chn);
 #endif
-
       RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
+
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
         pstRecCfg->attribute[i].venc_chn == 0 &&
         pstCommCfg->enable_wrap) {
@@ -339,6 +363,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 
 static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
   int ret;
+  RKADK_S32 s32VpssGrp;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
@@ -376,9 +401,10 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
 #ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
-      ret = RKADK_MPI_RGA_DeInit(pstRecCfg->attribute[i].rga_chn);
+      s32VpssGrp = 0;
+      ret = RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstRecCfg->attribute[i].rga_chn);
       if (ret) {
-        RKADK_LOGE("RKADK_MPI_RGA_DeInit failed[%x]", ret);
+        RKADK_LOGE("RKADK_MPI_VPSS_DeInit failed[%x]", ret);
         return ret;
       }
     }

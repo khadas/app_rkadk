@@ -460,7 +460,7 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
   change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0,
                                     VENC_MAX_CHN_NUM, 1, "stream venc_chn");
 #ifdef RKADK_ENABLE_RGA
-  change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->rga_chn, 0, RGA_MAX_CHN_NUM,
+  change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->rga_chn, 0, VPSS_MAX_CHN_NUM,
                                     1, "stream rga_chn");
 #endif
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, 4 * 1024 * 1024,
@@ -489,7 +489,7 @@ static void RKADK_PARAM_CheckPhotoCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->venc_chn, 0, VENC_MAX_CHN_NUM,
                                     2, "photo venc_chn");
 #ifdef RKADK_ENABLE_RGA
-  change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->rga_chn, 0, RGA_MAX_CHN_NUM,
+  change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->rga_chn, 0, VPSS_MAX_CHN_NUM,
                                     2, "photo rga_chn");
 #endif
 
@@ -575,7 +575,7 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
                                 u32DefChn, "rec venc_chn");
 #ifdef RKADK_ENABLE_RGA
     change |= RKADK_PARAM_CheckCfgU32(
-        &pstAttribute->rga_chn, 0, RGA_MAX_CHN_NUM, u32DefChn, "rec rga_chn");
+        &pstAttribute->rga_chn, 0, VPSS_MAX_CHN_NUM, u32DefChn, "rec rga_chn");
 #endif
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, u32DefBitrate,
                                    "rec bitrate");
@@ -691,7 +691,7 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
     change |= RKADK_PARAM_CheckCfg(&pstDispCfg->buf_pool_cnt, 3,
                                    "display buf_pool_cnt");
 #ifdef RKADK_ENABLE_RGA
-  change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->rga_chn, 0, RGA_MAX_CHN_NUM, 3,
+  change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->rga_chn, 0, VPSS_MAX_CHN_NUM, 3,
                                     "display rga_chn");
 #endif
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->device_node, "/dev/dri/card0",

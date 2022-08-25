@@ -851,88 +851,6 @@ exit:
 }
 
 #ifdef RKADK_ENABLE_RGA
-RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr) {
-  int ret = -1;
-  RKADK_S32 i;
-
-  RKADK_CHECK_POINTER(pstRgaAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
-
-  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
-
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT, 0,
-                         s32ChnId, "RGA_INIT");
-  if (i < 0) {
-    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stRgaInfo,
-                                  RKADK_MEDIA_RGA_MAX_CNT, "RGA_INIT");
-    if (i < 0) {
-      RKADK_LOGE("not find usable index");
-      goto exit;
-    }
-  }
-
-  if (0 == g_stMediaCtx.stRgaInfo[i].s32InitCnt) {
-    ret = RK_MPI_RGA_CreateChn(s32ChnId, pstRgaAttr);
-    if (ret) {
-      RKADK_LOGE("Create RGA[%d] failed[%d]", s32ChnId, ret);
-      goto exit;
-    }
-
-    g_stMediaCtx.stRgaInfo[i].bUsed = true;
-    g_stMediaCtx.stRgaInfo[i].s32ChnId = s32ChnId;
-  }
-
-  g_stMediaCtx.stRgaInfo[i].s32InitCnt++;
-  RKADK_LOGD("rgaChnId[%d], InitCnt[%d]", s32ChnId,
-             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
-  ret = 0;
-
-exit:
-  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
-  return ret;
-}
-
-RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId) {
-  int ret = -1;
-  RKADK_S32 i;
-  RKADK_S32 s32InitCnt;
-
-  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
-
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT, 0,
-                         s32ChnId, "RGA_DEINIT");
-  if (i < 0) {
-    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ChnId);
-    goto exit;
-  }
-
-  s32InitCnt = g_stMediaCtx.stRgaInfo[i].s32InitCnt;
-  if (0 == s32InitCnt) {
-    RKADK_LOGD("rgaChnId[%d] has already deinit", s32ChnId);
-    RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
-    return 0;
-  } else if (1 == s32InitCnt) {
-    ret = RK_MPI_RGA_DestroyChn(s32ChnId);
-    if (ret) {
-      RKADK_LOGE("Destory RGA[%d] failed[%d]", s32ChnId, ret);
-      goto exit;
-    }
-
-    g_stMediaCtx.stRgaInfo[i].bUsed = false;
-    g_stMediaCtx.stRgaInfo[i].s32ChnId = -1;
-  }
-
-  g_stMediaCtx.stRgaInfo[i].s32InitCnt--;
-  RKADK_LOGD("rgaChnId[%d], InitCnt[%d]", s32ChnId,
-             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
-  ret = 0;
-
-exit:
-  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
-  return ret;
-}
-#endif
-
 RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
                               VPSS_GRP_ATTR_S *pstVpssGrpAttr,
                               VPSS_CHN_ATTR_S *pstVpssChnAttr) {
@@ -1047,6 +965,7 @@ exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
   return ret;
 }
+#endif
 
 static void *RKADK_MEDIA_GetAencMb(void *params) {
   int ret;
@@ -1368,10 +1287,10 @@ static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
     *pstInfo = g_stMediaCtx.stViVencInfo;
   }
 #ifdef RKADK_ENABLE_RGA
-  else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_RGA) {
+  else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_VPSS) {
     s32BindCount = RKADK_VI_RGA_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViRgaInfo;
-  } else if (pstSrcChn->enModId == RK_ID_RGA &&
+  } else if (pstSrcChn->enModId == RK_ID_VPSS &&
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_RGA_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stRgaVencInfo;
