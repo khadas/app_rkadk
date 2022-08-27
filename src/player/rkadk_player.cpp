@@ -25,7 +25,6 @@
 #include "rk_mpi_ao.h"
 #include "rk_mpi_mb.h"
 #include "rk_mpi_sys.h"
-#include "audio_server.h"
 #include <stdbool.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -34,6 +33,48 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "audio_server.h"
+
+extern int pcmout_open_impl(struct playback_device *self, playback_device_cfg_t *cfg);
+extern int pcmout_start_impl(struct playback_device *self);
+extern int pcmout_write_impl(struct playback_device *self, const char *data, size_t data_len);
+extern int pcmout_stop_impl(struct playback_device *self);
+extern int pcmout_abort_impl(struct playback_device *self);
+extern void pcmout_close_impl(struct playback_device *self);
+
+#define PCM_DEVICE { \
+  .open = pcmout_open_impl, \
+  .start = pcmout_start_impl, \
+  .write = pcmout_write_impl, \
+  .stop = pcmout_stop_impl, \
+  .abort = pcmout_abort_impl, \
+  .close = pcmout_close_impl, \
+}
+
+void PlayerCallbackTest(player_handle_t self, play_info_t info, void *userdata);
+
+static int playback_end = 0;
+static player_handle_t player_test = NULL;
+static play_cfg_t *cfg_test = NULL;
+static player_cfg_t player_cfg =
+{
+  .tag = "one",
+  .device = PCM_DEVICE,
+  .preprocess_buf_size = 1024 * 40,
+  .decode_buf_size = 1024 * 20,
+  .preprocess_stack_size = 2048,
+  .decoder_stack_size = 1024 * 12,
+  .playback_stack_size = 2048,
+  .listen = PlayerCallbackTest,
+};
+
+#ifdef __cplusplus
+}
+#endif
 
 #define USE_AO_MIXER 0
 #define audiobufsize 2048
@@ -83,38 +124,6 @@ typedef struct _rkMpiAOCtx {
   RKADK_S32 s32OpenFlag;
 } TEST_AO_CTX_S;
 
-extern int pcmout_open_impl(struct playback_device *self, playback_device_cfg_t *cfg);
-extern int pcmout_start_impl(struct playback_device *self);
-extern int pcmout_write_impl(struct playback_device *self, const char *data, size_t data_len);
-extern int pcmout_stop_impl(struct playback_device *self);
-extern int pcmout_abort_impl(struct playback_device *self);
-extern void pcmout_close_impl(struct playback_device *self);
-
-#define PCM_DEVICE { \
-  .open = pcmout_open_impl, \
-  .start = pcmout_start_impl, \
-  .write = pcmout_write_impl, \
-  .stop = pcmout_stop_impl, \
-  .abort = pcmout_abort_impl, \
-  .close = pcmout_close_impl, \
-}
-
-void PlayerCallbackTest(player_handle_t self, play_info_t info, void *userdata);
-
-static int playback_end = 0;
-static player_handle_t player_test = NULL;
-static play_cfg_t *cfg_test = NULL;
-static player_cfg_t player_cfg =
-{
-  .preprocess_buf_size = 1024 * 40,
-  .decode_buf_size = 1024 * 20,
-  .preprocess_stack_size = 2048,
-  .decoder_stack_size = 1024 * 12,
-  .playback_stack_size = 2048,
-  .tag = "one",
-  .device = PCM_DEVICE,
-  .listen = PlayerCallbackTest,
-};
 
 int firstframe = 0;
 TEST_AO_CTX_S *ctx;
@@ -311,7 +320,7 @@ void* SendDataThread(void * ptr) {
   srcData = (RK_U8 *)(calloc(len, sizeof(RK_U8)));
   memset(srcData, 0, len);
   while (1) {
-    size= player_pull(player_test, buf, len);
+    size = player_pull(player_test, buf, len);
     srcData = (RK_U8 *)buf;
 
     frame.u32Len = size;
@@ -624,7 +633,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                                      const RKADK_CHAR *pszfilePath) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
 
-  cfg_test = malloc(sizeof(play_cfg_t));
+  cfg_test = (play_cfg_t *)malloc(sizeof(play_cfg_t));
   cfg_test->start_time = 0;
 
   RKADK_CHECK_POINTER(pszfilePath, RKADK_FAILURE);
