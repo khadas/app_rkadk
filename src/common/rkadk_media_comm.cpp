@@ -978,7 +978,7 @@ static void *RKADK_MEDIA_GetAencMb(void *params) {
   }
 
   while (pstMediaInfo->stGetAencMBAttr.bGetBuffer) {
-    ret = RK_MPI_AENC_GetStream(pstMediaInfo->s32ChnId, &stFrame, 1000);
+    ret = RK_MPI_AENC_GetStream(pstMediaInfo->s32ChnId, &stFrame, 1200);
     if (ret == RK_SUCCESS) {
       for (int i = 0; i < (int)pstMediaInfo->stGetAencMBAttr.s32GetCnt; i++)
         if (pstMediaInfo->stGetAencMBAttr.cbList[i])
@@ -1079,6 +1079,7 @@ RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
   if (!pstMediaInfo->stGetAencMBAttr.s32GetCnt) {
     pstMediaInfo->stGetAencMBAttr.bGetBuffer = false;
     if (pstMediaInfo->stGetAencMBAttr.tid) {
+      RKADK_LOGE("Request to cancel aenc mb thread...");
       ret = pthread_join(pstMediaInfo->stGetAencMBAttr.tid, NULL);
       if (ret)
         RKADK_LOGE("Exit get aenc mb thread failed!");
@@ -1096,6 +1097,7 @@ exit:
 static void *RKADK_MEDIA_GetVencMb(void *params) {
   int ret;
   RKADK_MEDIA_VENC_DATA_S stData;
+  VENC_PACK_S stPack;
 
   RKADK_MEDIA_INFO_S *pstMediaInfo = (RKADK_MEDIA_INFO_S *)params;
   if (!pstMediaInfo) {
@@ -1103,12 +1105,9 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
     return NULL;
   }
 
-  memset(&stData, 0, sizeof(RKADK_MEDIA_VENC_DATA_S));
-  stData.stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
-  if (!stData.stFrame.pstPack) {
-    RKADK_LOGE("malloc stream package buffer failed");
-    return NULL;
-  }
+  memset(&stData, 0, sizeof(stData));
+  memset(&stPack, 0, sizeof(stPack));
+  stData.stFrame.pstPack = &stPack;
 
   //force request I frame and thumbnail
   if (pstMediaInfo->s32ChnId == 0) {
@@ -1118,7 +1117,8 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
 
   stData.u32ChnId = pstMediaInfo->s32ChnId;
   while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
-    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1000);
+    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1200);
+
     if (ret == RK_SUCCESS) {
       for (int i = 0; i < (int)pstMediaInfo->stGetVencMBAttr.s32GetCnt; i++)
         if (pstMediaInfo->stGetVencMBAttr.cbList[i])
@@ -1132,9 +1132,6 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
     }
   }
-
-  if (stData.stFrame.pstPack)
-    free(stData.stFrame.pstPack);
 
   RKADK_LOGI("Exit get venc mb thread");
   return NULL;
@@ -1224,6 +1221,7 @@ RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
   if (!pstMediaInfo->stGetVencMBAttr.s32GetCnt) {
     pstMediaInfo->stGetVencMBAttr.bGetBuffer = false;
     if (pstMediaInfo->stGetVencMBAttr.tid) {
+      RKADK_LOGE("Request to cancel venc mb thread...");
       ret = pthread_join(pstMediaInfo->stGetVencMBAttr.tid, NULL);
       if (ret)
         RKADK_LOGE("Exit get venc mb thread failed!");

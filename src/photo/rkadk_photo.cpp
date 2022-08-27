@@ -109,7 +109,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
     RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetJpeg) {
-    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
+    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 50);
     if (ret == RK_SUCCESS) {
       if (pHandle->pSignal) {
         memcpy(pHandle->pJpegData,
@@ -181,7 +181,7 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetThumbJpeg) {
-    ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
+    ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 50);
     if (ret == RK_SUCCESS) {
       ret = RKADK_SIGNAL_Wait(pHandle->pSignal, 2000);/* Lapse video record one frame per second */
       if (ret == 0) {

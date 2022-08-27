@@ -44,7 +44,7 @@ static void *thumbnail_thread(void *arg) {
   }
 
   while (pThumbAttr->bGetThumb) {
-    ret = RK_MPI_VENC_GetStream(pThumbAttr->u32ThumbVencChn, &stFrame, 1000);
+    ret = RK_MPI_VENC_GetStream(pThumbAttr->u32ThumbVencChn, &stFrame, 50);
     if (ret == RK_SUCCESS) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
       BufSize = stFrame.pstPack->u32Len;
