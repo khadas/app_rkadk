@@ -1128,6 +1128,8 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
       ret = RK_MPI_VENC_ReleaseStream(pstMediaInfo->s32ChnId, &stData.stFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
+    } else {
+      RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
     }
   }
 
