@@ -177,6 +177,7 @@ typedef struct {
 /* muxer attribute param */
 typedef struct {
   RKADK_U32 u32CamId;
+  bool bLapseRecord;
   RKADK_U32 u32StreamCnt; /* stream cnt */
   RKADK_MUXER_STREAM_ATTR_S
   astStreamAttr[RKADK_MUXER_STREAM_MAX_CNT]; /* array of stream attr */
@@ -187,6 +188,7 @@ typedef struct {
 
 typedef struct {
   RKADK_U32 u32CamId;
+  bool bLapseRecord;
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
 } RKADK_MUXER_HANDLE_S;
@@ -266,7 +268,12 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts, vo
 RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK_U32 size,
                               int64_t pts);
 
-RKADK_S32 RKADK_MUXER_CreateThumblList(RKADK_MW_PTR pHandle);
+RKADK_S32 RKADK_MUXER_CreateThumbList(RKADK_MW_PTR pHandle);
+
+RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
+                              RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo);
+
+RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId);
 
 #ifdef __cplusplus
 }

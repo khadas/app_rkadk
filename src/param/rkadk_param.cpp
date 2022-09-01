@@ -2213,6 +2213,8 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
       VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstStreamCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+  pstStreamCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstStreamCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
   pstStreamCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstStreamCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
@@ -2259,8 +2261,8 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnab
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
       VI_V4L2_MEMORY_TYPE_DMABUF;
-  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
-  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
+  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
+  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
@@ -2314,8 +2316,15 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnable
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType =
         VI_V4L2_MEMORY_TYPE_DMABUF;
-    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
-    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
+    if (i == 0) {
+      //main stream;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
+    } else {
+      //sub stream;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
+    }
     pstRecCfg->vi_attr[i].stChnAttr.stSize.u32Width = pstViCfg->width;
     pstRecCfg->vi_attr[i].stChnAttr.stSize.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
@@ -2378,6 +2387,8 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnabl
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
       VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstDispCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+  pstDispCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstDispCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
   pstDispCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstDispCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(

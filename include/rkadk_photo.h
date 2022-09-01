@@ -157,6 +157,7 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
 
 RKADK_S32 RKADK_PHOTO_ThumbBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);
 
+RKADK_S32 RKADK_PHOTO_Reset(RKADK_U32 u32CamId);
 #if 0
 RKADK_S32 RKADK_PHOTO_GetData(RKADK_CHAR *pcFileName,
                               RKADK_PHOTO_DATA_ATTR_S *pstDataAttr);

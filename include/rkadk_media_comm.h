@@ -117,6 +117,15 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
                                 RKADK_U32 u32BitRate, RKADK_U32 u32SrcFrameRate,
                                 RKADK_U32 u32DstFrameRate);
 
+bool RKADK_MEDIA_CompareFrameRate(VENC_RC_ATTR_S *pstRcAttr,
+                                    RKADK_U32 u32DstFrameRate);
+
+bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
+                                RKADK_U32 u32Width, RKADK_U32 u32Height);
+
+bool RKADK_MEDIA_CompareCodecType(VENC_CHN_ATTR_S *pstRecAttr,
+                                  RK_CODEC_ID_E enType);
+
 RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,
                                     RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB,
                                     RKADK_VOID *pHandle);

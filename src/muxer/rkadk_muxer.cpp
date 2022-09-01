@@ -20,7 +20,6 @@
 #include "rkadk_param.h"
 #include "linux_list.h"
 #include "rkadk_log.h"
-#include "rkadk_param.h"
 #include "rkadk_signal.h"
 #include "rkadk_thread.h"
 #include "rkmuxer.h"
@@ -324,6 +323,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
   cell->buf = (unsigned char *)malloc(size);
   if (NULL == cell->buf) {
     RKADK_LOGE("malloc video cell buf failed");
+    RKADK_MUXER_CellFree(pstMuxerHandle, cell);
     return -1;
   }
 
@@ -679,6 +679,7 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
   pstMuxer->u32CamId = pstMuxerAttr->u32CamId;
   pstMuxer->u32StreamCnt = pstMuxerAttr->u32StreamCnt;
+  pstMuxer->bLapseRecord = pstMuxerAttr->bLapseRecord;
 
   ret = RKADK_MUXER_Enable(pstMuxerAttr, pstMuxer);
   if (ret) {
@@ -867,7 +868,7 @@ RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK
   for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
     pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
 
-    if (!pstMuxerHandle)
+    if (!pstMuxerHandle || !pstMuxerHandle->bEnableThumb)
       continue;
 
     MUXER_BUF_CELL_S *cell =
@@ -891,7 +892,7 @@ RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK
   return 0;
 }
 
-RKADK_S32 RKADK_MUXER_CreateThumblList(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_MUXER_CreateThumbList(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
@@ -909,3 +910,74 @@ RKADK_S32 RKADK_MUXER_CreateThumblList(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
+RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
+                             RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
+  if (!pstMuxerHandle) {
+    // RKADK_LOGE("don't find muxer handle");
+    return -1;
+  }
+
+  pstMuxerHandle->stVideo.width = pstVideoInfo->u32Width;
+  pstMuxerHandle->stVideo.height = pstVideoInfo->u32Height;
+  pstMuxerHandle->stVideo.bit_rate = pstVideoInfo->u32BitRate;
+  pstMuxerHandle->stVideo.profile = pstVideoInfo->u16Profile;
+  pstMuxerHandle->stVideo.level = pstVideoInfo->u16Level;
+
+  switch (pstVideoInfo->enCodecType) {
+  case RKADK_CODEC_TYPE_H264:
+    memcpy(pstMuxerHandle->stVideo.codec, "H.264", strlen("H.264"));
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    memcpy(pstMuxerHandle->stVideo.codec, "H.265", strlen("H.265"));
+    break;
+  default:
+    RKADK_LOGE("not support enCodecType: %d", pstVideoInfo->enCodecType);
+    return -1;
+  }
+
+  return 0;
+}
+
+RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  RKADK_LOGI("Reset Muxer[%d] Start...", chnId);
+
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
+
+  if (!pstMuxerHandle) {
+    RKADK_LOGD("Muxer Handle is NULL");
+    return -1;
+  }
+
+  RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
+
+  // Destroy thread
+  RKADK_THREAD_Destory(pstMuxerHandle->pThread);
+  pstMuxerHandle->pThread = NULL;
+
+  pstMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pstMuxerHandle);
+  if (!pstMuxerHandle->pThread) {
+    RKADK_LOGE("RKADK_THREAD_Create failed");
+    return -1;
+  }
+
+  RKADK_LOGI("Reset Muxer[%d] End...", chnId);
+
+  return 0;
+}

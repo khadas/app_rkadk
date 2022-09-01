@@ -79,6 +79,8 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.enType =
       RKADK_MEDIA_GetRkCodecType(pstLiveCfg->attribute.codec_type);
   pstVencAttr->stVencAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
+  pstVencAttr->stVencAttr.u32MaxPicWidth = pstLiveCfg->attribute.width;
+  pstVencAttr->stVencAttr.u32MaxPicHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32PicWidth = pstLiveCfg->attribute.width;
   pstVencAttr->stVencAttr.u32PicHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32VirWidth = pstLiveCfg->attribute.width;
