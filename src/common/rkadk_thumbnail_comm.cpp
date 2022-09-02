@@ -222,14 +222,18 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
                              thumb_width, thumb_height);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_VencThumBnail failed, ret = %d", ret);
+    RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
     goto exit;
   }
 
   ret = RK_MPI_SYS_Bind(&stViChnThu, &stVencChnThu);
-    if (ret != RK_SUCCESS) {
-        RKADK_LOGE("bind %d ch venc failed", stVencChnThu.s32ChnId);
-        goto exit;
-    }
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("bind %d ch venc failed", stVencChnThu.s32ChnId);
+    RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
+    RK_MPI_VENC_StopRecvFrame(venc_chn);
+    RKADK_MPI_VENC_DeInit(venc_chn);
+    goto exit;
+  }
 
   return ret;
 

@@ -109,7 +109,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
     RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetJpeg) {
-    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 50);
+    ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
     if (ret == RK_SUCCESS) {
       if (pHandle->pSignal) {
         memcpy(pHandle->pJpegData,
@@ -364,6 +364,12 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     return -1;
   }
 
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
   RKADK_MPI_SYS_Init();
 
   RKADK_PHOTO_SetChn(pstPhotoCfg, pstPhotoAttr->u32CamID, &stViChn, &stVencChn,
@@ -417,67 +423,55 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     RKADK_LOGE("Select combo mode");
     RKADK_PHOTO_CreateVencCombo(stVencChn.s32ChnId, &stVencAttr,
                                 pstPhotoCfg->combo_venc_chn);
-    //thu
-    ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
-    if (!ptsThumbCfg) {
-      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return -1;
-    }
-    ThumbnailInit(pstPhotoAttr->u32CamID, ptsThumbCfg->thumb_width,
-                        ptsThumbCfg->thumb_height, ptsThumbCfg->venc_chn,
-                        ptsThumbCfg->vi_chn);
-    ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->venc_chn);
-
-    pHandle->pSignal = RKADK_SIGNAL_Create(0, 1);
-    pHandle->bGetThumbJpeg = true;
-    pHandle->pJpegData = (RKADK_U8 *)malloc(pstPhotoCfg->image_width *
-                               pstPhotoCfg->image_height * 3 / 2);
-    ret = pthread_create(&pHandle->thumb_tid, NULL, RKADK_PHOTO_GetThumbJpeg, pHandle);
+  } else {
+    ret = RK_MPI_VENC_CreateChn(stVencChn.s32ChnId, &stVencAttr);
     if (ret) {
-      RKADK_LOGE("Create get thumbnail jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
-                ret);
+      RKADK_LOGE("Create Venc failed[%x]", ret);
       goto failed;
     }
 
-    pHandle->bGetJpeg = true;
-    ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
+    VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
+    memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
+    stVencChnRefBufShare.bEnable = RK_TRUE;
+    RK_MPI_VENC_SetChnRefBufShareAttr(stVencChn.s32ChnId, &stVencChnRefBufShare);
+
+    // must, for no streams callback running failed
+    VENC_RECV_PIC_PARAM_S stRecvParam;
+    stRecvParam.s32RecvPicNum = 1;
+    ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
     if (ret) {
-      RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
-                ret);
+      RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
       goto failed;
     }
-
-    pHandle->binit = true;
-    RKADK_LOGI("Photo[%d] Init End...", pstPhotoAttr->u32CamID);
-    return 0;
+    RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
   }
-
-  ret = RK_MPI_VENC_CreateChn(stVencChn.s32ChnId, &stVencAttr);
-  if (ret) {
-    RKADK_LOGE("Create Venc failed[%x]", ret);
-    goto failed;
-  }
-
-  VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
-  memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
-  stVencChnRefBufShare.bEnable = RK_TRUE;
-  RK_MPI_VENC_SetChnRefBufShareAttr(stVencChn.s32ChnId, &stVencChnRefBufShare);
-
-  // must, for no streams callback running failed
-  VENC_RECV_PIC_PARAM_S stRecvParam;
-  stRecvParam.s32RecvPicNum = 1;
-  ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
-  if (ret) {
-    RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
-    goto failed;
-  }
-  RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
 
   pHandle->bGetJpeg = true;
   ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
   if (ret) {
     RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
                ret);
+    goto failed;
+  }
+
+  ret = ThumbnailInit(pstPhotoAttr->u32CamID, ptsThumbCfg->thumb_width,
+                      ptsThumbCfg->thumb_height, ptsThumbCfg->venc_chn,
+                      ptsThumbCfg->vi_chn);
+  if (ret) {
+    RKADK_LOGI("Thumbnail venc [%d] Init fail [%d]",
+                ptsThumbCfg->venc_chn, ret);
+    goto failed;
+  }
+  ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->venc_chn);
+
+  pHandle->pSignal = RKADK_SIGNAL_Create(0, 1);
+  pHandle->bGetThumbJpeg = true;
+  pHandle->pJpegData = (RKADK_U8 *)malloc(pstPhotoCfg->image_width *
+                              pstPhotoCfg->image_height * 3 / 2);
+  ret = pthread_create(&pHandle->thumb_tid, NULL, RKADK_PHOTO_GetThumbJpeg, pHandle);
+  if (ret) {
+    RKADK_LOGE("Create get thumbnail jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
+              ret);
     goto failed;
   }
 
@@ -503,11 +497,13 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
 #endif
   {
     // VI Bind VENC
-    ret = RK_MPI_SYS_Bind(&stViChn, &stVencChn);
-    if (ret) {
-      RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
-                 stVencChn.s32ChnId, ret);
-      goto failed;
+    if (!pstPhotoCfg->enable_combo) {
+      ret = RK_MPI_SYS_Bind(&stViChn, &stVencChn);
+      if (ret) {
+        RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
+                    stVencChn.s32ChnId, ret);
+        goto failed;
+      }
     }
   }
 
@@ -519,17 +515,30 @@ failed:
   RKADK_LOGE("failed");
   RK_MPI_VENC_DestroyChn(stVencChn.s32ChnId);
 
-  if (pstPhotoCfg->enable_combo) {
-    if (pHandle->pSignal) {
-      RKADK_SIGNAL_Give(pHandle->pSignal);
-      RKADK_SIGNAL_Destroy(pHandle->pSignal);
-    }
+  pHandle->bGetJpeg = false;
+  if (pHandle->tid) {
+    ret = pthread_join(pHandle->tid, NULL);
+    if (ret)
+      RKADK_LOGE("Exit get jpeg thread failed!");
+    pHandle->tid = 0;
+  }
 
-    ThumbnailDeInit(pstPhotoAttr->u32CamID,
-                    ptsThumbCfg->venc_chn,
-                    ptsThumbCfg->vi_chn);
-    if (pHandle->pJpegData)
-      free(pHandle->pJpegData);
+  pHandle->bGetThumbJpeg = false;
+  if (pHandle->pSignal) {
+    RKADK_SIGNAL_Give(pHandle->pSignal);
+    RKADK_SIGNAL_Destroy(pHandle->pSignal);
+  }
+
+  if (pHandle->thumb_tid) {
+    ret = pthread_join(pHandle->thumb_tid, NULL);
+    if (ret)
+      RKADK_LOGE("Exit get thumbnail jpeg thread failed!");
+    pHandle->thumb_tid = 0;
+  }
+
+  if (pHandle->pJpegData) {
+    free(pHandle->pJpegData);
+    pHandle->pJpegData = NULL;
   }
 
 #ifdef RKADK_ENABLE_RGA
@@ -566,6 +575,13 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
     return -1;
   }
 
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
+            RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
   RKADK_PHOTO_SetChn(pstPhotoCfg, pHandle->u32CamId, &stViChn, &stVencChn,
                      &stRgaChn);
 
@@ -582,17 +598,10 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
     pHandle->thumb_tid = 0;
   }
 
-  if (pstPhotoCfg->enable_combo) {
-    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
-              RKADK_PARAM_GetThumbCfg();
-    if (!ptsThumbCfg) {
-      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return -1;
-    }
-    ThumbnailDeInit(pHandle->u32CamId,
-                    ptsThumbCfg->venc_chn,
-                    ptsThumbCfg->vi_chn);
-  if (pHandle->pJpegData)
+  ThumbnailDeInit(pHandle->u32CamId,
+                  ptsThumbCfg->venc_chn,
+                  ptsThumbCfg->vi_chn);
+  if (pHandle->pJpegData) {
     free(pHandle->pJpegData);
     pHandle->pJpegData = NULL;
   }
