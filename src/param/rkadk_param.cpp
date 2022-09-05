@@ -2454,6 +2454,23 @@ static void RKADK_PARAM_MicMute(bool mute, RKADK_U32 volume) {
   }
 }
 
+static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
+  char buffer[RKADK_VOLUME_LEN];
+  volume = (int)(volume * 2.55 + 0.5);
+  memset(buffer, 0, RKADK_VOLUME_LEN);
+  sprintf(buffer, "%d", volume);
+
+  RKADK_LOGI("RKADK_PARAM_RecMute mute = %d", mute);
+
+  if (mute) {
+    RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
+  } else {
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
+    RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
+  }
+}
+
 static void RKADK_PARAM_SetVolume() {
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
@@ -3294,12 +3311,14 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
 
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
+  RKADK_LOGI("RKADK_PARAM_RecMute enParamType = %d", enParamType);
   switch (enParamType) {
   case RKADK_PARAM_TYPE_REC_UNMUTE:
     RKADK_CHECK_EQUAL(pstCommCfg->rec_unmute, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
 
     pstCommCfg->rec_unmute = *(bool *)pvParam;
+    RKADK_PARAM_RecMute(!pstCommCfg->rec_unmute, pstCommCfg->mic_volume);
     break;
   case RKADK_PARAM_TYPE_AUDIO:
     RKADK_CHECK_EQUAL(pstCommCfg->enable_speaker, *(bool *)pvParam,

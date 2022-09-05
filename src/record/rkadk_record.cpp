@@ -444,7 +444,14 @@ static int RKADK_RECORD_CreateAudioChn() {
   AUDIO_SOUND_MODE_E soundMode;
   AIO_ATTR_S stAiAttr;
   AENC_CHN_ATTR_S stAencAttr;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+
+  pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
@@ -500,6 +507,8 @@ static int RKADK_RECORD_CreateAudioChn() {
     stAencAttr.stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
+
+  stAencAttr.stCodecAttr.u32Resv[3] = !pstCommCfg->rec_unmute;
 
   ret = RKADK_MPI_AENC_Init(RECORD_AENC_CHN, &stAencAttr);
   if (ret) {

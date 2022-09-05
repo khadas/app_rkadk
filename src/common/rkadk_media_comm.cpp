@@ -488,6 +488,8 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
       goto exit;
     }
 
+    RK_MPI_AENC_SetMute(s32AencChnId, (RK_BOOL)pstAencChnAttr->stCodecAttr.u32Resv[3]);
+
     g_stMediaCtx.stAencInfo[i].bUsed = true;
     g_stMediaCtx.stAencInfo[i].s32ChnId = s32AencChnId;
     g_stMediaCtx.stAencInfo[i].enCodecType = pstAencChnAttr->enType;
