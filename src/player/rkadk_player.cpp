@@ -190,6 +190,7 @@ static AUDIO_BIT_WIDTH_E FindBitWidth(RK_S32 bit) {
 }
 
 RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
+  int bytes = 2; // if the requirement is 16bit
   AUDIO_DEV aoDevId = ctx->s32DevId;
   AUDIO_SOUND_MODE_E soundMode;
 
@@ -209,6 +210,8 @@ RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
   if (bitWidth == AUDIO_BIT_WIDTH_BUTT) {
     goto __FAILED;
   }
+
+  bytes = ctx->s32BitWidth / 8;
   aoAttr.enBitwidth = bitWidth;
   aoAttr.enSamplerate = (AUDIO_SAMPLE_RATE_E)ctx->s32ReSmpSampleRate;
   soundMode = FindSoundMode(ctx->s32Channel);
@@ -217,7 +220,7 @@ RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
   }
   aoAttr.enSoundmode = soundMode;
   aoAttr.u32FrmNum = ctx->s32PeriodCount;
-  aoAttr.u32PtNumPerFrm = ctx->s32PeriodSize;
+  aoAttr.u32PtNumPerFrm = bytes * ctx->s32PeriodSize;
 
   aoAttr.u32EXFlag = 0;
   aoAttr.u32ChnCnt = 2;

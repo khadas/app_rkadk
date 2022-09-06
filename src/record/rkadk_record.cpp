@@ -446,6 +446,7 @@ static int RKADK_RECORD_CreateAudioChn() {
   AENC_CHN_ATTR_S stAencAttr;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+  int bytes = 2; // if the requirement is 16bit
 
   pstCommCfg = RKADK_PARAM_GetCommCfg();
   if (!pstCommCfg) {
@@ -473,6 +474,7 @@ static int RKADK_RECORD_CreateAudioChn() {
          strlen(pstAudioParam->audio_node));
   stAiAttr.soundCard.channels = AUDIO_DEVICE_CHANNEL;
   stAiAttr.soundCard.sampleRate = pstAudioParam->samplerate;
+  bytes = RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width) / 8;
   stAiAttr.soundCard.bitWidth = pstAudioParam->bit_width;
 
   stAiAttr.enBitwidth = pstAudioParam->bit_width;
@@ -483,7 +485,7 @@ static int RKADK_RECORD_CreateAudioChn() {
 
   stAiAttr.enSoundmode = soundMode;
   stAiAttr.u32FrmNum = 2;
-  stAiAttr.u32PtNumPerFrm = pstAudioParam->samples_per_frame;
+  stAiAttr.u32PtNumPerFrm = bytes * pstAudioParam->samples_per_frame;
   stAiAttr.u32EXFlag = 0;
   stAiAttr.u32ChnCnt = pstAudioParam->channels;
   ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode,

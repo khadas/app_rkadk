@@ -778,7 +778,7 @@ static RKADK_S32
 RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
                          RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
   AUDIO_SOUND_MODE_E soundMode;
-
+  int bytes = 2; // if the requirement is 16bit
   RKADK_CHECK_POINTER(pstAiChn, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
 
@@ -787,6 +787,7 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
          strlen(pstAudioParam->audio_node));
   pstAiAttr->soundCard.channels = AUDIO_DEVICE_CHANNEL;
   pstAiAttr->soundCard.sampleRate = pstAudioParam->samplerate;
+  bytes = RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width) / 8;
   pstAiAttr->soundCard.bitWidth = pstAudioParam->bit_width;
 
   pstAiAttr->enBitwidth = pstAudioParam->bit_width;
@@ -797,7 +798,7 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
 
   pstAiAttr->enSoundmode = soundMode;
   pstAiAttr->u32FrmNum = 2;
-  pstAiAttr->u32PtNumPerFrm = pstAudioParam->samples_per_frame;
+  pstAiAttr->u32PtNumPerFrm = bytes * pstAudioParam->samples_per_frame;
   pstAiAttr->u32EXFlag = 0;
   pstAiAttr->u32ChnCnt = pstAudioParam->channels;
 
