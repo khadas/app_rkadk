@@ -129,6 +129,14 @@ static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
                               RKADK_U32 thumb_width,
                               RKADK_U32 thumb_height) {
   int ret = 0;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+    return -1;
+  }
+
   VI_CHN_ATTR_S stChnAttr;
   memset(&stChnAttr, 0, sizeof(stChnAttr));
   stChnAttr.stIspOpt.u32BufCount = 3;
@@ -141,8 +149,10 @@ static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
   stChnAttr.stSize.u32Width  = thumb_width;
   stChnAttr.stSize.u32Height = thumb_height;
   stChnAttr.u32Depth         = 1;
-  stChnAttr.bMirror          = RK_FALSE;
-  stChnAttr.bFlip            = RK_FALSE;
+  if (pstSensorCfg->mirror)
+    stChnAttr.bMirror = RK_TRUE;
+  if (pstSensorCfg->flip)
+    stChnAttr.bFlip = RK_TRUE;
   stChnAttr.stIspOpt.stMaxSize.u32Width  = thumb_width;
   stChnAttr.stIspOpt.stMaxSize.u32Height = thumb_height;
 
