@@ -142,14 +142,6 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   return;
 }
 
-void *AudioPlay(void *arg)
-{
-  retplayer = RKADK_PLAYER_Play(pPlayer);
-  if (retplayer) {
-    RKADK_LOGE("Play failed, ret = %d", retplayer);
-  }
-}
-
 int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
@@ -238,8 +230,11 @@ int main(int argc, char *argv[]) {
   //RKADK_PLAYER_GetDuration(pPlayer, &duration);
   //RKADK_LOGD("%s: duration = %d", file, duration);
   pthread_t tidaudioplay;
-  pthread_create(&tidaudioplay, 0, AudioPlay, NULL);
-
+  retplayer = RKADK_PLAYER_Play(pPlayer);
+  if (retplayer) {
+    RKADK_LOGE("Play failed, ret = %d", retplayer);
+    return -1;
+  }
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
 
   char cmd[64];
@@ -260,7 +255,6 @@ int main(int argc, char *argv[]) {
       goto __FAILED;
     }
     RKADK_PLAYER_Stop(pPlayer);
-    pthread_join(tidaudioplay, NULL);
 
     ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
     if (ret) {
@@ -273,7 +267,11 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    pthread_create(&tidaudioplay, 0, AudioPlay, NULL);
+    retplayer = RKADK_PLAYER_Play(pPlayer);
+    if (retplayer) {
+      RKADK_LOGE("Play failed, ret = %d", retplayer);
+      break;
+    }
 
     usleep(500 * 1000);
   }
