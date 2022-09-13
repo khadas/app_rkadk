@@ -196,8 +196,8 @@ static void RKADK_STREAM_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
 static bool RKADK_STREAM_IsUseRga(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg) {
   RKADK_U32 u32SrcWidth = pstStreamCfg->vi_attr.stChnAttr.stSize.u32Width;
   RKADK_U32 u32SrcHeight = pstStreamCfg->vi_attr.stChnAttr.stSize.u32Height;
-  RKADK_U32 u32DstWidth = RKADK_WIDTH_480P;
-  RKADK_U32 u32DstHeight = RKADK_HEIGHT_480P;
+  RKADK_U32 u32DstWidth = pstStreamCfg->attribute.width;
+  RKADK_U32 u32DstHeight = pstStreamCfg->attribute.height;
 
   if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
     return false;
@@ -239,10 +239,12 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
       RKADK_MEDIA_GetRkCodecType(pstStreamCfg->attribute.codec_type);
   pstVencAttr->stVencAttr.enPixelFormat =
       pstStreamCfg->vi_attr.stChnAttr.enPixelFormat;
-  pstVencAttr->stVencAttr.u32PicWidth = RKADK_WIDTH_480P;
-  pstVencAttr->stVencAttr.u32PicHeight = RKADK_HEIGHT_480P;
-  pstVencAttr->stVencAttr.u32VirWidth = RKADK_WIDTH_480P;
-  pstVencAttr->stVencAttr.u32VirHeight = RKADK_HEIGHT_480P;
+  pstVencAttr->stVencAttr.u32MaxPicWidth = pstStreamCfg->attribute.width;
+  pstVencAttr->stVencAttr.u32MaxPicHeight = pstStreamCfg->attribute.height;
+  pstVencAttr->stVencAttr.u32PicWidth = pstStreamCfg->attribute.width;
+  pstVencAttr->stVencAttr.u32PicHeight = pstStreamCfg->attribute.height;
+  pstVencAttr->stVencAttr.u32VirWidth = pstStreamCfg->attribute.width;
+  pstVencAttr->stVencAttr.u32VirHeight = pstStreamCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstStreamCfg->attribute.profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
   pstVencAttr->stVencAttr.u32BufSize =
@@ -369,8 +371,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
     stChnAttr.enPixelFormat = pstStreamCfg->vi_attr.stChnAttr.enPixelFormat;
     stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.u32Width = RKADK_WIDTH_480P;
-    stChnAttr.u32Height = RKADK_HEIGHT_480P;
+    stChnAttr.u32Width = pstStreamCfg->attribute.width;
+    stChnAttr.u32Height = pstStreamCfg->attribute.height;
     stChnAttr.u32Depth = 0;
 
     ret = RKADK_MPI_VPSS_Init(s32VpssGrp, pstStreamCfg->attribute.rga_chn,

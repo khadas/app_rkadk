@@ -1726,8 +1726,8 @@ static RKADK_S32 RKADK_PARAM_GetViIndex(const char *module, RKADK_S32 s32CamId,
   } else {
     for (index = 0; index < RKADK_ISPP_VI_NODE_CNT; index++) {
       pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
-      if (strstr(pstViCfg->module, module) && pstViCfg->width == width &&
-          pstViCfg->height == height)
+      if (strstr(pstViCfg->module, module) && pstViCfg->width >= width &&
+          pstViCfg->height >= height)
         return index;
     }
   }

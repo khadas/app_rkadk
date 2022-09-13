@@ -205,21 +205,26 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.enPixelFormat =
       pstRecCfg->vi_attr[index].stChnAttr.enPixelFormat;
   if (index == 0) {
-    pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
-    pstVencAttr->stVencAttr.u32PicHeight = pstRecCfg->attribute[index].height;
-    pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
-    pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
+    //main stream
+    pstVencAttr->stVencAttr.u32MaxPicWidth = pstSensorCfg->max_width;
+    pstVencAttr->stVencAttr.u32MaxPicWidth = pstSensorCfg->max_height;
+    pstVencAttr->stVencAttr.u32BufSize = pstSensorCfg->max_width *
+                                         pstSensorCfg->max_height /
+                                         2;
   } else {
-    pstVencAttr->stVencAttr.u32PicWidth = RKADK_WIDTH_480P;
-    pstVencAttr->stVencAttr.u32PicHeight = RKADK_HEIGHT_480P;
-    pstVencAttr->stVencAttr.u32VirWidth = RKADK_WIDTH_480P;
-    pstVencAttr->stVencAttr.u32VirHeight = RKADK_HEIGHT_480P;
+    //sub stream
+    pstVencAttr->stVencAttr.u32MaxPicWidth = pstRecCfg->attribute[index].width;
+    pstVencAttr->stVencAttr.u32MaxPicHeight = pstRecCfg->attribute[index].height;
+    pstVencAttr->stVencAttr.u32BufSize = pstRecCfg->attribute[index].width *
+                                         pstRecCfg->attribute[index].height /
+                                         2;
   }
+  pstVencAttr->stVencAttr.u32PicWidth = pstRecCfg->attribute[index].width;
+  pstVencAttr->stVencAttr.u32PicHeight = pstRecCfg->attribute[index].height;
+  pstVencAttr->stVencAttr.u32VirWidth = pstRecCfg->attribute[index].width;
+  pstVencAttr->stVencAttr.u32VirHeight = pstRecCfg->attribute[index].height;
   pstVencAttr->stVencAttr.u32Profile = pstRecCfg->attribute[index].profile;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
-  pstVencAttr->stVencAttr.u32BufSize = pstRecCfg->attribute[index].width *
-                                       pstRecCfg->attribute[index].height /
-                                       2;
 
   return 0;
 }
@@ -231,13 +236,8 @@ static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
 
   u32SrcWidth= pstRecCfg->vi_attr[index].stChnAttr.stSize.u32Width;
   u32SrcHeight = pstRecCfg->vi_attr[index].stChnAttr.stSize.u32Height;
-  if (index == 0) {
-    u32DstWidth = pstRecCfg->attribute[index].width;
-    u32DstHeight = pstRecCfg->attribute[index].height;
-  } else {
-    u32DstWidth = RKADK_WIDTH_480P;
-    u32DstHeight = RKADK_HEIGHT_480P;
-  }
+  u32DstWidth = pstRecCfg->attribute[index].width;
+  u32DstHeight = pstRecCfg->attribute[index].height;
 
   if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
     return false;
@@ -315,8 +315,8 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       stChnAttr.enPixelFormat = pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat;
       stChnAttr.stFrameRate.s32SrcFrameRate = -1;
       stChnAttr.stFrameRate.s32DstFrameRate = -1;
-      stChnAttr.u32Width = RKADK_WIDTH_480P;
-      stChnAttr.u32Height = RKADK_HEIGHT_480P;
+      stChnAttr.u32Width = pstRecCfg->attribute[i].width;
+      stChnAttr.u32Height = pstRecCfg->attribute[i].height;
       stChnAttr.u32Depth = 0;
 
       ret = RKADK_MPI_VPSS_Init(s32VpssGrp, pstRecCfg->attribute[i].rga_chn,
