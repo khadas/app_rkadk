@@ -289,9 +289,9 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
   return ret;
 }
 
-RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
+RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pu8JpegData, RKADK_U32 u32JpegLen,
                                VENC_STREAM_S stThuFrame,
-                               RKADK_U8 *pNewPhoto) {
+                               RKADK_U8 *pu8Photo) {
   int ret = 0;
   char *thumb_data;
   int thumb_len;
@@ -305,17 +305,17 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
   RKADK_LOGI("Thumbnail seq = %d, data %p, size = %d", stThuFrame.u32Seq,
               thumb_data, thumb_len);
 
-  app0_len = pJpegdata[5];
+  app0_len = pu8JpegData[5];
   off_set = app0_len + 4;
-  memcpy(pNewPhoto, pJpegdata, off_set);
-  pNewPhoto += off_set;
+  memcpy(pu8Photo, pu8JpegData, off_set);
+  pu8Photo += off_set;
   userdata_len = PackageApp1(stIfd0, stIfd1, sizeof(stIfd0) / sizeof(IFD),
-                sizeof(stIfd1) / sizeof(IFD), (char *)pNewPhoto, thumb_data, thumb_len);
-  pNewPhoto += userdata_len;
-  memcpy(pNewPhoto, pJpegdata + off_set, JpegLen - off_set);
-  pNewPhoto -= (off_set + userdata_len);
+                sizeof(stIfd1) / sizeof(IFD), (char *)pu8Photo, thumb_data, thumb_len);
+  pu8Photo += userdata_len;
+  memcpy(pu8Photo, pu8JpegData + off_set, u32JpegLen - off_set);
+  pu8Photo -= (off_set + userdata_len);
 
-  return JpegLen + userdata_len;
+  return u32JpegLen + userdata_len;
 }
 
 RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb) {

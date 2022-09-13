@@ -45,6 +45,9 @@
 #define VDEC_CHN_THM 0
 #define VDEC_CHN_GET_DATA 1
 
+#define JPG_MMAP_ONE_FILE_PATH "/tmp/.mmap_1.jpeg"
+#define JPG_MMAP_TWO_FILE_PATH "/tmp/.mmap_2.jpeg"
+
 typedef enum {
   RKADK_JPG_LITTLE_ENDIAN, // II
   RKADK_JPG_BIG_ENDIAN,    // MM
@@ -67,6 +70,7 @@ typedef struct {
   RKADK_U32 u32PhotoCnt;
   RKADK_U8 *pJpegData;
   RKADK_U32 u32JpegLen;
+  RKADK_U32 u32MmapLen;
   void *pSignal;
 } RKADK_PHOTO_HANDLE_S;
 
@@ -75,6 +79,35 @@ static RKADK_PHOTO_HANDLE_S g_stPhotoHandle[RKADK_MAX_SENSOR_CNT] = {0};
 static RKADK_JPG_DE_TYPE_S g_stJpgDEType[JPG_DE_TYPE_COUNT] = {
     {1, 1}, {2, 1}, {3, 3}, {4, 4},  {5, 8},  {6, 1},
     {7, 1}, {8, 2}, {9, 3}, {10, 8}, {11, 4}, {12, 8}};
+
+static RKADK_U8 *RKADK_PHOTO_Mmap(RKADK_CHAR *FileName, RKADK_U32 u32PhotoLen) {
+  char data = 0xff;
+  FILE *fd = NULL;
+  RKADK_U8 *pu8Photo = NULL;
+
+  fd = fopen(FileName, "w+");
+  if (!fd) {
+    RKADK_LOGE("open %s failed", FileName);
+    return NULL;
+  }
+
+  if (fseek(fd, u32PhotoLen, SEEK_SET)) {
+    fclose(fd);
+    RKADK_LOGE("seek %s failed", FileName);
+    return NULL;
+  }
+  fwrite(&data, 1, 1, fd);
+
+  pu8Photo = (RKADK_U8 *)mmap(NULL, u32PhotoLen, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(fd), 0);
+  if (pu8Photo == MAP_FAILED) {
+    fclose(fd);
+    RKADK_LOGE("Mmap %s, errno: %d",FileName, errno);
+    return NULL;
+  }
+  fclose(fd);
+
+  return pu8Photo;
+}
 
 static void *RKADK_PHOTO_GetJpeg(void *params) {
   int ret;
@@ -145,8 +178,7 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
   VENC_STREAM_S stThumbFrame;
   VENC_PACK_S stPack;
   RKADK_PHOTO_RECV_DATA_S stData;
-  int NewPhotoLen = SENSOR_MAX_WIDTH * SENSOR_MAX_HEIGHT
-          * 3 / 2;
+  RKADK_U32 u32PhotoLen;
 
   RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
   if (!pHandle) {
@@ -165,13 +197,21 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     return NULL;
   }
 
-  stThumbFrame.pstPack = &stPack;
-
-  RKADK_U8 *NewPhoto = (RKADK_U8 *)malloc(NewPhotoLen);
-  if (!NewPhoto) {
-    RKADK_LOGE("No memory");
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
+    RKADK_PARAM_GetSensorCfg(pHandle->u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return NULL;
   }
+
+  stThumbFrame.pstPack = &stPack;
+
+  u32PhotoLen = pstSensorCfg->max_width *
+                pstSensorCfg->max_height * 3 / 2;
+
+  RKADK_U8 *pu8Photo = RKADK_PHOTO_Mmap(JPG_MMAP_TWO_FILE_PATH, u32PhotoLen);
+  if (!pu8Photo)
+    return NULL;
 
     // drop first frame
   ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
@@ -187,8 +227,8 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
       if (ret == 0) {
         if (pHandle->u32PhotoCnt) {
           memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
-          stData.u32DataLen = ThumbnailPhotoData(pHandle->pJpegData, pHandle->u32JpegLen, stThumbFrame, NewPhoto);
-          stData.pu8DataBuf = NewPhoto;
+          stData.u32DataLen = ThumbnailPhotoData(pHandle->pJpegData, pHandle->u32JpegLen, stThumbFrame, pu8Photo);
+          stData.pu8DataBuf = pu8Photo;
           stData.u32CamId = pHandle->u32CamId;
           pHandle->pDataRecvFn(stData.pu8DataBuf, stData.u32DataLen,
                                 stData.u32CamId);
@@ -204,8 +244,8 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     }
   }
 
-  if (NewPhoto)
-    free(NewPhoto);
+  if (pu8Photo)
+    munmap(pu8Photo, u32PhotoLen);
 
   RKADK_LOGD("Exit get thumbnail jpeg thread");
   return NULL;
@@ -464,14 +504,25 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   }
   ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->venc_chn);
 
+  pHandle->u32MmapLen = pstPhotoCfg->image_width *
+                        pstPhotoCfg->image_height * 3 / 2;
   pHandle->pSignal = RKADK_SIGNAL_Create(0, 1);
   pHandle->bGetThumbJpeg = true;
-  pHandle->pJpegData = (RKADK_U8 *)malloc(pstPhotoCfg->image_width *
-                              pstPhotoCfg->image_height * 3 / 2);
+  pHandle->pJpegData = RKADK_PHOTO_Mmap(JPG_MMAP_ONE_FILE_PATH, pHandle->u32MmapLen);
+  if (!pHandle->pJpegData) {
+    ThumbnailDeInit(pstPhotoAttr->u32CamID,
+                    ptsThumbCfg->venc_chn,
+                    ptsThumbCfg->vi_chn);
+    goto failed;
+  }
+
   ret = pthread_create(&pHandle->thumb_tid, NULL, RKADK_PHOTO_GetThumbJpeg, pHandle);
   if (ret) {
     RKADK_LOGE("Create get thumbnail jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamID,
               ret);
+    ThumbnailDeInit(pstPhotoAttr->u32CamID,
+                    ptsThumbCfg->venc_chn,
+                    ptsThumbCfg->vi_chn);
     goto failed;
   }
 
@@ -537,7 +588,7 @@ failed:
   }
 
   if (pHandle->pJpegData) {
-    free(pHandle->pJpegData);
+    munmap(pHandle->pJpegData, pHandle->u32MmapLen);
     pHandle->pJpegData = NULL;
   }
 
@@ -602,7 +653,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
                   ptsThumbCfg->venc_chn,
                   ptsThumbCfg->vi_chn);
   if (pHandle->pJpegData) {
-    free(pHandle->pJpegData);
+    munmap(pHandle->pJpegData, pHandle->u32MmapLen);
     pHandle->pJpegData = NULL;
   }
 
