@@ -119,7 +119,7 @@ static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
   }
 
   auto front = g_fileNameDeque[muxerId].front();
-  memcpy(pcFileName, front, strlen(front));
+  strncpy(pcFileName, front, RKADK_MAX_FILE_PATH_LEN);
   g_fileNameDeque[muxerId].pop_front();
   free(front);
 
