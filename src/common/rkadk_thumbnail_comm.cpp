@@ -463,6 +463,10 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
     u64BoxSize = bswap_32(*(RKADK_U32*) (pFile + cur));
     if (u64BoxSize == 1)
       u64BoxSize = bswap_64(*(RKADK_U64*) (pFile + cur + THM_BOX_HEADER_LEN));
+    else if (u64BoxSize <= 0) {
+      RKADK_LOGE("Last one box, not find thm box");
+      break;
+    }
 
     cur += u64BoxSize;
   }
@@ -526,10 +530,12 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
     pstThumbAttr->u32Height = (RKADK_U32) pFile[cur + THM_BOX_HEADER_LEN + 4];
     pstThumbAttr->u32VirWidth = (RKADK_U32) pFile[cur + THM_BOX_HEADER_LEN + 8];
     pstThumbAttr->u32VirHeight = (RKADK_U32) pFile[cur + THM_BOX_HEADER_LEN + 12];
+    munmap(pFile, len);
+    return RKADK_SUCCESS;
   }
 
   munmap(pFile, len);
-  return RKADK_SUCCESS;
+  return RKADK_FAILURE;
 }
 
 RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
