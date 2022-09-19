@@ -2220,9 +2220,9 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.u32Depth = 0;
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
-  if (pstSensorCfg->flip)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
     pstStreamCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-  if (pstSensorCfg->mirror)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
     pstStreamCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
 
   return 0;
@@ -2268,9 +2268,9 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnab
   pstPhotoCfg->vi_attr.stChnAttr.u32Depth = 0;
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
-  if (pstSensorCfg->flip)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
     pstPhotoCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-  if (pstSensorCfg->mirror)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
     pstPhotoCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
 
   return 0;
@@ -2323,9 +2323,9 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnable
     pstRecCfg->vi_attr[i].stChnAttr.u32Depth = 0;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = -1;
-    if (pstSensorCfg->flip)
+    if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
       pstRecCfg->vi_attr[i].stChnAttr.bFlip = RK_TRUE;
-    if (pstSensorCfg->mirror)
+    if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
       pstRecCfg->vi_attr[i].stChnAttr.bMirror = RK_TRUE;
   }
 
@@ -2385,9 +2385,9 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId, RKADK_BOOL bEnabl
   pstDispCfg->vi_attr.stChnAttr.u32Depth = 0;
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
-  if (pstSensorCfg->flip)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
     pstDispCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-  if (pstSensorCfg->mirror)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
     pstDispCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
 
   return 0;

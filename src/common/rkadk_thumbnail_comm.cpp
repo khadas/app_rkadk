@@ -149,9 +149,9 @@ static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
   stChnAttr.stSize.u32Width  = thumb_width;
   stChnAttr.stSize.u32Height = thumb_height;
   stChnAttr.u32Depth         = 1;
-  if (pstSensorCfg->mirror)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
     stChnAttr.bMirror = RK_TRUE;
-  if (pstSensorCfg->flip)
+  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
     stChnAttr.bFlip = RK_TRUE;
   stChnAttr.stIspOpt.stMaxSize.u32Width  = thumb_width;
   stChnAttr.stIspOpt.stMaxSize.u32Height = thumb_height;
