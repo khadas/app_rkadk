@@ -66,7 +66,6 @@ target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_stream_test DESTINATION "bin")
 
-if(COMPILE)
 #--------------------------
 # rkadk_storage_test
 #--------------------------
@@ -77,6 +76,7 @@ target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/includ
 target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_storage_test DESTINATION "bin")
 
+if(COMPILE)
 #-----------------------------------
 # rkadk_media_test: record photo stream
 #-----------------------------------

@@ -998,7 +998,7 @@ static RKADK_S32 RKADK_STORAGE_RKFSCK(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
   umount2(pHandle->stDevAttr.cMountPath, MNT_DETACH);
   ret = rkfsmk_fat_check(pHandle->stDevSta.cDevPath, &para);
   sync();
-  mount(pHandle->stDevAttr.cDevPath, pHandle->stDevAttr.cMountPath, "vfat", MS_NOATIME | MS_NOSUID, NULL);
+  mount(pHandle->stDevSta.cDevPath, pHandle->stDevAttr.cMountPath, "vfat", MS_NOATIME | MS_NOSUID, NULL);
 
   return ret;
 }
