@@ -860,11 +860,6 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
   if (u32Remainder)
     pstMuxerAttr->stPreRecordAttr.u32PreRecCacheTime += 1;
 
-  if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE)
-    pstMuxerAttr->bLapseRecord = RK_TRUE;
-  else
-    pstMuxerAttr->bLapseRecord = RK_FALSE;
-
   pstMuxerAttr->u32CamId = u32CamId;
   pstMuxerAttr->u32StreamCnt = pstRecCfg->file_num;
   pstMuxerAttr->stPreRecordAttr.u32PreRecTimeSec = pstRecCfg->pre_record_time;
@@ -873,7 +868,7 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
 
   for (int i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
     pstMuxerAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
-    if (pstMuxerAttr->bLapseRecord) {
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
       pstMuxerAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].lapse_interval;
       pstMuxerAttr->astStreamAttr[i].u32TrackCnt = 1; // only video track
@@ -910,7 +905,7 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
         pstRecCfg->attribute[i].height;
 
-    if (pstMuxerAttr->bLapseRecord || !bEnableAudio)
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE || !bEnableAudio)
       continue;
 
     // audio track
@@ -1000,8 +995,8 @@ failed:
 RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   RKADK_S32 ret, index;
   RKADK_U32 u32CamId;
-  RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
   RKADK_MUXER_HANDLE_S *stRecorder = NULL;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
   stRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
@@ -1010,14 +1005,17 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
-  if (stRecorder->bLapseRecord)
-    enRecType = RKADK_REC_TYPE_LAPSE;
-
-  RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->u32CamId,
-             enRecType);
-
   u32CamId = stRecorder->u32CamId;
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
+  RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->u32CamId,
+             pstRecCfg->record_type);
 
   for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
     index = i + (RKADK_MUXER_STREAM_MAX_CNT * u32CamId);
@@ -1042,7 +1040,8 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return ret;
   }
 
-  if (enRecType != RKADK_REC_TYPE_LAPSE && RKADK_MUXER_EnableAudio(u32CamId)) {
+  if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE &&
+      RKADK_MUXER_EnableAudio(u32CamId)) {
     ret = RKADK_RECORD_DestoryAudioChn();
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_DestoryAudioChn failed, ret = %d", ret);
@@ -1058,7 +1057,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
 
   g_pfnRequestFileNames[u32CamId] = NULL;
   RKADK_MPI_SYS_Exit();
-  RKADK_LOGI("Destory Record[%d, %d] End...", u32CamId, enRecType);
+  RKADK_LOGI("Destory Record[%d, %d] End...", u32CamId, pstRecCfg->record_type);
   return 0;
 }
 

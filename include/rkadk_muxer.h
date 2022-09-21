@@ -177,7 +177,6 @@ typedef struct {
 /* muxer attribute param */
 typedef struct {
   RKADK_U32 u32CamId;
-  bool bLapseRecord;
   RKADK_U32 u32StreamCnt; /* stream cnt */
   RKADK_MUXER_STREAM_ATTR_S
   astStreamAttr[RKADK_MUXER_STREAM_MAX_CNT]; /* array of stream attr */
@@ -188,7 +187,6 @@ typedef struct {
 
 typedef struct {
   RKADK_U32 u32CamId;
-  bool bLapseRecord;
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
 } RKADK_MUXER_HANDLE_S;

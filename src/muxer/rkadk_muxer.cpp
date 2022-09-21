@@ -678,7 +678,6 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
   pstMuxer->u32CamId = pstMuxerAttr->u32CamId;
   pstMuxer->u32StreamCnt = pstMuxerAttr->u32StreamCnt;
-  pstMuxer->bLapseRecord = pstMuxerAttr->bLapseRecord;
 
   ret = RKADK_MUXER_Enable(pstMuxerAttr, pstMuxer);
   if (ret) {
