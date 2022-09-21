@@ -1860,10 +1860,6 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     pstCommCfg->wrap_buf_line = height;
     RKADK_PARAM_SaveCommCfg(g_stPARAMCtx.path);
 
-    pstPhotoCfg->image_width = width;
-    pstPhotoCfg->image_height = height;
-    RKADK_PARAM_SavePhotoCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
-
     if ((width <= pstSensorCfg->max_width) &&
         (height <= pstSensorCfg->max_height)) {
       RKADK_LOGI("rec[0] default VI[0]");
@@ -3322,7 +3318,6 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
                             enStrmType);
     if (pstSensorCfg->used_isp) {
       RKADK_PARAM_SetRecViAttr(s32CamId, bEnable);
-      RKADK_PARAM_SetPhotoViAttr(s32CamId, bEnable);
     }
   }
 
