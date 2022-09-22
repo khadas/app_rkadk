@@ -487,8 +487,9 @@ static bool RKADK_MUXER_Proc(void *params) {
     // Process
     if (pstMuxerHandle->bMuxering) {
       // Check close
-      if (cell->isKeyFrame && (cell->pts - pstMuxerHandle->startTime >=
-                               pstMuxerHandle->duration * 1000000)) {
+      if (cell->isKeyFrame && ((cell->pts - pstMuxerHandle->startTime >=
+                                (pstMuxerHandle->duration * 1000000 -
+                                1000000 / pstMuxerHandle->stVideo.frame_rate_num)))) {
         RKADK_MUXER_Close(pstMuxerHandle);
         continue;
       }
