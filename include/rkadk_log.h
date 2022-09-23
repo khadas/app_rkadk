@@ -39,13 +39,13 @@ extern "C" {
 #define RKADK_LOGE(format, ...)                                                \
   do {                                                                         \
     RKADK_LOG_LEVEL_JUDGE(RKADK_LOG_LEVEL_ERROR);                              \
-    printf("[RKADK_I] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
+    printf("[RKADK_E] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
   } while (0)
 
 #define RKADK_LOGW(format, ...)                                                \
   do {                                                                         \
     RKADK_LOG_LEVEL_JUDGE(RKADK_LOG_LEVEL_WARNING);                            \
-    printf("[RKADK_I] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
+    printf("[RKADK_W] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
   } while (0)
 
 #define RKADK_LOGI(format, ...)                                                \
@@ -57,7 +57,7 @@ extern "C" {
 #define RKADK_LOGD(format, ...)                                                \
   do {                                                                         \
     RKADK_LOG_LEVEL_JUDGE(RKADK_LOG_LEVEL_DEBUG);                              \
-    printf("[RKADK_I] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
+    printf("[RKADK_D] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
   } while (0)
 
 #ifdef __cplusplus
