@@ -55,8 +55,8 @@ typedef struct {
   const char *cOutputFmt;
   VideoParam stVideo;
   AudioParam stAudio;
-  int64_t duration;     // s
-  int64_t realDuration; // ms
+  int32_t duration;     // s
+  int32_t realDuration; // ms
   int64_t startTime;    // us
   bool bEnableStream;
   bool bMuxering;
