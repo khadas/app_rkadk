@@ -387,6 +387,7 @@ static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
 
 RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   int ret;
+  bool bSysInit = false;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   VENC_CHN_ATTR_S stVencAttr;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
@@ -435,7 +436,11 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     return -1;
   }
 
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
 
   RKADK_PHOTO_SetChn(pstPhotoCfg, pstPhotoAttr->u32CamID, &stViChn, &stVencChn,
                      &stRgaChn);
@@ -767,7 +772,6 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_U32 u32CamId) {
     return ret;
   }
 
-  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Photo[%d] DeInit End...", pHandle->u32CamId);
 
   pHandle->pDataRecvFn = NULL;
@@ -1477,6 +1481,7 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
                                        RKADK_THUMB_ATTR_S *pstThumbAttr,
                                        RKADK_S32 s32VdecChnID) {
   int ret = 0;
+  bool bSysInit = false;
   VDEC_CHN_ATTR_S stVdecAttr;
   MEDIA_BUFFER jpg_mb = NULL;
   MEDIA_BUFFER mb = NULL;
@@ -1485,7 +1490,11 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_U8 *pu8JpgBuf,
   int dstFormat;
 
   // Jpg Decode
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
 
   stVdecAttr.enCodecType = RK_CODEC_TYPE_JPEG;
   stVdecAttr.enMode = VIDEO_MODE_FRAME;
@@ -1587,7 +1596,6 @@ exit:
   if (mb)
     RK_MPI_MB_ReleaseBuffer(mb);
 
-  RKADK_MPI_SYS_Exit();
   return ret;
 }
 

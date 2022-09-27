@@ -1195,13 +1195,18 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
 RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
                               RKADK_MW_PTR *ppRecorder) {
   int ret;
+  bool bSysInit = false;
   bool bEnableAudio = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
 
   RKADK_CHECK_POINTER(pstRecAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstRecAttr->s32CamID, RKADK_FAILURE);
 
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
   RKADK_PARAM_Init(NULL, NULL);
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
@@ -1319,7 +1324,6 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   }
 
   g_pfnRequestFileNames[u32CamId] = NULL;
-  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Destory Record[%d, %d] End...", u32CamId, pstRecCfg->record_type);
   return 0;
 }

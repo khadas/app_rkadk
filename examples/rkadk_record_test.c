@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_record.h"
@@ -185,6 +186,8 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
+  RKADK_MPI_SYS_Init();
+
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
     memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
@@ -249,7 +252,7 @@ int main(int argc, char *argv[]) {
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
 #endif
-
+  RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
   return 0;
 }

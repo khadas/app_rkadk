@@ -393,6 +393,7 @@ static RKADK_S32 RKADK_RTMP_EnableMuxer(RKADK_U32 u32CamId, char *path,
 RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
+  bool bSysInit = false;
   bool bEnableAudio, bUseRga = false;
   MPP_CHN_S stAiChn, stAencChn;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
@@ -410,7 +411,11 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     return -1;
   }
 
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
   RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
@@ -681,7 +686,6 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
     }
   }
 
-  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Rtmp[%d] DeInit End...", pstHandle->u32CamId);
   free(pHandle);
   return 0;

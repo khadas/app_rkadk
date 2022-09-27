@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_player.h"
@@ -200,6 +201,8 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigterm_handler);
 
+  RKADK_MPI_SYS_Init();
+
   RKADK_PLAYER_CFG_S stPlayCfg;
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   stPlayCfg.bEnableAudio = true;
@@ -279,5 +282,6 @@ int main(int argc, char *argv[]) {
 __FAILED:
   RKADK_PLAYER_Destroy(pPlayer);
   pPlayer = NULL;
+  RKADK_MPI_SYS_Exit();
   return 0;
 }

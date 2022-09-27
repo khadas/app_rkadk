@@ -15,7 +15,6 @@
  */
 
 #include "rkadk_param.h"
-#include "rkadk_media_comm.h"
 #include "rkadk_param_map.h"
 #include <string.h>
 #include <sys/stat.h>

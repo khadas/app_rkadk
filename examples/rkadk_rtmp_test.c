@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_rtmp.h"
@@ -88,6 +89,8 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGD("#camera id: %d", u32CamId);
 
+  RKADK_MPI_SYS_Init();
+
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
     memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
@@ -144,5 +147,6 @@ int main(int argc, char *argv[]) {
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(u32CamId);
 #endif
+  RKADK_MPI_SYS_Exit();
   return 0;
 }

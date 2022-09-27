@@ -500,11 +500,18 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
                               RKADK_PLAYER_CFG_S *pstPlayCfg) {
   RKADK_CHECK_POINTER(pstPlayCfg, RKADK_FAILURE);
   RKADK_S32 ret;
+  bool bSysInit = false;
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
   g_pfnPlayerCallback = pstPlayCfg->pfnPlayerCallback;
 
   if (*pPlayer) {
     RKADK_LOGE("player has been created");
+    return -1;
+  }
+
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
     return -1;
   }
 
@@ -553,7 +560,6 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   pstPlayer->pCtx->s32ClrPubAttr      = 0;
   pstPlayer->pCtx->s32GetPubAttr      = 0;
 
-  RKADK_MPI_SYS_Init();
   RKADK_LOGI("Create Player[%d, %d] End...", pstPlayCfg->bEnableVideo,
              pstPlayCfg->bEnableAudio);
   *pPlayer = (RKADK_MW_PTR)pstPlayer;
@@ -619,7 +625,6 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
     pstPlayer->pCtx = RK_NULL;
   }
 
-  RKADK_MPI_SYS_Exit();
   RKADK_LOGI("Destory Player End...");
   if (g_pfnPlayerCallback != NULL)
     g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);

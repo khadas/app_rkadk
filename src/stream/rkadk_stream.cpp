@@ -278,6 +278,7 @@ static RKADK_S32 RKADK_STREAM_VencGetData(RKADK_U32 u32CamId,
 RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
                                  RKADK_CODEC_TYPE_E enCodecType) {
   int ret = 0;
+  bool bSysInit = false;
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   RKADK_STREAM_TYPE_E enType;
   VENC_CHN_ATTR_S stVencChnAttr;
@@ -304,7 +305,11 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
   pVideoHandle->enCodecType = enCodecType;
   pVideoHandle->u32CamId = u32CamID;
 
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
   RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
@@ -528,7 +533,6 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_U32 u32CamID) {
     return ret;
   }
 
-  RKADK_MPI_SYS_Exit();
   pstHandle->init = false;
   RKADK_LOGI("Preview[%d] Video DeInit End...", pstHandle->u32CamId);
 
@@ -843,6 +847,7 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
 
 RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
   int ret;
+  bool bSysInit = false;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
   STREAM_AUDIO_HANDLE_S *pAudioHandle = &g_audioHandle;
@@ -854,7 +859,11 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
 
   RKADK_LOGI("Preview Audio Init...");
 
-  RKADK_MPI_SYS_Init();
+  bSysInit = RKADK_MPI_SYS_CHECK();
+  if (!bSysInit) {
+    RKADK_LOGE("System is not initialized");
+    return -1;
+  }
   RKADK_PARAM_Init(NULL, NULL);
 
   memset(pAudioHandle, 0, sizeof(STREAM_AUDIO_HANDLE_S));
@@ -985,8 +994,6 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
       return ret;
     }
   }
-
-  RKADK_MPI_SYS_Exit();
 
   pstHandle->init = false;
   pstHandle->start = false;

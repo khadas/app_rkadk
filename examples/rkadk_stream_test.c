@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_stream.h"
@@ -362,6 +363,8 @@ int main(int argc, char *argv[]) {
   RKADK_LOGD("#Test mode: %s", pMode);
   RKADK_LOGD("#Out path: %s", g_output_path);
 
+  RKADK_MPI_SYS_Init();
+
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
     memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
@@ -389,6 +392,6 @@ int main(int argc, char *argv[]) {
     RKADK_LOGE("Invalid test mode: %s", pMode);
     return -1;
   }
-
+  RKADK_MPI_SYS_Exit();
   return 0;
 }

@@ -18,17 +18,18 @@
 #define __RKADK_PARAM_H__
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_record.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "rk_mpi_ai.h"
+/* #include "rk_mpi_ai.h"
 #include "rk_mpi_venc.h"
 #include "rk_mpi_vi.h"
 #include "rk_mpi_vo.h"
 #include "rk_mpi_vpss.h"
-#include "rk_mpi_rgn.h"
+#include "rk_mpi_rgn.h" */
 
 #ifdef __cplusplus
 extern "C" {

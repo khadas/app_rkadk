@@ -32,6 +32,7 @@ extern "C" {
 #include "rk_mpi_rgn.h"
 #include "rk_mpi_amix.h"
 #include "rkadk_common.h"
+#include <stdbool.h>
 
 /* audio capture maximum count */
 #define RKADK_MEDIA_AI_MAX_CNT (1)
@@ -72,6 +73,7 @@ typedef void (*RKADK_MEDIA_AENC_DATA_PROC_FUNC)(AUDIO_STREAM_S stFrame,
 
 RKADK_S32 RKADK_MPI_SYS_Init();
 RKADK_S32 RKADK_MPI_SYS_Exit();
+bool RKADK_MPI_SYS_CHECK();
 
 AUDIO_SOUND_MODE_E RKADK_AI_GetSoundMode(RKADK_U32 ch);
 RKADK_S32 RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,

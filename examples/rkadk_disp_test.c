@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
@@ -87,6 +88,8 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGD("#camera id: %d", u32CamId);
 
+  RKADK_MPI_SYS_Init();
+
 #ifdef RKAIQ
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
@@ -117,7 +120,6 @@ int main(int argc, char *argv[]) {
   RKADK_BOOL fec_enable = RKADK_FALSE;
   RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
-
   ret = RKADK_DISP_Init(u32CamId);
   if (ret) {
     RKADK_LOGE("RKADK_DISP_Init failed(%d)", ret);
@@ -137,5 +139,6 @@ int main(int argc, char *argv[]) {
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(u32CamId);
 #endif
+  RKADK_MPI_SYS_Exit();
   return 0;
 }

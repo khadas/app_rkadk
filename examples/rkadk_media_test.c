@@ -16,6 +16,7 @@
 
 #include "mp3_header/mp3_header.h"
 #include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 #include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
@@ -453,6 +454,8 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
+  RKADK_MPI_SYS_Init();
+
 #ifdef RKAIQ
   int fps = 30;
   RK_BOOL fec_enable = RK_FALSE;
@@ -588,7 +591,7 @@ int main(int argc, char *argv[]) {
 #ifdef RKAIQ
   RKADK_VI_ISP_Stop(g_u32CamID);
 #endif
-
+  RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
   return 0;
 }

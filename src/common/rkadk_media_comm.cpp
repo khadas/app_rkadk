@@ -60,7 +60,6 @@ typedef struct {
 } RKADK_MEDIA_INFO_S;
 
 typedef struct {
-  RKADK_U32 u32InitCnt;
   pthread_mutex_t aiMutex;
   pthread_mutex_t aencMutex;
   pthread_mutex_t viMutex;
@@ -78,18 +77,12 @@ typedef struct {
   RKADK_BIND_INFO_S stRgaVencInfo[RKADK_RGA_VENC_MAX_BIND_CNT];
 } RKADK_MEDIA_CONTEXT_S;
 
-static bool g_bMediaCtxInit = false;
+static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
 static pthread_mutex_t g_mediaMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool g_bVpssGrpInit[VPSS_MAX_GRP_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
-  RKADK_MUTEX_LOCK(g_mediaMutex);
-  if (g_bMediaCtxInit) {
-    RKADK_MUTEX_UNLOCK(g_mediaMutex);
-    return;
-  }
-
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -97,8 +90,6 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.vencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.rgaMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_bMediaCtxInit = true;
-  RKADK_MUTEX_UNLOCK(g_mediaMutex);
 }
 
 static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp,
@@ -193,35 +184,42 @@ static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
 RKADK_S32 RKADK_MPI_SYS_Init() {
   int ret = 0;
 
-  RKADK_MEDIA_CtxInit();
-
-  if (!g_stMediaCtx.u32InitCnt) {
+  if (!g_bSysInit) {
+    RKADK_MEDIA_CtxInit();
     ret = RK_MPI_SYS_Init();
     if (ret) {
       RKADK_LOGE("RK_MPI_SYS_Init failed[%d]", ret);
       return ret;
     }
+    g_bSysInit = true;
+  } else {
+    RKADK_LOGI("System has been initialized");
   }
 
-  g_stMediaCtx.u32InitCnt++;
+  RKADK_LOGI("System initialization succeeded");
   return 0;
 }
 
 RKADK_S32 RKADK_MPI_SYS_Exit() {
   int ret;
 
-  if (0 == g_stMediaCtx.u32InitCnt) {
-    return 0;
-  } else if (1 == g_stMediaCtx.u32InitCnt) {
+  if (g_bSysInit) {
     ret = RK_MPI_SYS_Exit();
     if (ret) {
       RKADK_LOGE("RK_MPI_SYS_Exit failed[%d]", ret);
       return ret;
     }
+    g_bSysInit = false;
+  } else {
+    RKADK_LOGI("System has been deinitialized");
   }
 
-  g_stMediaCtx.u32InitCnt--;
+  RKADK_LOGI("System deinitialization succeeded");
   return 0;
+}
+
+bool RKADK_MPI_SYS_CHECK() {
+  return g_bSysInit;
 }
 
 #if 0
@@ -295,7 +293,6 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
   pstParams.s32UsrFrmDepth = 1;
 
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aiMutex);
 
@@ -460,7 +457,6 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
   RKADK_S32 i;
 
   RKADK_CHECK_POINTER(pstAencChnAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aencMutex);
 
@@ -561,7 +557,6 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
   memset(&stBindPipe, 0, sizeof(stBindPipe));
 
   RKADK_CHECK_POINTER(pstViChnAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.viMutex);
 
@@ -715,9 +710,8 @@ RKADK_S32 RKADK_MPI_VI_QueryCameraStatus(RKADK_U32 u32CamId) {
   int ret;
   VI_DEV_STATUS_S stDevStatus;
 
-  if (!g_stMediaCtx.u32InitCnt) {
-    RKADK_LOGE("RKADK_MPI_SYS_Init not init [%d]",
-                g_stMediaCtx.u32InitCnt);
+  if (!RKADK_MPI_SYS_CHECK()) {
+    RKADK_LOGE("System is not initialized");
     return -1;
   }
 
@@ -745,7 +739,6 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_S32 s32ChnId,
   }
 
   RKADK_CHECK_POINTER(pstVencChnAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
 
@@ -866,7 +859,6 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
 
   RKADK_CHECK_POINTER(pstVpssGrpAttr, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstVpssChnAttr, RKADK_FAILURE);
-  RKADK_MEDIA_CtxInit();
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
 
