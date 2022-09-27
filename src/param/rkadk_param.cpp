@@ -2445,6 +2445,8 @@ static void RKADK_PARAM_SetMicVolume(bool mute, RKADK_U32 volume) {
     RKADK_LOGE("Set mic input volume failed. Mic input volume range is [0,100]");
     return;
   }
+
+  RKADK_LOGI("RKADK_PARAM_SetMicVolume mute = %d, volume = %d", mute, volume);
   volume = (int)(volume * 2.55 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
@@ -2460,6 +2462,8 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
     RKADK_LOGE("Set speaker volume failed. Speaker volume range is[0,100]");
     return;
   }
+
+  RKADK_LOGI("RKADK_PARAM_SetSpeakerVolume volume = %d", volume);
   volume = (int)(volume * 0.3 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
@@ -2472,6 +2476,7 @@ static void RKADK_PARAM_MicMute(bool mute, RKADK_U32 volume) {
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
 
+  RKADK_LOGI("RKADK_PARAM_MicMute mute = %d, volume = %d", mute, volume);
   if (mute) {
     RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", "0");
     RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", "0");
