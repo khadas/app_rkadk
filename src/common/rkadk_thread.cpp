@@ -29,10 +29,7 @@ static void *RKADK_THREAD_Proc(void *params) {
   RKADK_THREAD_HANDLE_S *pstThread = (RKADK_THREAD_HANDLE_S *)params;
 
   while (!pstThread->exit_flag) {
-    if (pstThread->func(pstThread->param))
-      continue;
-
-    break;
+    pstThread->func(pstThread->param);
   }
 
   pstThread->exit_flag = 1;
@@ -85,5 +82,6 @@ int RKADK_THREAD_Destory(void *handle) {
   } while (0);
 
   free(pstThread);
+  RKADK_LOGE("Exit thread success!");
   return ret;
 }

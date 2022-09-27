@@ -460,61 +460,63 @@ static bool RKADK_MUXER_Proc(void *params) {
   cell = RKADK_MUXER_CellPop(pstMuxerHandle);
   while (cell) {
     // Create muxer
-    if (!pstMuxerHandle->bMuxering && cell->isKeyFrame) {
-      ret = pstMuxerHandle->pcbRequestFileNames(pstMuxerHandle->ptr,
-                                                pstMuxerHandle->cFileName,
-                                                pstMuxerHandle->muxerId);
-      if (ret) {
-        RKADK_LOGE("request file name failed");
-      } else {
-        RKADK_LOGI("Ready to recod new video file path:[%s]",
-                   pstMuxerHandle->cFileName);
-        RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN,
-                                 pstMuxerHandle->duration);
-        ret = rkmuxer_init(pstMuxerHandle->muxerId,
-                           (char *)pstMuxerHandle->cOutputFmt,
-                           pstMuxerHandle->cFileName, &pstMuxerHandle->stVideo,
-                           &pstMuxerHandle->stAudio);
+    if (pstMuxerHandle->bEnableStream) {
+      if (!pstMuxerHandle->bMuxering && cell->isKeyFrame) {
+        ret = pstMuxerHandle->pcbRequestFileNames(pstMuxerHandle->ptr,
+                                                  pstMuxerHandle->cFileName,
+                                                  pstMuxerHandle->muxerId);
         if (ret) {
-          RKADK_LOGE("rkmuxer_init failed[%d]", ret);
+          RKADK_LOGE("request file name failed");
         } else {
-          pstMuxerHandle->bMuxering = true;
-          pstMuxerHandle->startTime = cell->pts;
+          RKADK_LOGI("Ready to recod new video file path:[%s]",
+                    pstMuxerHandle->cFileName);
+          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN,
+                                  pstMuxerHandle->duration);
+          ret = rkmuxer_init(pstMuxerHandle->muxerId,
+                            (char *)pstMuxerHandle->cOutputFmt,
+                            pstMuxerHandle->cFileName, &pstMuxerHandle->stVideo,
+                            &pstMuxerHandle->stAudio);
+          if (ret) {
+            RKADK_LOGE("rkmuxer_init failed[%d]", ret);
+          } else {
+            pstMuxerHandle->bMuxering = true;
+            pstMuxerHandle->startTime = cell->pts;
+          }
         }
       }
-    }
 
-    // Process
-    if (pstMuxerHandle->bMuxering) {
-      // Check close
-      if (cell->isKeyFrame && ((cell->pts - pstMuxerHandle->startTime >=
-                                (pstMuxerHandle->duration * 1000000 -
-                                1000000 / pstMuxerHandle->stVideo.frame_rate_num)))) {
-        RKADK_MUXER_Close(pstMuxerHandle);
-        continue;
-      }
-
-      // Write
-      if (cell->pool == &pstMuxerHandle->stVFree) {
-#if 0
-        if(!g_output_file) {
-          g_output_file = fopen("/data/venc.h264", "w");
-          if (!g_output_file)
-            RKADK_LOGE("open /data/venc.h264 failed");
+      // Process
+      if (pstMuxerHandle->bMuxering) {
+        // Check close
+        if (cell->isKeyFrame && ((cell->pts - pstMuxerHandle->startTime >=
+                                  (pstMuxerHandle->duration * 1000000 -
+                                  1000000 / pstMuxerHandle->stVideo.frame_rate_num)))) {
+          RKADK_MUXER_Close(pstMuxerHandle);
+          continue;
         }
 
-        if (g_output_file)
-          fwrite(cell->buf, 1, cell->size, g_output_file);
-#endif
-        rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
-                                  cell->size, cell->pts, cell->isKeyFrame);
-        pstMuxerHandle->realDuration =
-            (cell->pts - pstMuxerHandle->startTime) / 1000;
-      } else if (cell->pool == &pstMuxerHandle->stAFree) {
-        rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
-                                  cell->size, cell->pts);
-      } else {
-        RKADK_LOGE("unknow pool");
+        // Write
+        if (cell->pool == &pstMuxerHandle->stVFree) {
+  #if 0
+          if(!g_output_file) {
+            g_output_file = fopen("/data/venc.h264", "w");
+            if (!g_output_file)
+              RKADK_LOGE("open /data/venc.h264 failed");
+          }
+
+          if (g_output_file)
+            fwrite(cell->buf, 1, cell->size, g_output_file);
+  #endif
+          rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
+                                    cell->size, cell->pts, cell->isKeyFrame);
+          pstMuxerHandle->realDuration =
+              (cell->pts - pstMuxerHandle->startTime) / 1000;
+        } else if (cell->pool == &pstMuxerHandle->stAFree) {
+          rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
+                                    cell->size, cell->pts);
+        } else {
+          RKADK_LOGE("unknow pool");
+        }
       }
     }
 
