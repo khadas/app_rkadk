@@ -24,11 +24,12 @@
 
 #include "rkadk_common.h"
 #include "rkadk_log.h"
+#include "rkadk_param.h"
 #include "rkadk_photo.h"
 #include "rkadk_thumb.h"
 
 #define THUMB_TEST_SAVE_FILE
-//#define THUMB_ONLY_TEST_JPG
+#define THUMB_ONLY_TEST_JPG
 
 extern int optind;
 extern char *optarg;
@@ -134,6 +135,8 @@ int main(int argc, char *argv[]) {
   RKADK_LOGD("#get thm file: %s", pInuptPath);
 
   signal(SIGINT, sigterm_handler);
+
+  RKADK_PARAM_Init(NULL, NULL);
 
   while (!is_quit) {
 #ifdef THUMB_ONLY_TEST_JPG

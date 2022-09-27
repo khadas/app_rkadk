@@ -39,6 +39,8 @@ RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb);
 RKADK_S32 ThumbnailBuildIn(RKADK_CHAR *pszFileName,
                             RKADK_THUMB_ATTR_S *pstThumbAttr);
 
+RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *buf, RKADK_U32 size);
+
 #ifdef __cplusplus
 }
 #endif

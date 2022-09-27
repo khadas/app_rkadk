@@ -52,6 +52,7 @@ static void *thumbnail_thread(void *arg) {
       RKADK_MUXER_SendThumbData(pThumbAttr->pRecorder, pData, BufSize, pts);
       RKADK_LOGI("Thumb seq: %d, len = %d", stFrame.u32Seq,
                   stFrame.pstPack->u32Len);
+      ThumbnailSaveFile(pData, BufSize);
       ret = RK_MPI_VENC_ReleaseStream(pThumbAttr->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS) {
           RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);

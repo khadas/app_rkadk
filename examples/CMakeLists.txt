@@ -76,6 +76,15 @@ target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/includ
 target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_storage_test DESTINATION "bin")
 
+#--------------------------
+# rkadk_thumb_test
+#--------------------------
+add_executable(rkadk_thumb_test rkadk_thumb_test.c)
+add_dependencies(rkadk_thumb_test rkadk)
+target_link_libraries(rkadk_thumb_test rkadk rockit)
+target_include_directories(rkadk_thumb_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkadk_thumb_test DESTINATION "bin")
+
 if(COMPILE)
 #-----------------------------------
 # rkadk_media_test: record photo stream
@@ -87,14 +96,6 @@ target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
 
-#--------------------------
-# rkadk_thumb_test
-#--------------------------
-add_executable(rkadk_thumb_test rkadk_thumb_test.c)
-add_dependencies(rkadk_thumb_test rkadk)
-target_link_libraries(rkadk_thumb_test rkadk rockit)
-target_include_directories(rkadk_thumb_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-install(TARGETS rkadk_thumb_test DESTINATION "bin")
 
 #--------------------------
 # rkadk_rtmp_test
