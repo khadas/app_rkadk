@@ -14,7 +14,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <utime.h>
 
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 #define RGA_ZOOM_MAX 16
@@ -298,6 +297,19 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pu8JpegData, RKADK_U32 u32JpegLen,
   int app0_len;
   int off_set;
   int userdata_len;
+  time_t timep;
+  struct tm *p;
+  char local_time[33];
+
+  time(&timep);
+  p = gmtime(&timep);
+
+  memset(local_time, 0, sizeof(local_time));
+  snprintf(local_time, sizeof(local_time) - 1, "%04d-%02d-%02d %02d:%02d:%02d",
+          (1900 + p->tm_year), (1 + p->tm_mon), p->tm_mday, p->tm_hour,
+          p->tm_min, p->tm_sec);
+
+  stIfd0[4].value[0].asv = local_time;
 
   //thumbnail
   thumb_data = (char *)RK_MPI_MB_Handle2VirAddr(stThuFrame.pstPack->pMbBlk);
