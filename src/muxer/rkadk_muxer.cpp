@@ -58,6 +58,7 @@ typedef struct {
   int32_t duration;     // s
   int32_t realDuration; // ms
   int64_t startTime;    // us
+  int frameCnt;
   bool bEnableStream;
   bool bMuxering;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
@@ -426,6 +427,13 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
     }
   }
 
+  if (pstMuxerHandle->realDuration <= 0) {
+    pstMuxerHandle->realDuration =
+      pstMuxerHandle->frameCnt * (1000 / pstMuxerHandle->stVideo.frame_rate_num);
+    RKADK_LOGI("The revised Duration = %d, frameCnt = %d",
+      pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt);
+  }
+
   RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
                            pstMuxerHandle->realDuration);
 
@@ -433,6 +441,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->realDuration = 0;
   pstMuxerHandle->startTime = 0;
   pstMuxerHandle->bMuxering = 0;
+  pstMuxerHandle->frameCnt = 0;
 
   if (g_output_file)
     fclose(g_output_file);
@@ -474,6 +483,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           } else {
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
+            pstMuxerHandle->frameCnt = 1;
           }
         }
       }
@@ -484,6 +494,7 @@ static bool RKADK_MUXER_Proc(void *params) {
         if (cell->isKeyFrame && ((cell->pts - pstMuxerHandle->startTime >=
                                   (pstMuxerHandle->duration * 1000000 -
                                   1000000 / pstMuxerHandle->stVideo.frame_rate_num)))) {
+          RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->vChnId, pstMuxerHandle->frameCnt);
           RKADK_MUXER_Close(pstMuxerHandle);
           continue;
         }
@@ -502,8 +513,11 @@ static bool RKADK_MUXER_Proc(void *params) {
   #endif
           rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
+          if (cell->pts < pstMuxerHandle->startTime)
+            RKADK_LOGE("muxer pts err pts = %lld, startTime = %d", cell->pts, pstMuxerHandle->startTime);
           pstMuxerHandle->realDuration =
               (cell->pts - pstMuxerHandle->startTime) / 1000;
+          pstMuxerHandle->frameCnt++;
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
