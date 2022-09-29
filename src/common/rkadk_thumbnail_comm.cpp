@@ -3,6 +3,7 @@
 #include "rkadk_thumb.h"
 #include "rkadk_thumbnail_comm.h"
 #include "rkadk_log.h"
+#include <unistd.h>
 #include "rkadk_photo.h"
 #include <byteswap.h>
 #include <errno.h>
@@ -489,9 +490,9 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
 
 static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
                                 RKADK_THUMB_ATTR_S *pstThumbAttr) {
-  FILE *fd = NULL;
+  FILE *fp = NULL;
   RKADK_U64 u64BoxSize;
-  int len, cur;
+  int len, cur, fd;
   RKADK_U8 *pFile;
 
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
@@ -510,26 +511,26 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
     pstThumbAttr->u32VirHeight = pstThumbAttr->u32Height;
   }
 
-  fd = fopen(pszFileName, "r");
-  if (!fd) {
+  fp = fopen(pszFileName, "r");
+  if (!fp) {
     RKADK_LOGE("open %s failed", pszFileName);
     return -1;
   }
 
-  if (fseek(fd, 0, SEEK_END) || (len = ftell(fd)) == -1 ||
-      fseek(fd, 0, SEEK_SET)) {
-    fclose(fd);
+  if (fseek(fp, 0, SEEK_END) || (len = ftell(fp)) == -1 ||
+      fseek(fp, 0, SEEK_SET)) {
+    fclose(fp);
     RKADK_LOGE("seek %s failed", pszFileName);
     return -1;
   }
 
-  pFile = (RKADK_U8 *)mmap(NULL, len, PROT_READ, MAP_SHARED, fileno(fd), 0);
+  pFile = (RKADK_U8 *)mmap(NULL, len, PROT_READ, MAP_SHARED, fileno(fp), 0);
   if (pFile == MAP_FAILED) {
-    fclose(fd);
+    fclose(fp);
     RKADK_LOGE("mmap %s failed, errno: %d", pszFileName, errno);
     return -1;
   }
-  fclose(fd);
+  fclose(fp);
 
   cur = SeekToMp4Thm(pFile, len);
   if (cur > 0 && (u64BoxSize = bswap_32(*(RKADK_U32*) (pFile + cur))) > 0 &&
@@ -564,28 +565,42 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
   } else {
     munmap(pFile, len);
 
-    fd = fopen(THM_FILE_PATH, "rb");
-    if (!fd) {
+    fp = fopen(THM_FILE_PATH, "rb");
+    if (!fp) {
       RKADK_LOGE("open %s failed", THM_FILE_PATH);
       return -1;
     }
+    fd = fileno(fp);
 
-    if (fseek(fd, 0, SEEK_END) || (len = ftell(fd)) == -1 ||
-      fseek(fd, 0, SEEK_SET)) {
-      fclose(fd);
+    if (fseek(fp, 0, SEEK_END) || (len = ftell(fp)) == -1 ||
+      fseek(fp, 0, SEEK_SET)) {
+      fclose(fp);
       RKADK_LOGE("seek %s failed", THM_FILE_PATH);
       return -1;
     }
 
-    pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(len);
     if (!pstThumbAttr->pu8Buf) {
-      RKADK_LOGE("malloc thumbnail buffer[%d] failed", len);
-      return RKADK_FAILURE;
+      pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(len);
+      if (!pstThumbAttr->pu8Buf) {
+        RKADK_LOGE("malloc thumbnail buffer[%d] failed", len);
+        fclose(fp);
+        return RKADK_FAILURE;
+      }
+      pstThumbAttr->u32BufSize = len;
+    } else {
+      if (pstThumbAttr->u32BufSize < len)
+        RKADK_LOGW("buffer size[%d] < thm data size[%d]",
+                   pstThumbAttr->u32BufSize, len);
+      else
+        pstThumbAttr->u32BufSize = len;
     }
-    pstThumbAttr->u32BufSize = len;
-    fread(pstThumbAttr->pu8Buf, 1, len, fd);
+
+    fread(pstThumbAttr->pu8Buf, 1, pstThumbAttr->u32BufSize, fp);
+    fclose(fp);
+    fsync(fd);
 
     ThumbnailBuildIn(pszFileName, pstThumbAttr);
+    RKADK_LOGI("Thumbnail build in %s success!", pszFileName);
     return RKADK_SUCCESS;
   }
 
@@ -610,7 +625,7 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   stThumbAttr.u32BufSize = *pu32Size;
   ret = GetThmInMp4Box(pszFileName, &stThumbAttr);
   *pu32Size = stThumbAttr.u32BufSize;
-
+  RKADK_LOGI("Get thumbnail in %s success!", pszFileName);
   return ret;
 }
 
