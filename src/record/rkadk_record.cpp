@@ -52,7 +52,6 @@ static void *thumbnail_thread(void *arg) {
       RKADK_MUXER_SendThumbData(pThumbAttr->pRecorder, pData, BufSize, pts);
       RKADK_LOGI("Thumb seq: %d, len = %d", stFrame.u32Seq,
                   stFrame.pstPack->u32Len);
-      ThumbnailSaveFile(pData, BufSize);
       ret = RK_MPI_VENC_ReleaseStream(pThumbAttr->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS) {
           RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
@@ -1113,6 +1112,9 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
                   index, stSrcChn.s32ChnId,stRecVenChn.s32ChnId, ret);
       return -1;
     }
+
+    if (index == 0)
+      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn);
   }
 
   return 0;

@@ -15,6 +15,7 @@
  */
 
 #include "rkadk_media_comm.h"
+#include "rkadk_thumbnail_comm.h"
 #include "rkadk_param.h"
 #include "rkadk_log.h"
 #include <pthread.h>
@@ -185,6 +186,7 @@ RKADK_S32 RKADK_MPI_SYS_Init() {
   int ret = 0;
 
   if (!g_bSysInit) {
+    ThumbnailFileInit();
     RKADK_MEDIA_CtxInit();
     ret = RK_MPI_SYS_Init();
     if (ret) {

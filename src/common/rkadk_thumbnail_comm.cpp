@@ -18,7 +18,8 @@
 
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 #define RGA_ZOOM_MAX 16
-#define THM_FILE_PATH "/data/thumbnail.jpg"
+#define THM_FILE_DIRECTORY "/data/ThumbRepair/"
+#define THM_FILE_PATH "/data/ThumbRepair/thumbnail.jpg"
 
 typedef struct {
   uint16_t tag_no; // tag number
@@ -124,6 +125,25 @@ static int PackageApp1(IFD ifd0[], IFD ifd1[], int ifd0_len, int ifd1_len,
   app1_buf[2] = ((total_len - 2) >> 8) & 0xff;
   app1_buf[3] = (total_len - 2) & 0xff;
   return total_len;
+}
+
+static void split(char *src,const char *separator,char **dest,int *num) {
+  char *pNext;
+  int count = 0;
+  if (src == NULL || strlen(src) == 0)
+    return;
+
+  if (separator == NULL || strlen(separator) == 0)
+    return;
+
+  char *strtok(char *str, const char *delim);
+  pNext = strtok(src,separator);
+  while(pNext != NULL) {
+    *dest++ = pNext;
+    ++count;
+    pNext = strtok(NULL,separator);
+  }
+  *num = count;
 }
 
 static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
@@ -488,11 +508,74 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
   return -1;
 }
 
+static void FilePath(RKADK_CHAR *pszFileName, char *DestName) {
+  int num = 0;
+  int position;
+  char *p[10];
+  char name[RKADK_MAX_FILE_PATH_LEN];
+
+  memcpy(name, pszFileName, RKADK_MAX_FILE_PATH_LEN);
+  split(name, "/_", p, &num);
+  for (position = 0; position < num; position++) {
+    if (*p[position] == 'R' && strlen(p[position]) > 8)
+      break;
+  }
+  snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[position]);
+}
+
+static RKADK_S32 ThumbnailRepair(RKADK_CHAR *pszFileName,
+                              RKADK_THUMB_ATTR_S *pstThumbAttr) {
+  int ret, len, fd;
+  FILE *fp;
+  char name[RKADK_MAX_FILE_PATH_LEN];
+
+  FilePath(pszFileName, name);
+
+  fp = fopen(name, "rb");
+  if (!fp) {
+    RKADK_LOGE("open %s failed", name);
+    return -1;
+  }
+  fd = fileno(fp);
+
+  if (fseek(fp, 0, SEEK_END) || (len = ftell(fp)) == -1 ||
+    fseek(fp, 0, SEEK_SET)) {
+    fclose(fp);
+    RKADK_LOGE("seek %s failed", name);
+    return -1;
+  }
+
+  if (!pstThumbAttr->pu8Buf) {
+    pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(len);
+    if (!pstThumbAttr->pu8Buf) {
+      RKADK_LOGE("malloc thumbnail buffer[%d] failed", len);
+      fclose(fp);
+      return RKADK_FAILURE;
+    }
+    pstThumbAttr->u32BufSize = len;
+  } else {
+    if (pstThumbAttr->u32BufSize < len)
+      RKADK_LOGW("buffer size[%d] < thm data size[%d]",
+                  pstThumbAttr->u32BufSize, len);
+    else
+      pstThumbAttr->u32BufSize = len;
+  }
+
+  fread(pstThumbAttr->pu8Buf, 1, pstThumbAttr->u32BufSize, fp);
+  fclose(fp);
+  fsync(fd);
+
+  ThumbnailBuildIn(pszFileName, pstThumbAttr);
+  RKADK_LOGI("Thumbnail buf %p len = %d build in %s success!",
+              pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, pszFileName);
+  return RKADK_SUCCESS;
+}
+
 static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
                                 RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fp = NULL;
   RKADK_U64 u64BoxSize;
-  int len, cur, fd;
+  int ret, len, cur, fd;
   RKADK_U8 *pFile;
 
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
@@ -565,42 +648,11 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
   } else {
     munmap(pFile, len);
 
-    fp = fopen(THM_FILE_PATH, "rb");
-    if (!fp) {
-      RKADK_LOGE("open %s failed", THM_FILE_PATH);
-      return -1;
+    ret = ThumbnailRepair(pszFileName, pstThumbAttr);
+    if (ret) {
+      RKADK_LOGE("File %s repair thumbnail failed!", pszFileName);
+      return RKADK_FAILURE;
     }
-    fd = fileno(fp);
-
-    if (fseek(fp, 0, SEEK_END) || (len = ftell(fp)) == -1 ||
-      fseek(fp, 0, SEEK_SET)) {
-      fclose(fp);
-      RKADK_LOGE("seek %s failed", THM_FILE_PATH);
-      return -1;
-    }
-
-    if (!pstThumbAttr->pu8Buf) {
-      pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(len);
-      if (!pstThumbAttr->pu8Buf) {
-        RKADK_LOGE("malloc thumbnail buffer[%d] failed", len);
-        fclose(fp);
-        return RKADK_FAILURE;
-      }
-      pstThumbAttr->u32BufSize = len;
-    } else {
-      if (pstThumbAttr->u32BufSize < len)
-        RKADK_LOGW("buffer size[%d] < thm data size[%d]",
-                   pstThumbAttr->u32BufSize, len);
-      else
-        pstThumbAttr->u32BufSize = len;
-    }
-
-    fread(pstThumbAttr->pu8Buf, 1, pstThumbAttr->u32BufSize, fp);
-    fclose(fp);
-    fsync(fd);
-
-    ThumbnailBuildIn(pszFileName, pstThumbAttr);
-    RKADK_LOGI("Thumbnail build in %s success!", pszFileName);
     return RKADK_SUCCESS;
   }
 
@@ -624,6 +676,10 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   stThumbAttr.pu8Buf = pu8Buf;
   stThumbAttr.u32BufSize = *pu32Size;
   ret = GetThmInMp4Box(pszFileName, &stThumbAttr);
+  if (ret) {
+    RKADK_LOGE("Get thumbnail in %s failed!", pszFileName);
+    return ret;
+  }
   *pu32Size = stThumbAttr.u32BufSize;
   RKADK_LOGI("Get thumbnail in %s success!", pszFileName);
   return ret;
@@ -800,19 +856,58 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
   return ret;
 }
 
-RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *buf, RKADK_U32 size) {
+RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *pszFileName, unsigned char *buf, RKADK_U32 size) {
   int ret;
   FILE *fp;
+  char name[RKADK_MAX_FILE_PATH_LEN];
 
-  fp = fopen(THM_FILE_PATH , "wb");
+  FilePath(pszFileName, name);
+
+  fp = fopen(THM_FILE_PATH , "rb+");
   if (!fp) {
-    RKADK_LOGE("Open %s failed!" THM_FILE_PATH);
+    RKADK_LOGE("Open %s failed!", THM_FILE_PATH);
     return -1;
   }
-
   fwrite(buf, 1, size, fp);
   fclose(fp);
 
-  RKADK_LOGD("Save thumbnail %s, size = %d done!", THM_FILE_PATH, size);
+  rename(THM_FILE_PATH, name);
+  RKADK_LOGI("Rename %s to %s", THM_FILE_PATH, name);
+  RKADK_LOGD("Save thumbnail %s, size = %d done!", name, size);
+  return 0;
+}
+
+RKADK_S32 ThumbnailRenameFile(RKADK_CHAR *pszFileName) {
+  int ret;
+  FILE *fp;
+  char name[RKADK_MAX_FILE_PATH_LEN];
+
+  FilePath(pszFileName, name);
+
+  fp = fopen(name, "r");
+  if (!fp) {
+    RKADK_LOGI("Open %s failed!", name);
+    return -1;
+  }
+  fclose(fp);
+
+  rename(name, THM_FILE_PATH);
+  RKADK_LOGI("Rename %s to %s", name, THM_FILE_PATH);
+  return 0;
+}
+
+RKADK_S32 ThumbnailFileInit() {
+  int ret;
+  FILE *fp;
+
+  mkdir(THM_FILE_DIRECTORY, S_IRWXU);
+
+  fp = fopen(THM_FILE_PATH, "wb");
+  if (!fp) {
+    RKADK_LOGE("Open %s failed!", THM_FILE_PATH);
+    return -1;
+  }
+
+  fclose(fp);
   return 0;
 }

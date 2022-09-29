@@ -55,10 +55,12 @@ typedef struct {
   const char *cOutputFmt;
   VideoParam stVideo;
   AudioParam stAudio;
+  int32_t gop;
   int32_t duration;     // s
   int32_t realDuration; // ms
   int64_t startTime;    // us
   int frameCnt;
+  bool bGetThumb;
   bool bEnableStream;
   bool bMuxering;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
@@ -79,7 +81,6 @@ typedef struct {
   MUXER_BUF_CELL_S stThumbCell[20]; // thumbnail list cache size
   struct list_head stThumbFree;     // thumbnail list remain size
   struct list_head stThumbProcList; // thumbnail process list
-
 } MUXER_HANDLE_S;
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -426,12 +427,8 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
       ThumbnailBuildIn(pstMuxerHandle->cFileName,
                               &stThumbAttr);
       RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
-    }
-    //requst thumbnai
-    if (pstMuxerHandle->vChnId == 0) {
-      ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
-      if (ret)
-        RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+      if (pstMuxerHandle->vChnId == 0)
+        ThumbnailRenameFile(pstMuxerHandle->cFileName);
     }
   }
 
@@ -453,6 +450,22 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
 
   if (g_output_file)
     fclose(g_output_file);
+}
+
+static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
+  MUXER_BUF_CELL_S *thumbCell = NULL;
+
+  if (pstMuxerHandle->bEnableThumb) {
+    thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
+    if (thumbCell) {
+      ThumbnailSaveFile(pstMuxerHandle->cFileName, thumbCell->buf,
+                              thumbCell->size);
+      RKADK_MUXER_ThumbCellPush(pstMuxerHandle, thumbCell);
+      return false;
+    } else {
+      return true;
+    }
+  }
 }
 
 static bool RKADK_MUXER_Proc(void *params) {
@@ -492,11 +505,16 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
             pstMuxerHandle->frameCnt = 1;
+            pstMuxerHandle->bGetThumb = true;
           }
         }
       } else if (!pstMuxerHandle->bMuxering){
         RKADK_LOGI("Stream [%d] wait I frame!", pstMuxerHandle->vChnId);
         RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
+      }
+
+      if (pstMuxerHandle->bGetThumb && pstMuxerHandle->vChnId == 0) {
+        pstMuxerHandle->bGetThumb = RKADK_MUXER_SaveThumb(pstMuxerHandle);
       }
 
       // Process
@@ -530,6 +548,15 @@ static bool RKADK_MUXER_Proc(void *params) {
           pstMuxerHandle->realDuration =
               (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
+          //requst thumbnai
+          if (pstMuxerHandle->vChnId == 0 &&
+              pstMuxerHandle->frameCnt > ((pstMuxerHandle->duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num)
+              * pstMuxerHandle->stVideo.frame_rate_num) && cell->isKeyFrame) {
+            RKADK_LOGI("Request thumbnail frameCnt = %d", pstMuxerHandle->frameCnt);
+            ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
+            if (ret)
+              RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+          }
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
@@ -558,6 +585,13 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
   RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxerAttr->u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
 
   for (i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
     pMuxerHandle = (MUXER_HANDLE_S *)malloc(sizeof(MUXER_HANDLE_S));
@@ -575,6 +609,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
     pstSrcStreamAttr = &(pstMuxerAttr->astStreamAttr[i]);
     pMuxerHandle->duration = pstSrcStreamAttr->u32TimeLenSec;
+    pMuxerHandle->gop = pstRecCfg->attribute[i].gop;
 
     switch (pstSrcStreamAttr->enType) {
     case RKADK_MUXER_TYPE_MP4:
