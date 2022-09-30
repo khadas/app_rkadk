@@ -731,6 +731,9 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     // Set flag off
     pstMuxerHandle->bEnableStream = false;
 
+    // exit thread
+    RKADK_THREAD_SetExit(pstMuxerHandle->pThread);
+
     RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
 
     // Destroy thread
@@ -966,6 +969,8 @@ RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
     RKADK_LOGD("Muxer Handle is NULL");
     return -1;
   }
+
+  RKADK_THREAD_SetExit(pstMuxerHandle->pThread);
 
   RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
 

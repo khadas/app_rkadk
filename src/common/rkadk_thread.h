@@ -31,6 +31,8 @@ void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param);
 
 int RKADK_THREAD_Destory(void *handle);
 
+int RKADK_THREAD_SetExit(void *handle);
+
 #ifdef __cplusplus
 }
 #endif

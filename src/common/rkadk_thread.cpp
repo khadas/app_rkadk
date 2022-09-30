@@ -72,9 +72,6 @@ int RKADK_THREAD_Destory(void *handle) {
 
   pstThread = (RKADK_THREAD_HANDLE_S *)handle;
   do {
-    if (pstThread->exit_flag) {
-      break;
-    }
     pstThread->exit_flag = 1;
     ret = pthread_join(pstThread->tid, NULL);
     if (ret)
@@ -83,5 +80,18 @@ int RKADK_THREAD_Destory(void *handle) {
 
   free(pstThread);
   RKADK_LOGE("Exit thread success!");
+  return ret;
+}
+
+int RKADK_THREAD_SetExit(void *handle) {
+  int ret = 0;
+  RKADK_THREAD_HANDLE_S *pstThread;
+
+  if (!handle) {
+    RKADK_LOGD("handle has been destory");
+    return 0;
+  }
+  pstThread = (RKADK_THREAD_HANDLE_S *)handle;
+  pstThread->exit_flag = 1;
   return ret;
 }
