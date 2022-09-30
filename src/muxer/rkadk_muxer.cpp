@@ -307,17 +307,11 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
   if (!pstMuxerHandle->bEnableStream)
     return 0;
 
-  MUXER_BUF_CELL_S *cell =
-      RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree);
-  if (isKeyFrame && NULL == cell) {
-    RKADK_LOGI("no free cell, when iframe in, drop last pframe");
-    RKADK_MUXER_ListDropPFrame(pstMuxerHandle);
-    cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree);
-  }
+  MUXER_BUF_CELL_S *cell;
 
-  if (NULL == cell) {
-    RKADK_LOGI("no free cell, lose video frame, key[%d]", isKeyFrame);
-    return 0;
+  while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
+      RKADK_LOGI("get video cell fail, retry");
+      usleep(10000);
   }
 
   cell->buf = (unsigned char *)malloc(size);
@@ -350,11 +344,10 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
     if (!pstMuxerHandle || !pstMuxerHandle->bEnableStream)
       continue;
 
-    MUXER_BUF_CELL_S *cell =
-        RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree);
-    if (NULL == cell) {
-      RKADK_LOGI("lose audio frame");
-      continue;
+    MUXER_BUF_CELL_S *cell;
+    while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
+      RKADK_LOGI("get audio cell fail, retry");
+      usleep(10000);
     }
 
     cell->size = size - headerSize;
