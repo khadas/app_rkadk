@@ -901,9 +901,8 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  return 0;
-
   RKADK_LOGI("Photo[%d] Reset end...", u32CamId);
+  return 0;
 }
 
 #if 0
