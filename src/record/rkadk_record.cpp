@@ -649,6 +649,7 @@ static RKADK_S32 RKADK_RECORD_VencGetData(RKADK_U32 u32CamId,
 
 static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
+  char name[256];
   MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
@@ -749,6 +750,8 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
           RK_LOGE("Create thumbnail thread failed!");
           return -1;
       }
+      snprintf(name, sizeof(name), "RecordThumbJpeg_%d", ptsThumbCfg->rec_venc_chn);
+      pthread_setname_np(pThumbAttr->sThumbTid, name);
     }
   }
 

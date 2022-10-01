@@ -736,6 +736,7 @@ static void *RKADK_STREAM_GetPcmMB(void *params) {
 static int
 RKADK_STREAM_CreateDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
   int ret = 0;
+  char name[256];
 
   pHandle->bGetBuffer = true;
   if (pHandle->enCodecType == RKADK_CODEC_TYPE_PCM) {
@@ -749,6 +750,10 @@ RKADK_STREAM_CreateDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
   if (ret) {
     RKADK_LOGE("Create read audio thread for failed %d", ret);
     return ret;
+  }
+  if (pHandle->pcmTid) {
+    snprintf(name, sizeof(name), "AudioStream_%d", pHandle->enCodecType);
+    pthread_setname_np(pHandle->pcmTid, name);
   }
 
   return 0;

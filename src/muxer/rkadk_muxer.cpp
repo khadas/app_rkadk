@@ -305,8 +305,10 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
     return -1;
   }
 
-  if (!pstMuxerHandle->bEnableStream)
+  if (!pstMuxerHandle->bEnableStream) {
+    RKADK_LOGI("Muxer is not enable stream");
     return 0;
+  }
 
   MUXER_BUF_CELL_S *cell;
 
@@ -542,6 +544,7 @@ static bool RKADK_MUXER_Proc(void *params) {
 static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                                     RKADK_MUXER_HANDLE_S *pstMuxer) {
   int i, j;
+  char name[256];
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
   RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
@@ -649,15 +652,14 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       RKADK_LOGE("RKADK_SIGNAL_Create failed");
       return -1;
     }
-
+    snprintf(name, sizeof(name), "Muxer_%d", pMuxerHandle->vChnId);
     pMuxerHandle->ptr = (RKADK_MW_PTR)pstMuxer;
     pMuxerHandle->mutex = PTHREAD_MUTEX_INITIALIZER;
-    pMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pMuxerHandle);
+    pMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pMuxerHandle, name);
     if (!pMuxerHandle->pThread) {
       RKADK_LOGE("RKADK_THREAD_Create failed");
       return -1;
     }
-
     pstMuxer->pMuxerHandle[i] = (RKADK_MW_PTR)pMuxerHandle;
   }
 
@@ -962,6 +964,7 @@ RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
 RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  char name[256];
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
 
@@ -985,7 +988,8 @@ RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
   RKADK_THREAD_Destory(pstMuxerHandle->pThread);
   pstMuxerHandle->pThread = NULL;
 
-  pstMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pstMuxerHandle);
+  snprintf(name, sizeof(name), "Muxer_%d", pstMuxerHandle->vChnId);
+  pstMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pstMuxerHandle, name);
   if (!pstMuxerHandle->pThread) {
     RKADK_LOGE("RKADK_THREAD_Create failed");
     return -1;

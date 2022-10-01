@@ -27,7 +27,7 @@ extern "C" {
 
 typedef bool (*RKADK_THREAD_PROC_FN)(void *param);
 
-void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param);
+void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param, char *name);
 
 int RKADK_THREAD_Destory(void *handle);
 

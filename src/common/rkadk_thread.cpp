@@ -37,7 +37,7 @@ static void *RKADK_THREAD_Proc(void *params) {
   return NULL;
 }
 
-void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param) {
+void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param, char *name) {
   int ret;
   RKADK_THREAD_HANDLE_S *pstThread = NULL;
 
@@ -57,7 +57,9 @@ void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param) {
     free(pstThread);
     return NULL;
   }
-
+  if (name)
+    pthread_setname_np(pstThread->tid, name);
+  RKADK_LOGI("Create thread success!");
   return (void *)pstThread;
 }
 
@@ -79,7 +81,7 @@ int RKADK_THREAD_Destory(void *handle) {
   } while (0);
 
   free(pstThread);
-  RKADK_LOGE("Exit thread success!");
+  RKADK_LOGI("Exit thread success!");
   return ret;
 }
 

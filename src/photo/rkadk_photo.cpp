@@ -388,6 +388,7 @@ static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
 RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   int ret;
   bool bSysInit = false;
+  char name[256];
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   VENC_CHN_ATTR_S stVencAttr;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
@@ -524,6 +525,8 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
                ret);
     goto failed;
   }
+  snprintf(name, sizeof(name), "PhotoGetJpeg_%d", stVencChn.s32ChnId);
+  pthread_setname_np(pHandle->tid, name);
 
   ret = ThumbnailInit(pstPhotoAttr->u32CamID, ptsThumbCfg->thumb_width,
                       ptsThumbCfg->thumb_height, ptsThumbCfg->venc_chn,
@@ -556,6 +559,9 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
                     ptsThumbCfg->vi_chn);
     goto failed;
   }
+  memset(name, 0, sizeof(name));
+  snprintf(name, sizeof(name), "PhotoThumbJpeg_%d", ptsThumbCfg->venc_chn);
+  pthread_setname_np(pHandle->thumb_tid, name);
 
 #ifdef RKADK_ENABLE_RGA
   if (bUseRga) {
