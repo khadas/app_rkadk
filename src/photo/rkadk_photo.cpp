@@ -150,6 +150,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
               stFrame.pstPack->u32Len);
         pHandle->u32JpegLen = stFrame.pstPack->u32Len;
         RKADK_SIGNAL_Give(pHandle->pSignal);
+        RKADK_LOGI("Photo success, seq = %d, len = %d", stFrame.u32Seq, pHandle->u32JpegLen);
       } else {
         if (pHandle->u32PhotoCnt) {
           memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
@@ -814,6 +815,7 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     stRecvParam.s32RecvPicNum = pstPhotoAttr->unPhotoTypeAttr.stMultipleAttr.s32Count;
 
   pHandle->u32PhotoCnt = stRecvParam.s32RecvPicNum;
+  RKADK_LOGI("Take photo number = %d", pHandle->u32PhotoCnt);
   return RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
 }
 
