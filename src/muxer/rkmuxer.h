@@ -26,7 +26,6 @@ typedef struct StAudioParam {
   int channels;
   int sample_rate;
   int frame_size;
-  int bitrate;
 } AudioParam;
 
 int rkmuxer_init(int id, char *format, const char *file_path,

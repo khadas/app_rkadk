@@ -615,7 +615,6 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         pMuxerHandle->stAudio.channels = audioInfo->u32ChnCnt;
         pMuxerHandle->stAudio.frame_size = audioInfo->u32SamplesPerFrame;
         pMuxerHandle->stAudio.sample_rate = audioInfo->u32SampleRate;
-        pMuxerHandle->stAudio.bitrate = audioInfo->u32Bitrate;
 
         switch (audioInfo->u32BitWidth) {
         case 16:
