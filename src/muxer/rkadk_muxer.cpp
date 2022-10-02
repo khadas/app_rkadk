@@ -296,6 +296,7 @@ static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
 int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
                                 RKADK_U32 size, int64_t pts, int isKeyFrame,
                                 void *handle) {
+  int cnt = 0;
   RKADK_CHECK_POINTER(handle, RKADK_FAILURE);
 
   RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)handle;
@@ -313,7 +314,9 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
   MUXER_BUF_CELL_S *cell;
 
   while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
-      RKADK_LOGI("get video cell fail, retry");
+      if (cnt % 100 == 0)
+        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d",chnId, cnt);
+      cnt++;
       usleep(10000);
   }
 
@@ -334,6 +337,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
 
 int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
                                 void *handle) {
+  int cnt = 0;
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   int headerSize = 0; // aenc header size
@@ -349,7 +353,9 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
 
     MUXER_BUF_CELL_S *cell;
     while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
-      RKADK_LOGI("get audio cell fail, retry");
+      if (cnt % 100 == 0)
+        RKADK_LOGI("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->vChnId, cnt);
+      cnt++;
       usleep(10000);
     }
 
