@@ -307,7 +307,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
   }
 
   if (!pstMuxerHandle->bEnableStream) {
-    RKADK_LOGI("Muxer is not enable stream");
+    //RKADK_LOGI("Muxer is not enable stream");
     return 0;
   }
 
@@ -494,6 +494,9 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->frameCnt = 1;
           }
         }
+      } else if (!pstMuxerHandle->bMuxering){
+        RKADK_LOGI("Stream [%d] wait I frame!", pstMuxerHandle->vChnId);
+        RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
       }
 
       // Process

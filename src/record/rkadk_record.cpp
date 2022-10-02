@@ -1072,7 +1072,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
     ret = RKADK_RECORD_ResetAttr(index, pstRecCfg, pstSensorCfg,
                                  &stRecAttr, &stChnAttr);
     if (ret) {
-      RKADK_LOGE("Record [%d] stream reset venc attr failed",
+      RKADK_LOGI("Record [%d] stream venc attr is not changed",
                   index);
       continue;
     }
