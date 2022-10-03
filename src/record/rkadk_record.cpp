@@ -1040,6 +1040,11 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
       return -1;
     }
 
+    if (index == 0) {
+      RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
+      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn); //make sure thumbnail
+    }
+
     memset(&stSrcChn, 0, sizeof(MPP_CHN_S));
     memset(&stRecVenChn, 0, sizeof(MPP_CHN_S));
 
@@ -1112,9 +1117,6 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
                   index, stSrcChn.s32ChnId,stRecVenChn.s32ChnId, ret);
       return -1;
     }
-
-    if (index == 0)
-      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn);
   }
 
   return 0;

@@ -447,6 +447,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->startTime = 0;
   pstMuxerHandle->bMuxering = 0;
   pstMuxerHandle->frameCnt = 0;
+  pstMuxerHandle->bGetThumb = false;
 
   if (g_output_file)
     fclose(g_output_file);
@@ -860,6 +861,7 @@ RKADK_S32 RKADK_MUXER_Stop(RKADK_MW_PTR pHandle) {
 
     pstMuxerHandle->bEnableStream = false;
     RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_STOP, 0);
+    RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
   }
 
   return 0;
