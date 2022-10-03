@@ -571,7 +571,6 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
                                    RKADK_VOID *pHandle) {
   RKADK_CHECK_POINTER_N(pHandle);
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
-  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_U64 u64LapsePts;
 
   RKADK_MUXER_HANDLE_S *pstMuxer =
@@ -583,12 +582,6 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
     return;
   }
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxer->u32CamId);
-  if (!pstRecCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
-    return;
-  }
-
   RKADK_CHAR *data =
       (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
 
@@ -597,7 +590,7 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
       (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE ||
       stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_IDRSLICE)) {
     //RKADK_LOGD("write I frame chnid = %d", stData.u32ChnId);
-    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    if (pstMuxer->bLapseRecord) {
       RKADK_U64 u64LapsePts =
         stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
@@ -610,7 +603,7 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
     }
   } else {
     // RKADK_LOGD("write P frame");
-    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+    if (pstMuxer->bLapseRecord) {
       RKADK_U64 u64LapsePts =
         stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
@@ -1377,16 +1370,16 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
-  ret = RKADK_RECORD_ResetAudio(pstRecCfg, pRecorder);
-  if (ret) {
-    RKADK_LOGE("RKADK_RECORD_ResetAudio failed");
-    goto failed;
-  }
-
   ret = RKADK_RECORD_ResetVideo(u32CamId, pstRecCfg,
                                 pstSensorCfg, pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_ResetVideo failed");
+    goto failed;
+  }
+
+  ret = RKADK_RECORD_ResetAudio(pstRecCfg, pRecorder);
+  if (ret) {
+    RKADK_LOGE("RKADK_RECORD_ResetAudio failed");
     goto failed;
   }
 

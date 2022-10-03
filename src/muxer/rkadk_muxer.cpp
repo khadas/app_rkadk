@@ -525,7 +525,8 @@ static bool RKADK_MUXER_Proc(void *params) {
           rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
           if (cell->pts < pstMuxerHandle->startTime)
-            RKADK_LOGE("muxer pts err pts = %lld, startTime = %d", cell->pts, pstMuxerHandle->startTime);
+            RKADK_LOGE("Stream [%d] muxer pts err pts = %lld, startTime = %lld",
+                        pstMuxerHandle->vChnId, cell->pts, pstMuxerHandle->startTime);
           pstMuxerHandle->realDuration =
               (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
