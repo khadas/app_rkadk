@@ -186,7 +186,6 @@ RKADK_S32 RKADK_MPI_SYS_Init() {
   int ret = 0;
 
   if (!g_bSysInit) {
-    ThumbnailFileInit();
     RKADK_MEDIA_CtxInit();
     ret = RK_MPI_SYS_Init();
     if (ret) {

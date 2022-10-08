@@ -1208,6 +1208,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
+  ThumbnailFileInit();
   RKADK_PARAM_Init(NULL, NULL);
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
