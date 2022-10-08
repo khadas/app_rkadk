@@ -61,6 +61,7 @@ typedef struct {
   int64_t startTime;    // us
   int frameCnt;
   bool bGetThumb;
+  bool bRequestThumb;
   bool bEnableStream;
   bool bMuxering;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
@@ -448,6 +449,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->bMuxering = 0;
   pstMuxerHandle->frameCnt = 0;
   pstMuxerHandle->bGetThumb = false;
+  pstMuxerHandle->bRequestThumb = false;
 
   if (g_output_file)
     fclose(g_output_file);
@@ -507,6 +509,7 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->startTime = cell->pts;
             pstMuxerHandle->frameCnt = 1;
             pstMuxerHandle->bGetThumb = true;
+            pstMuxerHandle->bRequestThumb = true;
           }
         }
       } else if (!pstMuxerHandle->bMuxering){
@@ -552,11 +555,12 @@ static bool RKADK_MUXER_Proc(void *params) {
           //requst thumbnai
           if (pstMuxerHandle->vChnId == 0 &&
               pstMuxerHandle->frameCnt > ((pstMuxerHandle->duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num)
-              * pstMuxerHandle->stVideo.frame_rate_num) && cell->isKeyFrame) {
+              * pstMuxerHandle->stVideo.frame_rate_num) && cell->isKeyFrame && pstMuxerHandle->bRequestThumb) {
             RKADK_LOGI("Request thumbnail frameCnt = %d", pstMuxerHandle->frameCnt);
             ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
             if (ret)
               RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+            pstMuxerHandle->bRequestThumb = false;
           }
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
