@@ -18,8 +18,6 @@
 
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 #define RGA_ZOOM_MAX 16
-#define THM_FILE_DIRECTORY "/data/ThumbRepair/"
-#define THM_FILE_PATH "/data/ThumbRepair/thumbnail.jpg"
 
 typedef struct {
   uint16_t tag_no; // tag number
@@ -364,126 +362,6 @@ RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb) {
   return 0;
 }
 
-RKADK_S32 ThumbnailBuildIn(RKADK_CHAR *pszFileName,
-                            RKADK_THUMB_ATTR_S *pstThumbAttr) {
-  FILE *fd = NULL;
-  int ret = -1;
-  bool bBuildInThm = false;
-  RKADK_U64 u64BoxSize;
-  RKADK_U8 boxHeader[THM_BOX_HEADER_LEN] = {0};
-  RKADK_U8 largeSize[THM_BOX_HEADER_LEN] = {0};
-
-  fd = fopen(pszFileName, "r+");
-  if (!fd) {
-    RKADK_LOGE("open %s failed", pszFileName);
-    return -1;
-  }
-
-  while (!feof(fd)) {
-    if (fread(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-      if (feof(fd)) {
-        RKADK_LOGD("EOF");
-        bBuildInThm = true;
-      } else {
-        RKADK_LOGE("Can't read box header");
-      }
-      break;
-    }
-
-    u64BoxSize = boxHeader[0] << 24 | boxHeader[1] << 16 | boxHeader[2] << 8 |
-                 boxHeader[3];
-
-    if (!u64BoxSize) {
-      if (!boxHeader[4] && !boxHeader[5] && !boxHeader[6] && !boxHeader[7]) {
-        RKADK_LOGE("invalid data, cover!!!");
-
-        if (fseek(fd, -THM_BOX_HEADER_LEN, SEEK_CUR))
-          RKADK_LOGE("seek failed");
-        else
-          bBuildInThm = true;
-      } else {
-        RKADK_LOGE("u64BoxSize = %lld, invalid data", u64BoxSize);
-      }
-
-      break;
-    } else if (u64BoxSize == 1) {
-      if (fread(largeSize, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-        RKADK_LOGE("read largeSize failed");
-        break;
-      }
-
-      u64BoxSize = (RKADK_U64)largeSize[0] << 56 |
-                   (RKADK_U64)largeSize[1] << 48 |
-                   (RKADK_U64)largeSize[2] << 40 |
-                   (RKADK_U64)largeSize[3] << 32 | largeSize[4] << 24 |
-                   largeSize[5] << 16 | largeSize[6] << 8 | largeSize[7];
-
-      if (fseek(fd, u64BoxSize - (THM_BOX_HEADER_LEN * 2), SEEK_CUR)) {
-        RKADK_LOGE("largeSize seek failed");
-        break;
-      }
-    } else {
-      if (fseek(fd, u64BoxSize - THM_BOX_HEADER_LEN, SEEK_CUR)) {
-        RKADK_LOGE("seek failed");
-        break;
-      }
-    }
-  }
-
-  if (!bBuildInThm)
-    goto exit;
-
-  // 16: 4bytes width + 4bytes height + 4bytes VirWidth + 4bytes VirHeight
-  u64BoxSize = pstThumbAttr->u32BufSize + THM_BOX_HEADER_LEN + 16;
-  boxHeader[0] = u64BoxSize >> 24;
-  boxHeader[1] = (u64BoxSize & 0x00FF0000) >> 16;
-  boxHeader[2] = (u64BoxSize & 0x0000FF00) >> 8;
-  boxHeader[3] = u64BoxSize & 0x000000FF;
-  boxHeader[4] = 't';
-  boxHeader[5] = 'h';
-  boxHeader[6] = 'm';
-  boxHeader[7] = pstThumbAttr->enType;
-
-  if (fwrite(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {
-    RKADK_LOGE("write thm box header failed");
-    goto exit;
-  }
-
-  if (fwrite(&(pstThumbAttr->u32Width), 4, 1, fd) != 1) {
-    RKADK_LOGE("write thm width failed");
-    goto exit;
-  }
-
-  if (fwrite(&(pstThumbAttr->u32Height), 4, 1, fd) != 1) {
-    RKADK_LOGE("write thm height failed");
-    goto exit;
-  }
-
-  if (fwrite(&(pstThumbAttr->u32VirWidth), 4, 1, fd) != 1) {
-    RKADK_LOGE("write thm virtual width failed");
-    goto exit;
-  }
-
-  if (fwrite(&(pstThumbAttr->u32VirHeight), 4, 1, fd) != 1) {
-    RKADK_LOGE("write thm virtual height failed");
-    goto exit;
-  }
-
-  if (fwrite(pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, 1, fd) != 1) {
-    RKADK_LOGE("write thm box body failed");
-    goto exit;
-  }
-
-  ret = 0;
-  RKADK_LOGD("done!");
-
-exit:
-  if (fd)
-    fclose(fd);
-
-  return ret;
-}
-
 static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
   RKADK_U64 u64BoxSize;
 
@@ -510,72 +388,6 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
   }
 
   return -1;
-}
-
-static void FilePath(RKADK_CHAR *pszFileName, char *DestName) {
-  int num = 0;
-  int position;
-  char *p[10];
-  char name[RKADK_MAX_FILE_PATH_LEN];
-
-  memcpy(name, pszFileName, RKADK_MAX_FILE_PATH_LEN);
-  split(name, "/_", p, &num);
-  for (position = 0; position < num; position++) {
-    if (*p[position] == 'R' && strlen(p[position]) > 8)
-      break;
-  }
-  if (position < num)
-    snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[position]);
-  else
-    snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[0]);
-}
-
-static RKADK_S32 ThumbnailRepair(RKADK_CHAR *pszFileName,
-                              RKADK_THUMB_ATTR_S *pstThumbAttr) {
-  int ret, len, fd;
-  FILE *fp;
-  char name[RKADK_MAX_FILE_PATH_LEN];
-
-  FilePath(pszFileName, name);
-
-  fp = fopen(name, "rb");
-  if (!fp) {
-    RKADK_LOGE("open %s failed", name);
-    return -1;
-  }
-  fd = fileno(fp);
-
-  if (fseek(fp, 0, SEEK_END) || (len = ftell(fp)) == -1 ||
-    fseek(fp, 0, SEEK_SET)) {
-    fclose(fp);
-    RKADK_LOGE("seek %s failed", name);
-    return -1;
-  }
-
-  if (!pstThumbAttr->pu8Buf) {
-    pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(len);
-    if (!pstThumbAttr->pu8Buf) {
-      RKADK_LOGE("malloc thumbnail buffer[%d] failed", len);
-      fclose(fp);
-      return RKADK_FAILURE;
-    }
-    pstThumbAttr->u32BufSize = len;
-  } else {
-    if (pstThumbAttr->u32BufSize < len)
-      RKADK_LOGW("buffer size[%d] < thm data size[%d]",
-                  pstThumbAttr->u32BufSize, len);
-    else
-      pstThumbAttr->u32BufSize = len;
-  }
-
-  fread(pstThumbAttr->pu8Buf, 1, pstThumbAttr->u32BufSize, fp);
-  fclose(fp);
-  fsync(fd);
-
-  ThumbnailBuildIn(pszFileName, pstThumbAttr);
-  RKADK_LOGI("Thumbnail buf %p len = %d build in %s success!",
-              pstThumbAttr->pu8Buf, pstThumbAttr->u32BufSize, pszFileName);
-  return RKADK_SUCCESS;
 }
 
 static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
@@ -646,23 +458,15 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
 
     memcpy(pstThumbAttr->pu8Buf, pFile + cur + THM_BOX_HEADER_LEN + 16,
            pstThumbAttr->u32BufSize);
-    pstThumbAttr->u32Width = *(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN);
-    pstThumbAttr->u32Height = *(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 4);
-    pstThumbAttr->u32VirWidth = *(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 8);
-    pstThumbAttr->u32VirHeight = *(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 12);
+    pstThumbAttr->u32Width = bswap_32(*(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN));
+    pstThumbAttr->u32Height = bswap_32(*(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 4));
+    pstThumbAttr->u32VirWidth = bswap_32(*(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 8));
+    pstThumbAttr->u32VirHeight = bswap_32(*(RKADK_U32*) (pFile + cur + THM_BOX_HEADER_LEN + 12));
     munmap(pFile, len);
-    return RKADK_SUCCESS;
-  } else {
-    munmap(pFile, len);
-
-    ret = ThumbnailRepair(pszFileName, pstThumbAttr);
-    if (ret) {
-      RKADK_LOGE("File %s repair thumbnail failed!", pszFileName);
-      return RKADK_FAILURE;
-    }
     return RKADK_SUCCESS;
   }
 
+  munmap(pFile, len);
   return RKADK_FAILURE;
 }
 
@@ -712,60 +516,4 @@ RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName,
     RKADK_ThmBufFree(pstThumbAttr);
 
   return ret;
-}
-
-RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *pszFileName, unsigned char *buf, RKADK_U32 size) {
-  int ret;
-  FILE *fp;
-  char name[RKADK_MAX_FILE_PATH_LEN];
-
-  FilePath(pszFileName, name);
-
-  fp = fopen(THM_FILE_PATH , "rb+");
-  if (!fp) {
-    RKADK_LOGE("Open %s failed!", THM_FILE_PATH);
-    return -1;
-  }
-  fwrite(buf, 1, size, fp);
-  fclose(fp);
-
-  rename(THM_FILE_PATH, name);
-  RKADK_LOGI("Rename %s to %s", THM_FILE_PATH, name);
-  RKADK_LOGD("Save thumbnail %s, size = %d done!", name, size);
-  return 0;
-}
-
-RKADK_S32 ThumbnailRenameFile(RKADK_CHAR *pszFileName) {
-  int ret;
-  FILE *fp;
-  char name[RKADK_MAX_FILE_PATH_LEN];
-
-  FilePath(pszFileName, name);
-
-  fp = fopen(name, "r");
-  if (!fp) {
-    RKADK_LOGI("Open %s failed!", name);
-    return -1;
-  }
-  fclose(fp);
-
-  rename(name, THM_FILE_PATH);
-  RKADK_LOGI("Rename %s to %s", name, THM_FILE_PATH);
-  return 0;
-}
-
-RKADK_S32 ThumbnailFileInit() {
-  int ret;
-  FILE *fp;
-
-  mkdir(THM_FILE_DIRECTORY, S_IRWXU);
-
-  fp = fopen(THM_FILE_PATH, "wb");
-  if (!fp) {
-    RKADK_LOGE("Open %s failed!", THM_FILE_PATH);
-    return -1;
-  }
-
-  fclose(fp);
-  return 0;
 }

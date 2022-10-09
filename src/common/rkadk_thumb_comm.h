@@ -36,15 +36,6 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
 
 RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb);
 
-RKADK_S32 ThumbnailBuildIn(RKADK_CHAR *pszFileName,
-                           RKADK_THUMB_ATTR_S *pstThumbAttr);
-
-RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *pszFileName, unsigned char *buf, RKADK_U32 size);
-
-RKADK_S32 ThumbnailRenameFile(RKADK_CHAR *pszFileName);
-
-RKADK_S32 ThumbnailFileInit();
-
 #ifdef __cplusplus
 }
 #endif

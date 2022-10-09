@@ -403,34 +403,6 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   // Stop muxer
   rkmuxer_deinit(pstMuxerHandle->muxerId);
 
-  // thumbnail
-  if (pstMuxerHandle->bEnableThumb) {
-    thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
-    if (thumbCell) {
-      memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
-      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
-        RKADK_PARAM_GetThumbCfg();
-      if (!ptsThumbCfg) {
-        RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-        return;
-      }
-      stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
-      stThumbAttr.u32Width = ptsThumbCfg->thumb_width;
-      stThumbAttr.u32Height = ptsThumbCfg->thumb_height;
-      stThumbAttr.u32VirWidth = ptsThumbCfg->thumb_width;
-      stThumbAttr.u32VirHeight = ptsThumbCfg->thumb_height;
-      stThumbAttr.pu8Buf = (RKADK_U8 *)thumbCell->buf;
-      stThumbAttr.u32BufSize = thumbCell->size;
-      RKADK_LOGI("FileName = %s, buf = %p, buf_size = %d",
-      pstMuxerHandle->cFileName, stThumbAttr.pu8Buf, stThumbAttr.u32BufSize);
-      ThumbnailBuildIn(pstMuxerHandle->cFileName,
-                              &stThumbAttr);
-      RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
-      if (pstMuxerHandle->vChnId == 0)
-        ThumbnailRenameFile(pstMuxerHandle->cFileName);
-    }
-  }
-
   if (pstMuxerHandle->realDuration <= 0) {
     pstMuxerHandle->realDuration =
       pstMuxerHandle->frameCnt * (1000 / pstMuxerHandle->stVideo.frame_rate_num);
@@ -451,14 +423,35 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
 }
 
 static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
+  int position = 0;
   MUXER_BUF_CELL_S *thumbCell = NULL;
+  FILE *fp = NULL;
 
   if (pstMuxerHandle->bEnableThumb) {
     thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
     if (thumbCell) {
-      ThumbnailSaveFile(pstMuxerHandle->cFileName, thumbCell->buf,
-                              thumbCell->size);
-      RKADK_MUXER_ThumbCellPush(pstMuxerHandle, thumbCell);
+      position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
+      if (position > 0) {
+        fp = fopen(pstMuxerHandle->cFileName, "r+");
+        if (!fp) {
+          RKADK_LOGE("Open %s file failed, errno = %d", pstMuxerHandle->cFileName, errno);
+          return true;
+        }
+
+        if (fseek(fp, position, SEEK_SET)) {
+          RKADK_LOGE("Seek failed");
+          fclose(fp);
+          return true;
+        }
+
+        fwrite(thumbCell->buf, 1, thumbCell->size, fp);
+        fclose(fp);
+        RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
+        RKADK_LOGI("Thumbnail build in %s file done",pstMuxerHandle->cFileName);
+      } else {
+        RKADK_LOGE("Thumbnail build in %s file failed, position = %d invalid value",
+                    pstMuxerHandle->cFileName, position);
+      }
       return false;
     } else {
       return true;
@@ -512,9 +505,8 @@ static bool RKADK_MUXER_Proc(void *params) {
         RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
       }
 
-      if (pstMuxerHandle->bGetThumb && pstMuxerHandle->vChnId == 0) {
+      if (pstMuxerHandle->bGetThumb)
         pstMuxerHandle->bGetThumb = RKADK_MUXER_SaveThumb(pstMuxerHandle);
-      }
 
       // Process
       if (pstMuxerHandle->bMuxering) {
@@ -576,10 +568,17 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
   RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxerAttr->u32CamId);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return -1;
+  }
+
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
   }
 
@@ -643,6 +642,16 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
           RKADK_LOGE("not support enCodecType: %d", videoInfo->enCodecType);
           return -1;
         }
+
+        //thumbnail infomation
+        pMuxerHandle->stVideo.thumb.width = ptsThumbCfg->thumb_width;
+        pMuxerHandle->stVideo.thumb.height = ptsThumbCfg->thumb_height;
+        pMuxerHandle->stVideo.thumb.vir_width = ptsThumbCfg->thumb_width;
+        pMuxerHandle->stVideo.thumb.vir_height = ptsThumbCfg->thumb_height;
+        pMuxerHandle->stVideo.thumb.data_size = ptsThumbCfg->thumb_width *
+                                                ptsThumbCfg->thumb_height * 3 / 2;
+        pMuxerHandle->stVideo.thumb.data = (unsigned char *)malloc(pMuxerHandle->stVideo.thumb.data_size);
+        memset(pMuxerHandle->stVideo.thumb.data, 0, sizeof(pMuxerHandle->stVideo.thumb.data));
       } else if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_AUDIO) {
         RKADK_TRACK_AUDIO_SOURCE_INFO_S *audioInfo =
             &(pstTrackSource->unTrackSourceAttr.stAudioInfo);
@@ -792,6 +801,11 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     // Release thu list
     if (pstMuxerHandle->bEnableThumb)
       RKADK_MUXER_ThumbListRelease(pstMuxerHandle);
+
+    if (pstMuxerHandle->stVideo.thumb.data) {
+      free(pstMuxerHandle->stVideo.thumb.data);
+      pstMuxerHandle->stVideo.thumb.data = NULL;
+    }
 
     free(pstMuxer->pMuxerHandle[i]);
     pstMuxer->pMuxerHandle[i] = NULL;
