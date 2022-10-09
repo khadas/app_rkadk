@@ -520,7 +520,10 @@ static void FilePath(RKADK_CHAR *pszFileName, char *DestName) {
     if (*p[position] == 'R' && strlen(p[position]) > 8)
       break;
   }
-  snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[position]);
+  if (position < num)
+    snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[position]);
+  else
+    snprintf(DestName, RKADK_MAX_FILE_PATH_LEN, "%s%s_R.jpg", THM_FILE_DIRECTORY, p[0]);
 }
 
 static RKADK_S32 ThumbnailRepair(RKADK_CHAR *pszFileName,
