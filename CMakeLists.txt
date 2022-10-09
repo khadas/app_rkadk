@@ -16,7 +16,7 @@ if(USE_RKAIQ)
     add_definitions(-DRKAIQ)
 
     if(${RKADK_CHIP} STREQUAL "rv1126")
-	add_definitions(-DRKAIQ_UAPI1 -DRV1126_1109)
+	add_definitions(-DRKAIQ_UAPI1 -DRV1126_1109 -DTHUMB_NORMAL)
     endif()
 endif()
 

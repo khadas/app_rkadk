@@ -351,8 +351,10 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
                           ptsThumbCfg->thumb_height,
                           ptsThumbCfg->rec_venc_chn,
                           ptsThumbCfg->vi_chn);
+#ifndef THUMB_NORMAL
       ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn,
                           ptsThumbCfg->rec_venc_chn);
+#endif
     }
   }
 
@@ -1053,7 +1055,16 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
 
     if (index == 0) {
       RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
+#ifndef THUMB_NORMAL
       RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn); //make sure thumbnail
+#else
+      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+      if (!ptsThumbCfg) {
+        RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+        return false;
+      }
+      ThumbnailRequest(ptsThumbCfg->rec_venc_chn);
+#endif
     }
 
     memset(&stSrcChn, 0, sizeof(MPP_CHN_S));

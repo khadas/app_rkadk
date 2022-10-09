@@ -526,7 +526,9 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
                 ptsThumbCfg->venc_chn, ret);
     goto failed;
   }
+#ifndef THUMB_NORMAL
   ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->venc_chn);
+#endif
 
   pHandle->u32MmapLen = pstPhotoCfg->image_width *
                         pstPhotoCfg->image_height * 3 / 2;
@@ -770,6 +772,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
 RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   VENC_RECV_PIC_PARAM_S stRecvParam;
   RKADK_PHOTO_HANDLE_S *pstHandle;
+  int ret;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   pstHandle = (RKADK_PHOTO_HANDLE_S *)pHandle;
@@ -796,7 +799,22 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_PHOTO_ATTR_S *pstPho
 
   pstHandle->u32PhotoCnt = stRecvParam.s32RecvPicNum;
   RKADK_LOGI("Take photo number = %d", pstHandle->u32PhotoCnt);
+#ifndef THUMB_NORMAL
   return RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
+#else
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+  ret = RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
+  ret |= RK_MPI_VENC_StartRecvFrame(ptsThumbCfg->venc_chn, &stRecvParam);
+  if(ret) {
+    RKADK_LOGE("Take photo failed %x", ret);
+    return -1;
+  }
+  return 0;
+#endif
 }
 
 RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {

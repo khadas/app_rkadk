@@ -36,6 +36,8 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
 
 RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb);
 
+RKADK_S32 ThumbnailRequest(RKADK_U32 u32VencChnTb);
+
 #ifdef __cplusplus
 }
 #endif

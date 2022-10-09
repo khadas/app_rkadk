@@ -217,9 +217,12 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   stVencChnRefBufShare.bEnable = RK_TRUE;
 
   RK_MPI_VENC_SetChnRefBufShareAttr(ChnId, &stVencChnRefBufShare);
+#ifndef THUMB_NORMAL
   RK_MPI_VENC_EnableThumbnail(ChnId);
-
   stRecvParam.s32RecvPicNum = -1;
+#else
+  stRecvParam.s32RecvPicNum = 1;
+#endif
   RK_MPI_VENC_StartRecvFrame(ChnId, &stRecvParam);
 
   return 0;
@@ -359,6 +362,20 @@ RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb) {
     return ret;
   }
 
+  return 0;
+}
+
+RKADK_S32 ThumbnailRequest(RKADK_U32 u32VencChnTb) {
+  int ret;
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+
+  memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
+  stRecvParam.s32RecvPicNum = 1;
+  ret = RK_MPI_VENC_StartRecvFrame(u32VencChnTb, &stRecvParam);
+  if (ret) {
+    RKADK_LOGE("Request thumbnail failed %x", ret);
+    return -1;
+  }
   return 0;
 }
 

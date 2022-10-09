@@ -466,6 +466,9 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
 static bool RKADK_MUXER_Proc(void *params) {
   int ret = 0;
+  bool bThumbFrame;
+  bool bThumbPts;
+  bool bFileSwitch;
   MUXER_BUF_CELL_S *cell = NULL;
 
   if (!params) {
@@ -500,7 +503,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           } else {
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
-            pstMuxerHandle->frameCnt = 1;
+            pstMuxerHandle->frameCnt = 0;
             pstMuxerHandle->bGetThumb = true;
             pstMuxerHandle->bRequestThumb = true;
           }
@@ -516,10 +519,10 @@ static bool RKADK_MUXER_Proc(void *params) {
       // Process
       if (pstMuxerHandle->bMuxering) {
         // Check close
-        if (cell->isKeyFrame && ((cell->pts - pstMuxerHandle->startTime >=
-                                  (pstMuxerHandle->duration * 1000000 -
-                                  1000000 / pstMuxerHandle->stVideo.frame_rate_num)))) {
-          RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->vChnId, pstMuxerHandle->frameCnt);
+        bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
+                      (pstMuxerHandle->duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
+        if (cell->isKeyFrame && bFileSwitch) {
+          RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->vChnId, pstMuxerHandle->frameCnt + 1);
           RKADK_MUXER_Close(pstMuxerHandle);
           continue;
         }
@@ -535,15 +538,33 @@ static bool RKADK_MUXER_Proc(void *params) {
               (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
           //requst thumbnai
-          if (pstMuxerHandle->vChnId == 0 &&
-              pstMuxerHandle->frameCnt > ((pstMuxerHandle->duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num)
-              * pstMuxerHandle->stVideo.frame_rate_num) && cell->isKeyFrame && pstMuxerHandle->bRequestThumb) {
-            RKADK_LOGI("Request thumbnail frameCnt = %d", pstMuxerHandle->frameCnt);
+#ifndef THUMB_NORMAL
+          bThumbFrame = pstMuxerHandle->frameCnt > ((pstMuxerHandle->duration - pstMuxerHandle->gop /
+                        pstMuxerHandle->stVideo.frame_rate_num) * pstMuxerHandle->stVideo.frame_rate_num);
+          bThumbPts = cell->pts - pstMuxerHandle->startTime >= 
+                      (pstMuxerHandle->duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num) * 1000000;
+          if (pstMuxerHandle->vChnId == 0 && (bThumbFrame || bThumbPts) && cell->isKeyFrame && pstMuxerHandle->bRequestThumb) {
+            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
             ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
             if (ret)
               RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
             pstMuxerHandle->bRequestThumb = false;
           }
+#else
+          bThumbFrame = pstMuxerHandle->frameCnt > (pstMuxerHandle->duration * pstMuxerHandle->stVideo.frame_rate_num - 1);
+          bThumbPts = cell->pts - pstMuxerHandle->startTime >=
+                      (pstMuxerHandle->duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num * 2);
+          if (pstMuxerHandle->vChnId == 0 && (bThumbFrame || bThumbPts) && pstMuxerHandle->bRequestThumb) {
+            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
+            RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+            if (!ptsThumbCfg) {
+              RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+              return false;
+            }
+            ThumbnailRequest(ptsThumbCfg->rec_venc_chn);
+            pstMuxerHandle->bRequestThumb = false;
+          }
+#endif
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
