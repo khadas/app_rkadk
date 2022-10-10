@@ -64,7 +64,7 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
 
   ret = RK_MPI_RGN_Create(RgnHandle, &stRgnAttr);
   if (RK_SUCCESS != ret) {
-    RKADK_LOGE("RK_MPI_RGN_Create (%d) failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] create failed with %#x!", RgnHandle, ret);
     RK_MPI_RGN_Destroy(RgnHandle);
     return ret;
   }
@@ -78,8 +78,8 @@ RKADK_S32 RKADK_OSD_Deinit(RKADK_U32 u32OsdId) {
   RgnHandle = u32OsdId;
 
   ret = RK_MPI_RGN_Destroy(RgnHandle);
-  if (0 != ret) {
-    RK_LOGE("RK_MPI_RGN_Destroy [%d] failed with %#x", RgnHandle, ret);
+  if (RK_SUCCESS != ret) {
+    RK_LOGE("OSD [%d] destroy failed with %#x", RgnHandle, ret);
     return ret;
   }
 
@@ -158,7 +158,8 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
   ret = RK_MPI_RGN_AttachToChn(RgnHandle, &stMppChn, &stRgnChnAttr);
   if (RK_SUCCESS != ret) {
-    RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] attach to stream [%d] failed with %#x!",
+                RgnHandle, stMppChn.s32ChnId, ret);
     return ret;
   }
 
@@ -228,7 +229,8 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
   ret = RK_MPI_RGN_DetachFromChn(RgnHandle, &stMppChn);
   if (RK_SUCCESS != ret) {
-    RKADK_LOGE("RK_MPI_RGN_AttachToChn (%d) failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] detach from stream [%d] failed with %#x!",
+                RgnHandle, stMppChn.s32ChnId, ret);
     return ret;
   }
 
@@ -248,8 +250,8 @@ RKADK_S32 RKADK_OSD_Update(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
   stBitmap.pData = pstOsdAttr->pData;
 
   ret = RK_MPI_RGN_SetBitMap(RgnHandle, &stBitmap);
-  if (0 != ret) {
-    RK_LOGE("RK_MPI_RGN_SetBitMap failed with %#x!", ret);
+  if (RK_SUCCESS != ret) {
+    RK_LOGE("OSD [%d] update failed with %#x!", RgnHandle, ret);
     return ret;
   }
 
@@ -319,7 +321,8 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
   ret = RK_MPI_RGN_GetDisplayAttr(RgnHandle, &stMppChn, &stRgnChnAttr);
   if (RK_SUCCESS != ret) {
-    RKADK_LOGE("RK_MPI_RGN_GetDisplayAttr (%d)) failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] get display attr from stream [%d] failed with %#x!",
+                RgnHandle, stMppChn.s32ChnId, ret);
     return ret;
   }
 
@@ -333,7 +336,8 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
   ret = RK_MPI_RGN_SetDisplayAttr(RgnHandle, &stMppChn, &stRgnChnAttr);
   if (RK_SUCCESS != ret) {
-    RKADK_LOGE("RK_MPI_RGN_SetDisplayAttr (%d)) failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] set display attr to stream [%d] failed with %#x!",
+                RgnHandle, stMppChn.s32ChnId, ret);
     return ret;
   }
 
