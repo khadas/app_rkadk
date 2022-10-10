@@ -2469,11 +2469,11 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
 
 static void RKADK_PARAM_MicMute(bool mute, RKADK_U32 volume) {
   char buffer[RKADK_VOLUME_LEN];
+  RKADK_LOGI("RKADK_PARAM_MicMute mute = %d, volume = %d", mute, volume);
   volume = (int)(volume * 2.55 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
 
-  RKADK_LOGI("RKADK_PARAM_MicMute mute = %d, volume = %d", mute, volume);
   if (mute) {
     RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", "0");
     RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", "0");
