@@ -503,6 +503,10 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
     }
 
     cur += u64BoxSize;
+    if (cur < 0) {
+      RKADK_LOGE("cur = %d invalid value, u64BoxSize = %lld", cur, u64BoxSize);
+      break;
+    }
   }
 
   return -1;
