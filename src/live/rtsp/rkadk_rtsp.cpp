@@ -299,7 +299,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
-  ret = RKADK_MPI_VENC_Init(stVencChn.s32ChnId, &stVencChnAttr);
+  ret = RKADK_MPI_VENC_Init(u32CamId, stVencChn.s32ChnId, &stVencChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
     goto failed;

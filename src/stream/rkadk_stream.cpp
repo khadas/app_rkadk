@@ -392,7 +392,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
 #endif
 
   // Create VENC
-  ret = RKADK_MPI_VENC_Init(stVencChn.s32ChnId, &stVencChnAttr);
+  ret = RKADK_MPI_VENC_Init(u32CamID, stVencChn.s32ChnId, &stVencChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_Init failed[%x]", ret);
     goto failed;

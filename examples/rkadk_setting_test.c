@@ -65,8 +65,6 @@ static void SetCommCfg() {
   stParamCommCfg.mic_volume = 70;
   stParamCommCfg.osd = true;
   stParamCommCfg.boot_sound = true;
-  stParamCommCfg.enable_wrap = true;
-  stParamCommCfg.wrap_buf_line = SENSOR_MAX_HEIGHT / 4;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
@@ -85,6 +83,8 @@ static void SetSensorCfg() {
   stSensorCfg.enable_photo = true;
   stSensorCfg.flip = false;
   stSensorCfg.mirror = false;
+  stSensorCfg.enable_wrap = false;
+  stSensorCfg.wrap_buf_line = SENSOR_MAX_HEIGHT / 4;
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
@@ -122,7 +122,7 @@ static void SetRecCfg() {
   stParamRecCfg.pre_record_time = 0;
   stParamRecCfg.pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   stParamRecCfg.lapse_multiple = 30;
-  stParamRecCfg.file_num = 1;
+  stParamRecCfg.file_num = 2;
 
   stParamRecCfg.record_time_cfg[0].record_time = 60;
   stParamRecCfg.record_time_cfg[0].splite_time = 60;
@@ -262,7 +262,7 @@ static void SetPhotoCfg() {
   stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
   stPhotoCfg.rga_chn = 2;
-  stPhotoCfg.enable_combo = true;
+  stPhotoCfg.enable_combo = false;
   stPhotoCfg.combo_venc_chn = 0;
 
   memset(sensorPath, 0, RKADK_PATH_LEN);

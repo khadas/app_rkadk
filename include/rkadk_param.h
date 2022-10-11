@@ -230,8 +230,6 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   bool osd;        /* Whether to display OSD */
   bool boot_sound; /* boot sound */
   bool osd_speed;  /* speed osd */
-  bool enable_wrap;
-  RKADK_U32 wrap_buf_line;
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
@@ -243,6 +241,8 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
   bool enable_photo;  /* photo enable, default true */
   bool flip;          /* FLIP */
   bool mirror;        /* MIRROR */
+  bool enable_wrap;
+  RKADK_U32 wrap_buf_line;
   RKADK_U32 ldc;      /* LDC level, [0,255]*/
   RKADK_U32 wdr;      /* WDR level, [0,10] */
   RKADK_U32 hdr;      /* hdr, [0: normal, 1: HDR2, 2: HDR3] */

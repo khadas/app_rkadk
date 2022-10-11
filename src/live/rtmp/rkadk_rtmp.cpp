@@ -251,7 +251,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     goto failed;
   }
 
-  ret = RKADK_MPI_VENC_Init(stVencChn.s32ChnId, &stVencChnAttr);
+  ret = RKADK_MPI_VENC_Init(u32CamId, stVencChn.s32ChnId, &stVencChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
     goto failed;

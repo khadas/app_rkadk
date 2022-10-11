@@ -185,7 +185,7 @@ static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
   return 0;
 }
 
-static int RKADK_Thumbnail_Venc(RKADK_S32 ChnId,
+static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
                                 RKADK_U32 thumb_width,
                                 RKADK_U32 thumb_height) {
   int ret = 0;
@@ -209,7 +209,7 @@ static int RKADK_Thumbnail_Venc(RKADK_S32 ChnId,
   stIfd1[0] = {0x0100, 3, 1, thumb_width, {{.uwv = thumb_width}}}; // ImageWidth
   stIfd1[1] = {0x0100, 3, 1, thumb_height, {{.uwv = thumb_height}}}; // ImageLength
 
-  ret = RKADK_MPI_VENC_Init(ChnId, &stAttr);
+  ret = RKADK_MPI_VENC_Init(u32CamId, ChnId, &stAttr);
   if (ret != 0) {
     RKADK_LOGE("RKADK_MPI_VENC_Init failed, ret = %d", ret);
     return ret;
@@ -249,7 +249,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
     goto exit;
   }
 
-  ret = RKADK_Thumbnail_Venc(stVencChnThu.s32ChnId,
+  ret = RKADK_Thumbnail_Venc(u32CamId, stVencChnThu.s32ChnId,
                              thumb_width, thumb_height);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_VencThumBnail failed, ret = %d", ret);

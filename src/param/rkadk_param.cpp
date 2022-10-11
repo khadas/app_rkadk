@@ -758,8 +758,6 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
   pstCommCfg->mic_volume = 70;
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
-  pstCommCfg->enable_wrap = false;
-  pstCommCfg->wrap_buf_line = SENSOR_MAX_HEIGHT;
   RKADK_PARAM_SaveCommCfg(path);
 }
 
@@ -806,6 +804,8 @@ static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, char *path) {
   pstSensorCfg->enable_photo = true;
   pstSensorCfg->flip = false;
   pstSensorCfg->mirror = false;
+  pstSensorCfg->enable_wrap = false;
+  pstSensorCfg->wrap_buf_line = SENSOR_MAX_HEIGHT / 4;
   RKADK_PARAM_SaveSensorCfg(path, u32CamId);
 }
 
@@ -1030,8 +1030,6 @@ static void RKADK_PARAM_Dump() {
   printf("\tmic_volume: %d\n", pstCfg->stCommCfg.mic_volume);
   printf("\tshow osd: %d\n", pstCfg->stCommCfg.osd);
   printf("\tboot_sound: %d\n", pstCfg->stCommCfg.boot_sound);
-  printf("\tenable_wrap: %d\n", pstCfg->stCommCfg.enable_wrap);
-  printf("\twrap_buf_line: %d\n", pstCfg->stCommCfg.wrap_buf_line);
 
   printf("Audio Config\n");
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
@@ -1064,6 +1062,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stSensorCfg[i].enable_photo);
     printf("\tsensor[%d] flip: %d\n", i, pstCfg->stSensorCfg[i].flip);
     printf("\tsensor[%d] mirror: %d\n", i, pstCfg->stSensorCfg[i].mirror);
+    printf("\tsensor[%d] enable_wrap: %d\n", i, pstCfg->stSensorCfg[i].enable_wrap);
+    printf("\tsensor[%d] wrap_buf_line: %d\n", i, pstCfg->stSensorCfg[i].wrap_buf_line);
 
     printf("\tVI Config\n");
     for (j = 0; j < RKADK_ISPP_VI_NODE_CNT; j++) {
@@ -1836,8 +1836,6 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
-  RKADK_PARAM_COMM_CFG_S *pstCommCfg =
-      &g_stPARAMCtx.stCfg.stCommCfg;
   RKADK_PARAM_VENC_ATTR_S *pstRecAttr =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stRecCfg.attribute[0];
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
@@ -1856,8 +1854,8 @@ static RKADK_S32 RKADK_PARAM_FindViIndex(RKADK_STREAM_TYPE_E enStrmType,
     RKADK_LOGI("Sensor[%d] rec[0][%d*%d] not find matched VI", s32CamId, width,
                height);
 
-    pstCommCfg->wrap_buf_line = height;
-    RKADK_PARAM_SaveCommCfg(g_stPARAMCtx.path);
+    pstSensorCfg->wrap_buf_line = height;
+    RKADK_PARAM_SaveSensorCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
 
     if ((width <= pstSensorCfg->max_width) &&
         (height <= pstSensorCfg->max_height)) {

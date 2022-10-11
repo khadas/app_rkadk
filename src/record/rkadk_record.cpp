@@ -331,7 +331,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 #endif
 
     // Create VENC
-    ret = RKADK_MPI_VENC_Init(pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
+    ret = RKADK_MPI_VENC_Init(u32CamId, pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
 

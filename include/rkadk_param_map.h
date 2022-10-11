@@ -67,8 +67,6 @@ static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, osd),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, boot_sound),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, osd_speed),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, enable_wrap),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, wrap_buf_line),
 };
 
 /* audio map table */
@@ -103,6 +101,8 @@ static RKADK_SI_CONFIG_MAP_S g_stSensorCfgMapTable[] = {
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, enable_photo),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, flip),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, mirror),
+    DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, enable_wrap),
+    DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, wrap_buf_line),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, ldc),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, wdr),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, hdr),
