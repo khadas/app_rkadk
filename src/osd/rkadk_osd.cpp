@@ -55,6 +55,8 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
   RGN_ATTR_S stRgnAttr;
   RGN_HANDLE RgnHandle = 0;
 
+  RKADK_CHECK_POINTER(pstOsdAttr, RKADK_FAILURE);
+
   memset(&stRgnAttr, 0, sizeof(RGN_ATTR_S));
   stRgnAttr.enType = OVERLAY_RGN;
   stRgnAttr.unAttr.stOverlay.enPixelFmt = TO_RK_FORMAT_FMT(pstOsdAttr->Format);
@@ -93,6 +95,8 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
+
+  RKADK_CHECK_POINTER(pstOsdStreamAttr, RKADK_FAILURE);
 
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
@@ -237,11 +241,13 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   return 0;
 }
 
-RKADK_S32 RKADK_OSD_Update(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
+RKADK_S32 RKADK_OSD_UpdateBitMap(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
   int ret;
   RGN_HANDLE RgnHandle = 0;
   RgnHandle = u32OsdId;
   BITMAP_S stBitmap;
+
+  RKADK_CHECK_POINTER(pstOsdAttr, RKADK_FAILURE);
 
   memset(&stBitmap, 0, sizeof(BITMAP_S));
   stBitmap.enPixelFormat = TO_RK_FORMAT_FMT(pstOsdAttr->Format);
@@ -265,6 +271,8 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
+
+  RKADK_CHECK_POINTER(pstOsdStreamAttr, RKADK_FAILURE);
 
   RKADK_PARAM_REC_CFG_S *pstRecCfg =
       RKADK_PARAM_GetRecCfg(u32CamId);
@@ -338,6 +346,42 @@ RKADK_S32 RKADK_OSD_UpdateDisplayAttr(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
   if (RK_SUCCESS != ret) {
     RKADK_LOGE("OSD [%d] set display attr to stream [%d] failed with %#x!",
                 RgnHandle, stMppChn.s32ChnId, ret);
+    return ret;
+  }
+
+  return 0;
+}
+
+RKADK_S32 RKADK_OSD_UpdateOsdSize(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
+  int ret;
+  RGN_ATTR_S stRgnAttr;
+  RGN_HANDLE RgnHandle = 0;
+  RgnHandle = u32OsdId;
+
+  RKADK_CHECK_POINTER(pstOsdAttr, RKADK_FAILURE);
+
+  memset(&stRgnAttr, 0, sizeof(stRgnAttr));
+
+  ret = RK_MPI_RGN_GetAttr(RgnHandle, &stRgnAttr);
+  if (RK_SUCCESS != ret) {
+    RK_LOGE("OSD [%d] get attr failed with %#x!", RgnHandle, ret);
+    return ret;
+  }
+
+  if (stRgnAttr.unAttr.stOverlay.stSize.u32Width  == pstOsdAttr->Width &&
+      stRgnAttr.unAttr.stOverlay.stSize.u32Height == pstOsdAttr->Height) {
+    RKADK_LOGI("OSD size has not change old [%d %d] new [%d, %d]!",
+    stRgnAttr.unAttr.stOverlay.stSize.u32Width,
+    stRgnAttr.unAttr.stOverlay.stSize.u32Height,
+    pstOsdAttr->Width, pstOsdAttr->Height);
+    return 0;
+  }
+
+  stRgnAttr.unAttr.stOverlay.stSize.u32Width  = pstOsdAttr->Width;
+  stRgnAttr.unAttr.stOverlay.stSize.u32Height = pstOsdAttr->Height;
+  ret = RK_MPI_RGN_SetAttr(RgnHandle, &stRgnAttr);
+  if (RK_SUCCESS != ret) {
+    RK_LOGE("OSD [%d] set attr failed with %#x!", RgnHandle, ret);
     return ret;
   }
 

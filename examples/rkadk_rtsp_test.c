@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     RKADK_LOGD("open osd file success");
     fread((RKADK_U8 *)OsdAttr.pData, OsdAttr.Width * OsdAttr.Height * 4, 1, fp);
     fclose(fp);
-    RKADK_OSD_Update(u32OsdId, &OsdAttr);
+    RKADK_OSD_UpdateBitMap(u32OsdId, &OsdAttr);
   }
 
   signal(SIGINT, sigterm_handler);
