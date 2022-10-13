@@ -18,6 +18,7 @@
 #include "rkadk_thumb_comm.h"
 #include "rkadk_param.h"
 #include "rkadk_log.h"
+#include "rkadk_version.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -186,6 +187,7 @@ RKADK_S32 RKADK_MPI_SYS_Init() {
   int ret = 0;
 
   if (!g_bSysInit) {
+    RKADK_VERSION_Dump();
     RKADK_MEDIA_CtxInit();
     ret = RK_MPI_SYS_Init();
     if (ret) {
