@@ -16,7 +16,7 @@
 
 #include "rkadk_record.h"
 #include "rkadk_log.h"
-#include "rkadk_thumbnail_comm.h"
+#include "rkadk_thumb_comm.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
 #include "rkadk_audio_mp3.h"

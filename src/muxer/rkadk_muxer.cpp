@@ -16,7 +16,7 @@
 
 #include "rkadk_muxer.h"
 #include "rkadk_media_comm.h"
-#include "rkadk_thumbnail_comm.h"
+#include "rkadk_thumb_comm.h"
 #include "rkadk_param.h"
 #include "linux_list.h"
 #include "rkadk_log.h"

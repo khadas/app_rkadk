@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-#ifndef __RKADK_THUMBNAIL_COMM_H__
-#define __RKADK_THUMBNAIL_COMM_H__
+#ifndef __RKADK_THUMB_COMM_H__
+#define __RKADK_THUMB_COMM_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,20 +24,20 @@ extern "C" {
 #include "rkadk_media_comm.h"
 
 RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
-                               RKADK_U32 thumb_height, RKADK_U32 venc_chn,
-                               RKADK_U32 vi_chn);
+                        RKADK_U32 thumb_height, RKADK_U32 venc_chn,
+                        RKADK_U32 vi_chn);
 
 RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId, RKADK_U32 venc_chn,
-                                 RKADK_U32 vi_chn);
+                          RKADK_U32 vi_chn);
 
 RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pJpegdata, RKADK_U32 JpegLen,
-                               VENC_STREAM_S stThuFrame,
-                               RKADK_U8 *pNewPhoto);
+                             VENC_STREAM_S stThuFrame,
+                             RKADK_U8 *pNewPhoto);
 
 RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb);
 
 RKADK_S32 ThumbnailBuildIn(RKADK_CHAR *pszFileName,
-                            RKADK_THUMB_ATTR_S *pstThumbAttr);
+                           RKADK_THUMB_ATTR_S *pstThumbAttr);
 
 RKADK_S32 ThumbnailSaveFile(RKADK_CHAR *pszFileName, unsigned char *buf, RKADK_U32 size);
 
