@@ -132,9 +132,8 @@ typedef struct {
   RKADK_CHAR *pAudioBuf;
   player_handle_t mAudioPlayer;
   play_cfg_t *pAudioPlayerCfg;
+  RKADK_PLAYER_EVENT_FN g_pfnPlayerCallback;
 } RKADK_PLAYER_HANDLE_S;
-
-static RKADK_PLAYER_EVENT_FN g_pfnPlayerCallback = NULL;
 
 RKADK_VOID AudioPlayerCallback(player_handle_t self, play_info_t info, RKADK_VOID *userdata) {
   printf("MP3 playback end\n");
@@ -208,7 +207,8 @@ RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
 
   AUDIO_BIT_WIDTH_E bitWidth = FindBitWidth(ctx->s32BitWidth);
   if (bitWidth == AUDIO_BIT_WIDTH_BUTT) {
-    goto __FAILED;
+    RKADK_LOGE("audio bitWidth unsupport, bitWidth = %d", bitWidth);
+    return RKADK_FAILURE;
   }
 
   bytes = ctx->s32BitWidth / 8;
@@ -216,7 +216,8 @@ RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
   aoAttr.enSamplerate = (AUDIO_SAMPLE_RATE_E)ctx->s32ReSmpSampleRate;
   soundMode = FindSoundMode(ctx->s32Channel);
   if (soundMode == AUDIO_SOUND_MODE_BUTT) {
-    goto __FAILED;
+    RKADK_LOGE("audio soundMode unsupport, soundMode = %d", soundMode);
+    return RKADK_FAILURE;
   }
   aoAttr.enSoundmode = soundMode;
   aoAttr.u32FrmNum = ctx->s32PeriodCount;
@@ -230,8 +231,6 @@ RK_S32 OpenDeviceAo(PLAYER_AO_CTX_S *ctx) {
   RK_MPI_AO_Enable(aoDevId);
   ctx->s32OpenFlag = 1;
   return RK_SUCCESS;
-__FAILED:
-  return RK_FAILURE;
 }
 
 RK_S32 InitMpiAO(PLAYER_AO_CTX_S *params) {
@@ -304,13 +303,18 @@ RK_S32 SetAoChannelMode(AUDIO_DEV aoDevId, AO_CHN aoChn) {
   return RK_SUCCESS;
 }
 
-RKADK_VOID* SendDataThread(RKADK_VOID * ptr) {
-  RKADK_CHAR *buf = (RKADK_CHAR *)malloc(4096);
-  uint32_t len = 4096;
+RKADK_VOID* SendDataThread(RKADK_VOID *ptr) {
   RKADK_PLAYER_HANDLE_S *pPlayer = (RKADK_PLAYER_HANDLE_S *)ptr;
+  uint32_t len = 4096;
+  RKADK_CHAR *buf = (RKADK_CHAR *)calloc(len, sizeof(RKADK_CHAR));
+  if (!buf) {
+    RKADK_LOGE("malloc AO buf failed, bufsize = %d", len);
+    if (pPlayer->g_pfnPlayerCallback != NULL)
+      pPlayer->g_pfnPlayerCallback(ptr, RKADK_PLAYER_EVENT_ERROR, NULL);
+    return RK_NULL;
+  }
+
   MB_POOL_CONFIG_S pool_config;
-  // set default value for struct
-  RK_U8 *srcData = RK_NULL;
   AUDIO_FRAME_S frame;
   RK_U64 timeStamp = 0;
   RK_S32 s32MilliSec = -1;
@@ -319,11 +323,8 @@ RKADK_VOID* SendDataThread(RKADK_VOID * ptr) {
   FILE *file = RK_NULL;
   RKADK_LOGI("s32ChnIndex : %d", pPlayer->pCtx->s32ChnIndex);
 
-  srcData = (RK_U8 *)(calloc(len, sizeof(RK_U8)));
-  memset(srcData, 0, len);
   while (1) {
     size = player_pull(pPlayer->mAudioPlayer, buf, len);
-    srcData = (RK_U8 *)buf;
 
     frame.u32Len = size;
     frame.u64TimeStamp = timeStamp++;
@@ -333,16 +334,16 @@ RKADK_VOID* SendDataThread(RKADK_VOID * ptr) {
 
     MB_EXT_CONFIG_S extConfig;
     memset(&extConfig, 0, sizeof(extConfig));
-    extConfig.pOpaque = srcData;
-    extConfig.pu8VirAddr = srcData;
+    extConfig.pOpaque = (RK_U8 *)buf;
+    extConfig.pu8VirAddr = (RK_U8 *)buf;
     extConfig.u64Size = size;
     RK_MPI_SYS_CreateMB(&(frame.pMbBlk), &extConfig);
-
     result = RK_MPI_AO_SendFrame(pPlayer->pCtx->s32DevId, pPlayer->pCtx->s32ChnIndex, &frame, s32MilliSec);
     if (result < 0) {
         RKADK_LOGE("send frame fail, result = %d, TimeStamp = %lld, s32MilliSec = %d",
             result, frame.u64TimeStamp, s32MilliSec);
     }
+
     RK_MPI_MB_ReleaseMB(frame.pMbBlk);
 
     if (size <= 0) {
@@ -352,7 +353,11 @@ RKADK_VOID* SendDataThread(RKADK_VOID * ptr) {
   }
 
   RK_MPI_AO_WaitEos(pPlayer->pCtx->s32DevId, pPlayer->pCtx->s32ChnIndex, s32MilliSec);
-  free(srcData);
+  if (buf != NULL) {
+    free(buf);
+    buf = NULL;
+  }
+
   return RK_NULL;
 }
 
@@ -472,8 +477,8 @@ RKADK_VOID *DoPull(RKADK_VOID *arg) {
   RKADK_S32 *ReSmpSampleRate = 0;
   if (OpenDeviceAo(pPlayer->pCtx) != RK_SUCCESS) {
     RKADK_LOGE("AO open failed");
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
+    if (pPlayer->g_pfnPlayerCallback != NULL)
+      pPlayer->g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
     return NULL;
   }
 
@@ -485,8 +490,8 @@ RKADK_VOID *DoPull(RKADK_VOID *arg) {
 
   if (InitMpiAO(pPlayer->pCtx) != RK_SUCCESS) {
     RKADK_LOGE("AO init failed");
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
+    if (pPlayer->g_pfnPlayerCallback != NULL)
+      pPlayer->g_pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_ERROR, NULL);
     return NULL;
   }
 
@@ -499,20 +504,19 @@ RKADK_VOID *DoPull(RKADK_VOID *arg) {
 RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
                               RKADK_PLAYER_CFG_S *pstPlayCfg) {
   RKADK_CHECK_POINTER(pstPlayCfg, RKADK_FAILURE);
-  RKADK_S32 ret;
+  RKADK_S32 ret = 0;
   bool bSysInit = false;
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
-  g_pfnPlayerCallback = pstPlayCfg->pfnPlayerCallback;
 
   if (*pPlayer) {
     RKADK_LOGE("player has been created");
-    return -1;
+    return RKADK_FAILURE;
   }
 
   bSysInit = RKADK_MPI_SYS_CHECK();
   if (!bSysInit) {
     RKADK_LOGE("System is not initialized");
-    return -1;
+    return RKADK_FAILURE;
   }
 
   RKADK_LOGI("Create Player[%d, %d] Start...", pstPlayCfg->bEnableVideo,
@@ -521,14 +525,23 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)malloc(sizeof(RKADK_PLAYER_HANDLE_S));
   if (!pstPlayer) {
     RKADK_LOGE("malloc pstPlayer failed");
-    return -1;
+    return RKADK_FAILURE;
   }
 
+  memset(pstPlayer, 0, sizeof(RKADK_PLAYER_HANDLE_S));
   pstPlayer->bEnableVideo = pstPlayCfg->bEnableVideo;
-  pstPlayer->pFin = NULL;
-  pstPlayer->pAudioBuf = NULL;
+  pstPlayer->g_pfnPlayerCallback = pstPlayCfg->pfnPlayerCallback;
+  pstPlayer->pCtx = (PLAYER_AO_CTX_S *)malloc(sizeof(PLAYER_AO_CTX_S));
+  if (!pstPlayer->pCtx) {
+    RKADK_LOGE("malloc pstPlayer ao ctx failed");
+    if (pstPlayer) {
+      free(pstPlayer);
+      pstPlayer = NULL;
+    }
 
-  pstPlayer->pCtx = (PLAYER_AO_CTX_S *)(malloc(sizeof(PLAYER_AO_CTX_S)));
+    return RKADK_FAILURE;
+  }
+
   memset(pstPlayer->pCtx, 0, sizeof(PLAYER_AO_CTX_S));
 
   pstPlayer->pCtx->srcFilePath        = RK_NULL;
@@ -563,72 +576,30 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   RKADK_LOGI("Create Player[%d, %d] End...", pstPlayCfg->bEnableVideo,
              pstPlayCfg->bEnableAudio);
   *pPlayer = (RKADK_MW_PTR)pstPlayer;
-  return 0;
-
-failed:
-  RKADK_LOGI("Create Player[%d, %d] failed...", pstPlayCfg->bEnableVideo,
-             pstPlayCfg->bEnableAudio);
-
-  if (pstPlayer)
-    free(pstPlayer);
-
-  return -1;
+  return RKADK_SUCCESS;
 }
 
 RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-
-  RKADK_S32 ret;
+  RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   RKADK_LOGI("Destory Player Start...");
-  player_push(pstPlayer->mAudioPlayer, pstPlayer->pAudioBuf, 0);
-
-  ret = CloseDeviceAO(pstPlayer->pCtx);
-  if (ret) {
-    RKADK_LOGE("Ao destory failed(%d)", ret);
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-    return ret;
-  }
-
-  ret = player_stop(pstPlayer->mAudioPlayer);
-  if (ret) {
-    RKADK_LOGE("Player stop failed(%d)", ret);
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-    return ret;
-  }
-
-  if (pstPlayer->pAudioPlayerCfg) {
-    free(pstPlayer->pAudioPlayerCfg);
-    pstPlayer->pAudioPlayerCfg = NULL;
-  }
-
-  player_destroy(pstPlayer->mAudioPlayer);
-  pstPlayer->mAudioPlayer = NULL;
-  player_deinit();
-
-  if (pstPlayer->pFin != NULL) {
-    fclose(pstPlayer->pFin);
-    pstPlayer->pFin = NULL;
-  }
-
-  if (pstPlayer->pAudioBuf) {
-    free(pstPlayer->pAudioBuf);
-    pstPlayer->pAudioBuf = NULL;
-  }
-
+  ret = RKADK_PLAYER_Stop(pPlayer);
 
   if (pstPlayer->pCtx) {
     free(pstPlayer->pCtx);
     pstPlayer->pCtx = RK_NULL;
   }
 
-  RKADK_LOGI("Destory Player End...");
-  if (g_pfnPlayerCallback != NULL)
-    g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
-  return 0;
+  if (!ret)
+    RKADK_LOGI("Destory Player End...");
+
+  if (pstPlayer) {
+    free(pstPlayer);
+  }
+
+  return ret;
 }
 
 RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
@@ -646,6 +617,11 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   playback_set_volume(100);
   pstPlayer->pAudioPlayerCfg = NULL;
   pstPlayer->pAudioPlayerCfg = (play_cfg_t *)malloc(sizeof(play_cfg_t));
+  if (!pstPlayer->pAudioPlayerCfg) {
+    RKADK_LOGE("malloc pstPlayer ao cfg failed");
+    goto __FAILED;
+  }
+
   pstPlayer->pAudioPlayerCfg->start_time = 0;
   pstPlayer->pAudioPlayerCfg->target = (RKADK_CHAR *)pszfilePath;
 
@@ -654,17 +630,37 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 
     if (pstPlayer->pFin == NULL) {
       RKADK_LOGE("open %s failed, file %s is NULL", pstPlayer->pAudioPlayerCfg->target, pstPlayer->pAudioPlayerCfg->target);
-      if (g_pfnPlayerCallback != NULL)
-        g_pfnPlayerCallback(pstPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-      return RKADK_FAILURE;
+      goto __FAILED;
     }
+
     pstPlayer->pAudioBuf = (RKADK_CHAR *)malloc(AUDIO_BUF_SIZE);
+    if (!pstPlayer->pAudioBuf) {
+      RKADK_LOGE("malloc pstPlayer ao audio buf failed");
+      goto __FAILED;
+    }
+
     return RKADK_SUCCESS;
-  }
-  else {
+  } else {
     RKADK_LOGE("SetDataSource failed");
     return RKADK_FAILURE;
   }
+
+__FAILED:
+  if (pstPlayer->g_pfnPlayerCallback != NULL)
+    pstPlayer->g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
+
+  if(pstPlayer->mAudioPlayer) {
+    player_destroy(pstPlayer->mAudioPlayer);
+    pstPlayer->mAudioPlayer = NULL;
+    player_deinit();
+  }
+
+  if (pstPlayer->pAudioPlayerCfg) {
+    free(pstPlayer->pAudioPlayerCfg);
+    pstPlayer->pAudioPlayerCfg = NULL;
+  }
+
+  return RKADK_FAILURE;
 }
 
 RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
@@ -675,8 +671,8 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   pstPlayer->pAudioPlayerCfg->freq_t = PLAY_FREQ_LOCALPLAY;
   pstPlayer->pAudioPlayerCfg->need_free = 1;
   pstPlayer->pAudioPlayerCfg->info_only = 0;
-  if (g_pfnPlayerCallback != NULL)
-    g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PREPARED, NULL);
+  if (pstPlayer->g_pfnPlayerCallback != NULL)
+    pstPlayer->g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PREPARED, NULL);
 
   return RKADK_SUCCESS;
 }
@@ -721,16 +717,17 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
     pthread_join(pPlayer->stThreadParam.tidReceive, RK_NULL);
 
   DeInitMpiAO(pPlayer->pCtx->s32DevId, pPlayer->pCtx->s32ChnIndex);
-  if (g_pfnPlayerCallback != NULL)
-    g_pfnPlayerCallback((RKADK_VOID *)pPlayer, RKADK_PLAYER_EVENT_EOF, NULL);
+
+  if (pPlayer->g_pfnPlayerCallback != NULL)
+    pPlayer->g_pfnPlayerCallback((RKADK_VOID *)pPlayer, RKADK_PLAYER_EVENT_EOF, NULL);
 }
 
 RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  if (g_pfnPlayerCallback != NULL)
-    g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STARTED, NULL);
+  if (pstPlayer->g_pfnPlayerCallback != NULL)
+    pstPlayer->g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STARTED, NULL);
 
   player_play(pstPlayer->mAudioPlayer, pstPlayer->pAudioPlayerCfg);
   pthread_create(&pstPlayer->stThreadParam.tid, 0, DoPull, pPlayer);
@@ -744,24 +741,22 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
 
 RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-  RKADK_S32 ret;
+  RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = NULL;
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  player_push(pstPlayer->mAudioPlayer, pstPlayer->pAudioBuf, 0);
-  ret = CloseDeviceAO(pstPlayer->pCtx);
-  if (ret) {
-    RKADK_LOGE("Ao destory failed(%d)", ret);
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-    return ret;
+  if (pstPlayer->mAudioPlayer)
+    player_push(pstPlayer->mAudioPlayer, NULL, 0);
+
+  if (pstPlayer->pCtx) {
+    ret |= CloseDeviceAO(pstPlayer->pCtx);
+    if (ret)
+      RKADK_LOGE("Ao destory failed(%d)", ret);
   }
 
-  ret = player_stop(pstPlayer->mAudioPlayer);
-  if (ret) {
-    if (g_pfnPlayerCallback != NULL)
-      g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-    RKADK_LOGE("Player stop failed(%d)", ret);
-    return ret;
+  if (pstPlayer->mAudioPlayer) {
+    ret |= player_stop(pstPlayer->mAudioPlayer);
+    if (ret)
+      RKADK_LOGE("Player stop failed(%d)", ret);
   }
 
   if (pstPlayer->pAudioPlayerCfg) {
@@ -769,11 +764,13 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     pstPlayer->pAudioPlayerCfg = NULL;
   }
 
-  player_destroy(pstPlayer->mAudioPlayer);
-  pstPlayer->mAudioPlayer = NULL;
-  player_deinit();
+  if (pstPlayer->mAudioPlayer) {
+    player_destroy(pstPlayer->mAudioPlayer);
+    pstPlayer->mAudioPlayer = NULL;
+    player_deinit();
+  }
 
-  if (pstPlayer->pFin != NULL) {
+  if (pstPlayer->pFin) {
     fclose(pstPlayer->pFin);
     pstPlayer->pFin = NULL;
   }
@@ -783,8 +780,12 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     pstPlayer->pAudioBuf = NULL;
   }
 
-  if (g_pfnPlayerCallback != NULL)
-    g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
+  if (pstPlayer->g_pfnPlayerCallback != NULL) {
+    if (!ret)
+      pstPlayer->g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
+    else
+      pstPlayer->g_pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
+  }
 
   return ret;
 }

@@ -52,6 +52,11 @@ RK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
   }
 
   RKAencMp3Context *ctx = (RKAencMp3Context *)malloc(sizeof(RKAencMp3Context));
+  if (!ctx) {
+    RKADK_LOGE("malloc aenc context ctx failed, bufsize = %d", sizeof(RKAencMp3Context));
+    return RK_FAILURE;
+  }
+
   memset(ctx, 0, sizeof(RKAencMp3Context));
 
   ctx->s32FrameLength = attr->u32Resv[0];
@@ -148,6 +153,11 @@ RK_S32 RegisterAencMp3(void) {
     RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
     memset(&aencCtx, 0, sizeof(AENC_ENCODER_S));
     g_pMP3Ctx = (TEST_AENC_CTX_S *)malloc(sizeof(TEST_AENC_CTX_S));
+    if (!g_pMP3Ctx) {
+      RKADK_LOGE("malloc aenc ctx failed, bufsize = %d", sizeof(TEST_AENC_CTX_S));
+      return RK_FAILURE;
+    }
+
     memset(g_pMP3Ctx, 0, sizeof(TEST_AENC_CTX_S));
 
     pstAudioParam = RKADK_PARAM_GetAudioCfg();
