@@ -79,7 +79,7 @@ typedef struct {
 
   // thumbnail list param;
   bool bEnableThumb;
-  MUXER_BUF_CELL_S stThumbCell[20]; // thumbnail list cache size
+  MUXER_BUF_CELL_S stThumbCell[2]; // thumbnail list cache size
   struct list_head stThumbFree;     // thumbnail list remain size
   struct list_head stThumbProcList; // thumbnail process list
 } MUXER_HANDLE_S;
