@@ -191,6 +191,7 @@ typedef struct {
   bool bLapseRecord;
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
+  RKADK_MW_PTR pThumbAttr;
 } RKADK_MUXER_HANDLE_S;
 
 /**

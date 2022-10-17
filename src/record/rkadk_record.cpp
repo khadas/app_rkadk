@@ -26,15 +26,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-static RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
-
 static void *thumbnail_thread(void *arg) {
-  pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)arg;
   int ret;
-  RKADK_CHAR *pData = RK_NULL;
+  RKADK_CHAR *pData = NULL;
   RKADK_U32 BufSize = 0;
   RKADK_U64 pts = 0;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
   VENC_STREAM_S stFrame;
+
+  RKADK_CHECK_POINTER_N(arg);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)arg;
+  pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)pstMuxer->pThumbAttr;
 
   memset(&stFrame, 0, sizeof(stFrame));
   stFrame.pstPack = (VENC_PACK_S *)(malloc(sizeof(VENC_PACK_S)));
@@ -49,7 +53,7 @@ static void *thumbnail_thread(void *arg) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
       BufSize = stFrame.pstPack->u32Len;
       pts = stFrame.pstPack->u64PTS;
-      RKADK_MUXER_SendThumbData(pThumbAttr->pRecorder, pData, BufSize, pts);
+      RKADK_MUXER_SendThumbData(arg, pData, BufSize, pts);
       RKADK_LOGI("Thumb seq: %d, len = %d", stFrame.u32Seq,
                   stFrame.pstPack->u32Len);
       ret = RK_MPI_VENC_ReleaseStream(pThumbAttr->u32ThumbVencChn, &stFrame);
@@ -360,12 +364,16 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   return 0;
 }
 
-static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
+static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
   RKADK_S32 s32VpssGrp;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
+
+  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
@@ -414,6 +422,8 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
       RKADK_LOGI("VI[%d] VENC[%d] support destroy thumbnail",
                   pstRecCfg->vi_attr[i].u32ViChn,
                   pstRecCfg->attribute[i].venc_chn);
+      pstMuxer = (RKADK_MUXER_HANDLE_S *)pRecorder;
+      pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)pstMuxer->pThumbAttr;
       if (pThumbAttr) {
         pThumbAttr->bGetThumb = false;
         if (pThumbAttr->sThumbTid) {
@@ -646,6 +656,8 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
 
 #ifdef RKADK_ENABLE_RGA
   bool bUseRga;
@@ -732,13 +744,14 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
         pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)malloc(sizeof(RKADK_REC_THUMB_ATTR_S));
         pThumbAttr->bGetThumb = true;
         pThumbAttr->u32ThumbVencChn = ptsThumbCfg->rec_venc_chn;
-        pThumbAttr->pRecorder = pRecorder;
-        ret = RKADK_MUXER_CreateThumbList(pThumbAttr->pRecorder);
+        pstMuxer = (RKADK_MUXER_HANDLE_S *)pRecorder;
+        pstMuxer->pThumbAttr = (RKADK_MW_PTR)pThumbAttr;
+        ret = RKADK_MUXER_CreateThumbList(pRecorder);
         if (ret != 0) {
           RKADK_LOGE("RKADK_MUXER_CreateThumbList failed(%d)", ret);
           return ret;
         }
-      if (pthread_create(&pThumbAttr->sThumbTid, NULL, thumbnail_thread, pThumbAttr)) {
+      if (pthread_create(&pThumbAttr->sThumbTid, NULL, thumbnail_thread, pRecorder)) {
           RK_LOGE("Create thumbnail thread failed!");
           return -1;
       }
@@ -1166,7 +1179,7 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
   } else if (pstRecCfg->record_type == RKADK_REC_TYPE_NORMAL &&
              RKADK_MUXER_EnableAudio(pstRecorder->u32CamId)){
     if (RKADK_RECORD_CreateAudioChn()) {
-      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId);
+      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId, pRecorder);
       return -1;
     }
 
@@ -1181,7 +1194,7 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
       RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
-      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId);
+      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId, pRecorder);
       return ret;
     }
 
@@ -1226,7 +1239,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->s32CamID);
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
     if (RKADK_RECORD_CreateAudioChn()) {
-      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
+      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID, *ppRecorder);
       return -1;
     }
   }
@@ -1254,7 +1267,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
 failed:
   RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
-  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
+  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID, *ppRecorder);
 
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio)
     RKADK_RECORD_DestoryAudioChn();
@@ -1304,7 +1317,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return ret;
   }
 
-  ret = RKADK_RECORD_DestoryVideoChn(u32CamId);
+  ret = RKADK_RECORD_DestoryVideoChn(u32CamId, pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_DestoryVideoChn failed[%x]", ret);
     return ret;

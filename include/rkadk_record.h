@@ -53,7 +53,6 @@ typedef struct {
   bool bGetThumb;
   pthread_t sThumbTid;
   RKADK_U32 u32ThumbVencChn;
-  RKADK_MW_PTR pRecorder;
 } RKADK_REC_THUMB_ATTR_S;
 
 /****************************************************************************/
