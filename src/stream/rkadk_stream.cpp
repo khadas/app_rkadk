@@ -769,6 +769,9 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
   if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
     pstAencAttr->stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     pstAencAttr->stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
+  } else if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC){
+    pstAencAttr->stCodecAttr.u32Resv[0] = 2;
+    pstAencAttr->stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
   pstAencChn->enModId = RK_ID_AENC;

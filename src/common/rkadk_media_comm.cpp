@@ -1458,6 +1458,9 @@ RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {
   case RKADK_CODEC_TYPE_MP3:
     enCodecType = RK_AUDIO_ID_MP3;
     break;
+  case RKADK_CODEC_TYPE_ACC:
+    enCodecType = RK_AUDIO_ID_ACC;
+    break;
 
   default:
     enCodecType = RK_VIDEO_ID_Unused;

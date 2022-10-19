@@ -361,6 +361,9 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
       usleep(10000);
     }
 
+    if (!strcmp(pstMuxerHandle->stAudio.codec, "ACC"))
+      headerSize = 7; //ACC header size
+
     cell->size = size - headerSize;
     cell->buf = (unsigned char *)malloc(cell->size);
     if (NULL == cell->buf) {

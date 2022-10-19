@@ -507,6 +507,9 @@ static int RKADK_RECORD_CreateAudioChn() {
   if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
     stAencAttr.stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
+  } else if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC) {
+    stAencAttr.stCodecAttr.u32Resv[0] = 2;
+    stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
   stAencAttr.stCodecAttr.u32Resv[3] = !pstCommCfg->rec_unmute;

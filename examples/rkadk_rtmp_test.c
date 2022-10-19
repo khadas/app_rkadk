@@ -133,10 +133,15 @@ int main(int argc, char *argv[]) {
   }
 
   signal(SIGINT, sigterm_handler);
-
+  char cmd[64];
+  printf("\n#Usage: input 'quit' to exit programe!\n"
+         "peress any other key to quit\n");
   while (!is_quit) {
-    if (is_quit)
+    fgets(cmd, sizeof(cmd), stdin);
+    if (strstr(cmd, "quit") || is_quit) {
+      RKADK_LOGD("#Get 'quit' cmd!");
       break;
+    }
 
     usleep(500000);
   }
