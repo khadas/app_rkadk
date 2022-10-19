@@ -393,8 +393,6 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
   pstMuxerHandle->pfnEventCallback(pstMuxerHandle, &stEventInfo);
 }
 
-static FILE *g_output_file = NULL;
-
 static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   MUXER_BUF_CELL_S *thumbCell = NULL;
   RKADK_THUMB_ATTR_S stThumbAttr;
@@ -450,9 +448,6 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->frameCnt = 0;
   pstMuxerHandle->bGetThumb = false;
   pstMuxerHandle->bRequestThumb = false;
-
-  if (g_output_file)
-    fclose(g_output_file);
 }
 
 static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -534,16 +529,6 @@ static bool RKADK_MUXER_Proc(void *params) {
 
         // Write
         if (cell->pool == &pstMuxerHandle->stVFree) {
-  #if 0
-          if(!g_output_file) {
-            g_output_file = fopen("/data/venc.h264", "w");
-            if (!g_output_file)
-              RKADK_LOGE("open /data/venc.h264 failed");
-          }
-
-          if (g_output_file)
-            fwrite(cell->buf, 1, cell->size, g_output_file);
-  #endif
           rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
           if (cell->pts < pstMuxerHandle->startTime)
