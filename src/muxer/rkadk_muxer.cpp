@@ -427,11 +427,11 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   MUXER_BUF_CELL_S *thumbCell = NULL;
   FILE *fp = NULL;
 
-  if (pstMuxerHandle->bEnableThumb) {
-    thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
-    if (thumbCell) {
-      position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
-      if (position > 0) {
+  position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
+  if (position > 0) {
+    if (pstMuxerHandle->bEnableThumb) {
+      thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
+      if (thumbCell) {
         fp = fopen(pstMuxerHandle->cFileName, "r+");
         if (!fp) {
           RKADK_LOGE("Open %s file failed, errno = %d", pstMuxerHandle->cFileName, errno);
@@ -447,15 +447,17 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
         fwrite(thumbCell->buf, 1, thumbCell->size, fp);
         fclose(fp);
         RKADK_MUXER_CellFree(pstMuxerHandle, thumbCell);
-        RKADK_LOGI("Thumbnail build in %s file done",pstMuxerHandle->cFileName);
+        RKADK_LOGI("Stream [%d] thumbnail build in %s file position = %d done!",
+                    pstMuxerHandle->vChnId, pstMuxerHandle->cFileName, position);
+        return false;
       } else {
-        RKADK_LOGE("Thumbnail build in %s file failed, position = %d invalid value",
-                    pstMuxerHandle->cFileName, position);
+        RKADK_LOGI("Stream [%d] get thumbnail cell failed, retry!", pstMuxerHandle->vChnId);
+        return true;
       }
-      return false;
-    } else {
-      return true;
     }
+  } else {
+    RKADK_LOGI("Stream [%d] position = %d invalid value, retry!",pstMuxerHandle->vChnId, position);
+    return true;
   }
 }
 
