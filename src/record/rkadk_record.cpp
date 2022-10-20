@@ -35,7 +35,10 @@ static void *thumbnail_thread(void *arg) {
   RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
   VENC_STREAM_S stFrame;
 
-  RKADK_CHECK_POINTER_N(arg);
+  if (!arg) {
+    RKADK_LOGE("Invalid parameters");
+    return NULL;
+  }
 
   pstMuxer = (RKADK_MUXER_HANDLE_S *)arg;
   pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)pstMuxer->pThumbAttr;
