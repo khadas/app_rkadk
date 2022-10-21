@@ -23,8 +23,14 @@ extern "C" {
 
 #ifdef RKAIQ
 #include "rkadk_common.h"
+
+#ifdef RKAIQ_UAPI1
+#include <rk_aiq_user_api_imgproc.h>
+#include <rk_aiq_user_api_sysctl.h>
+#else
 #include <rk_aiq_user_api2_imgproc.h>
 #include <rk_aiq_user_api2_sysctl.h>
+#endif
 
 int RKADK_VI_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
                        bool bMultiCam, const char *iq_file_dir, int fps);

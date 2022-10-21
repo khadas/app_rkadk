@@ -10,13 +10,14 @@ include(version/Version.cmake)
 install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
-message("ROCKIT_HEADER_DIR = ${ROCKIT_HEADER_DIR}")
-include_directories(${ROCKIT_HEADER_DIR})
-
 if(USE_RKAIQ)
     find_package(RkAiq REQUIRED)
     include_directories(${RKAIQ_INCLUDE_DIRS})
     add_definitions(-DRKAIQ)
+
+if(${RKADK_CHIP} EQUAL "rv1126")
+	add_definitions(-DRKAIQ_UAPI1)
+endif()
 endif()
 
 #-Wextra
