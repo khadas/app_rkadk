@@ -458,10 +458,8 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                  "stream height");
   change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0,
                                     VENC_MAX_CHN_NUM, 1, "stream venc_chn");
-#ifdef RKADK_ENABLE_RGA
   change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->rga_chn, 0, VPSS_MAX_CHN_NUM,
                                     1, "stream rga_chn");
-#endif
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, 4 * 1024 * 1024,
                                  "stream bitrate");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "stream gop");
@@ -487,10 +485,8 @@ static void RKADK_PARAM_CheckPhotoCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->snap_num, 1, "photo snap_num");
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->venc_chn, 0, VENC_MAX_CHN_NUM,
                                     2, "photo venc_chn");
-#ifdef RKADK_ENABLE_RGA
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->rga_chn, 0, VPSS_MAX_CHN_NUM,
                                     2, "photo rga_chn");
-#endif
 
   if (change)
     RKADK_PARAM_SavePhotoCfg(path, u32CamId);
@@ -572,10 +568,8 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
     change |=
         RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0, VENC_MAX_CHN_NUM,
                                 u32DefChn, "rec venc_chn");
-#ifdef RKADK_ENABLE_RGA
     change |= RKADK_PARAM_CheckCfgU32(
         &pstAttribute->rga_chn, 0, VPSS_MAX_CHN_NUM, u32DefChn, "rec rga_chn");
-#endif
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, u32DefBitrate,
                                    "rec bitrate");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "rec gop");
@@ -689,10 +683,8 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   if (pstDispCfg->enable_buf_pool)
     change |= RKADK_PARAM_CheckCfg(&pstDispCfg->buf_pool_cnt, 3,
                                    "display buf_pool_cnt");
-#ifdef RKADK_ENABLE_RGA
   change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->rga_chn, 0, VPSS_MAX_CHN_NUM, 3,
                                     "display rga_chn");
-#endif
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->device_node, "/dev/dri/card0",
                                     RKADK_BUFFER_LEN, "display vo device_node");
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->img_type, "RGB888",

@@ -127,8 +127,6 @@ extern "C" {
 #define RKADK_WIDTH_3840P 3840
 #define RKADK_HEIGHT_2160P 2160
 
-#define RKADK_ENABLE_RGA 1
-
 /* Resolution type */
 typedef enum {
   RKADK_RES_720P = 0, /* 1280*720 */

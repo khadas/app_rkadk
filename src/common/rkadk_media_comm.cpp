@@ -855,7 +855,6 @@ exit:
   return ret;
 }
 
-#ifdef RKADK_ENABLE_RGA
 RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
                               VPSS_GRP_ATTR_S *pstVpssGrpAttr,
                               VPSS_CHN_ATTR_S *pstVpssChnAttr) {
@@ -969,7 +968,6 @@ exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
   return ret;
 }
-#endif
 
 static void *RKADK_MEDIA_GetAencMb(void *params) {
   int ret;
@@ -1295,18 +1293,14 @@ static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_VI_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViVencInfo;
-  }
-#ifdef RKADK_ENABLE_RGA
-  else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_VPSS) {
+  } else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_VPSS) {
     s32BindCount = RKADK_VI_RGA_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViRgaInfo;
   } else if (pstSrcChn->enModId == RK_ID_VPSS &&
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_RGA_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stRgaVencInfo;
-  }
-#endif
-  else {
+  } else {
     RKADK_LOGE("Nonsupport: src enModId: %d, dest enModId: %d",
                pstSrcChn->enModId, pstDestChn->enModId);
   }

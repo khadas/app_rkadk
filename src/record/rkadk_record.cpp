@@ -142,11 +142,9 @@ static void RKADK_RECORD_SetVideoChn(int index, RKADK_U32 u32CamId,
   pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstRecCfg->vi_attr[index].u32ViChn;
 
-#ifdef RKADK_ENABLE_RGA
   pstRgaChn->enModId = RK_ID_VPSS;
   pstRgaChn->s32DevId = u32CamId;
   pstRgaChn->s32ChnId = pstRecCfg->attribute[index].rga_chn;
-#endif
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = u32CamId;
@@ -236,7 +234,6 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
   return 0;
 }
 
-#ifdef RKADK_ENABLE_RGA
 static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
@@ -254,7 +251,6 @@ static bool RKADK_RECORD_IsUseRga(int index, RKADK_PARAM_REC_CFG_S *pstRecCfg) {
     return true;
   }
 }
-#endif
 
 static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   int ret;
@@ -262,13 +258,10 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
-
-#ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
   RKADK_S32 s32VpssGrp;
-#endif
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -302,7 +295,6 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       return ret;
     }
 
-#ifdef RKADK_ENABLE_RGA
     // Create RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
@@ -335,17 +327,15 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
         return ret;
       }
     }
-#endif
 
     // Create VENC
     ret = RKADK_MPI_VENC_Init(u32CamId, pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
 
-#ifdef RKADK_ENABLE_RGA
       if (bUseRga)
         RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstRecCfg->attribute[i].rga_chn);
-#endif
+
       RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
@@ -370,6 +360,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
   RKADK_S32 s32VpssGrp;
+  bool bUseRga = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
@@ -377,10 +368,6 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
   RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
 
   RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
-
-#ifdef RKADK_ENABLE_RGA
-  bool bUseRga = false;
-#endif
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -408,7 +395,6 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
       return ret;
     }
 
-#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       s32VpssGrp = 0;
@@ -418,7 +404,7 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
         return ret;
       }
     }
-#endif
+
     //Destroy thu vi venc
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
         pstRecCfg->attribute[i].venc_chn == 0) {
@@ -655,16 +641,13 @@ static RKADK_S32 RKADK_RECORD_VencGetData(RKADK_U32 u32CamId,
 static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
   char name[256];
+  bool bUseRga;
   MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
-
-#ifdef RKADK_ENABLE_RGA
-  bool bUseRga;
-#endif
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -712,7 +695,6 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
     if (RKADK_RECORD_VencGetData(u32CamId, &stDestChn, pRecorder))
       return -1;
 
-#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       // RGA Bind VENC
@@ -730,9 +712,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
                    stRgaChn.s32ChnId, ret);
         return ret;
       }
-    } else
-#endif
-    {
+    } else {
       // Bind VI to VENC
       ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
       if (ret) {
@@ -770,10 +750,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
   int ret;
   MPP_CHN_S stSrcChn, stDestChn, stRgaChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
-
-#ifdef RKADK_ENABLE_RGA
   bool bUseRga = false;
-#endif
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -803,7 +780,6 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
     // Stop get venc data
     RKADK_MEDIA_StopGetVencBuffer(&stDestChn, RKADK_RECORD_VencOutCb);
 
-#ifdef RKADK_ENABLE_RGA
     bUseRga = RKADK_RECORD_IsUseRga(i, pstRecCfg);
     if (bUseRga) {
       // RGA UnBind VENC
@@ -821,9 +797,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
                    stRgaChn.s32ChnId, ret);
         return ret;
       }
-    } else
-#endif
-    {
+    } else {
       // UnBind VI to VENC
       ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
       if (ret) {

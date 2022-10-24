@@ -24,9 +24,6 @@ extern "C" {
 #include "rkadk_log.h"
 #include <pthread.h>
 
-//#define RKADK_ENABLE_DISP
-//#define RKADK_ENABLE_RGA
-
 // dump config info for debug
  #define RKADK_DUMP_CONFIG
 
