@@ -552,16 +552,31 @@ static int RKADK_RECORD_DestoryAudioChn() {
   return 0;
 }
 
-static int64_t fakeTime = 0;
 static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
                                    RKADK_VOID *pHandle) {
   // current rockit audio timestamp inaccurate, use fake time
-  //fakeTime += 62560;
+  int duration = 0;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
   RKADK_CHECK_POINTER_N(pHandle);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  pstAudioCfg = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return;
+  }
+
+  duration = 1000000 / (double)pstAudioCfg->samplerate * pstAudioCfg->samples_per_frame;
+
+  if (!pstMuxer->u64AudioPts)
+    pstMuxer->u64AudioPts = stFrame.u64TimeStamp;
 
   RKADK_MUXER_WriteAudioFrame(
       (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk), stFrame.u32Len,
-    /* fakeTime  */ stFrame.u64TimeStamp, pHandle);
+                    pstMuxer->u64AudioPts, pHandle);
+  pstMuxer->u64AudioPts += duration;
 }
 
 static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,

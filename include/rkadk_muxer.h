@@ -192,6 +192,7 @@ typedef struct {
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
   RKADK_MW_PTR pThumbAttr;
+  RKADK_U64 u64AudioPts;
 } RKADK_MUXER_HANDLE_S;
 
 /**
