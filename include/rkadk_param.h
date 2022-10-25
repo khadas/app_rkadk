@@ -49,7 +49,7 @@ extern "C" {
 #define AI_DEVICE_NAME "hw:0,0"
 
 /* video default parameters */
-#define VIDEO_GOP 30
+#define VIDEO_GOP 25
 #define VIDEO_FRAME_RATE 25
 #define VIDEO_PROFILE 100
 #define VIDEO_BUFFER_COUNT 2
@@ -165,9 +165,7 @@ typedef enum {
   RKADK_PARAM_TYPE_MIC_UNMUTE,      /* mic(mute) enable, bool */
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
   RKADK_PARAM_TYPE_OSD,             /* show osd or not, bool */
-  RKADK_PARAM_TYPE_OSD_TIME_FORMAT, /* osd format for time */
   RKADK_PARAM_TYPE_BOOTSOUND,       /* boot sound enable, bool */
-  RKADK_PARAM_TYPE_OSD_SPEED,       /* speed osd enable, bool */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 
@@ -214,10 +212,8 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 speaker_volume; /* speaker volume, [0,100] */
   bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
-  RKADK_U32 osd_time_format;
   bool osd;        /* Whether to display OSD */
   bool boot_sound; /* boot sound */
-  bool osd_speed;  /* speed osd */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {

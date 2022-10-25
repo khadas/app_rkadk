@@ -63,10 +63,8 @@ static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, speaker_volume),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, mic_unmute),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, mic_volume),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, osd_time_format),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, osd),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, boot_sound),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, osd_speed),
 };
 
 /* audio map table */
