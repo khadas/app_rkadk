@@ -589,8 +589,9 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
   bool change = false;
   RKADK_U32 u32ChnId;
   const char *pixFmt = "NV12";
-  const char *deviceName = "rkisp_mainpath";
-  const char *module = "RECORD_MAIN|PHOTO";
+  const char *deviceName;
+  const char *module;
+  RKADK_U32 u32DefWidth, u32DefHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
   RKADK_PARAM_VI_CFG_S *pstViCfg =
@@ -602,62 +603,44 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
 
   switch (index) {
   case 0:
-    pixFmt = "NV12";
-    change =
-        RKADK_PARAM_CheckCfg(&pstViCfg->width, RECORD_VIDEO_WIDTH, "vi width");
-    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, RECORD_VIDEO_HEIGHT,
-                                   "vi height");
+    deviceName = DEF_DEVICE_NEME_VI_0;
+    module = DEF_MODULE_VI_0;
+    u32DefWidth = RECORD_VIDEO_WIDTH;
+    u32DefHeight = RECORD_VIDEO_HEIGHT;
     break;
   case 1:
-    deviceName = "rkisp_selfpath";
-    pixFmt = "NV12";
-    module = "RECORD_MAIN|PHOTO";
-    change =
-        RKADK_PARAM_CheckCfg(&pstViCfg->width, RECORD_VIDEO_WIDTH, "vi width");
-    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, RECORD_VIDEO_HEIGHT,
-                                   "vi height");
+    deviceName = DEF_DEVICE_NEME_VI_1;
+    module = DEF_MODULE_VI_1;
+    u32DefWidth = DEF_WIDTH_VI_1;
+    u32DefHeight = DEF_HEIGHT_VI_1;
     break;
   case 2:
-    deviceName = "rkisp_bypasspath";
-    module = "RECORD_SUB|PREVIEW|LIVE|DISP";
-    change =
-        RKADK_PARAM_CheckCfg(&pstViCfg->width, STREAM_VIDEO_WIDTH, "vi width");
-    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, STREAM_VIDEO_HEIGHT,
-                                   "vi height");
+    deviceName = DEF_DEVICE_NEME_VI_2;
+    module = DEF_MODULE_VI_2;
+    u32DefWidth = DEF_WIDTH_VI_2;
+    u32DefHeight = DEF_HEIGHT_VI_2;
     break;
   case 3:
-    deviceName = "rkisp_mainpath_4x4sampling";
-    module = "NONE";
-    change =
-        RKADK_PARAM_CheckCfg(&pstViCfg->width, STREAM_VIDEO_WIDTH, "vi width");
-    change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, STREAM_VIDEO_HEIGHT,
-                                   "vi height");
+    deviceName = DEF_DEVICE_NEME_VI_3;
+    module = DEF_MODULE_VI_3;
+    u32DefWidth = STREAM_VIDEO_WIDTH;
+    u32DefHeight = STREAM_VIDEO_HEIGHT;
     break;
   default:
     break;
   }
 
+  change = RKADK_PARAM_CheckCfg(&pstViCfg->width, u32DefWidth, "vi width");
+  change |= RKADK_PARAM_CheckCfg(&pstViCfg->height, u32DefHeight, "vi height");
   change |= RKADK_PARAM_CheckCfgU32(&pstViCfg->chn_id, 0, VI_MAX_CHN_NUM,
                                     u32ChnId, "vi chn_id");
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->device_name, deviceName,
                                     MAX_VI_ENTITY_NAME_LEN, "vi device_name");
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->module, module, RKADK_BUFFER_LEN,
                                     "vi module");
-  change |= RKADK_PARAM_CheckCfg(&pstViCfg->buf_cnt, 4, "vi buf_cnt");
+  change |= RKADK_PARAM_CheckCfg(&pstViCfg->buf_cnt, VIDEO_BUFFER_COUNT, "vi buf_cnt");
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->pix_fmt, pixFmt,
                                     RKADK_PIX_FMT_LEN, "vi pix_fmt");
-
-  if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
-    if ((pstViCfg->width != pstSensorCfg->max_width) &&
-        (pstViCfg->width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
-      if (strcmp(pstViCfg->pix_fmt, "NV16")) {
-        RKADK_LOGW("rkispp_scale0 resolution[%dx%d] > 2K, default NV16",
-                   pstViCfg->width, pstViCfg->height);
-        memcpy(pstViCfg->pix_fmt, "NV16", strlen("NV16"));
-        change = true;
-      }
-    }
-  }
 
   if (change)
     RKADK_PARAM_SaveViCfg(path, index, u32CamId);
@@ -811,31 +794,33 @@ static void RKADK_PARAM_DefViCfg(RKADK_U32 u32CamId, RKADK_U32 u32ViIndex,
   if (pstViCfg->chn_id >= VI_MAX_CHN_NUM)
     pstViCfg->chn_id = VI_MAX_CHN_NUM - 1;
 
+  pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
+  memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
+
   switch (u32ViIndex) {
   case 0:
-    memcpy(pstViCfg->device_name, "rkisp_mainpath", strlen("rkisp_mainpath"));
-    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
+    memcpy(pstViCfg->device_name, DEF_DEVICE_NEME_VI_0, strlen(DEF_DEVICE_NEME_VI_0));
     pstViCfg->width = RECORD_VIDEO_WIDTH;
     pstViCfg->height = RECORD_VIDEO_HEIGHT;
-    memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
-    memcpy(pstViCfg->module, "RECORD_MAIN|PHOTO", strlen("RECORD_MAIN|PHOTO"));
+    memcpy(pstViCfg->module, DEF_MODULE_VI_0, strlen(DEF_MODULE_VI_0));
     break;
   case 1:
-    memcpy(pstViCfg->device_name, "rkisp_selfpath", strlen("rkisp_selfpath"));
-    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
-    pstViCfg->width = THUMB_WIDTH;
-    pstViCfg->height = THUMB_HEIGHT;
-    memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
-    memcpy(pstViCfg->module, "THUMB", strlen("THUMB"));
+    memcpy(pstViCfg->device_name, DEF_DEVICE_NEME_VI_1, strlen(DEF_DEVICE_NEME_VI_1));
+    pstViCfg->width = DEF_WIDTH_VI_1;
+    pstViCfg->height = DEF_HEIGHT_VI_1;
+    memcpy(pstViCfg->module, DEF_MODULE_VI_1, strlen(DEF_MODULE_VI_1));
     break;
   case 2:
-    memcpy(pstViCfg->device_name, "rkisp_bypasspath", strlen("rkisp_bypasspath"));
-    pstViCfg->buf_cnt = VIDEO_BUFFER_COUNT;
+    memcpy(pstViCfg->device_name, DEF_DEVICE_NEME_VI_2, strlen(DEF_DEVICE_NEME_VI_2));
+    pstViCfg->width = DEF_WIDTH_VI_2;
+    pstViCfg->height = DEF_HEIGHT_VI_2;
+    memcpy(pstViCfg->module, DEF_MODULE_VI_2, strlen(DEF_MODULE_VI_2));
+    break;
+  case 3:
+    memcpy(pstViCfg->device_name, DEF_DEVICE_NEME_VI_3, strlen(DEF_DEVICE_NEME_VI_3));
     pstViCfg->width = STREAM_VIDEO_WIDTH;
     pstViCfg->height = STREAM_VIDEO_HEIGHT;
-    memcpy(pstViCfg->pix_fmt, "NV12", strlen("NV12"));
-    memcpy(pstViCfg->module, "RECORD_SUB|PREVIEW|LIVE|DISP",
-           strlen("RECORD_SUB|PREVIEW|LIVE|DISP"));
+    memcpy(pstViCfg->module, DEF_MODULE_VI_3, strlen(DEF_MODULE_VI_3));
     break;
   default:
     RKADK_LOGE("Nonsupport vi index: %d", u32ViIndex);
@@ -1325,12 +1310,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
   ret = RKADK_Ini2Struct(path, &pstCfg->stCommCfg, g_stCommCfgMapTable,
                          sizeof(g_stCommCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
-  if (ret == RKADK_PARAM_NOT_EXIST) {
-    // use default
+  if (ret) {
     RKADK_LOGW("common config param not exist, use default");
-    RKADK_PARAM_DefCommCfg(path);
-  } else if (ret) {
-    RKADK_LOGE("load %s failed", path);
     return ret;
   }
   RKADK_PARAM_CheckCommCfg(path);
@@ -1340,12 +1321,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
   ret = RKADK_Ini2Struct(path, &pstCfg->stAudioCfg, g_stAudioCfgMapTable,
                          sizeof(g_stAudioCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
-  if (ret == RKADK_PARAM_NOT_EXIST) {
-    // use default
+  if (ret) {
     RKADK_LOGW("audio config param not exist, use default");
-    RKADK_PARAM_DefAudioCfg(path);
-  } else if (ret) {
-    RKADK_LOGE("load audio param failed");
     return ret;
   }
   RKADK_PARAM_CheckAudioCfg(path);
@@ -1355,12 +1332,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
   ret = RKADK_Ini2Struct(path, &pstCfg->stThumbCfg, g_stThumbCfgMapTable,
                          sizeof(g_stThumbCfgMapTable) /
                              sizeof(RKADK_SI_CONFIG_MAP_S));
-  if (ret == RKADK_PARAM_NOT_EXIST) {
-    // use default
+  if (ret) {
     RKADK_LOGW("thumb config param not exist, use default");
-    RKADK_PARAM_DefThumbCfg(path);
-  } else if (ret) {
-    RKADK_LOGE("load thumb param failed");
     return ret;
   }
   RKADK_PARAM_CheckThumbCfg(path);
@@ -1374,12 +1347,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stSensorCfg[i],
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] config param not exist, use default", i);
-      RKADK_PARAM_DefSensorCfg(i, sensorPath[i]);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] param failed", i);
       return ret;
     }
     RKADK_PARAM_CheckSensorCfg(sensorPath[i], i);
@@ -1405,13 +1374,9 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
                              pstMapTableCfg->pstMapTable,
                              pstMapTableCfg->u32TableLen);
 
-      if (ret == RKADK_PARAM_NOT_EXIST) {
-        // use default
+      if (ret) {
         RKADK_LOGW("sensor[%d] vi[%d] config param not exist, use default", i,
                    j);
-        RKADK_PARAM_DefViCfg(i, j, sensorPath[i]);
-      } else if (ret) {
-        RKADK_LOGE("load sensor[%d] vi[%d] param failed", i, j);
         return ret;
       }
       RKADK_PARAM_CheckViCfg(sensorPath[i], i, j);
@@ -1425,12 +1390,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] record param not exist, use default", i);
-      RKADK_PARAM_DefRecCfg(i, sensorPath[i]);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] record param failed", i);
       return ret;
     }
 
@@ -1458,25 +1419,17 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
       ret = RKADK_Ini2Struct(
           sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg.record_time_cfg[j],
           pstTimeMapTable->pstMapTable, pstTimeMapTable->u32TableLen);
-      if (ret == RKADK_PARAM_NOT_EXIST) {
-        // use default
+      if (ret) {
         RKADK_LOGW("sensor[%d] rec time[%d] not exist, use default", i, j);
-        RKADK_PARAM_DefRecTime(i, enStrmType, sensorPath[i]);
-      } else if (ret) {
-        RKADK_LOGE("load sensor[%d] record time[%d] failed", i, j);
         return ret;
       }
 
       ret = RKADK_Ini2Struct(
           sensorPath[i], &pstCfg->stMediaCfg[i].stRecCfg.attribute[j],
           pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
-      if (ret == RKADK_PARAM_NOT_EXIST) {
-        // use default
+      if (ret) {
         RKADK_LOGW("sensor[%d] rec attribute[%d] param not exist, use default",
                    i, j);
-        RKADK_PARAM_DefRecAttr(i, enStrmType, sensorPath[i]);
-      } else if (ret) {
-        RKADK_LOGE("load sensor[%d] record attribute[%d] param failed", i, j);
         return ret;
       }
     }
@@ -1491,14 +1444,11 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(
         sensorPath[i], &pstCfg->stMediaCfg[i].stStreamCfg.attribute,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] stream config param not exist, use default", i);
-      RKADK_PARAM_DefStreamCfg(i, sensorPath[i], RKADK_STREAM_TYPE_PREVIEW);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] stream param failed", i);
       return ret;
     }
+
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_PREVIEW);
 
     // load live config
@@ -1510,14 +1460,11 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(
         sensorPath[i], &pstCfg->stMediaCfg[i].stLiveCfg.attribute,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] live config param not exist, use default", i);
-      RKADK_PARAM_DefStreamCfg(i, sensorPath[i], RKADK_STREAM_TYPE_LIVE);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] live param failed", i);
       return ret;
     }
+
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_LIVE);
 
     // load photo config
@@ -1529,12 +1476,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stPhotoCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] photo config param not exist, use default", i);
-      RKADK_PARAM_DefPhotoCfg(i, sensorPath[i]);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] photo param failed", i);
       return ret;
     }
     RKADK_PARAM_CheckPhotoCfg(sensorPath[i], i);
@@ -1547,12 +1490,8 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stDispCfg,
                            pstMapTableCfg->pstMapTable,
                            pstMapTableCfg->u32TableLen);
-    if (ret == RKADK_PARAM_NOT_EXIST) {
-      // use default
+    if (ret) {
       RKADK_LOGW("sensor[%d] display config param not exist, use default", i);
-      RKADK_PARAM_DefDispCfg(i, sensorPath[i]);
-    } else if (ret) {
-      RKADK_LOGE("load sensor[%d] display param failed", i);
       return ret;
     }
     RKADK_PARAM_CheckDispCfg(sensorPath[i], i);
@@ -1697,14 +1636,6 @@ static RKADK_S32 RKADK_PARAM_LoadDefault() {
   }
 
   return 0;
-}
-
-static RKADK_BOOL RKADK_PARAM_IsUseRga(RKADK_U32 srcWidth, RKADK_U32 srcHeight,
-                                       RKADK_U32 dstWidth, RKADK_U32 dstHeight) {
-  if (srcWidth == dstWidth && srcHeight == dstHeight)
-    return RKADK_FALSE;
-  else
-    return RKADK_TRUE;
 }
 
 static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
@@ -2894,7 +2825,6 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
   bool bSaveSensorCfg = false;
   RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_BUTT;
   RKADK_PARAM_RES_E type = RKADK_RES_BUTT;
-  RKADK_BOOL bEnable;
 
   // RKADK_LOGD("s32CamId: %d, enParamType: %d, u32_pvParam: %d, b_pvParam: %d",
   // s32CamId, enParamType, *(RKADK_U32 *)pvParam, *(bool *)pvParam);
@@ -3052,9 +2982,8 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
   if (bSaveRecAttr) {
     RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
                             enStrmType);
-    if (pstSensorCfg->used_isp) {
+    if (pstSensorCfg->used_isp)
       RKADK_PARAM_SetRecViAttr(s32CamId);
-    }
   }
 
   if (bSavePhotoCfg) {

@@ -30,9 +30,6 @@ extern "C" {
 // dump isp process result
 //#define RKADK_DUMP_ISP_RESULT
 
-// rkispp_m_bypass rkispp_scale0 rkispp_scale1
-#define RKADK_ISPP_VI_NODE_CNT 3
-
 // camera sensor count
 #define RKADK_MAX_SENSOR_CNT 3
 

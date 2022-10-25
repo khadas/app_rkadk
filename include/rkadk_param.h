@@ -20,16 +20,10 @@
 #include "rkadk_common.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_record.h"
+#include "rkadk_platform_param.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-/* #include "rk_mpi_ai.h"
-#include "rk_mpi_venc.h"
-#include "rk_mpi_vi.h"
-#include "rk_mpi_vo.h"
-#include "rk_mpi_vpss.h"
-#include "rk_mpi_rgn.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,10 +36,6 @@ extern "C" {
 #define RKADK_VOLUME_LEN 3
 #define RKADK_RC_MODE_LEN 5
 #define RKADK_PATH_LEN 128
-
-/* sensor default parameters */
-#define SENSOR_MAX_WIDTH 2560
-#define SENSOR_MAX_HEIGHT 1440
 
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
