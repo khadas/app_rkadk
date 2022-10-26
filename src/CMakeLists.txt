@@ -10,7 +10,7 @@ file(GLOB_RECURSE OSD_SRC "${CMAKE_SOURCE_DIR}/src/osd/*.cpp")
 #file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
 #file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
 
-if(RKAIQ_UAPI1)
+if(${RKADK_CHIP} STREQUAL "rv1126")
 	file(GLOB_RECURSE VI_SRC "${CMAKE_SOURCE_DIR}/src/vi/rkadk_aiq_uapi1.cpp")
 else()
 	file(GLOB_RECURSE VI_SRC "${CMAKE_SOURCE_DIR}/src/vi/rkadk_aiq_uapi2.cpp")
