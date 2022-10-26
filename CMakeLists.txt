@@ -15,9 +15,9 @@ if(USE_RKAIQ)
     include_directories(${RKAIQ_INCLUDE_DIRS})
     add_definitions(-DRKAIQ)
 
-if(${RKADK_CHIP} EQUAL "rv1126")
+    if(${RKADK_CHIP} STREQUAL "rv1126")
 	add_definitions(-DRKAIQ_UAPI1 -DRV1126_1109)
-endif()
+    endif()
 endif()
 
 #-Wextra
