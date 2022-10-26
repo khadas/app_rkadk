@@ -1,5 +1,7 @@
 file(GLOB_RECURSE AUDIO_ENCODER_SRC "${CMAKE_SOURCE_DIR}/src/audio/encoder/*.cpp")
+file(GLOB_RECURSE AUDIO_DECODER_SRC "${CMAKE_SOURCE_DIR}/src/audio/decoder/*.cpp")
 file(GLOB_RECURSE COMMON_SRC "${CMAKE_SOURCE_DIR}/src/common/*.cpp")
+file(GLOB_RECURSE DEMUXER_SRC "${CMAKE_SOURCE_DIR}/src/demuxer/*.cpp")
 file(GLOB_RECURSE MUXER_SRC "${CMAKE_SOURCE_DIR}/src/muxer/*.cpp")
 file(GLOB_RECURSE RECORD_SRC "${CMAKE_SOURCE_DIR}/src/record/*.cpp")
 file(GLOB_RECURSE PHOTO_SRC "${CMAKE_SOURCE_DIR}/src/photo/*.cpp")
@@ -26,7 +28,9 @@ link_directories(${CMAKE_SOURCE_DIR}/lib/arm-rockchip830-linux-gnueabihf)
 
 add_library(rkadk SHARED
 		${AUDIO_ENCODER_SRC}
+		${AUDIO_DECODER_SRC}
 		${COMMON_SRC}
+		${DEMUXER_SRC}
 		${MUXER_SRC}
 		${RECORD_SRC}
 		${PHOTO_SRC}
@@ -45,13 +49,14 @@ add_library(rkadk SHARED
 set_target_properties(rkadk PROPERTIES LINK_FLAGS -Wl,--version-script,${CMAKE_CURRENT_LIST_DIR}/export.map)
 #set_target_properties(rkadk PROPERTIES COMPILE_OPTIONS -Wl,-Bsymbolic)
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/record")
+target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
 if(CMAKE_C_COMPILER MATCHES "arm-rockchip830-linux-uclibcgnueabihf*")
-	target_link_libraries(rkadk rockit rga rkmuxer iconv rtsp z rkaudio rkfsmk)
+	target_link_libraries(rkadk rockit rga rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
 else()
-	target_link_libraries(rkadk rockit rga rtsp rkfsmk rkmuxer z)
+	target_link_libraries(rkadk rockit rga rtsp rkfsmk rkmuxer z rkdemuxer)
 endif()
 
 if(USE_RKAIQ)

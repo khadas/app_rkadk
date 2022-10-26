@@ -23,6 +23,13 @@ extern "C" {
 
 #include "rkadk_common.h"
 
+#define USE_AO_MIXER 0
+#define VIDEO_ID 1
+#define AUDIO_ID 2
+#define MIX_VIDEO_FLAG 1
+#define VIDEO_FLAG 2
+#define AUDIO_FLAG 3
+
 /** Error information of the player*/
 typedef enum {
   RKADK_PLAYER_ERROR_VID_PLAY_FAIL = 0x0, /**< The video fails to be played. */
