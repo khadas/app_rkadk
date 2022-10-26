@@ -19,7 +19,7 @@
 #include "rkadk_thumb_comm.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkadk_audio_mp3.h"
+#include "rkadk_audio_encoder.h"
 #include <deque>
 #include <pthread.h>
 #include <stdio.h>
@@ -459,12 +459,10 @@ static int RKADK_RECORD_CreateAudioChn() {
     return -1;
   }
 
-  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
-    ret = RegisterAencMp3();
-    if (ret) {
-      RKADK_LOGE("Register Mp3 encoder failed(%d)", ret);
-      return ret;
-    }
+  ret = RKADK_AUDIO_ENCODER_Register(pstAudioParam->codec_type);
+  if (ret) {
+    RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
+    return ret;
   }
 
   // Create AI
@@ -543,13 +541,12 @@ static int RKADK_RECORD_DestoryAudioChn() {
     return ret;
   }
 
-  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
-    ret = UnRegisterAencMp3();
-    if (ret) {
-      RKADK_LOGE("UnRegister Mp3 encoder failed(%d)", ret);
-      return ret;
-    }
+  ret = RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
+  if (ret) {
+    RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed(%d)", ret);
+    return ret;
   }
+
   return 0;
 }
 

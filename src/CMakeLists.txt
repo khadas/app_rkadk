@@ -1,3 +1,4 @@
+file(GLOB_RECURSE AUDIO_ENCODER_SRC "${CMAKE_SOURCE_DIR}/src/audio/encoder/*.cpp")
 file(GLOB_RECURSE COMMON_SRC "${CMAKE_SOURCE_DIR}/src/common/*.cpp")
 file(GLOB_RECURSE MUXER_SRC "${CMAKE_SOURCE_DIR}/src/muxer/*.cpp")
 file(GLOB_RECURSE RECORD_SRC "${CMAKE_SOURCE_DIR}/src/record/*.cpp")
@@ -24,6 +25,7 @@ add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 link_directories(${CMAKE_SOURCE_DIR}/lib/arm-rockchip830-linux-gnueabihf)
 
 add_library(rkadk SHARED
+		${AUDIO_ENCODER_SRC}
 		${COMMON_SRC}
 		${MUXER_SRC}
 		${RECORD_SRC}

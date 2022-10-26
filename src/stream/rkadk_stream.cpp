@@ -18,7 +18,7 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-#include "rkadk_audio_mp3.h"
+#include "rkadk_audio_encoder.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -859,12 +859,10 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_CODEC_TYPE_E enCodecType) {
 
   pAudioHandle->enCodecType = enCodecType;
   RKADK_LOGD("pAudioHandle enCodecType = %d", enCodecType);
-  if (pAudioHandle->enCodecType == RKADK_CODEC_TYPE_MP3){
-    ret = RegisterAencMp3();
-    if (ret) {
-      RKADK_LOGE("Register Mp3 encoder failed(%d)", ret);
-      return ret;
-    }
+  ret = RKADK_AUDIO_ENCODER_Register(pAudioHandle->enCodecType);
+  if (ret) {
+    RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
+    return ret;
   }
 
   // Create AI
@@ -970,12 +968,10 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_CODEC_TYPE_E enCodecType) {
     return ret;
   }
 
-  if (pstHandle->enCodecType == RKADK_CODEC_TYPE_MP3){
-    ret = UnRegisterAencMp3();
-    if (ret) {
-      RKADK_LOGE("UnRegister Mp3 encoder failed(%d)", ret);
-      return ret;
-    }
+  ret = RKADK_AUDIO_ENCODER_UnRegister(pstHandle->enCodecType);
+  if (ret) {
+    RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed[%x]", ret);
+    return ret;
   }
 
   pstHandle->init = false;
