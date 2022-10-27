@@ -3006,7 +3006,7 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
 
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
-  RKADK_LOGI("RKADK_PARAM_RecMute enParamType = %d", enParamType);
+  RKADK_LOGI("RKADK_PARAM_SetCommParam enParamType = %d", enParamType);
   switch (enParamType) {
   case RKADK_PARAM_TYPE_REC_UNMUTE:
     RKADK_CHECK_EQUAL(pstCommCfg->rec_unmute, *(bool *)pvParam,
