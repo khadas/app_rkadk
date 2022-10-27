@@ -305,6 +305,8 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
+  RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
+
   ret = RKADK_RTSP_VencGetData(u32CamId, &stVencChn, pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_RTSP_VencGetData failed(%d)", ret);

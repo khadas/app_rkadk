@@ -340,6 +340,8 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       return ret;
     }
 
+    RKADK_PARAM_SetVAdvancedParam(pstRecCfg->attribute[i]);
+
     if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
         pstRecCfg->attribute[i].venc_chn == 0) {
       RKADK_LOGI("VI[%d] VENC[%d] Enable support thumbnail",

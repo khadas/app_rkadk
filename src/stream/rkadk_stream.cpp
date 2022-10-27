@@ -389,6 +389,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_U32 u32CamID,
     goto failed;
   }
 
+  RKADK_PARAM_SetVAdvancedParam(pstStreamCfg->attribute);
+
   ret = RKADK_STREAM_VencGetData(u32CamID, &stVencChn, pVideoHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VencGetData failed[%x]", ret);

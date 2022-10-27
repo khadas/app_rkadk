@@ -247,12 +247,11 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
 
 typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   /* rc param */
-  RKADK_S32 first_frame_qp; /* start QP value of the first frame, default: -1 */
-  RKADK_U32 qp_step;
-  RKADK_U32 max_qp; /* max QP: [8, 51], default: 48 */
-  RKADK_U32 min_qp; /* min QP: [0, 48], can't be larger than max_qp, default: 8 */
-  RKADK_U32 row_qp_delta_i; /* only CBR, [0, 10], default: 1 */
-  RKADK_U32 row_qp_delta_p; /* only CBR, [0, 10], default: 2 */
+  RKADK_S32 first_frame_qp; /* start QP value of the first frame */
+  RKADK_S32 qp_step;
+  RKADK_S32 max_qp; /* max QP: [8, 51] */
+  RKADK_S32 min_qp; /* min QP: [0, 48], can't be larger than max_qp */
+
   bool hier_qp_en;
   char hier_qp_delta[RKADK_BUFFER_LEN];
   char hier_frame_num[RKADK_BUFFER_LEN];
@@ -475,6 +474,8 @@ RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
 
 VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
                                      RKADK_CODEC_TYPE_E enCodecType);
+
+RKADK_S32 RKADK_PARAM_SetVAdvancedParam(RKADK_PARAM_VENC_ATTR_S stVencAttr);
 
 RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
                                            RKADK_U32 u32ChnId);

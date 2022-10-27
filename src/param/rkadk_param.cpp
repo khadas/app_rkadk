@@ -1099,6 +1099,14 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].codec_type);
       printf("\t\tsensor[%d] stRecCfg[%d] rc_mode: %s\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].rc_mode);
+      printf("\t\tsensor[%d] stRecCfg[%d] first_frame_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.first_frame_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] qp_step: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.qp_step);
+      printf("\t\tsensor[%d] stRecCfg[%d] max_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.max_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] min_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.min_qp);
     }
 
     printf("\tPhoto Config\n");
@@ -1136,6 +1144,15 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stStreamCfg rc_mode: %s\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.rc_mode);
+    printf(
+        "\t\tsensor[%d] stStreamCfg first_frame_qp: %d\n", i,
+        pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.first_frame_qp);
+    printf("\t\tsensor[%d] stStreamCfg qp_step: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.qp_step);
+    printf("\t\tsensor[%d] stStreamCfg max_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.max_qp);
+    printf("\t\tsensor[%d] stStreamCfg min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.min_qp);
 
     printf("\tLive Config\n");
     printf("\t\tsensor[%d] stLiveCfg width: %d\n", i,
@@ -1156,6 +1173,14 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stLiveCfg rc_mode: %s\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.rc_mode);
+    printf("\t\tsensor[%d] stLiveCfg first_frame_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.first_frame_qp);
+    printf("\t\tsensor[%d] stLiveCfg qp_step: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.qp_step);
+    printf("\t\tsensor[%d] stLiveCfg max_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.max_qp);
+    printf("\t\tsensor[%d] stLiveCfg min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.min_qp);
 
     printf("\tDisplay Config\n");
     printf("\t\tsensor[%d] stDispCfg width: %d\n", i,
@@ -1397,6 +1422,7 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
 
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
       RKADK_MAP_TABLE_CFG_S *pstTimeMapTable = NULL;
+      RKADK_MAP_TABLE_CFG_S *pstParamMapTable = NULL;
       RKADK_STREAM_TYPE_E enStrmType;
 
       memset(&pstCfg->stMediaCfg[i].stRecCfg.attribute[j], 0,
@@ -1406,14 +1432,18 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
         pstTimeMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_MAP);
+        pstParamMapTable =
+            RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_PARAM_MAP);
       } else {
         enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
         pstTimeMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_MAP);
+        pstParamMapTable =
+            RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_PARAM_MAP);
       }
 
-      if (!pstMapTableCfg || !pstTimeMapTable)
+      if (!pstMapTableCfg || !pstParamMapTable || !pstTimeMapTable)
         return -1;
 
       ret = RKADK_Ini2Struct(
@@ -1432,6 +1462,14 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
                    i, j);
         return ret;
       }
+
+      ret = RKADK_Ini2Struct(
+          sensorPath[i],
+          &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
+          pstParamMapTable->pstMapTable, pstParamMapTable->u32TableLen);
+      if (ret)
+        RKADK_LOGW(
+            "sensor[%d] rec attribute[%d] venc param not exist, use default", i, j);
     }
     RKADK_PARAM_CheckRecCfg(sensorPath[i], i);
 
@@ -1449,6 +1487,16 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
       return ret;
     }
 
+    // load preview venc param
+    pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_PREVIEW_PARAM_MAP);
+    RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
+
+    ret = RKADK_Ini2Struct(
+        sensorPath[i], &pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param,
+        pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
+    if (ret)
+      RKADK_LOGW("sensor[%d] stream venc param not exist, use default", i);
+
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_PREVIEW);
 
     // load live config
@@ -1464,6 +1512,16 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
       RKADK_LOGW("sensor[%d] live config param not exist, use default", i);
       return ret;
     }
+
+    // load live venc param
+    pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_LIVE_PARAM_MAP);
+    RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
+
+    ret = RKADK_Ini2Struct(
+        sensorPath[i], &pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param,
+        pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
+    if (ret)
+      RKADK_LOGW("sensor[%d] live venc param not exist, use default", i);
 
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_LIVE);
 
@@ -2214,6 +2272,233 @@ VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
   }
 
   return enRcMode;
+}
+
+static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
+  bool bSetRcParam = false;
+  int ret = 0;
+  RKADK_S32 u32StepQp, u32MinQp, u32MaxQp;
+  VENC_RC_PARAM_S stRcParam;
+
+  ret = RK_MPI_VENC_GetRcParam(stVencAttr.venc_chn, &stRcParam);
+  if (ret) {
+    RKADK_LOGE("venc_chn[%d] GetRcParam failed[%d]", stVencAttr.venc_chn, ret);
+    return -1;
+  }
+
+  if (stVencAttr.venc_param.first_frame_qp > 0) {
+    stRcParam.s32FirstFrameStartQp = stVencAttr.venc_param.first_frame_qp;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.qp_step > 0) {
+    u32StepQp = stVencAttr.venc_param.qp_step;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.max_qp >= 8 && stVencAttr.venc_param.max_qp <= 51) {
+    u32MaxQp = stVencAttr.venc_param.max_qp;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.min_qp >= 0 && stVencAttr.venc_param.min_qp <= 48) {
+    u32MinQp = stVencAttr.venc_param.min_qp;
+    bSetRcParam = true;
+  }
+
+  if(u32MinQp > u32MaxQp)
+    u32MinQp = u32MaxQp;
+
+  if (!bSetRcParam)
+    return 0;
+
+  switch (stVencAttr.codec_type) {
+  case RKADK_CODEC_TYPE_H264:
+    stRcParam.stParamH264.u32StepQp = u32StepQp;
+    stRcParam.stParamH264.u32MaxQp = u32MaxQp;
+    stRcParam.stParamH264.u32MinQp = u32MinQp;
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    stRcParam.stParamH265.u32StepQp = u32StepQp;
+    stRcParam.stParamH265.u32MaxQp = u32MaxQp;
+    stRcParam.stParamH265.u32MinQp = u32MinQp;
+    break;
+  default:
+    RKADK_LOGE("Nonsupport codec type: %d", stVencAttr.codec_type);
+    return -1;
+  }
+
+  ret = RK_MPI_VENC_SetRcParam(stVencAttr.venc_chn, &stRcParam);
+  if (ret) {
+    RKADK_LOGE("venc_chn[%d] SetRcParam failed[%d]", stVencAttr.venc_chn, ret);
+    return -1;
+  }
+
+  return 0;
+}
+
+static RKADK_S32 RKADK_PARAM_SetVencTrans(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
+  int ret = 0, scalingList;
+  VENC_H264_TRANS_S stH264Trans;
+  VENC_H265_TRANS_S stH265Trans;
+
+  scalingList = stVencAttr.venc_param.scaling_list ? 1 : 0;
+
+  switch (stVencAttr.codec_type) {
+  case RKADK_CODEC_TYPE_H264:
+    ret = RK_MPI_VENC_GetH264Trans(stVencAttr.venc_chn, &stH264Trans);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] GetH264Trans failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    if (stH264Trans.bScalingListValid == scalingList)
+      return 0;
+
+    stH264Trans.bScalingListValid = scalingList;
+    ret = RK_MPI_VENC_SetH264Trans(stVencAttr.venc_chn, &stH264Trans);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] SetH264Trans failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    ret = RK_MPI_VENC_GetH265Trans(stVencAttr.venc_chn, &stH265Trans);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] GetH265Trans failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    if (stH265Trans.bScalingListEnabled == scalingList)
+      return 0;
+
+    stH265Trans.bScalingListEnabled = scalingList;
+    ret = RK_MPI_VENC_SetH265Trans(stVencAttr.venc_chn, &stH265Trans);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] SetH265Trans failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    break;
+  default:
+    RKADK_LOGE("Nonsupport codec type: %d", stVencAttr.codec_type);
+    return -1;
+  }
+
+  return 0;
+}
+
+static RKADK_S32 RKADK_PARAM_SetVencVui(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
+  int ret = 0, fullRange;
+  VENC_H264_VUI_S stH264Vui;
+  VENC_H265_VUI_S stH265Vui;
+
+  fullRange = stVencAttr.venc_param.full_range ? 1 : 0;
+
+  switch (stVencAttr.codec_type) {
+  case RKADK_CODEC_TYPE_H264:
+    ret = RK_MPI_VENC_GetH264Vui(stVencAttr.venc_chn, &stH264Vui);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] GetH264Vui failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    if (stH264Vui.stVuiVideoSignal.video_full_range_flag == fullRange)
+      return 0;
+
+    stH264Vui.stVuiVideoSignal.video_full_range_flag = fullRange;
+    ret = RK_MPI_VENC_SetH264Vui(stVencAttr.venc_chn, &stH264Vui);
+    if(ret) {
+      RKADK_LOGE("venc_chn[%d] SetH264Vui failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    break;
+  case RKADK_CODEC_TYPE_H265:
+    ret = RK_MPI_VENC_GetH265Vui(stVencAttr.venc_chn, &stH265Vui);
+    if (ret) {
+      RKADK_LOGE("venc_chn[%d] GetH265Vui failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    if (stH265Vui.stVuiVideoSignal.video_full_range_flag == fullRange)
+      return 0;
+
+    stH265Vui.stVuiVideoSignal.video_full_range_flag = fullRange;
+    ret = RK_MPI_VENC_SetH265Vui(stVencAttr.venc_chn, &stH265Vui);
+    if(ret) {
+      RKADK_LOGE("venc_chn[%d] SetH265Vui failed[%d]", stVencAttr.venc_chn, ret);
+      return -1;
+    }
+
+    break;
+  default:
+    RKADK_LOGE("Nonsupport codec type: %d", stVencAttr.codec_type);
+    return -1;
+  }
+
+  return 0;
+}
+
+static void RKADK_PARAM_Strtok(char *input, RKADK_S32 *s32Output,
+                               RKADK_S32 u32OutputLen, const char *delim) {
+  char *p;
+
+  for (int i = 0; i < u32OutputLen; i++) {
+    if (!i)
+      p = strtok(input, delim);
+    else
+      p = strtok(NULL, delim);
+
+    if (!p)
+      break;
+
+    s32Output[i] = atoi(p);
+  }
+}
+
+static RKADK_S32 RKADK_PARAM_SetVencHierarchicalQp(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
+  int ret = 0;
+  VENC_HIERARCHICAL_QP_S stHierarchicalQp;
+
+  //default false
+  if (!stVencAttr.venc_param.hier_qp_en)
+    return 0;
+
+  ret = RK_MPI_VENC_GetHierarchicalQp(stVencAttr.venc_chn, &stHierarchicalQp);
+  if (ret) {
+    RKADK_LOGE("venc_chn[%d] GetHierarchicalQp failed[%d]", stVencAttr.venc_chn, ret);
+    return -1;
+  }
+
+  stHierarchicalQp.bHierarchicalQpEn = RK_TRUE;
+  if (!strcmp(stVencAttr.venc_param.hier_qp_delta, "NONE"))
+    RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_qp_delta,
+                       stHierarchicalQp.s32HierarchicalQpDelta, 4, ",");
+
+  if (!strcmp(stVencAttr.venc_param.hier_frame_num, "NONE"))
+    RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_frame_num,
+                       stHierarchicalQp.s32HierarchicalFrameNum, 4, ",");
+
+  ret = RK_MPI_VENC_SetHierarchicalQp(stVencAttr.venc_chn, &stHierarchicalQp);
+  if (ret) {
+    RKADK_LOGE("venc_chn[%d] SetHierarchicalQp failed[%d]", stVencAttr.venc_chn, ret);
+    return -1;
+  }
+
+  return 0;
+}
+
+RKADK_S32 RKADK_PARAM_SetVAdvancedParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
+  int ret;
+
+  ret = RKADK_PARAM_SetRcParam(stVencAttr);
+  ret |= RKADK_PARAM_SetVencTrans(stVencAttr);
+  ret |= RKADK_PARAM_SetVencVui(stVencAttr);
+  ret != RKADK_PARAM_SetVencHierarchicalQp(stVencAttr);
+
+  return ret;
 }
 
 RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx() {
