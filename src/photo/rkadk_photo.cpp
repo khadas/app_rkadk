@@ -259,7 +259,7 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   VENC_ATTR_JPEG_S *pstAttrJpege = &(pstVencAttr->stVencAttr.stAttrJpege);
 
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
-  pstVencAttr->stVencAttr.enType = RK_VIDEO_ID_MJPEG;
+  pstVencAttr->stVencAttr.enType = RK_VIDEO_ID_JPEG;
   pstVencAttr->stVencAttr.enPixelFormat =
       pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
   pstVencAttr->stVencAttr.u32MaxPicWidth = pstSensorCfg->max_width;
