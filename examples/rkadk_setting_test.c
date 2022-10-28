@@ -264,6 +264,7 @@ static void SetPhotoCfg() {
   stPhotoCfg.rga_chn = 2;
   stPhotoCfg.enable_combo = false;
   stPhotoCfg.combo_venc_chn = 0;
+  stPhotoCfg.qfactor = 70;
 
   memset(sensorPath, 0, RKADK_PATH_LEN);
   sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);

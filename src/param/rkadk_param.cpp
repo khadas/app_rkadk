@@ -928,6 +928,7 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
     pstPhotoCfg->rga_chn = 2;
     pstPhotoCfg->enable_combo = false;
     pstPhotoCfg->combo_venc_chn = 0;
+    pstPhotoCfg->qfactor = 70;
   }
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
@@ -1124,6 +1125,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.enable_combo);
     printf("\t\tsensor[%d] stPhotoCfg combo_venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.combo_venc_chn);
+    printf("\t\tsensor[%d] stPhotoCfg qfactor: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.qfactor);
 
     printf("\tPreview Config\n");
     printf("\t\tsensor[%d] stStreamCfg width: %d\n", i,

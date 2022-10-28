@@ -304,7 +304,7 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
 
 static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
                                         VENC_CHN_ATTR_S *pstVencChnAttr,
-                                        RKADK_S32 s32ComboChnId) {
+                                        RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
   VENC_RECV_PIC_PARAM_S stRecvParam;
   VENC_CHN_BUF_WRAP_S stVencChnBufWrap;
   VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
@@ -328,10 +328,10 @@ static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
   RK_MPI_VENC_StartRecvFrame(s32ChnId, &stRecvParam);
 
   stComboAttr.bEnable = RK_TRUE;
-  stComboAttr.s32ChnId = s32ComboChnId;
+  stComboAttr.s32ChnId = pstPhotoCfg->combo_venc_chn;
   RK_MPI_VENC_SetComboAttr(s32ChnId, &stComboAttr);
 
-  stJpegParam.u32Qfactor = 77;
+  stJpegParam.u32Qfactor = pstPhotoCfg->qfactor;
   RK_MPI_VENC_SetJpegParam(s32ChnId, &stJpegParam);
 
   RK_MPI_VENC_StopRecvFrame(s32ChnId);
@@ -486,7 +486,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
   if (pstPhotoCfg->enable_combo) {
     RKADK_LOGE("Select combo mode");
     RKADK_PHOTO_CreateVencCombo(stVencChn.s32ChnId, &stVencAttr,
-                                pstPhotoCfg->combo_venc_chn);
+                                pstPhotoCfg);
   } else {
     ret = RK_MPI_VENC_CreateChn(stVencChn.s32ChnId, &stVencAttr);
     if (ret) {
@@ -498,6 +498,11 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
     memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
     stVencChnRefBufShare.bEnable = RK_TRUE;
     RK_MPI_VENC_SetChnRefBufShareAttr(stVencChn.s32ChnId, &stVencChnRefBufShare);
+
+    VENC_JPEG_PARAM_S stJpegParam;
+    memset(&stJpegParam, 0, sizeof(VENC_JPEG_PARAM_S));
+    stJpegParam.u32Qfactor = pstPhotoCfg->qfactor;
+    RK_MPI_VENC_SetJpegParam(stVencChn.s32ChnId, &stJpegParam);
 
     // must, for no streams callback running failed
     VENC_RECV_PIC_PARAM_S stRecvParam;
