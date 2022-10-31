@@ -344,10 +344,12 @@ static RKADK_S32 RKADK_RTMP_EnableAudio(MPP_CHN_S stAiChn, MPP_CHN_S stAencChn,
   AIO_ATTR_S stAiAttr;
   AENC_CHN_ATTR_S stAencAttr;
 
-  ret = RKADK_AUDIO_ENCODER_Register(pstAudioParam->codec_type);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pstAudioParam->codec_type)) {
+    ret = RKADK_AUDIO_ENCODER_Register(pstAudioParam->codec_type);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
+      return ret;
+    }
   }
 
   // Create AI and AENC
@@ -380,7 +382,8 @@ failed:
   RKADK_MPI_AI_DeInit(stAiChn.s32DevId, stAiChn.s32ChnId, pstAudioParam->vqe_mode);
 
 unregist:
-    RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
+    if (RKADK_MEDIA_EnableAencRegister(pstAudioParam->codec_type))
+      RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
 
   return ret;
 }
@@ -403,10 +406,12 @@ static RKADK_S32 RKADK_RTMP_DisableAudio(MPP_CHN_S stAiChn, MPP_CHN_S stAencChn,
     return ret;
   }
 
-  ret = RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed(%d)", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pstAudioParam->codec_type)) {
+    ret = RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed(%d)", ret);
+      return ret;
+    }
   }
 
   return 0;

@@ -818,11 +818,12 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
   }
 
   pAudioHandle->enCodecType = pstAudioParam->codec_type;
-  RKADK_LOGD("pAudioHandle enCodecType = %d", pAudioHandle->enCodecType);
-  ret = RKADK_AUDIO_ENCODER_Register(pAudioHandle->enCodecType);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pAudioHandle->enCodecType)) {
+    ret = RKADK_AUDIO_ENCODER_Register(pAudioHandle->enCodecType);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
+      return ret;
+    }
   }
 
   // Create AI
@@ -930,12 +931,13 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle) {
     return ret;
   }
 
-  ret = RKADK_AUDIO_ENCODER_UnRegister(pstHandle->enCodecType);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed[%x]", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pstHandle->enCodecType)) {
+    ret = RKADK_AUDIO_ENCODER_UnRegister(pstHandle->enCodecType);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed[%x]", ret);
+      return ret;
+    }
   }
-
 
   pstHandle->start = false;
   if (pHandle) {

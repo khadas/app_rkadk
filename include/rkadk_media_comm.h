@@ -157,6 +157,8 @@ RKADK_U16 RKADK_MEDIA_GetAudioBitWidth(AUDIO_BIT_WIDTH_E enBitWidth);
 
 int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat, RKADK_CHAR *cPixFmt);
 
+bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType);
+
 #ifdef __cplusplus
 }
 #endif

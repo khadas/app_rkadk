@@ -26,7 +26,7 @@ RKADK_S32 RKADK_AUDIO_ENCODER_Register(RKADK_CODEC_TYPE_E eCodecType) {
       return RKADK_FAILURE;
     }
   } else {
-    RKADK_LOGE("Cannot register unsupported audio encoding format");
+    RKADK_LOGE("Unsupported audio codec type[%d]", eCodecType);
     return RKADK_FAILURE;
   }
 
@@ -42,7 +42,7 @@ RKADK_S32 RKADK_AUDIO_ENCODER_UnRegister(RKADK_CODEC_TYPE_E eCodecType) {
       return RKADK_FAILURE;
     }
   } else {
-    RKADK_LOGE("Cannot unregister unsupported audio encoding format");
+    RKADK_LOGE("Unsupported audio codec type[%d]", eCodecType);
     return RKADK_FAILURE;
   }
 

@@ -461,10 +461,12 @@ static int RKADK_RECORD_CreateAudioChn() {
     return -1;
   }
 
-  ret = RKADK_AUDIO_ENCODER_Register(pstAudioParam->codec_type);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pstAudioParam->codec_type)) {
+    ret = RKADK_AUDIO_ENCODER_Register(pstAudioParam->codec_type);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_Register failed(%d)", ret);
+      return ret;
+    }
   }
 
   // Create AI
@@ -546,10 +548,12 @@ static int RKADK_RECORD_DestoryAudioChn() {
     return ret;
   }
 
-  ret = RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
-  if (ret) {
-    RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed(%d)", ret);
-    return ret;
+  if (RKADK_MEDIA_EnableAencRegister(pstAudioParam->codec_type)) {
+    ret = RKADK_AUDIO_ENCODER_UnRegister(pstAudioParam->codec_type);
+    if (ret) {
+      RKADK_LOGE("RKADK_AUDIO_ENCODER_UnRegister failed(%d)", ret);
+      return ret;
+    }
   }
 
   return 0;

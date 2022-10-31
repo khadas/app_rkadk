@@ -1814,3 +1814,10 @@ int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat,
 
   return ret;
 }
+
+bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType) {
+  if (eCodecType == RKADK_CODEC_TYPE_MP3 || eCodecType == RKADK_CODEC_TYPE_ACC)
+    return true;
+
+  return false;
+}
