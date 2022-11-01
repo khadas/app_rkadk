@@ -29,17 +29,24 @@ extern "C" {
 
 typedef RKADK_VOID (*RKADK_DEMUXER_READ_PACKET_CALLBACK_FN)(RKADK_MW_PTR pHandle);
 
-typedef struct _RKADK_DEMUXER_READ_PACKET_CALLBACK_S {
+typedef struct {
   RKADK_DEMUXER_READ_PACKET_CALLBACK_FN pfnReadVideoPacketCallback;
   RKADK_DEMUXER_READ_PACKET_CALLBACK_FN pfnReadAudioPacketCallback;
 } RKADK_DEMUXER_READ_PACKET_CALLBACK_S;
 
-typedef struct _RKADK_DEMUXER_PARAM_S{
-  RKADK_VOID *pPlayer;
+typedef struct {
+  RKADK_VOID *ptr;
+  RKADK_BOOL  videoEnableFlag;
+  RKADK_BOOL  audioEnableFlag;
+  RKADK_DEMUXER_READ_PACKET_CALLBACK_S pstReadPacketCallback;
+} RKADK_DEMUXER_INPUT_S;
+
+typedef struct {
   RKADK_S32   totalTime;
   RKADK_CHAR *pVideoCodec;
   RKADK_S32   videoWidth;
   RKADK_S32   videoHeigh;
+  RKADK_S8    VideoFormat;
   RKADK_S32   videoTimeBaseNum;
   RKADK_S32   videoTimeBaseDen;
   RKADK_S64   videoFirstPTS;
@@ -50,11 +57,26 @@ typedef struct _RKADK_DEMUXER_PARAM_S{
   RKADK_S64   audioFirstPTS;
   RKADK_S32   audioTimeBaseNum;
   RKADK_S32   audioTimeBaseDen;
-  RKADK_DEMUXER_READ_PACKET_CALLBACK_S pstReadPacketCallback;
 } RKADK_DEMUXER_PARAM_S;
 
 /**
  * @brief create a new demuxer
+ * @param[in]demuxerCfg : pointer of demuxerCfg
+ * @param[in]demuxerParam : pointer of demuxer cfg
+ * @return 0 success
+ * @return others failure
+ */
+
+RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *demuxerParam);
+
+/**
+ * @brief destory a demuxer.
+ * @param[in]demuxerCfg : pointer of demuxerCfg
+ */
+RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg);
+
+/**
+ * @brief get demuxer param
  * @param[in]demuxerCfg : pointer of demuxerCfg
  * @param[in]inputName : path of input file
  * @param[in]demuxerParam : pointer of demuxer params
@@ -62,12 +84,7 @@ typedef struct _RKADK_DEMUXER_PARAM_S{
  * @return others failure
  */
 
-RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam);
-/**
- * @brief destory a demuxer.
- * @param[in]demuxerCfg : pointer of demuxerCfg
- */
-RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg);
+RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam);
 
 /**
  * @brief start demuxer

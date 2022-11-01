@@ -31,14 +31,10 @@ typedef struct {
 
 /**
  * @brief  create the audio decoder
- * @param[in] decoderMode : mode of the decoder
- * @param[in] eCodecType : codec type of the decoder
- * @param[in] pszfilePath : path of the audio file
  * @param[in] pAudioDecoder : pointer of the audio decoder
  * @retval 0 success, others failed
  */
-RKADK_S32 RKADK_AUDIO_DECODER_Create(RKADK_S8 decoderMode, RKADK_CODEC_TYPE_E eCodecType,
-                                     const RKADK_CHAR *pszfilePath, RKADK_MW_PTR *pAudioDecoder);
+RKADK_S32 RKADK_AUDIO_DECODER_Create(RKADK_MW_PTR *pAudioDecoder);
 
 /**
  * @brief  destroy the audio decoder
@@ -49,13 +45,27 @@ RKADK_S32 RKADK_AUDIO_DECODER_Create(RKADK_S8 decoderMode, RKADK_CODEC_TYPE_E eC
 RKADK_S32 RKADK_AUDIO_DECODER_Destroy(RKADK_S8 decoderMode, RKADK_MW_PTR *pAudioDecoder);
 
 /**
- * @brief  push the undecoded audio decoder mix data
- * @param[in] pAudioDecoder : pointer of the audio decoder
- * @param[in] pAudioDecoder : pointer of the audio packet
+ * @brief  create the audio decoder
+ * @param[in] decoderMode : mode of the decoder
+ * @param[in] eCodecType : codec type of the decoder
+ * @param[in] pszfilePath : path of the audio file
  * @param[in] pAudioDecoder : pointer of the audio decoder
  * @retval 0 success, others failed
  */
-RKADK_S32 RKADK_AUDIO_DECODER_StreamPush(RKADK_MW_PTR pAudioDecoder, RKADK_CHAR *pFrameData, RKADK_S32 frameSize);
+RKADK_S32 RKADK_AUDIO_DECODER_SetParam(RKADK_S8 decoderMode, RKADK_CODEC_TYPE_E eCodecType,
+                                       const RKADK_CHAR *pszfilePath, RKADK_MW_PTR pAudioDecoder);
+
+/**
+ * @brief  push the undecoded audio decoder mix data
+ * @param[in] pAudioDecoder : pointer of the audio decoder
+ * @param[in] pPacketData : data of the audio packet
+ * @param[in] packetSize : size of the audio packet
+ * @param[in] bEofFlag : eof flag of the audio packet
+ * @param[in] packetSize : stop flag of the audio packet
+ * @retval 0 success, others failed
+ */
+RKADK_S32 RKADK_AUDIO_DECODER_StreamPush(RKADK_MW_PTR pAudioDecoder, RKADK_CHAR *pPacketData,
+                                         RKADK_S32 packetSize, RKADK_BOOL bEofFlag, RKADK_BOOL bStopFlag);
 
 /**
  * @brief  push the Undecoded audio decoder single data

@@ -29,6 +29,45 @@ extern "C" {
 #define MIX_VIDEO_FLAG 1
 #define VIDEO_FLAG 2
 #define AUDIO_FLAG 3
+#define MAX_STREAM_CNT 8
+#define MAX_VDEC_PIXEL 9437184
+#define VDEC_ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
+#define MAX_FRAME_QUEUE 8
+#define MAX_TIME_OUT_MS 20
+#define MAX_VO_DISPLAY_WIDTH 1024
+#define MAX_VO_DISPLAY_HEIGTHT 600
+
+#define RK356X_VOP_LAYER_CLUSTER_0      0
+#define RK356X_VOP_LAYER_CLUSTER_1      2
+#define RK356X_VOP_LAYER_ESMART_0       4
+#define RK356X_VOP_LAYER_ESMART_1       5
+#define RK356X_VOP_LAYER_SMART_0        6
+#define RK356X_VOP_LAYER_SMART_1        7
+
+#define RK356X_VO_DEV_HD0               0
+#define RK356X_VO_DEV_HD1               1
+
+#define MAX_VO_FORMAT_RGB_NUM        17
+#define WBC_FORMAT_BGRA8888          0
+#define WBC_FORMAT_RGBA8888          1
+#define WBC_FORMAT_RGB888            2
+#define WBC_FORMAT_BGR888            3
+#define WBC_FORMAT_YUV420SP          4
+#define WBC_FORMAT_YUV420SP_VU       5
+
+#define VO_CHANNEL_PLAY_NORMAL           0
+#define VO_CHANNEL_PLAY_PAUSE            1
+#define VO_CHANNEL_PLAY_STEP             2
+#define VO_CHANNEL_PLAY_SPEED            3
+
+#define WBC_SOURCE_DEV                0
+#define WBC_SOURCE_VIDEO              1
+#define WBC_SOURCE_GRAPHIC            2
+
+#define MAX_WINDOWS_NUM               64
+#define MAX_STEP_FRAME_NUM            50
+
+#define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 
 /** Error information of the player*/
 typedef enum {
@@ -90,6 +129,8 @@ typedef enum {
   DISPLAY_TYPE_HDMI = 0,
   DISPLAY_TYPE_EDP,
   DISPLAY_TYPE_VGA,
+  DISPLAY_TYPE_DP,
+  DISPLAY_TYPE_HDMI_EDP,
   DISPLAY_TYPE_MIPI,
 } RKADK_PLAYER_VO_INTF_TYPE_E;
 

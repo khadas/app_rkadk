@@ -22,15 +22,33 @@
 #include "rkadk_thread.h"
 #include "rkdemuxer.h"
 
-RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam) {
+RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *demuxerInput) {
+  DemuxerInput tempDemuxerInput;
+
+  tempDemuxerInput.ptr = demuxerInput->ptr;
+  tempDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
+  tempDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
+  tempDemuxerInput.pstReadPacketCallback.read_video_packet = demuxerInput->pstReadPacketCallback.pfnReadVideoPacketCallback;
+  tempDemuxerInput.pstReadPacketCallback.read_audio_packet = demuxerInput->pstReadPacketCallback.pfnReadAudioPacketCallback;
+  int ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
+  if (ret != 0) {
+    RKADK_LOGE("RKADK_DEMUXER_Create failed");
+    return RKADK_FAILURE;
+  }
+
+  return RKADK_SUCCESS;
+}
+
+RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg) {
+  rkdemuxer_deinit(demuxerCfg);
+}
+
+RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam) {
   DemuxerParam tempDemuxerParam;
 
-  tempDemuxerParam.pPlayer = demuxerParam->pPlayer;
-  tempDemuxerParam.pstReadPacketCallback.read_video_packet = demuxerParam->pstReadPacketCallback.pfnReadVideoPacketCallback;
-  tempDemuxerParam.pstReadPacketCallback.read_audio_packet = demuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback;
-  int ret = rkdemuxer_init(demuxerCfg, inputName, &tempDemuxerParam);
+  int ret = rkdemuxer_get_param(demuxerCfg, inputName, &tempDemuxerParam);
   if (ret != 0) {
-      RKADK_LOGE("RKADK_DEMUXER_Create failed");
+      RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
       return RKADK_FAILURE;
   }
 
@@ -38,6 +56,7 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, const RKADK_CHAR *input
   demuxerParam->pVideoCodec = (char *)tempDemuxerParam.pVideoCodec;
   demuxerParam->videoWidth = tempDemuxerParam.s32VideoWidth;
   demuxerParam->videoHeigh = tempDemuxerParam.s32VideoHeigh;
+  demuxerParam->VideoFormat = tempDemuxerParam.s8VideoFormat;
   demuxerParam->videoTimeBaseNum = tempDemuxerParam.s32VideoTimeBaseNum;
   demuxerParam->videoTimeBaseDen = tempDemuxerParam.s32VideoTimeBaseDen;
   demuxerParam->videoFirstPTS = tempDemuxerParam.s64VideoFirstPTS;
@@ -50,10 +69,6 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, const RKADK_CHAR *input
   demuxerParam->audioTimeBaseDen = tempDemuxerParam.s32AudioTimeBaseDen;
 
   return RKADK_SUCCESS;
-}
-
-RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg) {
-  rkdemuxer_deinit(demuxerCfg);
 }
 
 RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg) {
