@@ -577,7 +577,7 @@ static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
     return;
   }
 
-  duration = 1000000 / (double)pstAudioCfg->samplerate * pstAudioCfg->samples_per_frame;
+  duration = 1000000 / (double)pstAudioCfg->samplerate * pstAudioCfg->samples_per_frame / pstAudioCfg->channels;
 
   if (!pstMuxer->u64AudioPts)
     pstMuxer->u64AudioPts = stFrame.u64TimeStamp;
