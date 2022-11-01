@@ -67,9 +67,8 @@ extern "C" {
 /* thumb default parameters */
 #define THUMB_WIDTH 320
 #define THUMB_HEIGHT 180
-#define THUMB_VENC_CHN 5
-#define THUMB_REC_VENC_CHN 6
-#define THUMB_VI_CHN 1
+#define THUMB_PHOTO_VENC_CHN 5
+#define THUMB_RECORD_VENC_CHN 6
 
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0
@@ -332,6 +331,18 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_DISP_CFG_S;
 
+typedef struct tagRKADK_PARAM_THUMB_CFG_S {
+  // 4 alignment
+  RKADK_U32 thumb_width;
+  // 2 alignment
+  RKADK_U32 thumb_height;
+  // photo
+  RKADK_U32 photo_venc_chn;
+  // record
+  RKADK_U32 record_venc_chn;
+  RKADK_PRAAM_VI_ATTR_S vi_attr;
+} RKADK_PARAM_THUMB_CFG_S;
+
 typedef struct tagRKADK_PARAM_MEDIA_CFG_S {
   RKADK_PARAM_VI_CFG_S stViCfg[RKADK_ISPP_VI_NODE_CNT];
   RKADK_PARAM_REC_CFG_S stRecCfg;
@@ -339,25 +350,13 @@ typedef struct tagRKADK_PARAM_MEDIA_CFG_S {
   RKADK_PARAM_STREAM_CFG_S stLiveCfg;
   RKADK_PARAM_PHOTO_CFG_S stPhotoCfg;
   RKADK_PARAM_DISP_CFG_S stDispCfg;
+  RKADK_PARAM_THUMB_CFG_S stThumbCfg;
 } RKADK_PARAM_MEDIA_CFG_S;
-
-typedef struct tagRKADK_PARAM_THUMB_CFG_S {
-  // 4 alignment
-  RKADK_U32 thumb_width;
-  // 2 alignment
-  RKADK_U32 thumb_height;
-  // photo
-  RKADK_U32 venc_chn;
-  // record
-  RKADK_U32 rec_venc_chn;
-  RKADK_U32 vi_chn;
-} RKADK_PARAM_THUMB_CFG_S;
 
 typedef struct tagPARAM_CFG_S {
   RKADK_PARAM_VERSION_S stVersion;
   RKADK_PARAM_COMM_CFG_S stCommCfg;
   RKADK_PARAM_AUDIO_CFG_S stAudioCfg;
-  RKADK_PARAM_THUMB_CFG_S stThumbCfg;
   RKADK_PARAM_SENSOR_CFG_S stSensorCfg[RKADK_MAX_SENSOR_CNT];
   RKADK_PARAM_MEDIA_CFG_S stMediaCfg[RKADK_MAX_SENSOR_CNT];
 } RKADK_PARAM_CFG_S;
@@ -469,9 +468,9 @@ RKADK_PARAM_SENSOR_CFG_S *RKADK_PARAM_GetSensorCfg(RKADK_U32 u32CamId);
 
 RKADK_PARAM_DISP_CFG_S *RKADK_PARAM_GetDispCfg(RKADK_U32 u32CamId);
 
-RKADK_PARAM_AUDIO_CFG_S *RKADK_PARAM_GetAudioCfg(RKADK_VOID);
+RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_U32 u32CamId);
 
-RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID);
+RKADK_PARAM_AUDIO_CFG_S *RKADK_PARAM_GetAudioCfg(RKADK_VOID);
 
 VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
                                      RKADK_CODEC_TYPE_E enCodecType);

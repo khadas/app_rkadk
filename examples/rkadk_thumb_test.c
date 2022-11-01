@@ -56,6 +56,7 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c;
+  RKADK_U32 u32CamId = 0;
   unsigned int count = 1;
   RKADK_CHAR *pInuptPath = "/userdata/RecordTest_0.mp4";
   char filePath[RKADK_MAX_FILE_PATH_LEN];
@@ -143,13 +144,13 @@ int main(int argc, char *argv[]) {
     size = buf_size;
 
     if (bIsMp4) {
-      if (RKADK_GetThmInMp4(pInuptPath, buffer, &size)) {
+      if (RKADK_GetThmInMp4(u32CamId, pInuptPath, buffer, &size)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
         return -1;
       }
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
-      if (RKADK_PHOTO_GetThmInJpg(pInuptPath, eJpgThumbType, buffer, &size)) {
+      if (RKADK_PHOTO_GetThmInJpg(u32CamId, pInuptPath, eJpgThumbType, buffer, &size)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
         return -1;
       }
@@ -174,13 +175,13 @@ int main(int argc, char *argv[]) {
 
 #else
     if (bIsMp4) {
-      if (RKADK_GetThmInMp4Ex(pInuptPath, &stThumbAttr)) {
+      if (RKADK_GetThmInMp4Ex(u32CamId, pInuptPath, &stThumbAttr)) {
         RKADK_LOGE("RKADK_GetThmInMp4Ex failed");
         return -1;
       }
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
-      if (RKADK_PHOTO_GetThmInJpgEx(pInuptPath, eJpgThumbType, &stThumbAttr)) {
+      if (RKADK_PHOTO_GetThmInJpgEx(u32CamId, pInuptPath, eJpgThumbType, &stThumbAttr)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
         return -1;
       }

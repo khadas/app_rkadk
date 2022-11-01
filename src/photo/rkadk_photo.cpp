@@ -184,7 +184,7 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     return NULL;
   }
 
-  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pHandle->u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return NULL;
@@ -207,14 +207,14 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
     return NULL;
 
     // drop first frame
-  ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 1000);
+  ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
   if (ret == RK_SUCCESS)
-    RK_MPI_VENC_ReleaseStream(ptsThumbCfg->venc_chn, &stThumbFrame);
+    RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
   else
     RKADK_LOGE("RK_MPI_VENC_GetStream timeout %x\n", ret);
 
   while (pHandle->bGetThumbJpeg) {
-    ret = RK_MPI_VENC_GetStream(ptsThumbCfg->venc_chn, &stThumbFrame, 50);
+    ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 50);
     if (ret == RK_SUCCESS) {
       ret = RKADK_SIGNAL_Wait(pHandle->pSignal, 2000);/* Lapse video record one frame per second */
       if (ret == 0) {
@@ -230,7 +230,7 @@ static void *RKADK_PHOTO_GetThumbJpeg(void *params) {
         RKADK_LOGE("Lose jpeg data, take photo failed");
       }
 
-      ret = RK_MPI_VENC_ReleaseStream(ptsThumbCfg->venc_chn, &stThumbFrame);
+      ret = RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     }
@@ -379,6 +379,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   VENC_CHN_ATTR_S stVencAttr;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = NULL;
   bool bUseRga = false;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
@@ -406,14 +407,13 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   pHandle->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
 
   RKADK_PARAM_Init(NULL, NULL);
-  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
-      RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
+  pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
   if (!pstPhotoCfg) {
     RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
     return -1;
   }
 
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstPhotoAttr->u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -519,15 +519,15 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   pthread_setname_np(pHandle->tid, name);
 
   ret = ThumbnailInit(pstPhotoAttr->u32CamId, ptsThumbCfg->thumb_width,
-                      ptsThumbCfg->thumb_height, ptsThumbCfg->venc_chn,
-                      ptsThumbCfg->vi_chn);
+                      ptsThumbCfg->thumb_height, ptsThumbCfg->photo_venc_chn,
+                      ptsThumbCfg->vi_attr);
   if (ret) {
     RKADK_LOGI("Thumbnail venc [%d] Init fail [%d]",
-                ptsThumbCfg->venc_chn, ret);
+                ptsThumbCfg->photo_venc_chn, ret);
     goto failed;
   }
 #ifndef THUMB_NORMAL
-  ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->venc_chn);
+  ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->photo_venc_chn);
 #endif
 
   pHandle->u32MmapLen = pstPhotoCfg->image_width *
@@ -537,8 +537,8 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   pHandle->pJpegData = RKADK_PHOTO_Mmap(JPG_MMAP_ONE_FILE_PATH, pHandle->u32MmapLen);
   if (!pHandle->pJpegData) {
     ThumbnailDeInit(pstPhotoAttr->u32CamId,
-                    ptsThumbCfg->venc_chn,
-                    ptsThumbCfg->vi_chn);
+                    ptsThumbCfg->photo_venc_chn,
+                    ptsThumbCfg->vi_attr);
     goto failed;
   }
 
@@ -547,12 +547,12 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     RKADK_LOGE("Create get thumbnail jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamId,
               ret);
     ThumbnailDeInit(pstPhotoAttr->u32CamId,
-                    ptsThumbCfg->venc_chn,
-                    ptsThumbCfg->vi_chn);
+                    ptsThumbCfg->photo_venc_chn,
+                    ptsThumbCfg->vi_attr);
     goto failed;
   }
   memset(name, 0, sizeof(name));
-  snprintf(name, sizeof(name), "PhotoThumbJpeg_%d", ptsThumbCfg->venc_chn);
+  snprintf(name, sizeof(name), "PhotoThumbJpeg_%d", ptsThumbCfg->photo_venc_chn);
   pthread_setname_np(pHandle->thumb_tid, name);
 
   if (bUseRga) {
@@ -650,7 +650,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
-            RKADK_PARAM_GetThumbCfg();
+      RKADK_PARAM_GetThumbCfg(pstHandle->u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -673,8 +673,8 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   ThumbnailDeInit(pstHandle->u32CamId,
-                  ptsThumbCfg->venc_chn,
-                  ptsThumbCfg->vi_chn);
+                  ptsThumbCfg->photo_venc_chn,
+                  ptsThumbCfg->vi_attr);
   if (pstHandle->pJpegData) {
     munmap(pstHandle->pJpegData, pstHandle->u32MmapLen);
     pstHandle->pJpegData = NULL;
@@ -802,13 +802,13 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_PHOTO_ATTR_S *pstPho
 #ifndef THUMB_NORMAL
   return RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
 #else
-  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstHandle->u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
   }
   ret = RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);
-  ret |= RK_MPI_VENC_StartRecvFrame(ptsThumbCfg->venc_chn, &stRecvParam);
+  ret |= RK_MPI_VENC_StartRecvFrame(ptsThumbCfg->photo_venc_chn, &stRecvParam);
   if(ret) {
     RKADK_LOGE("Take photo failed %x", ret);
     return -1;
@@ -915,13 +915,13 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
-static RKADK_S32 RKADK_GetThmInJpg(RKADK_CHAR *pszFileName,
+static RKADK_S32 RKADK_GetThmInJpg(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                                    RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fd = NULL;
   RKADK_U8 *pFile;
   int len, cur, exif_end;
 
-  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -1022,7 +1022,7 @@ static RKADK_S32 RKADK_GetThmInJpg(RKADK_CHAR *pszFileName,
   return RKADK_SUCCESS;
 }
 
-RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
+RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                                   RKADK_JPG_THUMB_TYPE_E eThmType,
                                   RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size) {
   int ret;
@@ -1039,7 +1039,7 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpg(RKADK_CHAR *pszFileName,
   stThumbAttr.pu8Buf = pu8Buf;
   stThumbAttr.u32BufSize = *pu32Size;
 
-  ret = RKADK_GetThmInJpg(pszFileName, &stThumbAttr);
+  ret = RKADK_GetThmInJpg(u32CamId, pszFileName, &stThumbAttr);
   *pu32Size = stThumbAttr.u32BufSize;
 
   return ret;
@@ -1049,7 +1049,7 @@ RKADK_S32 RKADK_PHOTO_ThumbBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr) {
   return RKADK_MEDIA_FrameFree((RKADK_FRAME_ATTR_S *)pstThumbAttr);
 }
 
-RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
+RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                                     RKADK_JPG_THUMB_TYPE_E eThmType,
                                     RKADK_THUMB_ATTR_S *pstThumbAttr) {
   int ret;
@@ -1057,7 +1057,7 @@ RKADK_S32 RKADK_PHOTO_GetThmInJpgEx(RKADK_CHAR *pszFileName,
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstThumbAttr, RKADK_FAILURE);
 
-  ret = RKADK_GetThmInJpg(pszFileName, pstThumbAttr);
+  ret = RKADK_GetThmInJpg(u32CamId, pszFileName, pstThumbAttr);
   if (ret)
     RKADK_PHOTO_ThumbBufFree(pstThumbAttr);
 

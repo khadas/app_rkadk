@@ -24,10 +24,10 @@ extern "C" {
 #include "rkadk_common.h"
 
 // Default jpeg thumbnail
-RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
-                            RKADK_U32 *pu32Size);
+RKADK_S32 RKADK_GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
+                            RKADK_U8 *pu8Buf, RKADK_U32 *pu32Size);
 
-RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName,
+RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                               RKADK_THUMB_ATTR_S *pstThumbAttr);
 
 RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr);

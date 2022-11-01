@@ -268,7 +268,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -348,12 +348,12 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
                   pstRecCfg->vi_attr[i].u32ViChn,
                   pstRecCfg->attribute[i].venc_chn);
       ThumbnailInit(u32CamId, ptsThumbCfg->thumb_width,
-                          ptsThumbCfg->thumb_height,
-                          ptsThumbCfg->rec_venc_chn,
-                          ptsThumbCfg->vi_chn);
+                    ptsThumbCfg->thumb_height,
+                    ptsThumbCfg->record_venc_chn,
+                    ptsThumbCfg->vi_attr);
 #ifndef THUMB_NORMAL
       ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn,
-                          ptsThumbCfg->rec_venc_chn);
+                          ptsThumbCfg->record_venc_chn);
 #endif
     }
   }
@@ -379,7 +379,7 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
     return -1;
   }
 
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -427,8 +427,8 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
         }
         free(pThumbAttr);
       }
-      ThumbnailDeInit(u32CamId, ptsThumbCfg->rec_venc_chn,
-                          ptsThumbCfg->vi_chn);
+      ThumbnailDeInit(u32CamId, ptsThumbCfg->record_venc_chn,
+                      ptsThumbCfg->vi_attr);
     }
 
     // Destroy VI
@@ -678,7 +678,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -749,7 +749,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
         pstRecCfg->attribute[i].venc_chn == 0) {
         pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)malloc(sizeof(RKADK_REC_THUMB_ATTR_S));
         pThumbAttr->bGetThumb = true;
-        pThumbAttr->u32ThumbVencChn = ptsThumbCfg->rec_venc_chn;
+        pThumbAttr->u32ThumbVencChn = ptsThumbCfg->record_venc_chn;
         pstMuxer = (RKADK_MUXER_HANDLE_S *)pRecorder;
         pstMuxer->pThumbAttr = (RKADK_MW_PTR)pThumbAttr;
         ret = RKADK_MUXER_CreateThumbList(pRecorder);
@@ -761,8 +761,16 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
           RK_LOGE("Create thumbnail thread failed!");
           return -1;
       }
-      snprintf(name, sizeof(name), "RecordThumbJpeg_%d", ptsThumbCfg->rec_venc_chn);
+      snprintf(name, sizeof(name), "RecordThumbJpeg_%d", ptsThumbCfg->record_venc_chn);
       pthread_setname_np(pThumbAttr->sThumbTid, name);
+
+      //force request I frame and thumbnail
+      RK_MPI_VENC_RequestIDR(pstRecCfg->vi_attr[i].u32ViChn, RK_FALSE);
+#ifndef THUMB_NORMAL
+      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->vi_attr[i].u32ViChn);
+#else
+      ThumbnailRequest(ptsThumbCfg->record_venc_chn);
+#endif
     }
   }
 
@@ -1058,12 +1066,12 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
 #ifndef THUMB_NORMAL
       RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn); //make sure thumbnail
 #else
-      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
       if (!ptsThumbCfg) {
         RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
         return false;
       }
-      ThumbnailRequest(ptsThumbCfg->rec_venc_chn);
+      ThumbnailRequest(ptsThumbCfg->record_venc_chn);
 #endif
     }
 

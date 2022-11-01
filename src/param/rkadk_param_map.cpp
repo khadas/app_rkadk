@@ -52,7 +52,9 @@ static RKADK_MAP_TABLE_CFG_S g_sensorMapTableList[RKADK_PARAM_MAP_BUTT] = {
     {sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S),
      g_stViCfgMapTable_3},
     {sizeof(g_stDispCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
-     g_stDispCfgMapTable}};
+     g_stDispCfgMapTable},
+    {sizeof(g_stThumbCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S),
+     g_stThumbCfgMapTable}};
 
 RKADK_MAP_TABLE_CFG_S *
 RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable) {

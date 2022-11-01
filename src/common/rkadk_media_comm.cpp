@@ -1113,23 +1113,6 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
   memset(&stData, 0, sizeof(stData));
   memset(&stPack, 0, sizeof(stPack));
   stData.stFrame.pstPack = &stPack;
-
-  //force request I frame and thumbnail
-  if (pstMediaInfo->s32ChnId == 0) {
-    RK_MPI_VENC_RequestIDR(pstMediaInfo->s32ChnId, RK_FALSE);
-#ifndef THUMB_NORMAL
-    RK_MPI_VENC_ThumbnailRequest(pstMediaInfo->s32ChnId);
-#else
-    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg =
-      RKADK_PARAM_GetThumbCfg();
-    if (!ptsThumbCfg) {
-      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return NULL;
-    }
-    ThumbnailRequest(ptsThumbCfg->rec_venc_chn);
-#endif
-  }
-
   stData.u32ChnId = pstMediaInfo->s32ChnId;
   while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
     ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1200);

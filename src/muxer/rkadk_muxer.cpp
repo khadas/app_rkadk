@@ -49,6 +49,7 @@ typedef struct {
 
 typedef struct {
   RKADK_MW_PTR ptr;
+  RKADK_U32 u32CamId;
   RKADK_U32 vChnId; // venc channel id
   int muxerId;
   char cFileName[RKADK_MAX_FILE_PATH_LEN];
@@ -555,13 +556,13 @@ static bool RKADK_MUXER_Proc(void *params) {
           bThumbPts = cell->pts - pstMuxerHandle->startTime >=
                       (pstMuxerHandle->duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num * 2);
           if (pstMuxerHandle->vChnId == 0 && (bThumbFrame || bThumbPts) && pstMuxerHandle->bRequestThumb) {
-            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
-            RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
+            RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
             if (!ptsThumbCfg) {
               RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
               return false;
             }
-            ThumbnailRequest(ptsThumbCfg->rec_venc_chn);
+            ThumbnailRequest(ptsThumbCfg->record_venc_chn);
             pstMuxerHandle->bRequestThumb = false;
           }
 #endif
@@ -602,7 +603,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     return -1;
   }
 
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxer->u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -616,6 +617,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     }
     memset(pMuxerHandle, 0, sizeof(MUXER_HANDLE_S));
 
+    pMuxerHandle->u32CamId = pstMuxerAttr->u32CamId;
     pMuxerHandle->muxerId =
         i + (pstMuxerAttr->u32CamId * RKADK_MUXER_STREAM_MAX_CNT);
     pMuxerHandle->bEnableStream = true;

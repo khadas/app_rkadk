@@ -107,13 +107,20 @@ static RKADK_S32 RKADK_PARAM_SaveAudioCfg(char *path) {
   return ret;
 }
 
-static RKADK_S32 RKADK_PARAM_SaveThumbCfg(char *path) {
+static RKADK_S32 RKADK_PARAM_SaveThumbCfg(char *path, RKADK_U32 u32CamId) {
   int ret = 0;
-  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
+  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg;
+  RKADK_MAP_TABLE_CFG_S *pstMapTableCfg = NULL;
 
-  ret = RKADK_Struct2Ini(path, pstThumbCfg, g_stThumbCfgMapTable,
-                         sizeof(g_stThumbCfgMapTable) /
-                             sizeof(RKADK_SI_CONFIG_MAP_S));
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  pstThumbCfg = &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stThumbCfg;
+
+  pstMapTableCfg = RKADK_PARAM_GetMapTable(u32CamId, RKADK_PARAM_THUMB_MAP);
+  RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
+
+  ret = RKADK_Struct2Ini(path, pstThumbCfg, pstMapTableCfg->pstMapTable,
+                         pstMapTableCfg->u32TableLen);
   if (ret)
     RKADK_LOGE("save thumb param failed");
 
@@ -400,19 +407,22 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
     RKADK_PARAM_SaveAudioCfg(path);
 }
 
-static void RKADK_PARAM_CheckThumbCfg(char *path) {
+static void RKADK_PARAM_CheckThumbCfg(char *path, RKADK_U32 u32CamId) {
   bool change = false;
-  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
+  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
+    &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stThumbCfg;
 
   change = RKADK_PARAM_CheckCfgU32(&pstThumbCfg->thumb_width, 240, 1280,
                                    THUMB_WIDTH, "thumb_width");
   change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->thumb_height, 180, 720,
                                     THUMB_HEIGHT, "thumb_height");
-  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->venc_chn, 0, VENC_MAX_CHN_NUM,
-                                    THUMB_VENC_CHN, "thumb venc_chn");
+  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->photo_venc_chn, 0, VENC_MAX_CHN_NUM,
+                                    THUMB_PHOTO_VENC_CHN, "thumb photo_venc_chn");
+  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->record_venc_chn, 0, VENC_MAX_CHN_NUM,
+                                    THUMB_RECORD_VENC_CHN, "thumb record_venc_chn");
 
   if (change)
-    RKADK_PARAM_SaveThumbCfg(path);
+    RKADK_PARAM_SaveThumbCfg(path, u32CamId);
 }
 
 static void RKADK_PARAM_CheckSensorCfg(char *path, RKADK_U32 u32CamId) {
@@ -752,18 +762,6 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   RKADK_PARAM_SaveAudioCfg(path);
 }
 
-static void RKADK_PARAM_DefThumbCfg(char *path) {
-  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg = &g_stPARAMCtx.stCfg.stThumbCfg;
-
-  memset(pstThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
-  pstThumbCfg->thumb_width = THUMB_WIDTH;
-  pstThumbCfg->thumb_height = THUMB_HEIGHT;
-  pstThumbCfg->venc_chn = THUMB_VENC_CHN;
-  pstThumbCfg->rec_venc_chn = THUMB_REC_VENC_CHN;
-  pstThumbCfg->vi_chn = THUMB_VI_CHN;
-  RKADK_PARAM_SaveThumbCfg(path);
-}
-
 static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[0];
 
@@ -999,6 +997,18 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
   RKADK_PARAM_SaveDispCfg(path, u32CamId);
 }
 
+static void RKADK_PARAM_DefThumbCfg(RKADK_U32 u32CamId, char *path) {
+  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
+    &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stThumbCfg;
+
+  memset(pstThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
+  pstThumbCfg->thumb_width = THUMB_WIDTH;
+  pstThumbCfg->thumb_height = THUMB_HEIGHT;
+  pstThumbCfg->photo_venc_chn = THUMB_PHOTO_VENC_CHN;
+  pstThumbCfg->record_venc_chn = THUMB_RECORD_VENC_CHN;
+  RKADK_PARAM_SaveThumbCfg(path, u32CamId);
+}
+
 static void RKADK_PARAM_Dump() {
   int i, j;
   RKADK_PARAM_CFG_S *pstCfg = &g_stPARAMCtx.stCfg;
@@ -1025,13 +1035,6 @@ static void RKADK_PARAM_Dump() {
   printf("\tbitrate: %d\n", pstCfg->stAudioCfg.bitrate);
   printf("\tvqe_mode: %d\n", pstCfg->stAudioCfg.vqe_mode);
   printf("\tcodec_type: %d\n", pstCfg->stAudioCfg.codec_type);
-
-  printf("Thumb Config\n");
-  printf("\tthumb_width: %d\n", pstCfg->stThumbCfg.thumb_width);
-  printf("\tthumb_height: %d\n", pstCfg->stThumbCfg.thumb_height);
-  printf("\tvenc_chn: %d\n", pstCfg->stThumbCfg.venc_chn);
-  printf("\trec_venc_chn: %d\n", pstCfg->stThumbCfg.rec_venc_chn);
-  printf("\tvi_chn: %d\n", pstCfg->stThumbCfg.vi_chn);
 
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
     printf("Sensor[%d] Config\n", i);
@@ -1216,6 +1219,16 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stDispCfg.z_pos);
     printf("\t\tsensor[%d] stDispCfg vo_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vo_chn);
+
+    printf("\tThumb Config\n");
+    printf("\t\tsensor[%d] stThumbCfg thumb_width: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.thumb_width);
+    printf("\t\tsensor[%d] stThumbCfg thumb_height: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.thumb_height);
+    printf("\t\tsensor[%d] stThumbCfg photo_venc_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.photo_venc_chn);
+    printf("\t\tsensor[%d] stThumbCfg record_venc_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.record_venc_chn);
   }
 }
 
@@ -1326,6 +1339,25 @@ static void RKADK_PARAM_DumpViAttr() {
     printf("\t\tsensor[%d] stDispCfg stIspOpt.enMemoryType: %d\n", i,
            pstCfg->stMediaCfg[i]
                .stDispCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+
+    printf("\tThumb VI Attribute\n");
+    printf("\t\tsensor[%d] stThumbCfg stIspOpt.aEntityName: %s\n", i,
+           pstCfg->stMediaCfg[i]
+               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+    printf("\t\tsensor[%d] stThumbCfg u32ViChn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.u32ViChn);
+    printf("\t\tsensor[%d] stThumbCfg u32Width: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stSize.u32Width);
+    printf("\t\tsensor[%d] stThumbCfg u32Height: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stSize.u32Height);
+    printf("\t\tsensor[%d] stThumbCfg stIspOpt.u32BufCount: %d\n", i,
+           pstCfg->stMediaCfg[i]
+               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stThumbCfg enPixelFormat: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.enPixelFormat);
+    printf("\t\tsensor[%d] stThumbCfg stIspOpt.enMemoryType: %d\n", i,
+           pstCfg->stMediaCfg[i]
+               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
   }
 }
 
@@ -1360,17 +1392,6 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     return ret;
   }
   RKADK_PARAM_CheckAudioCfg(path);
-
-  // load thumb config
-  memset(&pstCfg->stThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
-  ret = RKADK_Ini2Struct(path, &pstCfg->stThumbCfg, g_stThumbCfgMapTable,
-                         sizeof(g_stThumbCfgMapTable) /
-                             sizeof(RKADK_SI_CONFIG_MAP_S));
-  if (ret) {
-    RKADK_LOGW("thumb config param not exist, use default");
-    return ret;
-  }
-  RKADK_PARAM_CheckThumbCfg(path);
 
   // load sensor config
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
@@ -1562,6 +1583,20 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
       return ret;
     }
     RKADK_PARAM_CheckDispCfg(sensorPath[i], i);
+
+    // load thumb config
+    pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_THUMB_MAP);
+    RKADK_CHECK_POINTER(pstMapTableCfg, RKADK_FAILURE);
+
+    memset(&pstCfg->stMediaCfg[i].stThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
+    ret = RKADK_Ini2Struct(sensorPath[i], &pstCfg->stMediaCfg[i].stThumbCfg,
+                           pstMapTableCfg->pstMapTable,
+                           pstMapTableCfg->u32TableLen);
+    if (ret) {
+      RKADK_LOGW("thumb config param not exist, use default");
+      return ret;
+    }
+    RKADK_PARAM_CheckThumbCfg(sensorPath[i], i);
   }
 
   return 0;
@@ -1582,9 +1617,6 @@ static void RKADK_PARAM_UseDefault() {
 
   // default audio config
   RKADK_PARAM_DefAudioCfg(g_stPARAMCtx.path);
-
-  // default thumb config
-  RKADK_PARAM_DefThumbCfg(g_stPARAMCtx.path);
 
   // default sensor.0 config
   RKADK_PARAM_DefSensorCfg(0, g_stPARAMCtx.sensorPath[0]);
@@ -1620,6 +1652,9 @@ static void RKADK_PARAM_UseDefault() {
 
   // default sensor.0.disp config
   RKADK_PARAM_DefDispCfg(0, g_stPARAMCtx.sensorPath[0]);
+
+  // default sensor.0.thumb config
+  RKADK_PARAM_DefThumbCfg(0, g_stPARAMCtx.sensorPath[0]);
 }
 
 static void RKADK_PARAM_Mkdirs(char *dir) {
@@ -1745,6 +1780,10 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
 
   case RKADK_STREAM_TYPE_DISP:
     memcpy(module, "DISP", strlen("DISP"));
+    break;
+
+  case RKADK_STREAM_TYPE_THUMB:
+    memcpy(module, "THUMB", strlen("THUMB"));
     break;
 
   default:
@@ -2135,6 +2174,48 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
   return 0;
 }
 
+static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
+  int index;
+  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stThumbCfg;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
+      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
+  RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
+
+  RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
+
+  index = RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_THUMB, s32CamId,
+                                   pstThumbCfg->thumb_width,
+                                   pstThumbCfg->thumb_height);
+  if (index < 0 || index >= RKADK_ISPP_VI_NODE_CNT) {
+    RKADK_LOGE("not find match vi index");
+    return -1;
+  }
+
+  pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
+  pstThumbCfg->vi_attr.u32ViChn = pstViCfg->chn_id;
+  memcpy(pstThumbCfg->vi_attr.stChnAttr.stIspOpt.aEntityName,
+         pstViCfg->device_name, sizeof(pstViCfg->device_name));
+  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
+  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
+      VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
+  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
+  pstThumbCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
+  pstThumbCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
+  pstThumbCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
+      pstViCfg->pix_fmt, &(pstThumbCfg->vi_attr.stChnAttr.enCompressMode));
+  pstThumbCfg->vi_attr.stChnAttr.u32Depth = 0;
+  pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+  pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
+    pstThumbCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
+  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
+    pstThumbCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
+
+  return 0;
+}
+
 static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
   int i, ret = 0;
 
@@ -2158,6 +2239,10 @@ static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
       break;
 
     ret = RKADK_PARAM_SetDispViAttr(i);
+    if (ret)
+      break;
+
+    ret = RKADK_PARAM_SetThumbViAttr(i);
     if (ret)
       break;
   }
@@ -2566,14 +2651,15 @@ RKADK_PARAM_DISP_CFG_S *RKADK_PARAM_GetDispCfg(RKADK_U32 u32CamId) {
   return &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stDispCfg;
 }
 
+RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_U32 u32CamId) {
+  RKADK_CHECK_INIT(g_stPARAMCtx.bInit, NULL);
+  RKADK_CHECK_CAMERAID(u32CamId, NULL);
+  return &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stThumbCfg;
+}
+
 RKADK_PARAM_AUDIO_CFG_S *RKADK_PARAM_GetAudioCfg() {
   RKADK_CHECK_INIT(g_stPARAMCtx.bInit, NULL);
   return &g_stPARAMCtx.stCfg.stAudioCfg;
-}
-
-RKADK_PARAM_THUMB_CFG_S *RKADK_PARAM_GetThumbCfg(RKADK_VOID) {
-  RKADK_CHECK_INIT(g_stPARAMCtx.bInit, NULL);
-  return &g_stPARAMCtx.stCfg.stThumbCfg;
 }
 
 RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,

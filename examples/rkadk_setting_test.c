@@ -326,21 +326,6 @@ static void SetViCfg() {
                    sizeof(g_stViCfgMapTable_3) / sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
-static void SetThumbCfg() {
-  RKADK_PARAM_THUMB_CFG_S stThumbCfg;
-
-  memset(&stThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
-  stThumbCfg.thumb_width = THUMB_WIDTH;
-  stThumbCfg.thumb_height = THUMB_HEIGHT;
-  stThumbCfg.venc_chn = THUMB_VENC_CHN;
-  stThumbCfg.rec_venc_chn = THUMB_REC_VENC_CHN;
-  stThumbCfg.vi_chn = THUMB_VI_CHN;
-
-  RKADK_Struct2Ini(RKADK_PARAM_PATH, &stThumbCfg, g_stThumbCfgMapTable,
-                   sizeof(g_stThumbCfgMapTable) /
-                       sizeof(RKADK_SI_CONFIG_MAP_S));
-}
-
 static void SetDispCfg() {
   char sensorPath[RKADK_PATH_LEN];
   RKADK_PARAM_DISP_CFG_S stDispCfg;
@@ -366,6 +351,23 @@ static void SetDispCfg() {
   stDispCfg.vo_chn = 0;
   RKADK_Struct2Ini(sensorPath, &stDispCfg, g_stDispCfgMapTable,
                    sizeof(g_stDispCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
+}
+
+static void SetThumbCfg() {
+  char sensorPath[RKADK_PATH_LEN];
+  RKADK_PARAM_THUMB_CFG_S stThumbCfg;
+
+  memset(sensorPath, 0, RKADK_PATH_LEN);
+  sprintf(sensorPath, "%s_%d.ini", RKADK_PARAM_PATH_SENSOR_PREFIX, 0);
+
+  memset(&stThumbCfg, 0, sizeof(RKADK_PARAM_THUMB_CFG_S));
+  stThumbCfg.thumb_width = THUMB_WIDTH;
+  stThumbCfg.thumb_height = THUMB_HEIGHT;
+  stThumbCfg.photo_venc_chn = THUMB_PHOTO_VENC_CHN;
+  stThumbCfg.record_venc_chn = THUMB_RECORD_VENC_CHN;
+
+  RKADK_Struct2Ini(sensorPath, &stThumbCfg, g_stThumbCfgMapTable,
+                   sizeof(g_stThumbCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
 }
 
 int main(int argc, char *argv[]) {
@@ -397,9 +399,6 @@ int main(int argc, char *argv[]) {
       SetAudioCfg();
       RKADK_LOGD("SetAudioCfg done");
 
-      SetThumbCfg();
-      RKADK_LOGD("SetThumbCfg done");
-
       SetSensorCfg();
       RKADK_LOGD("SetSensorCfg done");
 
@@ -420,6 +419,9 @@ int main(int argc, char *argv[]) {
 
       SetDispCfg();
       RKADK_LOGD("SetDispCfg done");
+
+      SetThumbCfg();
+      RKADK_LOGD("SetThumbCfg done");
     }
 
     if (strstr(cmd, "get")) {

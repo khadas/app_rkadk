@@ -48,6 +48,7 @@ typedef enum {
   RKADK_PARAM_VI2_MAP,
   RKADK_PARAM_VI3_MAP,
   RKADK_PARAM_DISP_MAP,
+  RKADK_PARAM_THUMB_MAP,
   RKADK_PARAM_MAP_BUTT
 } RKADK_PARAM_MAP_TYPE_E;
 
@@ -78,15 +79,6 @@ static RKADK_SI_CONFIG_MAP_S g_stAudioCfgMapTable[] = {
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, bitrate),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, vqe_mode),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, codec_type),
-};
-
-/* thumb map table */
-static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_width),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_height),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, venc_chn),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, rec_venc_chn),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vi_chn),
 };
 
 /* sensor map table */
@@ -287,6 +279,14 @@ static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable[] = {
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, img_type),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, z_pos),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_chn),
+};
+
+/* thumb map table */
+static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_width),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_height),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, photo_venc_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_venc_chn),
 };
 
 RKADK_MAP_TABLE_CFG_S *RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable);

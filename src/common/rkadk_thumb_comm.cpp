@@ -1,5 +1,3 @@
-#include "rkadk_media_comm.h"
-#include "rkadk_param.h"
 #include "rkadk_thumb_comm.h"
 #include "rkadk_thumb.h"
 #include "rkadk_log.h"
@@ -144,42 +142,16 @@ static void split(char *src,const char *separator,char **dest,int *num) {
   *num = count;
 }
 
-static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_S32 ChnId,
-                              RKADK_U32 thumb_width,
-                              RKADK_U32 thumb_height) {
+static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_PRAAM_VI_ATTR_S vi_attr,
+                              RKADK_U32 thumb_width, RKADK_U32 thumb_height) {
   int ret = 0;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
 
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
-  if (!pstSensorCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
-    return -1;
-  }
-
-  VI_CHN_ATTR_S stChnAttr;
-  memset(&stChnAttr, 0, sizeof(stChnAttr));
-  stChnAttr.stIspOpt.u32BufCount = 3;
-  stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-  stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
-  stChnAttr.u32Depth = 0;
-  stChnAttr.enPixelFormat = RK_FMT_YUV420SP;
-  stChnAttr.stFrameRate.s32SrcFrameRate = -1;
-  stChnAttr.stFrameRate.s32DstFrameRate = -1;
-  stChnAttr.stSize.u32Width  = thumb_width;
-  stChnAttr.stSize.u32Height = thumb_height;
-  stChnAttr.u32Depth         = 1;
-  if (!pstSensorCfg->used_isp && pstSensorCfg->mirror)
-    stChnAttr.bMirror = RK_TRUE;
-  if (!pstSensorCfg->used_isp && pstSensorCfg->flip)
-    stChnAttr.bFlip = RK_TRUE;
-  stChnAttr.stIspOpt.stMaxSize.u32Width  = thumb_width;
-  stChnAttr.stIspOpt.stMaxSize.u32Height = thumb_height;
-
-  ret = RKADK_MPI_VI_Init(u32CamId, ChnId, &stChnAttr);
+  ret = RKADK_MPI_VI_Init(u32CamId, vi_attr.u32ViChn, &vi_attr.stChnAttr);
   if (ret != 0) {
     RKADK_LOGE("RKADK_MPI_VI_Init failed, ret = %d", ret);
     return ret;
   }
+
   return 0;
 }
 
@@ -229,8 +201,8 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
 }
 
 RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
-                               RKADK_U32 thumb_height, RKADK_U32 venc_chn,
-                               RKADK_U32 vi_chn) {
+                        RKADK_U32 thumb_height, RKADK_U32 venc_chn,
+                        RKADK_PRAAM_VI_ATTR_S vi_attr) {
   int ret = 0;
   MPP_CHN_S stViChnThu, stVencChnThu;
   memset(&stViChnThu, 0, sizeof(MPP_CHN_S));
@@ -238,12 +210,12 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
 
   stViChnThu.enModId = RK_ID_VI;
   stViChnThu.s32DevId = u32CamId;
-  stViChnThu.s32ChnId = vi_chn;
+  stViChnThu.s32ChnId = vi_attr.u32ViChn;
 
   stVencChnThu.enModId = RK_ID_VENC;
   stVencChnThu.s32DevId = u32CamId;
   stVencChnThu.s32ChnId = venc_chn;
-  ret = RKADK_Thumbnail_Vi(u32CamId, stViChnThu.s32ChnId,
+  ret = RKADK_Thumbnail_Vi(u32CamId, vi_attr,
                            thumb_width, thumb_height);
   if (ret != 0) {
     RKADK_LOGE("RKADK_PHOTO_ViThumBnail failed, ret = %d", ret);
@@ -254,14 +226,14 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_U32 thumb_width,
                              thumb_width, thumb_height);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_VencThumBnail failed, ret = %d", ret);
-    RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
+    RKADK_MPI_VI_DeInit(u32CamId, vi_attr.u32ViChn);
     goto exit;
   }
 
   ret = RK_MPI_SYS_Bind(&stViChnThu, &stVencChnThu);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("bind %d ch venc failed", stVencChnThu.s32ChnId);
-    RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
+    RKADK_MPI_VI_DeInit(u32CamId, vi_attr.u32ViChn);
     RK_MPI_VENC_StopRecvFrame(venc_chn);
     RKADK_MPI_VENC_DeInit(venc_chn);
     goto exit;
@@ -273,9 +245,8 @@ exit:
   return -1;
 }
 
-RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
-                                 RKADK_U32 venc_chn,
-                                 RKADK_U32 vi_chn) {
+RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId, RKADK_U32 venc_chn,
+                          RKADK_PRAAM_VI_ATTR_S vi_attr) {
   int ret = 0;
   MPP_CHN_S stViChnThu, stVencChnThu;
   memset(&stViChnThu, 0, sizeof(MPP_CHN_S));
@@ -283,7 +254,7 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
 
   stViChnThu.enModId = RK_ID_VI;
   stViChnThu.s32DevId = u32CamId;
-  stViChnThu.s32ChnId = vi_chn;
+  stViChnThu.s32ChnId = vi_attr.u32ViChn;
 
   stVencChnThu.enModId = RK_ID_VENC;
   stVencChnThu.s32DevId = u32CamId;
@@ -294,7 +265,7 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId,
       RKADK_LOGE("unbind %d ch venc failed", venc_chn);
   }
 
-  ret = RKADK_MPI_VI_DeInit(u32CamId, vi_chn);
+  ret = RKADK_MPI_VI_DeInit(u32CamId, vi_attr.u32ViChn);
   if (ret) {
       RKADK_LOGE("RK_MPI_VI_DisableChn %x", ret);
   }
@@ -407,14 +378,14 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
   return -1;
 }
 
-static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
+static RKADK_S32 GetThmInMp4Box(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                                 RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fp = NULL;
   RKADK_U64 u64BoxSize;
   int ret, len, cur, fd;
   RKADK_U8 *pFile;
 
-  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg();
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -487,7 +458,7 @@ static RKADK_S32 GetThmInMp4Box(RKADK_CHAR *pszFileName,
   return RKADK_FAILURE;
 }
 
-RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
+RKADK_S32 RKADK_GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
                             RKADK_U32 *pu32Size) {
   int ret;
   RKADK_THUMB_ATTR_S stThumbAttr;
@@ -503,7 +474,7 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_CHAR *pszFileName, RKADK_U8 *pu8Buf,
   stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
   stThumbAttr.pu8Buf = pu8Buf;
   stThumbAttr.u32BufSize = *pu32Size;
-  ret = GetThmInMp4Box(pszFileName, &stThumbAttr);
+  ret = GetThmInMp4Box(u32CamId, pszFileName, &stThumbAttr);
   if (ret) {
     RKADK_LOGE("Get thumbnail in %s failed!", pszFileName);
     return ret;
@@ -521,14 +492,14 @@ RKADK_S32 RKADK_ThmBufFree(RKADK_THUMB_ATTR_S *pstThumbAttr) {
   return 0;
 }
 
-RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_CHAR *pszFileName,
+RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                               RKADK_THUMB_ATTR_S *pstThumbAttr) {
   int ret;
 
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstThumbAttr, RKADK_FAILURE);
 
-  ret = GetThmInMp4Box(pszFileName, pstThumbAttr);
+  ret = GetThmInMp4Box(u32CamId, pszFileName, pstThumbAttr);
   if (ret)
     RKADK_ThmBufFree(pstThumbAttr);
 
