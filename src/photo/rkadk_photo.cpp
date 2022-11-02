@@ -324,8 +324,6 @@ static void RKADK_PHOTO_CreateVencCombo(RKADK_S32 s32ChnId,
 
   stJpegParam.u32Qfactor = pstPhotoCfg->qfactor;
   RK_MPI_VENC_SetJpegParam(s32ChnId, &stJpegParam);
-
-  RK_MPI_VENC_StopRecvFrame(s32ChnId);
 }
 
 static void RKADK_PHOTO_SetChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
@@ -508,7 +506,6 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
       RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
       goto failed;
     }
-    RK_MPI_VENC_StopRecvFrame(stVencChn.s32ChnId);
   }
 
   pHandle->bGetJpeg = true;
