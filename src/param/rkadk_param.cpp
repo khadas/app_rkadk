@@ -898,6 +898,9 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
   pstAttr->codec_type = RKADK_CODEC_TYPE_H264;
   memcpy(pstAttr->rc_mode, "CBR", strlen("CBR"));
 
+  pstAttr->venc_param.max_qp = -1;
+  pstAttr->venc_param.min_qp = -1;
+
   RKADK_PARAM_SaveRecAttr(path, u32CamId, enStrmType);
 }
 
@@ -963,6 +966,9 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
   pstStreamCfg->attribute.codec_type = RKADK_CODEC_TYPE_H264;
   memcpy(pstStreamCfg->attribute.rc_mode, "VBR", strlen("VBR"));
+
+  pstStreamCfg->attribute.venc_param.max_qp = -1;
+  pstStreamCfg->attribute.venc_param.min_qp = -1;
 
   RKADK_PARAM_SaveStreamCfg(path, u32CamId, enStrmType);
 }
@@ -2289,9 +2295,16 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
     return -1;
   }
 
-  if (stVencAttr.venc_param.first_frame_qp > 0) {
-    stRcParam.s32FirstFrameStartQp = stVencAttr.venc_param.first_frame_qp;
-    bSetRcParam = true;
+  if (stVencAttr.codec_type == RKADK_CODEC_TYPE_H264) {
+    u32StepQp = stRcParam.stParamH264.u32StepQp;
+    u32MaxQp = stRcParam.stParamH264.u32MaxQp;
+    u32MinQp= stRcParam.stParamH264.u32MinQp;
+  } else if (stVencAttr.codec_type == RKADK_CODEC_TYPE_H265) {
+    u32StepQp = stRcParam.stParamH265.u32StepQp;
+    u32MaxQp = stRcParam.stParamH265.u32MaxQp;
+    u32MinQp= stRcParam.stParamH265.u32MinQp;
+  } else {
+    return -1;
   }
 
   if (stVencAttr.venc_param.qp_step > 0) {
@@ -2299,18 +2312,22 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
     bSetRcParam = true;
   }
 
-  if (stVencAttr.venc_param.max_qp >= 8 && stVencAttr.venc_param.max_qp <= 51) {
+  if (stVencAttr.venc_param.max_qp >= 1 && stVencAttr.venc_param.max_qp <= 51) {
     u32MaxQp = stVencAttr.venc_param.max_qp;
     bSetRcParam = true;
   }
 
-  if (stVencAttr.venc_param.min_qp >= 0 && stVencAttr.venc_param.min_qp <= 48) {
+  if (stVencAttr.venc_param.min_qp >= 1
+    && stVencAttr.venc_param.min_qp <= stVencAttr.venc_param.max_qp) {
     u32MinQp = stVencAttr.venc_param.min_qp;
     bSetRcParam = true;
   }
 
-  if(u32MinQp > u32MaxQp)
-    u32MinQp = u32MaxQp;
+  if (stVencAttr.venc_param.first_frame_qp >= stVencAttr.venc_param.min_qp
+    && stVencAttr.venc_param.first_frame_qp <= stVencAttr.venc_param.max_qp) {
+    stRcParam.s32FirstFrameStartQp = stVencAttr.venc_param.first_frame_qp;
+    bSetRcParam = true;
+  }
 
   if (!bSetRcParam)
     return 0;
@@ -3484,6 +3501,7 @@ RKADK_S32 RKADK_PARAM_Init(char *globalSetting, char **sesnorSettingArrary) {
   RKADK_PARAM_SetPath(globalSetting, sesnorSettingArrary);
 
   memset(&g_stPARAMCtx.stCfg, 0, sizeof(RKADK_PARAM_CFG_S));
+
   ret = RKADK_PARAM_LoadParam(g_stPARAMCtx.path, g_stPARAMCtx.sensorPath);
   if (ret) {
     RKADK_LOGE("load setting ini failed, load default ini");
