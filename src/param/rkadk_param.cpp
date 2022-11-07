@@ -1006,6 +1006,7 @@ static void RKADK_PARAM_DefThumbCfg(RKADK_U32 u32CamId, char *path) {
   pstThumbCfg->thumb_height = THUMB_HEIGHT;
   pstThumbCfg->photo_venc_chn = THUMB_PHOTO_VENC_CHN;
   pstThumbCfg->record_venc_chn = THUMB_RECORD_VENC_CHN;
+  pstThumbCfg->rga_chn = THUMB_RGA_CHN;
   RKADK_PARAM_SaveThumbCfg(path, u32CamId);
 }
 
@@ -1229,6 +1230,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stThumbCfg.photo_venc_chn);
     printf("\t\tsensor[%d] stThumbCfg record_venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.record_venc_chn);
+    printf("\t\tsensor[%d] stThumbCfg rga_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.rga_chn);
   }
 }
 

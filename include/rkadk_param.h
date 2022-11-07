@@ -69,6 +69,7 @@ extern "C" {
 #define THUMB_HEIGHT 180
 #define THUMB_PHOTO_VENC_CHN 5
 #define THUMB_RECORD_VENC_CHN 6
+#define THUMB_RGA_CHN 0
 
 #define RECORD_AI_CHN 0
 #define RECORD_AENC_CHN 0
@@ -340,6 +341,7 @@ typedef struct tagRKADK_PARAM_THUMB_CFG_S {
   RKADK_U32 photo_venc_chn;
   // record
   RKADK_U32 record_venc_chn;
+  RKADK_U32 rga_chn;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_THUMB_CFG_S;
 

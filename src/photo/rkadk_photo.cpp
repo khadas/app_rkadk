@@ -384,6 +384,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
   RKADK_S32 s32VpssGrp = 0;
+  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_PHOTO;
   RKADK_PHOTO_HANDLE_S *pHandle = NULL;
 
   RKADK_CHECK_POINTER(pstPhotoAttr, RKADK_FAILURE);
@@ -518,9 +519,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   snprintf(name, sizeof(name), "PhotoGetJpeg_%d", stVencChn.s32ChnId);
   pthread_setname_np(pHandle->tid, name);
 
-  ret = ThumbnailInit(pstPhotoAttr->u32CamId, ptsThumbCfg->thumb_width,
-                      ptsThumbCfg->thumb_height, ptsThumbCfg->photo_venc_chn,
-                      ptsThumbCfg->vi_attr);
+  ret = ThumbnailInit(pstPhotoAttr->u32CamId, enThumbModule, ptsThumbCfg);
   if (ret) {
     RKADK_LOGI("Thumbnail venc [%d] Init fail [%d]",
                 ptsThumbCfg->photo_venc_chn, ret);
@@ -536,9 +535,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   pHandle->bGetThumbJpeg = true;
   pHandle->pJpegData = RKADK_PHOTO_Mmap(JPG_MMAP_ONE_FILE_PATH, pHandle->u32MmapLen);
   if (!pHandle->pJpegData) {
-    ThumbnailDeInit(pstPhotoAttr->u32CamId,
-                    ptsThumbCfg->photo_venc_chn,
-                    ptsThumbCfg->vi_attr);
+    ThumbnailDeInit(pstPhotoAttr->u32CamId, enThumbModule, ptsThumbCfg);
     goto failed;
   }
 
@@ -546,9 +543,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   if (ret) {
     RKADK_LOGE("Create get thumbnail jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamId,
               ret);
-    ThumbnailDeInit(pstPhotoAttr->u32CamId,
-                    ptsThumbCfg->photo_venc_chn,
-                    ptsThumbCfg->vi_attr);
+    ThumbnailDeInit(pstPhotoAttr->u32CamId, enThumbModule, ptsThumbCfg);
     goto failed;
   }
   memset(name, 0, sizeof(name));
@@ -634,6 +629,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   MPP_CHN_S stViChn, stVencChn, stRgaChn;
   bool bUseRga = false;
   RKADK_S32 s32VpssGrp = 0;
+  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_PHOTO;
   RKADK_PHOTO_HANDLE_S *pstHandle;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
@@ -672,9 +668,8 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
     pstHandle->thumb_tid = 0;
   }
 
-  ThumbnailDeInit(pstHandle->u32CamId,
-                  ptsThumbCfg->photo_venc_chn,
-                  ptsThumbCfg->vi_attr);
+  ThumbnailDeInit(pstHandle->u32CamId, RKADK_THUMB_MODULE_PHOTO,
+                  ptsThumbCfg);
   if (pstHandle->pJpegData) {
     munmap(pstHandle->pJpegData, pstHandle->u32MmapLen);
     pstHandle->pJpegData = NULL;
