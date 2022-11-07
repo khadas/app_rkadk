@@ -86,6 +86,7 @@ typedef struct {
 } RKADK_AUDIO_INFO_S;
 
 typedef struct {
+  RKADK_CODEC_TYPE_E enCodecType;
   RKADK_AUDIO_DATA_PROC_FUNC pfnPcmDataCB;
   RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;
 } RKADK_STREAM_AUDIO_ATTR_S;
@@ -115,7 +116,7 @@ RKADK_S32 RKADK_STREAM_AencStart(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_STREAM_AencStop(RKADK_MW_PTR pHandle);
 
-RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_AUDIO_INFO_S *pstAudioInfo);
+RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_MW_PTR pHandle, RKADK_AUDIO_INFO_S *pstAudioInfo);
 
 #ifdef __cplusplus
 }

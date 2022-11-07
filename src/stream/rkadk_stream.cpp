@@ -47,6 +47,15 @@ typedef struct {
   RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;
 } STREAM_AUDIO_HANDLE_S;
 
+static int RKADK_STREAM_CheckCodecType(RKADK_CODEC_TYPE_E enCodecType) {
+  if (enCodecType < RKADK_CODEC_TYPE_G711A) {
+    RKADK_LOGE("invalid audio enCodecType = %d", enCodecType);
+    return -1;
+  }
+
+  return 0;
+}
+
 /**************************************************/
 /*                     Video API                  */
 /**************************************************/
@@ -603,18 +612,12 @@ static void RKADK_STREAM_AencOutCb(AUDIO_STREAM_S stFrame,
     return;
   }
 
-  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = RKADK_PARAM_GetAudioCfg();
-  if (!pstAudioParam) {
-    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
-    return;
-  }
-
   memset(&stStreamData, 0, sizeof(RKADK_AUDIO_STREAM_S));
   stStreamData.pStream = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk);
   stStreamData.u32Len = stFrame.u32Len;
   stStreamData.u32Seq = pstHandle->audioSeq;
   stStreamData.u64TimeStamp = stFrame.u64TimeStamp;
-  stStreamData.enType = pstAudioParam->codec_type;
+  stStreamData.enType = pstHandle->enCodecType;
 
   if (pstHandle->pfnAencDataCB && pstHandle->start)
     pstHandle->pfnAencDataCB(&stStreamData);
@@ -672,6 +675,10 @@ RKADK_STREAM_CreateDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
   } else {
     ret = RKADK_MEDIA_GetAencBuffer(&pHandle->stAencChn, RKADK_STREAM_AencOutCb,
                                     pHandle);
+
+    if (pHandle->pfnPcmDataCB)
+      ret |= pthread_create(&pHandle->pcmTid, NULL, RKADK_STREAM_GetPcmMB,
+                            pHandle);
   }
 
   if (ret) {
@@ -744,11 +751,11 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
   return 0;
 }
 
-static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
+static RKADK_S32 RKADK_STREAM_SetAencConfig(STREAM_AUDIO_HANDLE_S *pstHandle,
                                             AENC_CHN_ATTR_S *pstAencAttr) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
-  RKADK_CHECK_POINTER(pstAencChn, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstHandle, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstAencAttr, RKADK_FAILURE);
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
@@ -758,7 +765,7 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
   }
 
   memset(pstAencAttr, 0, sizeof(AENC_CHN_ATTR_S));
-  pstAencAttr->enType = RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
+  pstAencAttr->enType = RKADK_MEDIA_GetRkCodecType(pstHandle->enCodecType);
   pstAencAttr->u32BufCount = 4;
   pstAencAttr->stCodecAttr.enType = pstAencAttr->enType;
   pstAencAttr->stCodecAttr.u32Channels = pstAudioParam->channels;
@@ -766,17 +773,17 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(MPP_CHN_S *pstAencChn,
   pstAencAttr->stCodecAttr.enBitwidth = pstAudioParam->bit_width;
   pstAencAttr->stCodecAttr.pstResv = RK_NULL;
 
-  if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_MP3){
+  if (pstHandle->enCodecType == RKADK_CODEC_TYPE_MP3){
     pstAencAttr->stCodecAttr.u32Resv[0] = pstAudioParam->samples_per_frame;
     pstAencAttr->stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
-  } else if (pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC){
+  } else if (pstHandle->enCodecType == RKADK_CODEC_TYPE_ACC){
     pstAencAttr->stCodecAttr.u32Resv[0] = 2;
     pstAencAttr->stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
-  pstAencChn->enModId = RK_ID_AENC;
-  pstAencChn->s32DevId = 0;
-  pstAencChn->s32ChnId = PREVIEW_AENC_CHN;
+  pstHandle->stAencChn.enModId = RK_ID_AENC;
+  pstHandle->stAencChn.s32DevId = 0;
+  pstHandle->stAencChn.s32ChnId = PREVIEW_AENC_CHN;
   return 0;
 }
 
@@ -794,6 +801,9 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
   }
 
   RKADK_LOGI("Preview Audio Init...");
+
+  if (RKADK_STREAM_CheckCodecType(pstAudioAttr->enCodecType))
+    return -1;
 
   if (!RKADK_MPI_SYS_CHECK()) {
     RKADK_LOGE("System is not initialized");
@@ -817,7 +827,15 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
     return -1;
   }
 
-  pAudioHandle->enCodecType = pstAudioParam->codec_type;
+  if (pstAudioAttr->enCodecType != pstAudioParam->codec_type) {
+    RKADK_LOGW("enCodecType[%d] != codec_type[%d]", pstAudioAttr->enCodecType,
+               pstAudioParam->codec_type);
+
+    if (pstAudioAttr->enCodecType == RKADK_CODEC_TYPE_BUTT)
+      pstAudioAttr->enCodecType = pstAudioParam->codec_type;
+  }
+
+  pAudioHandle->enCodecType = pstAudioAttr->enCodecType;
   if (RKADK_MEDIA_EnableAencRegister(pAudioHandle->enCodecType)) {
     ret = RKADK_AUDIO_ENCODER_Register(pAudioHandle->enCodecType);
     if (ret) {
@@ -843,7 +861,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
 
   if (pAudioHandle->enCodecType != RKADK_CODEC_TYPE_PCM) {
     AENC_CHN_ATTR_S aencAttr;
-    if (RKADK_STREAM_SetAencConfig(&pAudioHandle->stAencChn, &aencAttr)) {
+    if (RKADK_STREAM_SetAencConfig(pAudioHandle, &aencAttr)) {
       RKADK_LOGE("StreamSetAencChnAttr failed");
       goto pcm_mode;
     }
@@ -969,7 +987,8 @@ RKADK_S32 RKADK_STREAM_AencStop(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
-RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_AUDIO_INFO_S *pstAudioInfo) {
+RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_MW_PTR pHandle,
+                                    RKADK_AUDIO_INFO_S *pstAudioInfo) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
   RKADK_CHECK_POINTER(pstAudioInfo, RKADK_FAILURE);
@@ -983,7 +1002,13 @@ RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_AUDIO_INFO_S *pstAudioInfo) {
     return -1;
   }
 
-  pstAudioInfo->enCodecType = pstAudioParam->codec_type;
+  if (pHandle) {
+    STREAM_AUDIO_HANDLE_S *pstHandle = (STREAM_AUDIO_HANDLE_S *)pHandle;
+    pstAudioInfo->enCodecType = pstHandle->enCodecType;
+  } else {
+    pstAudioInfo->enCodecType = RKADK_CODEC_TYPE_PCM;
+  }
+
   pstAudioInfo->u16SampleBitWidth =
       RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width);
   pstAudioInfo->u32ChnCnt = pstAudioParam->channels;

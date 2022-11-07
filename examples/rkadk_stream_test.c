@@ -37,8 +37,10 @@ static FILE *g_output_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
 static RKADK_CHAR *g_output_path = "/data/ai.pcm";
-
 static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
+
+//default use ini audio codec type
+static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_BUTT;
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -50,6 +52,8 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
+  printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, mp3, "
+         "Default:ini audio codec type\n");
   printf("\t-o: Output path, Default:\"/data/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   ;
@@ -236,15 +240,8 @@ static int AudioTest() {
   RKADK_STREAM_AUDIO_ATTR_S stAudioAttr;
   RKADK_AUDIO_INFO_S stAudioInfo;
 
-  RKADK_STREAM_GetAudioInfo(&stAudioInfo);
-  RKADK_LOGD("stAudioInfo.enCodecType: %d", stAudioInfo.enCodecType);
-  RKADK_LOGD("stAudioInfo.u16SampleBitWidth: %d", stAudioInfo.u16SampleBitWidth);
-  RKADK_LOGD("stAudioInfo.u32AvgBytesPerSec: %d", stAudioInfo.u32AvgBytesPerSec);
-  RKADK_LOGD("stAudioInfo.u32ChnCnt: %d", stAudioInfo.u32ChnCnt);
-  RKADK_LOGD("stAudioInfo.u32SampleRate: %d", stAudioInfo.u32SampleRate);
-  RKADK_LOGD("stAudioInfo.u32SamplesPerFrame: %d", stAudioInfo.u32SamplesPerFrame);
-
   memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
+  stAudioAttr.enCodecType = g_enCodecType;
   stAudioAttr.pfnPcmDataCB = PcmDataCb;
   stAudioAttr.pfnAencDataCB = AencDataCb;
   ret = RKADK_STREAM_AudioInit(&stAudioAttr, &pHandle);
@@ -252,6 +249,14 @@ static int AudioTest() {
     RKADK_LOGE("RKADK_STREAM_AudioInit failed = %d", ret);
     return ret;
   }
+
+  RKADK_STREAM_GetAudioInfo(pHandle, &stAudioInfo);
+  RKADK_LOGD("stAudioInfo.enCodecType: %d", stAudioInfo.enCodecType);
+  RKADK_LOGD("stAudioInfo.u16SampleBitWidth: %d", stAudioInfo.u16SampleBitWidth);
+  RKADK_LOGD("stAudioInfo.u32AvgBytesPerSec: %d", stAudioInfo.u32AvgBytesPerSec);
+  RKADK_LOGD("stAudioInfo.u32ChnCnt: %d", stAudioInfo.u32ChnCnt);
+  RKADK_LOGD("stAudioInfo.u32SampleRate: %d", stAudioInfo.u32SampleRate);
+  RKADK_LOGD("stAudioInfo.u32SamplesPerFrame: %d", stAudioInfo.u32SamplesPerFrame);
 
   ret = RKADK_STREAM_AencStart(pHandle);
   if (ret) {
@@ -324,6 +329,25 @@ int main(int argc, char *argv[]) {
       break;
     case 'm':
       pMode = optarg;
+      break;
+    case 'e':
+      if (!strcmp(optarg, "pcm")) {
+        g_enCodecType = RKADK_CODEC_TYPE_PCM;
+        g_output_path = "/data/ai.pcm";
+      } else if (!strcmp(optarg, "g711a")) {
+        g_enCodecType = RKADK_CODEC_TYPE_G711A;
+        g_output_path = "/data/aenc.g711a";
+      } else if (!strcmp(optarg, "g711u")) {
+        g_enCodecType = RKADK_CODEC_TYPE_G711U;
+        g_output_path = "/data/aenc.g711u";
+      } else if (!strcmp(optarg, "mp3")) {
+        g_enCodecType = RKADK_CODEC_TYPE_MP3;
+        g_output_path = "/data/aenc.mp3";
+      } else {
+        RKADK_LOGE("unknow encode type: %s", optarg);
+        return 0;
+      }
+      RKADK_LOGD("Encode type: %d", g_enCodecType);
       break;
     case 'o':
       g_output_path = optarg;

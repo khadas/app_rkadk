@@ -44,7 +44,6 @@ typedef enum {
 /** record task's attribute */
 typedef struct {
   RKADK_S32 s32CamID;                                  /* camera id */
-  RKADK_REC_TYPE_E enRecType;                          /* record type */
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
 } RKADK_RECORD_ATTR_S;
