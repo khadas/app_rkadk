@@ -323,15 +323,15 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
       goto exit;
     }
 
-    ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
-    if (ret) {
-      RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
-      goto exit;
-    }
-
     ret = RK_MPI_AI_SetChnParam(aiDevId, s32AiChnId, &pstParams);
     if (ret != 0) {
       RKADK_LOGE("AI[%d] enable chn param failed[%x]", aiDevId, ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
+    if (ret) {
+      RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
       goto exit;
     }
 
