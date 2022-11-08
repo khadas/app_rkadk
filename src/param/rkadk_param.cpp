@@ -743,6 +743,7 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
   pstCommCfg->mic_volume = 70;
   pstCommCfg->osd = true;
   pstCommCfg->boot_sound = true;
+  pstCommCfg->vpss_devcie = 1;
   RKADK_PARAM_SaveCommCfg(path);
 }
 

@@ -94,16 +94,22 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
 }
 
-static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp,
-                              VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
+static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp, VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
   int ret;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   if (g_bVpssGrpInit[s32VpssGrp])
     return 0;
+
+  pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return -1;
+  }
 
   ret = RK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
   if (ret) {
     RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-    RKADK_LOGE("RK_MPI_VPSS_SetChnAttr failed with %#x", ret);
+    RKADK_LOGE("RK_MPI_VPSS_CreateGrp(grp:%d) failed with %#x",s32VpssGrp, ret);
     return ret;
   }
 
@@ -118,6 +124,14 @@ static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp,
   ret = RK_MPI_VPSS_ResetGrp(s32VpssGrp);
   if (ret) {
     RKADK_LOGE("RK_MPI_VPSS_ResetGrp failed with %#x", ret);
+  }
+
+  ret = RK_MPI_VPSS_SetVProcDev(s32VpssGrp, (VIDEO_PROC_DEV_TYPE_E)pstCommCfg->vpss_devcie);
+  if (ret) {
+    RKADK_LOGE("RK_MPI_VPSS_SetVProcDev(grp:%d) failed with %#x!", s32VpssGrp, ret);
+    RK_MPI_VPSS_StopGrp(s32VpssGrp);
+    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+    return ret;
   }
 
   g_bVpssGrpInit[s32VpssGrp] = true;

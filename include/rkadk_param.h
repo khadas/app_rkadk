@@ -214,6 +214,7 @@ typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
   bool osd;        /* Whether to display OSD */
   bool boot_sound; /* boot sound */
+  RKADK_U32 vpss_devcie; /* 0: GPU device, 1: RGA device */
 } RKADK_PARAM_COMM_CFG_S;
 
 typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
