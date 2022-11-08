@@ -70,36 +70,14 @@ typedef int (*RKADK_MUXER_REQUEST_FILE_NAME_CB)(RKADK_VOID *pHandle, RKADK_CHAR 
 
 /* muxer manual split type enum */
 typedef enum {
-  MUXER_POST_MANUAL_SPLIT = 0, /* post maunal split type */
   MUXER_PRE_MANUAL_SPLIT,      /* pre manual split type */
   MUXER_NORMAL_MANUAL_SPLIT,   /* normal manual split type */
-  MUXER_MANUAL_SPLIT_BUTT
 } RKADK_MUXER_MANUAL_SPLIT_TYPE_E;
-
-/* post manual split attribute */
-typedef struct {
-  RKADK_U32 u32AfterSec; /* manual split file will end after u32AfterSec */
-} RKADK_MUXER_POST_MANUAL_SPLIT_ATTR_S;
-
-/* pre manual split attribute */
-typedef struct {
-  RKADK_U32 u32DurationSec; /* file duration of manual split file */
-} RKADK_MUXER_PRE_MANUAL_SPLIT_ATTR_S;
-
-/* normal manual split attribute */
-typedef struct {
-  RKADK_U32 u32Rsv; /* reserve */
-} RKADK_MUXER_NORMAL_MANUAL_SPLIT_ATTR_S;
 
 /* pre manual split attribute */
 typedef struct {
   RKADK_MUXER_MANUAL_SPLIT_TYPE_E enManualType; /* maual split type */
-  union {
-    RKADK_MUXER_POST_MANUAL_SPLIT_ATTR_S stPostSplitAttr; /* post manual split attr */
-    RKADK_MUXER_PRE_MANUAL_SPLIT_ATTR_S stPreSplitAttr;   /* pre manual split attr */
-    RKADK_MUXER_NORMAL_MANUAL_SPLIT_ATTR_S
-    stNormalSplitAttr; /* normal manual split attr */
-  };
+  RKADK_U32 u32DurationSec; /* file duration of manual split file */
 } RKADK_MUXER_MANUAL_SPLIT_ATTR_S;
 
 typedef enum {

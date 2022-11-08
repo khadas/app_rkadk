@@ -83,6 +83,11 @@ typedef struct {
   MUXER_BUF_CELL_S stThumbCell[2]; // thumbnail list cache size
   struct list_head stThumbFree;     // thumbnail list remain size
   struct list_head stThumbProcList; // thumbnail process list
+
+  //manual split
+  bool bManualSplit;
+  bool bManualSplitRecord;
+  RKADK_U32 u32SplitDurationSec;
 } MUXER_HANDLE_S;
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -401,6 +406,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   MUXER_BUF_CELL_S *thumbCell = NULL;
   RKADK_THUMB_ATTR_S stThumbAttr;
   int ret;
+
   if (!pstMuxerHandle->bMuxering)
     return;
 
@@ -414,8 +420,12 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
       pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt);
   }
 
-  RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
-                           pstMuxerHandle->realDuration);
+  if (pstMuxerHandle->bManualSplitRecord)
+    RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_MANUAL_SPLIT_END,
+                             pstMuxerHandle->realDuration);
+  else
+    RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
+                             pstMuxerHandle->realDuration);
 
   // Reset muxer
   pstMuxerHandle->realDuration = 0;
@@ -424,6 +434,8 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->frameCnt = 0;
   pstMuxerHandle->bGetThumb = false;
   pstMuxerHandle->bRequestThumb = false;
+  pstMuxerHandle->bManualSplit = false;
+  pstMuxerHandle->bManualSplitRecord = false;
 }
 
 static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -465,11 +477,112 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   }
 }
 
+static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
+  bool bFileSwitch;
+  RKADK_U32 u32Duration;
+
+  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
+    return false;
+
+  if (pstMuxerHandle->bManualSplitRecord)
+    u32Duration = pstMuxerHandle->u32SplitDurationSec;
+  else
+    u32Duration = pstMuxerHandle->duration;
+
+  if (pstMuxerHandle->bManualSplit) {
+    RKADK_LOGI("File switch: manual_split[%d]", pstMuxerHandle->vChnId);
+    pstMuxerHandle->bManualSplit = false;
+    RKADK_MUXER_Close(pstMuxerHandle);
+    pstMuxerHandle->bManualSplitRecord = true;
+    return true;
+  }
+
+  bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
+                (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
+  if (bFileSwitch) {
+    RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->vChnId, pstMuxerHandle->frameCnt + 1);
+    RKADK_MUXER_Close(pstMuxerHandle);
+    return true;
+  }
+
+  return false;
+}
+
+static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
+  RKADK_U32 u32Duration;
+  bool bThumbPts, bThumbFrame;
+  bool bRequestThumb;
+  int ret;
+
+  if (pstMuxerHandle->duration <= 0)
+    return;
+
+  if (pstMuxerHandle->bManualSplitRecord)
+    u32Duration = pstMuxerHandle->u32SplitDurationSec;
+  else
+    u32Duration = pstMuxerHandle->duration;
+
+#ifndef THUMB_NORMAL
+  bRequestThumb = pstMuxerHandle->vChnId == 0 && cell->isKeyFrame && pstMuxerHandle->bRequestThumb;
+
+  bThumbFrame = pstMuxerHandle->frameCnt > ((u32Duration - pstMuxerHandle->gop /
+                pstMuxerHandle->stVideo.frame_rate_num) * pstMuxerHandle->stVideo.frame_rate_num);
+
+  bThumbPts = cell->pts - pstMuxerHandle->startTime >=
+              (u32Duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num) * 1000000;
+
+  if (bRequestThumb && (bThumbFrame || bThumbPts)) {
+    RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
+    ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
+    if (ret)
+      RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+    pstMuxerHandle->bRequestThumb = false;
+  }
+#else
+  bRequestThumb = pstMuxerHandle->vChnId == 0 && pstMuxerHandle->bRequestThumb;
+  bThumbFrame = pstMuxerHandle->frameCnt > (u32Duration * pstMuxerHandle->stVideo.frame_rate_num - 1);
+  bThumbPts = cell->pts - pstMuxerHandle->startTime >=
+              (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num * 2);
+
+  if (bRequestThumb && (bThumbFrame || bThumbPts) ) {
+    RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
+    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
+    if (!ptsThumbCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+      return false;
+    }
+    ThumbnailRequest(ptsThumbCfg->record_venc_chn);
+    pstMuxerHandle->bRequestThumb = false;
+  }
+#endif
+}
+
+static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
+  int ret;
+
+  if(pstMuxerHandle->vChnId == 0) {
+#ifndef THUMB_NORMAL
+    ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
+    if (ret)
+      RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
+#else
+    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
+    if (!ptsThumbCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+      return false;
+    }
+    ThumbnailRequest(ptsThumbCfg->record_venc_chn);
+#endif
+  }
+
+  pstMuxerHandle->bRequestThumb = false;
+}
+
 static bool RKADK_MUXER_Proc(void *params) {
   int ret = 0;
   bool bThumbFrame;
   bool bThumbPts;
-  bool bFileSwitch;
+  RKADK_U32 u32Duration;
   MUXER_BUF_CELL_S *cell = NULL;
 
   if (!params) {
@@ -484,6 +597,11 @@ static bool RKADK_MUXER_Proc(void *params) {
   while (cell) {
     // Create muxer
     if (pstMuxerHandle->bEnableStream) {
+      if (pstMuxerHandle->bManualSplitRecord)
+        u32Duration = pstMuxerHandle->u32SplitDurationSec;
+      else
+        u32Duration = pstMuxerHandle->duration;
+
       if (!pstMuxerHandle->bMuxering && cell->isKeyFrame) {
         ret = pstMuxerHandle->pcbRequestFileNames(pstMuxerHandle->ptr,
                                                   pstMuxerHandle->cFileName,
@@ -493,8 +611,7 @@ static bool RKADK_MUXER_Proc(void *params) {
         } else {
           RKADK_LOGI("Ready to recod new video file path:[%s]",
                     pstMuxerHandle->cFileName);
-          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN,
-                                  pstMuxerHandle->duration);
+          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN, u32Duration);
           ret = rkmuxer_init(pstMuxerHandle->muxerId,
                             (char *)pstMuxerHandle->cOutputFmt,
                             pstMuxerHandle->cFileName, &pstMuxerHandle->stVideo,
@@ -510,7 +627,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           }
         }
       } else if (!pstMuxerHandle->bMuxering){
-        RKADK_LOGI("Stream [%d] wait I frame!", pstMuxerHandle->vChnId);
+        RKADK_LOGI("Stream [%d] request idr!", pstMuxerHandle->vChnId);
         RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
       }
 
@@ -519,14 +636,8 @@ static bool RKADK_MUXER_Proc(void *params) {
 
       // Process
       if (pstMuxerHandle->bMuxering) {
-        // Check close
-        bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
-                      (pstMuxerHandle->duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
-        if (cell->isKeyFrame && bFileSwitch) {
-          RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->vChnId, pstMuxerHandle->frameCnt + 1);
-          RKADK_MUXER_Close(pstMuxerHandle);
+        if (RKADK_MUXER_CheckEnd(pstMuxerHandle, cell))
           continue;
-        }
 
         // Write
         if (cell->pool == &pstMuxerHandle->stVFree) {
@@ -538,34 +649,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           pstMuxerHandle->realDuration =
               (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
-          //requst thumbnai
-#ifndef THUMB_NORMAL
-          bThumbFrame = pstMuxerHandle->frameCnt > ((pstMuxerHandle->duration - pstMuxerHandle->gop /
-                        pstMuxerHandle->stVideo.frame_rate_num) * pstMuxerHandle->stVideo.frame_rate_num);
-          bThumbPts = cell->pts - pstMuxerHandle->startTime >= 
-                      (pstMuxerHandle->duration - pstMuxerHandle->gop / pstMuxerHandle->stVideo.frame_rate_num) * 1000000;
-          if (pstMuxerHandle->vChnId == 0 && (bThumbFrame || bThumbPts) && cell->isKeyFrame && pstMuxerHandle->bRequestThumb) {
-            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
-            ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
-            if (ret)
-              RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
-            pstMuxerHandle->bRequestThumb = false;
-          }
-#else
-          bThumbFrame = pstMuxerHandle->frameCnt > (pstMuxerHandle->duration * pstMuxerHandle->stVideo.frame_rate_num - 1);
-          bThumbPts = cell->pts - pstMuxerHandle->startTime >=
-                      (pstMuxerHandle->duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num * 2);
-          if (pstMuxerHandle->vChnId == 0 && (bThumbFrame || bThumbPts) && pstMuxerHandle->bRequestThumb) {
-            RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
-            RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
-            if (!ptsThumbCfg) {
-              RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-              return false;
-            }
-            ThumbnailRequest(ptsThumbCfg->record_venc_chn);
-            pstMuxerHandle->bRequestThumb = false;
-          }
-#endif
+          RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
@@ -891,6 +975,8 @@ RKADK_S32 RKADK_MUXER_Stop(RKADK_MW_PTR pHandle) {
     }
 
     pstMuxerHandle->bEnableStream = false;
+    pstMuxerHandle->bManualSplit = false;
+    pstMuxerHandle->bManualSplitRecord = false;
     RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_STOP, 0);
     RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
   }
@@ -906,6 +992,37 @@ RKADK_S32 RKADK_MUXER_SetFrameRate(RKADK_MW_PTR pHandle,
 RKADK_S32
 RKADK_MUXER_ManualSplit(RKADK_MW_PTR pHandle,
                         RKADK_MUXER_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  RKADK_U32 u32Duration;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstSplitAttr, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  if (!pstSplitAttr->u32DurationSec) {
+    RKADK_LOGE("invalid manual split duration[%d]", pstSplitAttr->u32DurationSec);
+    return -1;
+  }
+
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+
+    if (!pstMuxerHandle) {
+      RKADK_LOGD("Muxer Handle[%d] is NULL", i);
+      continue;
+    }
+
+    if (!pstMuxerHandle->bEnableStream)
+      return -1;
+
+    pstMuxerHandle->bManualSplit = true;
+    RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
+    pstMuxerHandle->u32SplitDurationSec = pstSplitAttr->u32DurationSec;
+  }
+
   return 0;
 }
 

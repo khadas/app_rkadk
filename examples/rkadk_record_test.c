@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL;
   RK_BOOL fec_enable = RK_FALSE;
+  RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
@@ -241,6 +242,10 @@ int main(int argc, char *argv[]) {
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
+    } else if (strstr(cmd, "MS")) { //Manual Split
+      stSplitAttr.enManualType = MUXER_NORMAL_MANUAL_SPLIT;
+      stSplitAttr.u32DurationSec = 20;
+      RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
     }
 
     usleep(500000);
