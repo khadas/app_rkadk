@@ -981,6 +981,7 @@ RKADK_MUXER_ManualSplit(RKADK_MW_PTR pHandle,
       return -1;
 
     pstMuxerHandle->stManualSplit.bEnableSplit = true;
+    RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
     RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
     pstMuxerHandle->stManualSplit.u32SplitDurationSec = pstSplitAttr->u32DurationSec;
   }
