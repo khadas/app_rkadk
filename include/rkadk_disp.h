@@ -29,7 +29,7 @@ typedef struct {
 } RKADK_DISP_RECT_S;
 
 typedef struct {
-  RKADK_DISP_RECT_S stRgaRect;
+  RKADK_DISP_RECT_S stVpssRect;
   RKADK_DISP_RECT_S stVoRect;
 } RKADK_DISP_ATTR_S;
 

@@ -36,14 +36,14 @@ typedef struct {
 
 static void RKADK_RTSP_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
                                    MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
-                                   MPP_CHN_S *pstRgaChn) {
+                                   MPP_CHN_S *pstVpssChn) {
   pstViChn->enModId = RK_ID_VI;
   pstViChn->s32DevId = 0;
   pstViChn->s32ChnId = pstLiveCfg->vi_attr.u32ViChn;
 
-  pstRgaChn->enModId = RK_ID_RGA;
-  pstRgaChn->s32DevId = 0;
-  pstRgaChn->s32ChnId = pstLiveCfg->attribute.rga_chn;
+  pstVpssChn->enModId = RK_ID_VPSS;
+  pstVpssChn->s32DevId = 0;
+  pstVpssChn->s32ChnId = pstLiveCfg->attribute.vpss_chn;
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = 0;
@@ -198,7 +198,7 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
   return ret;
 }
 
-static bool RKADK_RTSP_IsUseRga(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
+static bool RKADK_RTSP_IsUseVpss(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
   RKADK_U32 u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Width;
   RKADK_U32 u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Height;
   RKADK_U32 u32DstWidth = pstLiveCfg->attribute.width;
@@ -217,7 +217,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
   bool bSysInit = false;
-  MPP_CHN_S stViChn, stVencChn, stRgaChn;
+  MPP_CHN_S stViChn, stVencChn, stVpssChn;
   RKADK_STREAM_TYPE_E enType;
   VENC_RC_PARAM_S stVencRcParam;
   RKADK_RTSP_HANDLE_S *pHandle;
@@ -262,7 +262,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     return -1;
   }
 
-  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
+  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stVpssChn);
   enType = RKADK_PARAM_VencChnMux(u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_LIVE) {
     switch (enType) {
@@ -339,7 +339,7 @@ failed:
 
 RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
-  MPP_CHN_S stViChn, stVencChn, stRgaChn;
+  MPP_CHN_S stViChn, stVencChn, stVpssChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
@@ -353,7 +353,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
-  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stRgaChn);
+  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stVpssChn);
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)

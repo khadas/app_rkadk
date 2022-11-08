@@ -123,7 +123,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
-    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, rga_chn),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -151,7 +151,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_1[] = {
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
-    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, rga_chn),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -174,7 +174,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPreviewCfgMapTable[] = {
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
-    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, rga_chn),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -197,7 +197,7 @@ static RKADK_SI_CONFIG_MAP_S g_stLiveCfgMapTable[] = {
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, codec_type),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
-    DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, rga_chn),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -217,7 +217,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPhotoCfgMapTable[] = {
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, image_height),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, snap_num),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, venc_chn),
-    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, rga_chn),
+    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, vpss_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, enable_combo),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, combo_venc_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, qfactor),
@@ -271,7 +271,7 @@ static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable[] = {
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, bool_e, enable_buf_pool),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, buf_pool_cnt),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, rotaion),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, rga_chn),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_chn),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, device_node),
 #ifdef RKADK_ENABLE_DISP
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, plane_type),
@@ -287,7 +287,7 @@ static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_height),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, photo_venc_chn),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_venc_chn),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, rga_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vpss_chn),
 };
 
 RKADK_MAP_TABLE_CFG_S *RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable);

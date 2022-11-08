@@ -15,7 +15,7 @@
 #include <sys/types.h>
 
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
-#define RGA_ZOOM_MAX 16
+#define VPSS_ZOOM_MAX 16
 
 typedef struct {
   uint16_t tag_no; // tag number
@@ -239,18 +239,18 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
 static int RKADK_THUMB_SetChn(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg,
                               RKADK_THUMB_MODULE_E enThumbModule,
                               RKADK_U32 u32CamId, MPP_CHN_S *pstViChn,
-                              MPP_CHN_S *pstVencChn, MPP_CHN_S *pstRgaChn) {
+                              MPP_CHN_S *pstVencChn, MPP_CHN_S *pstVpssChn) {
   memset(pstViChn, 0, sizeof(MPP_CHN_S));
   memset(pstVencChn, 0, sizeof(MPP_CHN_S));
-  memset(pstRgaChn, 0, sizeof(MPP_CHN_S));
+  memset(pstVpssChn, 0, sizeof(MPP_CHN_S));
 
   pstViChn->enModId = RK_ID_VI;
   pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = ptsThumbCfg->vi_attr.u32ViChn;
 
-  pstRgaChn->enModId = RK_ID_VPSS;
-  pstRgaChn->s32DevId = u32CamId;
-  pstRgaChn->s32ChnId = ptsThumbCfg->rga_chn;
+  pstVpssChn->enModId = RK_ID_VPSS;
+  pstVpssChn->s32DevId = u32CamId;
+  pstVpssChn->s32ChnId = ptsThumbCfg->vpss_chn;
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = u32CamId;
@@ -271,7 +271,7 @@ static int RKADK_THUMB_SetChn(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg,
   return 0;
 }
 
-static bool RKADK_THUMB_IsUseRga(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
+static bool RKADK_THUMB_IsUseVpss(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
 
@@ -293,13 +293,13 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
                         RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
   int ret = 0;
   RKADK_U32 u32VpssGrp;
-  bool bUseRga = false;
-  MPP_CHN_S stViChn, stVencChn, stRgaChn;
+  bool bUseVpss = false;
+  MPP_CHN_S stViChn, stVencChn, stVpssChn;
 
   RKADK_LOGI("Thumbnail [%d, %d] init start!", u32CamId, enThumbModule);
 
   ret = RKADK_THUMB_SetChn(ptsThumbCfg, enThumbModule, u32CamId,
-                           &stViChn, &stVencChn, &stRgaChn);
+                           &stViChn, &stVencChn, &stVpssChn);
   if (ret) {
     RKADK_LOGE("Set chn failed [%d]!", ret);
     return -1;
@@ -312,13 +312,13 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
     return -1;
   }
 
-  bUseRga = RKADK_THUMB_IsUseRga(ptsThumbCfg);
-  if (bUseRga) {
+  bUseVpss = RKADK_THUMB_IsUseVpss(ptsThumbCfg);
+  if (bUseVpss) {
     u32VpssGrp = u32CamId;
-    ret = RKADK_Thumbnail_Vpss(u32VpssGrp, stRgaChn.s32ChnId, ptsThumbCfg);
+    ret = RKADK_Thumbnail_Vpss(u32VpssGrp, stVpssChn.s32ChnId, ptsThumbCfg);
     if (ret) {
       RKADK_LOGE("Thumbnail vpss [%d, %d] init failed, ret = %x",u32VpssGrp,
-                  stRgaChn.s32ChnId, ret);
+                  stVpssChn.s32ChnId, ret);
       RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
       return ret;
     }
@@ -329,25 +329,25 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
     RKADK_LOGE("Thumbnail venc [%d, %d] init failed, ret = %x", u32CamId,
                 stVencChn.s32ChnId, ret);
     RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
-    RKADK_MPI_VPSS_DeInit(u32VpssGrp, stRgaChn.s32ChnId);
+    RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
     return -1;
   }
 
-  if (bUseRga) {
+  if (bUseVpss) {
     // RGA Bind VENC
-    ret = RKADK_MPI_SYS_Bind(&stRgaChn, &stVencChn);
+    ret = RKADK_MPI_SYS_Bind(&stVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%x]", stRgaChn.s32ChnId,
+      RKADK_LOGE("Bind RGA[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       goto failed;
     }
 
     // VI Bind RGA
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVpssChn);
     if (ret) {
       RKADK_LOGE("Bind VI[%d] to RGA[%d] failed[%x]", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
-      RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
+                 stVpssChn.s32ChnId, ret);
+      RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
       goto failed;
     }
   } else {
@@ -366,7 +366,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
 failed:
   RKADK_LOGE("failed");
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
-  RKADK_MPI_VPSS_DeInit(u32VpssGrp, stRgaChn.s32ChnId);
+  RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
   return -1;
 }
@@ -375,34 +375,34 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule
                           RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
   int ret = 0;
   RKADK_U32 u32VpssGrp;
-  bool bUseRga = false;
-  MPP_CHN_S stViChn, stVencChn, stRgaChn;
+  bool bUseVpss = false;
+  MPP_CHN_S stViChn, stVencChn, stVpssChn;
 
   RKADK_LOGI("Thumbnail [%d, %d] DeInit start!", u32CamId, enThumbModule);
 
   ret = RKADK_THUMB_SetChn(ptsThumbCfg, enThumbModule, u32CamId,
-                           &stViChn, &stVencChn, &stRgaChn);
+                           &stViChn, &stVencChn, &stVpssChn);
   if (ret) {
     RKADK_LOGE("Set chn failed [%d]!", ret);
     return -1;
   }
 
-  bUseRga = RKADK_THUMB_IsUseRga(ptsThumbCfg);
-  if (bUseRga){
+  bUseVpss = RKADK_THUMB_IsUseVpss(ptsThumbCfg);
+  if (bUseVpss){
     u32VpssGrp = u32CamId;
     // RGA UnBind VENC
-    ret = RKADK_MPI_SYS_UnBind(&stRgaChn, &stVencChn);
+    ret = RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("UnBind RGA[%d] to VENC[%d] failed[%x]", stRgaChn.s32ChnId,
+      RKADK_LOGE("UnBind RGA[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       return ret;
     }
 
     // VI UnBind RGA
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVpssChn);
     if (ret) {
       RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed[%x]", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
+                 stVpssChn.s32ChnId, ret);
       return ret;
     }
   } else {
@@ -423,10 +423,10 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule
   }
 
   // Destory RGA
-  if (bUseRga) {
-    ret = RKADK_MPI_VPSS_DeInit(u32VpssGrp, stRgaChn.s32ChnId);
+  if (bUseVpss) {
+    ret = RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
     if (ret) {
-      RKADK_LOGE("DeInit RGA[%d] failed[%x]", stRgaChn.s32ChnId, ret);
+      RKADK_LOGE("DeInit RGA[%d] failed[%x]", stVpssChn.s32ChnId, ret);
       return ret;
     }
   }

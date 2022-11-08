@@ -66,17 +66,17 @@ typedef struct {
   pthread_mutex_t aencMutex;
   pthread_mutex_t viMutex;
   pthread_mutex_t vencMutex;
-  pthread_mutex_t rgaMutex;
+  pthread_mutex_t vpssMutex;
   pthread_mutex_t bindMutex;
   RKADK_MEDIA_INFO_S stAiInfo[RKADK_MEDIA_AI_MAX_CNT];
   RKADK_MEDIA_INFO_S stAencInfo[RKADK_MEDIA_AENC_MAX_CNT];
   RKADK_MEDIA_INFO_S stViInfo[RKADK_MEDIA_VI_MAX_CNT];
   RKADK_MEDIA_INFO_S stVencInfo[RKADK_MEDIA_VENC_MAX_CNT];
-  RKADK_MEDIA_INFO_S stRgaInfo[RKADK_MEDIA_RGA_MAX_CNT];
+  RKADK_MEDIA_INFO_S stVpssInfo[RKADK_MEDIA_VPSS_MAX_CNT];
   RKADK_BIND_INFO_S stAiAencInfo[RKADK_AI_AENC_MAX_BIND_CNT];
   RKADK_BIND_INFO_S stViVencInfo[RKADK_VI_VENC_MAX_BIND_CNT];
-  RKADK_BIND_INFO_S stViRgaInfo[RKADK_VI_RGA_MAX_BIND_CNT];
-  RKADK_BIND_INFO_S stRgaVencInfo[RKADK_RGA_VENC_MAX_BIND_CNT];
+  RKADK_BIND_INFO_S stViVpssInfo[RKADK_VI_VPSS_MAX_BIND_CNT];
+  RKADK_BIND_INFO_S stVpssVencInfo[RKADK_VPSS_VENC_MAX_BIND_CNT];
 } RKADK_MEDIA_CONTEXT_S;
 
 static bool g_bSysInit = false;
@@ -90,7 +90,7 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.vencMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.rgaMutex = PTHREAD_MUTEX_INITIALIZER;
+  g_stMediaCtx.vpssMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
 }
 
@@ -864,12 +864,12 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
   RKADK_CHECK_POINTER(pstVpssGrpAttr, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstVpssChnAttr, RKADK_FAILURE);
 
-  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vpssMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVpssInfo, RKADK_MEDIA_VPSS_MAX_CNT,
                          s32VpssGrp, s32VpssChn, "VPSS_INIT");
   if (i < 0) {
-    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stVpssInfo, RKADK_MEDIA_VPSS_MAX_CNT,
                                   "VPSS_INIT");
     if (i < 0) {
       RKADK_LOGE("not find usable index");
@@ -877,7 +877,7 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
     }
   }
 
-  if (0 == g_stMediaCtx.stRgaInfo[i].s32InitCnt) {
+  if (0 == g_stMediaCtx.stVpssInfo[i].s32InitCnt) {
     ret = RKADK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VPSS_CreateGrp failed [%d]", ret);
@@ -896,18 +896,18 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
       goto exit;
     }
 
-    g_stMediaCtx.stRgaInfo[i].bUsed = true;
-    g_stMediaCtx.stRgaInfo[i].s32DevId = s32VpssGrp;
-    g_stMediaCtx.stRgaInfo[i].s32ChnId = s32VpssChn;
+    g_stMediaCtx.stVpssInfo[i].bUsed = true;
+    g_stMediaCtx.stVpssInfo[i].s32DevId = s32VpssGrp;
+    g_stMediaCtx.stVpssInfo[i].s32ChnId = s32VpssChn;
   }
 
-  g_stMediaCtx.stRgaInfo[i].s32InitCnt++;
+  g_stMediaCtx.stVpssInfo[i].s32InitCnt++;
   RKADK_LOGD("VpssGrp[%d] VpssChn[%d], InitCnt[%d]", s32VpssGrp, s32VpssChn,
-             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+             g_stMediaCtx.stVpssInfo[i].s32InitCnt);
   ret = 0;
 
 exit:
-  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vpssMutex);
   return ret;
 }
 
@@ -916,19 +916,19 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
   RKADK_S32 i, j;
   RKADK_S32 s32InitCnt;
 
-  RKADK_MUTEX_LOCK(g_stMediaCtx.rgaMutex);
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vpssMutex);
 
-  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stRgaInfo, RKADK_MEDIA_RGA_MAX_CNT,
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVpssInfo, RKADK_MEDIA_VPSS_MAX_CNT,
                          s32VpssGrp, s32VpssChn, "VPSS_DEINIT");
   if (i < 0) {
     RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32VpssChn);
     goto exit;
   }
 
-  s32InitCnt = g_stMediaCtx.stRgaInfo[i].s32InitCnt;
+  s32InitCnt = g_stMediaCtx.stVpssInfo[i].s32InitCnt;
   if (0 == s32InitCnt) {
     RKADK_LOGD("VpssChn[%d] has already deinit", s32VpssChn);
-    RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.vpssMutex);
     return 0;
   } else if (1 == s32InitCnt) {
     ret = RK_MPI_VPSS_DisableChn(s32VpssGrp, s32VpssChn);
@@ -937,16 +937,16 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
       goto exit;
     }
 
-    for (j = 0; j < RKADK_MEDIA_RGA_MAX_CNT; j++) {
-      if (g_stMediaCtx.stRgaInfo[j].s32DevId == s32VpssGrp) {
+    for (j = 0; j < RKADK_MEDIA_VPSS_MAX_CNT; j++) {
+      if (g_stMediaCtx.stVpssInfo[j].s32DevId == s32VpssGrp) {
         if (j == i)
           continue;
-        if (g_stMediaCtx.stRgaInfo[j].s32InitCnt > 0)
+        if (g_stMediaCtx.stVpssInfo[j].s32InitCnt > 0)
           break;
       }
     }
 
-    if (j == RKADK_MEDIA_RGA_MAX_CNT) {
+    if (j == RKADK_MEDIA_VPSS_MAX_CNT) {
       ret = RKADK_MPI_VPSS_DestroyGrp(s32VpssGrp);
       if (ret) {
         RKADK_LOGE("RKADK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
@@ -954,18 +954,18 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
       }
     }
 
-    g_stMediaCtx.stRgaInfo[i].bUsed = false;
-    g_stMediaCtx.stRgaInfo[i].s32ChnId = -1;
-    g_stMediaCtx.stRgaInfo[i].s32DevId = -1;
+    g_stMediaCtx.stVpssInfo[i].bUsed = false;
+    g_stMediaCtx.stVpssInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stVpssInfo[i].s32DevId = -1;
   }
 
-  g_stMediaCtx.stRgaInfo[i].s32InitCnt--;
+  g_stMediaCtx.stVpssInfo[i].s32InitCnt--;
   RKADK_LOGD("VpssGrp[%d] VpssChn[%d], InitCnt[%d]", s32VpssGrp, s32VpssChn,
-             g_stMediaCtx.stRgaInfo[i].s32InitCnt);
+             g_stMediaCtx.stVpssInfo[i].s32InitCnt);
   ret = 0;
 
 exit:
-  RKADK_MUTEX_UNLOCK(g_stMediaCtx.rgaMutex);
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vpssMutex);
   return ret;
 }
 
@@ -1287,12 +1287,12 @@ static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
     s32BindCount = RKADK_VI_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViVencInfo;
   } else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_VPSS) {
-    s32BindCount = RKADK_VI_RGA_MAX_BIND_CNT;
-    *pstInfo = g_stMediaCtx.stViRgaInfo;
+    s32BindCount = RKADK_VI_VPSS_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stViVpssInfo;
   } else if (pstSrcChn->enModId == RK_ID_VPSS &&
              pstDestChn->enModId == RK_ID_VENC) {
-    s32BindCount = RKADK_RGA_VENC_MAX_BIND_CNT;
-    *pstInfo = g_stMediaCtx.stRgaVencInfo;
+    s32BindCount = RKADK_VPSS_VENC_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stVpssVencInfo;
   } else {
     RKADK_LOGE("Nonsupport: src enModId: %d, dest enModId: %d",
                pstSrcChn->enModId, pstDestChn->enModId);

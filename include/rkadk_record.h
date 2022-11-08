@@ -137,7 +137,7 @@ RKADK_RECORD_RegisterEventCallback(
 RKADK_S32 RKADK_RECORD_GetAencChn();
 
 /**
- * @brief toggle mirror implemented by RGA
+ * @brief toggle mirror implemented by VPSS
  * @return 0 success
  * @return -1 failure
  */
@@ -146,7 +146,7 @@ RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
                                     int mirror);
 
 /**
- * @brief toggle flip implemented by RGA
+ * @brief toggle flip implemented by VPSS
  * @return 0 success
  * @return -1 failure
  */

@@ -261,7 +261,7 @@ static void SetPhotoCfg() {
   stPhotoCfg.image_height = PHOTO_VIDEO_HEIGHT;
   stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
-  stPhotoCfg.rga_chn = 2;
+  stPhotoCfg.vpss_chn = 2;
   stPhotoCfg.enable_combo = false;
   stPhotoCfg.combo_venc_chn = 0;
   stPhotoCfg.qfactor = 70;
@@ -336,11 +336,11 @@ static void SetDispCfg() {
   memset(&stDispCfg, 0, sizeof(RKADK_PARAM_DISP_CFG_S));
   stDispCfg.width = DISP_WIDTH;
   stDispCfg.height = DISP_HEIGHT;
-  // rga
+  // vpss
   stDispCfg.enable_buf_pool = true;
   stDispCfg.buf_pool_cnt = 3;
   stDispCfg.rotaion = 90;
-  stDispCfg.rga_chn = 3;
+  stDispCfg.vpss_chn = 3;
   // vo
   strcpy(stDispCfg.device_node, "/dev/dri/card0");
 #ifdef RKADK_ENABLE_DISP
@@ -365,7 +365,7 @@ static void SetThumbCfg() {
   stThumbCfg.thumb_height = THUMB_HEIGHT;
   stThumbCfg.photo_venc_chn = THUMB_PHOTO_VENC_CHN;
   stThumbCfg.record_venc_chn = THUMB_RECORD_VENC_CHN;
-  stThumbCfg.rga_chn = THUMB_RGA_CHN;
+  stThumbCfg.vpss_chn = THUMB_VPSS_CHN;
 
   RKADK_Struct2Ini(sensorPath, &stThumbCfg, g_stThumbCfgMapTable,
                    sizeof(g_stThumbCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));

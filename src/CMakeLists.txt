@@ -54,9 +54,9 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
 if(CMAKE_C_COMPILER MATCHES "arm-rockchip830-linux-uclibcgnueabihf*")
-	target_link_libraries(rkadk rockit rga rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
+	target_link_libraries(rkadk rockit rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
 else()
-	target_link_libraries(rkadk rockit rga rtsp rkfsmk rkmuxer z rkdemuxer)
+	target_link_libraries(rkadk rockit rtsp rkfsmk rkmuxer z rkdemuxer)
 endif()
 
 if(USE_RKAIQ)

@@ -46,8 +46,8 @@ extern "C" {
 /* video encoder maximum count */
 #define RKADK_MEDIA_VENC_MAX_CNT RKADK_MEDIA_VI_MAX_CNT
 
-/* rga maximum count */
-#define RKADK_MEDIA_RGA_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
+/* vpss maximum count */
+#define RKADK_MEDIA_VPSS_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
 
 /* ai aenc maximum bind count */
 #define RKADK_AI_AENC_MAX_BIND_CNT RKADK_MEDIA_AENC_MAX_CNT
@@ -55,11 +55,11 @@ extern "C" {
 /* vi venc maximum bind count */
 #define RKADK_VI_VENC_MAX_BIND_CNT RKADK_MEDIA_VENC_MAX_CNT
 
-/* vi rga maximum bind count */
-#define RKADK_VI_RGA_MAX_BIND_CNT RKADK_MEDIA_RGA_MAX_CNT
+/* vi vpss maximum bind count */
+#define RKADK_VI_VPSS_MAX_BIND_CNT RKADK_MEDIA_VPSS_MAX_CNT
 
-/* rga venc maximum bind count */
-#define RKADK_RGA_VENC_MAX_BIND_CNT RKADK_MEDIA_RGA_MAX_CNT
+/* vpss venc maximum bind count */
+#define RKADK_VPSS_VENC_MAX_BIND_CNT RKADK_MEDIA_VPSS_MAX_CNT
 
 typedef struct {
   RKADK_U32 u32ChnId;
@@ -100,12 +100,6 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
                               VPSS_GRP_ATTR_S *pstVpssGrpAttr, VPSS_CHN_ATTR_S *pstVpssChnAttr);
 
 RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn);
-
-#if 0
-RK_S32 RKADK_MPI_RGA_Init(RKADK_S32 s32ChnId, RGA_ATTR_S *pstRgaAttr);
-
-RK_S32 RKADK_MPI_RGA_DeInit(RKADK_S32 s32ChnId);
-#endif
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);
