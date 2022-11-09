@@ -18,7 +18,6 @@
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
-//#include "rkmedia_api.h"
 #include "rtsp_demo.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -217,9 +216,12 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
   bool bSysInit = false;
+  bool bUseVpss = false;
+  RKADK_U32 u32VpssGrp;
   MPP_CHN_S stViChn, stVencChn, stVpssChn;
   RKADK_STREAM_TYPE_E enType;
-  VENC_RC_PARAM_S stVencRcParam;
+  VPSS_GRP_ATTR_S stGrpAttr;
+  VPSS_CHN_ATTR_S stChnAttr;
   RKADK_RTSP_HANDLE_S *pHandle;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -291,6 +293,37 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
+  bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
+  if (bUseVpss) {
+    u32VpssGrp = u32CamId;
+
+    memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
+    memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
+
+    stGrpAttr.u32MaxW = 4096;
+    stGrpAttr.u32MaxH = 4096;
+    stGrpAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
+    stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
+    stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
+    stGrpAttr.stFrameRate.s32DstFrameRate = -1;
+    stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+    stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
+    stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
+    stChnAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
+    stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+    stChnAttr.stFrameRate.s32DstFrameRate = -1;
+    stChnAttr.u32Width = pstLiveCfg->attribute.width;
+    stChnAttr.u32Height = pstLiveCfg->attribute.height;
+    stChnAttr.u32Depth = 0;
+
+    ret = RKADK_MPI_VPSS_Init(u32VpssGrp, stVpssChn.s32ChnId,
+                              &stGrpAttr, &stChnAttr);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_VPSS_Init falied[%d]",ret);
+      goto failed;
+    }
+  }
+
   // Create VENC
   VENC_CHN_ATTR_S stVencChnAttr;
   ret = RKADK_RTSP_SetVencAttr(u32CamId, pstLiveCfg, &stVencChnAttr);
@@ -313,10 +346,31 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
-  ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
-  if (ret) {
-    RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
-    goto failed;
+  if (bUseVpss) {
+    // VPSS Bind VENC
+    ret = RKADK_MPI_SYS_Bind(&stVpssChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      goto failed;
+    }
+
+    // VI Bind VPSS
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVpssChn);
+    if (ret) {
+      RKADK_LOGE("Bind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
+                 stVpssChn.s32ChnId, ret);
+      RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+      goto failed;
+    }
+  } else {
+    // VI Bind VENC
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
+                  stVencChn.s32ChnId, ret);
+      goto failed;
+    }
   }
 
   *ppHandle = (RKADK_MW_PTR)pHandle;
@@ -326,6 +380,8 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
 failed:
   RKADK_LOGE("failed");
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
+
+  RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
 
@@ -339,6 +395,8 @@ failed:
 
 RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
+  bool bUseVpss = false;
+  RKADK_U32 u32VpssGrp;
   MPP_CHN_S stViChn, stVencChn, stVpssChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
@@ -359,18 +417,48 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   if (pstHandle->bVencChnMux)
     RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb);
 
-  ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
-  if (ret) {
-    RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
-    return ret;
-  }
+  bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
+  if (bUseVpss){
+    u32VpssGrp = pstHandle->u32CamId;
+    // VPSS UnBind VENC
+    ret = RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      return ret;
+    }
 
+    // VI UnBind VPSS
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVpssChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
+                 stVpssChn.s32ChnId, ret);
+      return ret;
+    }
+  } else {
+    // VI UnBind VENC
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
+                stVencChn.s32ChnId, ret);
+      return ret;
+    }
+  }
 
   // destroy venc before vi
   ret = RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VENC_DeInit failed(%d)", ret);
     return ret;
+  }
+
+  // Destory VPSS
+  if (bUseVpss) {
+    ret = RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
+    if (ret) {
+      RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stVpssChn.s32ChnId, ret);
+      return ret;
+    }
   }
 
   // destroy vi

@@ -499,7 +499,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   } else {
     // VI Bind VENC
     if (!pstPhotoCfg->enable_combo) {
-      ret = RK_MPI_SYS_Bind(&stViChn, &stVencChn);
+      ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
       if (ret) {
         RKADK_LOGE("Bind VI[%d] to VENC[%d] failed[%x]", stViChn.s32ChnId,
                     stVencChn.s32ChnId, ret);
@@ -614,7 +614,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   } else {
     if (!pstPhotoCfg->enable_combo) {
       // VI UnBind VENC
-      ret = RK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+      ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
       if (ret) {
         RKADK_LOGE("UnBind VI[%d] to VENC[%d] failed[%d]", stViChn.s32ChnId,
                   stVencChn.s32ChnId, ret);
@@ -772,7 +772,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
   RKADK_PHOTO_ResetAttr(pstSensorCfg, pstPhotoCfg,
                         &stPhoAttr, &stChnAttr);
 
-  ret = RK_MPI_SYS_UnBind(&stSrcChn, &stPhoVenChn);
+  ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stPhoVenChn);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo VI UnBind VENC [%d %d]fail %x", stSrcChn.s32ChnId,
                 stPhoVenChn.s32ChnId, ret);
