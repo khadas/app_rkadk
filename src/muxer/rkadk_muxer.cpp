@@ -549,7 +549,7 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_C
     RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
     if (!ptsThumbCfg) {
       RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return false;
+      return;
     }
     ThumbnailRequest(ptsThumbCfg->record_venc_chn);
     pstMuxerHandle->bRequestThumb = false;
@@ -569,7 +569,7 @@ static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
     RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxerHandle->u32CamId);
     if (!ptsThumbCfg) {
       RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return false;
+      return;
     }
     ThumbnailRequest(ptsThumbCfg->record_venc_chn);
 #endif
