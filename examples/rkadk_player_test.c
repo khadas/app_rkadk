@@ -252,6 +252,7 @@ int main(int argc, char *argv[]) {
     if (retplayer) {
       goto __FAILED;
     }
+
     RKADK_PLAYER_Stop(pPlayer);
 
     ret = RKADK_PLAYER_SetDataSource(pPlayer, file);

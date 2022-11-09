@@ -25,19 +25,16 @@ extern "C" {
   #include "aenc_mp3_register.h"
 }
 
+static RKADK_S32 extCodecHandle = -1;
+static RKADK_U32 mp3InitCnt = 0;
+
 typedef struct _RKADK_AENC_MP3_CTX_S {
-  RKADK_S32 s32FrameLength;
-  RKADK_U32 u32FrameSize;
-  RKADK_S32 s32SampleRate;
-  RKADK_S32 s32Channel;
-  RKADK_S32 s32Bitwidth;
-  RKADK_S32 s32Bitrate;
+  mp3_enc stMp3Enc;
+  RKADK_S32 frameLength;
 } RKADK_AENC_MP3_CTX_S;
 
-static RKADK_S32 s32ExtCodecHandle;
-static RKADK_U32 u32MP3InitCnt = 0;
-
 RKADK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
+  int bitrate = 0;
   if (pEncoderAttr == NULL) {
     RKADK_LOGE("pEncoderAttr is NULL");
     return RKADK_FAILURE;
@@ -61,37 +58,16 @@ RKADK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
     goto __FAILED;
   }
 
-  ctx->s32FrameLength = attr->u32Resv[0];
-  ctx->s32SampleRate = attr->u32SampleRate;
-  ctx->s32Channel = attr->u32Channels;
-
-  switch(attr->enBitwidth) {
-  case AUDIO_BIT_WIDTH_8:
-    ctx->s32Bitwidth = 8;
-    break;
-  case AUDIO_BIT_WIDTH_16:
-    ctx->s32Bitwidth = 16;
-    break;
-  case AUDIO_BIT_WIDTH_24:
-    ctx->s32Bitwidth = 24;
-    break;
-  case AUDIO_BIT_WIDTH_32:
-    ctx->s32Bitwidth = 32;
-    break;
-  default:
-    RKADK_LOGE("Unsupported enBitwidth %d", attr->enBitwidth);
+  ctx->frameLength = attr->u32Resv[0];
+  bitrate = attr->u32Resv[1] / 1000;
+  RKADK_LOGD("MP3Encode: sample_rate = %d, channel = %d, bitrate = %d.", attr->u32SampleRate, attr->u32Channels, bitrate);
+  ctx->stMp3Enc = *(Mp3EncodeVariableInit(attr->u32SampleRate, attr->u32Channels, bitrate));
+  if (ctx->stMp3Enc.frame_size <= 0){
+    RKADK_LOGE("MP3Encode init failed! r:%d c:%d\n", attr->u32SampleRate, attr->u32Channels);
     goto __FAILED;
   }
 
-  ctx->s32Bitrate = attr->u32Resv[1] / 1000;
-  RKADK_LOGD("MP3Encode: sample_rate = %d, channel = %d, bitrate = %d.", ctx->s32SampleRate, ctx->s32Channel, ctx->s32Bitrate);
-  ctx->u32FrameSize = Mp3EncodeVariableInit(ctx->s32SampleRate, ctx->s32Channel, ctx->s32Bitrate);
-  if (ctx->u32FrameSize <= 0){
-    RKADK_LOGE("MP3Encode init failed! r:%d c:%d\n", ctx->s32SampleRate, ctx->s32Channel);
-    goto __FAILED;
-  }
-
-  RKADK_LOGD("MP3Encode FrameSize = %d", ctx->u32FrameSize);
+  RKADK_LOGD("MP3Encode FrameSize = %d", ctx->stMp3Enc.frame_size);
   *ppEncoder = (RK_VOID *)ctx;
 
   return RKADK_SUCCESS;
@@ -133,14 +109,15 @@ RKADK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
     pParam->u64OutTimeStamp = inPts;
   }
 
-  inbufSize = 2 * ctx->s32FrameLength;
+  //inbufSize = 2 * ctx->s32FrameLength;
+  inbufSize = 2 * ctx->stMp3Enc.frame_size;
   copySize = (pParam->u32InLen > inbufSize) ? inbufSize : pParam->u32InLen;
-  memcpy(&in_buf, inData, copySize);
+  memcpy(ctx->stMp3Enc.config.in_buf, inData, copySize);
   pParam->u32InLen = pParam->u32InLen - copySize;
-  u32EncSize = L3_compress(ctx->u32FrameSize, &out_ptr);
+  u32EncSize = L3_compress(&ctx->stMp3Enc, 0, (unsigned char **)(&ctx->stMp3Enc.config.out_buf));
 
   u32EncSize = (u32EncSize > pParam->u32OutLen) ? pParam->u32OutLen : u32EncSize;
-  memcpy(pParam->pu8OutBuf, out_ptr, u32EncSize);
+  memcpy(pParam->pu8OutBuf, ctx->stMp3Enc.config.out_buf, u32EncSize);
   pParam->u64OutTimeStamp = inPts;
   pParam->u32OutLen = u32EncSize;
 
@@ -148,12 +125,12 @@ RKADK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
 }
 
 RKADK_S32 RegisterAencMp3(void) {
-  if (!u32MP3InitCnt) {
+  if (!mp3InitCnt) {
     RKADK_S32 ret;
     AENC_ENCODER_S aencCtx;
     memset(&aencCtx, 0, sizeof(AENC_ENCODER_S));
 
-    s32ExtCodecHandle = -1;
+    extCodecHandle = -1;
     aencCtx.enType = RK_AUDIO_ID_MP3;
     snprintf((RK_CHAR*)(aencCtx.aszName),
              sizeof(aencCtx.aszName), "rkaudio");
@@ -163,34 +140,34 @@ RKADK_S32 RegisterAencMp3(void) {
     aencCtx.pfnCloseEncoder = RKAduioMp3EncoderClose;
 
     RKADK_LOGD("register external aenc(%s)", aencCtx.aszName);
-    ret = RK_MPI_AENC_RegisterEncoder(&s32ExtCodecHandle, &aencCtx);
+    ret = RK_MPI_AENC_RegisterEncoder(&extCodecHandle, &aencCtx);
     if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("aenc[%s] register decoder fail[%d]", aencCtx.aszName, ret);
+      RKADK_LOGE("aenc %s register decoder fail %x", aencCtx.aszName, ret);
       return RKADK_FAILURE;
     }
   }
 
-  u32MP3InitCnt++;
+  mp3InitCnt++;
   return RKADK_SUCCESS;
 }
 
 RKADK_S32 UnRegisterAencMp3(void) {
-  if (s32ExtCodecHandle == -1) {
+  if (extCodecHandle == -1) {
     return RKADK_SUCCESS;
   }
 
-  if (0 == u32MP3InitCnt) {
+  if (0 == mp3InitCnt) {
     return 0;
-  } else if (1 == u32MP3InitCnt) {
+  } else if (1 == mp3InitCnt) {
     RKADK_LOGD("unregister external aenc");
-    RKADK_S32 ret = RK_MPI_AENC_UnRegisterEncoder(s32ExtCodecHandle);
+    RKADK_S32 ret = RK_MPI_AENC_UnRegisterEncoder(extCodecHandle);
     if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("aenc unregister decoder fail[%d]", ret);
+      RKADK_LOGE("aenc unregister decoder fail %x", ret);
       return RKADK_FAILURE;
     }
 
-    s32ExtCodecHandle = -1;
+    extCodecHandle = -1;
   }
-  u32MP3InitCnt--;
+  mp3InitCnt--;
   return RKADK_SUCCESS;
 }

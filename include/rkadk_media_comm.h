@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include "rk_mpi_aenc.h"
+#include "rk_mpi_adec.h"
 #include "rk_mpi_ai.h"
 #include "rk_mpi_mb.h"
 #include "rk_mpi_sys.h"

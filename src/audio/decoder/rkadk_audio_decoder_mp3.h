@@ -14,23 +14,11 @@
  *  limitations under the License.
  */
 
-#ifndef __RKADK_AUDIO_DECODER_H__
-#define __RKADK_AUDIO_DECODER_H__
+#ifndef __RKADK_AUDIO_DECODER_MP3_H__
+#define __RKADK_AUDIO_DECODER_MP3_H__
 
-#include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 
-/**
- * @brief register extra audio decoder
- * @param[in] eCodecType : codec type of audio decoder
- * @retval  0 success, others failed
- */
-RKADK_S32 RKADK_AUDIO_DECODER_Register(RKADK_CODEC_TYPE_E eCodecType);
-
-/**
- * @brief unregister extra audio decoder
- * @param[in] eCodecType : codec type of the audio decoder
- * @retval  0 success, others failed
- */
-RKADK_S32 RKADK_AUDIO_DECODER_UnRegister(RKADK_CODEC_TYPE_E eCodecType);
-
+RKADK_S32 RegisterAdecMp3(void);
+RKADK_S32 UnRegisterAdecMp3(void);
 #endif

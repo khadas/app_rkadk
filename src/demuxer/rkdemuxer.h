@@ -61,6 +61,7 @@ typedef struct StDemuxerPacket{
   int8_t   s8PacketNum;
   int8_t  *s8PacketData;
   int32_t  s32PacketSize;
+  int32_t  s32Series;
   int64_t  s64Pts;
   int64_t  s64Duration;
   int64_t  s64Pos;
