@@ -48,6 +48,21 @@ typedef struct {
 } MUXER_BUF_CELL_S;
 
 typedef struct {
+  bool bEnableSplit;
+  bool bSplitRecord;
+  RKADK_U32 u32SplitDurationSec;
+} MANUAL_SPLIT_ATTR;
+
+typedef struct {
+  bool bGetThumb;
+  bool bRequestThumb;
+  bool bEnableThumb;
+  MUXER_BUF_CELL_S stThumbCell[2];  // thumbnail list cache size
+  struct list_head stThumbFree;     // thumbnail list remain size
+  struct list_head stThumbProcList; // thumbnail process list
+} MANUAL_THUMB_PARAM;
+
+typedef struct {
   RKADK_MW_PTR ptr;
   RKADK_U32 u32CamId;
   RKADK_U32 vChnId; // venc channel id
@@ -61,12 +76,11 @@ typedef struct {
   int32_t realDuration; // ms
   int64_t startTime;    // us
   int frameCnt;
-  bool bGetThumb;
-  bool bRequestThumb;
   bool bEnableStream;
   bool bMuxering;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
+
   void *pThread;
   pthread_mutex_t mutex;
   void *pSignal;
@@ -78,16 +92,8 @@ typedef struct {
   struct list_head stAFree;     // audio list remain size
   struct list_head stProcList;  // process list
 
-  // thumbnail list param;
-  bool bEnableThumb;
-  MUXER_BUF_CELL_S stThumbCell[2]; // thumbnail list cache size
-  struct list_head stThumbFree;     // thumbnail list remain size
-  struct list_head stThumbProcList; // thumbnail process list
-
-  //manual split
-  bool bManualSplit;
-  bool bManualSplitRecord;
-  RKADK_U32 u32SplitDurationSec;
+  MANUAL_THUMB_PARAM stThumbParam;
+  MANUAL_SPLIT_ATTR stManualSplit;
 } MUXER_HANDLE_S;
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -221,15 +227,15 @@ void RKADK_MUXER_ListDropPFrame(MUXER_HANDLE_S *pstMuxerHandle) {
 
 // thumbnail list
 static void RKADK_MUXER_ThumbListInit(MUXER_HANDLE_S *pstMuxerHandle) {
-  INIT_LIST_HEAD(&pstMuxerHandle->stThumbFree);
-  INIT_LIST_HEAD(&pstMuxerHandle->stThumbProcList);
+  INIT_LIST_HEAD(&pstMuxerHandle->stThumbParam.stThumbFree);
+  INIT_LIST_HEAD(&pstMuxerHandle->stThumbParam.stThumbProcList);
 
-  for (unsigned int i = 0; i < ARRAY_SIZE(pstMuxerHandle->stThumbCell); i++) {
-    INIT_LIST_HEAD(&pstMuxerHandle->stThumbCell[i].mark);
-    pstMuxerHandle->stThumbCell[i].pool = &pstMuxerHandle->stThumbFree;
-    list_add_tail(&pstMuxerHandle->stThumbCell[i].mark, &pstMuxerHandle->stThumbFree);
+  for (unsigned int i = 0; i < ARRAY_SIZE(pstMuxerHandle->stThumbParam.stThumbCell); i++) {
+    INIT_LIST_HEAD(&pstMuxerHandle->stThumbParam.stThumbCell[i].mark);
+    pstMuxerHandle->stThumbParam.stThumbCell[i].pool = &pstMuxerHandle->stThumbParam.stThumbFree;
+    list_add_tail(&pstMuxerHandle->stThumbParam.stThumbCell[i].mark, &pstMuxerHandle->stThumbParam.stThumbFree);
   }
-  pstMuxerHandle->bEnableThumb = true;
+  pstMuxerHandle->stThumbParam.bEnableThumb = true;
 }
 
 static void RKADK_MUXER_ThumbListRelease(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -237,13 +243,13 @@ static void RKADK_MUXER_ThumbListRelease(MUXER_HANDLE_S *pstMuxerHandle) {
   MUXER_BUF_CELL_S *cell_n = NULL;
   int ret = 0;
 
-  list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+  list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbParam.stThumbProcList, mark) {
     ret = 1;
     list_del_init(&cell->mark);
     RKADK_MUXER_CellFree(pstMuxerHandle, cell);
     break;
   }
-  pstMuxerHandle->bEnableThumb = false;
+  pstMuxerHandle->stThumbParam.bEnableThumb = false;
   if (ret)
     RKADK_LOGI("lose frame");
 }
@@ -256,7 +262,7 @@ static void RKADK_MUXER_ThumbCellPush(MUXER_HANDLE_S *pstMuxerHandle,
 
   RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
   do {
-    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbParam.stThumbProcList, mark) {
       if (cell->pts > one->pts) {
         list_add_tail(&one->mark, &cell->mark);
         ret = 0;
@@ -264,7 +270,7 @@ static void RKADK_MUXER_ThumbCellPush(MUXER_HANDLE_S *pstMuxerHandle,
       }
     }
     if (ret) {
-      list_add_tail(&one->mark, &pstMuxerHandle->stThumbProcList);
+      list_add_tail(&one->mark, &pstMuxerHandle->stThumbParam.stThumbProcList);
     }
   } while (0);
   RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
@@ -277,7 +283,7 @@ static MUXER_BUF_CELL_S *RKADK_MUXER_ThumbCellPop(MUXER_HANDLE_S *pstMuxerHandle
 
   RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
   do {
-    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbProcList, mark) {
+    list_for_each_entry_safe(cell, cell_n, &pstMuxerHandle->stThumbParam.stThumbProcList, mark) {
       list_del_init(&cell->mark);
       rst = cell;
       break;
@@ -420,7 +426,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
       pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt);
   }
 
-  if (pstMuxerHandle->bManualSplitRecord)
+  if (pstMuxerHandle->stManualSplit.bSplitRecord)
     RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_MANUAL_SPLIT_END,
                              pstMuxerHandle->realDuration);
   else
@@ -432,10 +438,10 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->startTime = 0;
   pstMuxerHandle->bMuxering = 0;
   pstMuxerHandle->frameCnt = 0;
-  pstMuxerHandle->bGetThumb = false;
-  pstMuxerHandle->bRequestThumb = false;
-  pstMuxerHandle->bManualSplit = false;
-  pstMuxerHandle->bManualSplitRecord = false;
+  pstMuxerHandle->stThumbParam.bGetThumb = false;
+  pstMuxerHandle->stThumbParam.bRequestThumb = false;
+  pstMuxerHandle->stManualSplit.bEnableSplit = false;
+  pstMuxerHandle->stManualSplit.bSplitRecord = false;
 }
 
 static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -445,7 +451,7 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
   position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
   if (position > 0) {
-    if (pstMuxerHandle->bEnableThumb) {
+    if (pstMuxerHandle->stThumbParam.bEnableThumb) {
       thumbCell = RKADK_MUXER_ThumbCellPop(pstMuxerHandle);
       if (thumbCell) {
         fp = fopen(pstMuxerHandle->cFileName, "r+");
@@ -472,9 +478,10 @@ static bool RKADK_MUXER_SaveThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       }
     }
   } else {
-    RKADK_LOGI("Stream [%d] position = %d invalid value, retry!",pstMuxerHandle->vChnId, position);
-    return true;
+    RKADK_LOGI("Stream [%d] position[%d] invalid value, retry!",pstMuxerHandle->vChnId, position);
   }
+
+  return true;
 }
 
 static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
@@ -484,16 +491,16 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_
   if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
     return false;
 
-  if (pstMuxerHandle->bManualSplitRecord)
-    u32Duration = pstMuxerHandle->u32SplitDurationSec;
+  if (pstMuxerHandle->stManualSplit.bSplitRecord)
+    u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
   else
     u32Duration = pstMuxerHandle->duration;
 
-  if (pstMuxerHandle->bManualSplit) {
+  if (pstMuxerHandle->stManualSplit.bEnableSplit) {
     RKADK_LOGI("File switch: manual_split[%d]", pstMuxerHandle->vChnId);
-    pstMuxerHandle->bManualSplit = false;
+    pstMuxerHandle->stManualSplit.bEnableSplit = false;
     RKADK_MUXER_Close(pstMuxerHandle);
-    pstMuxerHandle->bManualSplitRecord = true;
+    pstMuxerHandle->stManualSplit.bSplitRecord = true;
     return true;
   }
 
@@ -517,13 +524,13 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_C
   if (pstMuxerHandle->duration <= 0)
     return;
 
-  if (pstMuxerHandle->bManualSplitRecord)
-    u32Duration = pstMuxerHandle->u32SplitDurationSec;
+  if (pstMuxerHandle->stManualSplit.bSplitRecord)
+    u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
   else
     u32Duration = pstMuxerHandle->duration;
 
 #ifndef THUMB_NORMAL
-  bRequestThumb = pstMuxerHandle->vChnId == 0 && cell->isKeyFrame && pstMuxerHandle->bRequestThumb;
+  bRequestThumb = pstMuxerHandle->vChnId == 0 && cell->isKeyFrame && pstMuxerHandle->stThumbParam.bRequestThumb;
 
   bThumbFrame = pstMuxerHandle->frameCnt > ((u32Duration - pstMuxerHandle->gop /
                 pstMuxerHandle->stVideo.frame_rate_num) * pstMuxerHandle->stVideo.frame_rate_num);
@@ -536,10 +543,10 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_C
     ret = RK_MPI_VENC_ThumbnailRequest(pstMuxerHandle->vChnId);
     if (ret)
       RKADK_LOGE("RK_MPI_VENC_ThumbnailRequest fail %x", ret);
-    pstMuxerHandle->bRequestThumb = false;
+    pstMuxerHandle->stThumbParam.bRequestThumb = false;
   }
 #else
-  bRequestThumb = pstMuxerHandle->vChnId == 0 && pstMuxerHandle->bRequestThumb;
+  bRequestThumb = pstMuxerHandle->vChnId == 0 && pstMuxerHandle->stThumbParam.bRequestThumb;
   bThumbFrame = pstMuxerHandle->frameCnt > (u32Duration * pstMuxerHandle->stVideo.frame_rate_num - 1);
   bThumbPts = cell->pts - pstMuxerHandle->startTime >=
               (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num * 2);
@@ -552,7 +559,7 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_C
       return;
     }
     ThumbnailRequest(ptsThumbCfg->record_venc_chn);
-    pstMuxerHandle->bRequestThumb = false;
+    pstMuxerHandle->stThumbParam.bRequestThumb = false;
   }
 #endif
 }
@@ -575,7 +582,7 @@ static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 #endif
   }
 
-  pstMuxerHandle->bRequestThumb = false;
+  pstMuxerHandle->stThumbParam.bRequestThumb = false;
 }
 
 static bool RKADK_MUXER_Proc(void *params) {
@@ -597,8 +604,8 @@ static bool RKADK_MUXER_Proc(void *params) {
   while (cell) {
     // Create muxer
     if (pstMuxerHandle->bEnableStream) {
-      if (pstMuxerHandle->bManualSplitRecord)
-        u32Duration = pstMuxerHandle->u32SplitDurationSec;
+      if (pstMuxerHandle->stManualSplit.bSplitRecord)
+        u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
       else
         u32Duration = pstMuxerHandle->duration;
 
@@ -622,8 +629,8 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
             pstMuxerHandle->frameCnt = 0;
-            pstMuxerHandle->bGetThumb = true;
-            pstMuxerHandle->bRequestThumb = true;
+            pstMuxerHandle->stThumbParam.bGetThumb = true;
+            pstMuxerHandle->stThumbParam.bRequestThumb = true;
           }
         }
       } else if (!pstMuxerHandle->bMuxering){
@@ -631,8 +638,8 @@ static bool RKADK_MUXER_Proc(void *params) {
         RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
       }
 
-      if (pstMuxerHandle->bGetThumb)
-        pstMuxerHandle->bGetThumb = RKADK_MUXER_SaveThumb(pstMuxerHandle);
+      if (pstMuxerHandle->stThumbParam.bGetThumb)
+        pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_SaveThumb(pstMuxerHandle);
 
       // Process
       if (pstMuxerHandle->bMuxering) {
@@ -911,7 +918,7 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     RKADK_MUXER_ListRelease(pstMuxerHandle);
 
     // Release thu list
-    if (pstMuxerHandle->bEnableThumb)
+    if (pstMuxerHandle->stThumbParam.bEnableThumb)
       RKADK_MUXER_ThumbListRelease(pstMuxerHandle);
 
     if (pstMuxerHandle->stVideo.thumb.data) {
@@ -975,8 +982,8 @@ RKADK_S32 RKADK_MUXER_Stop(RKADK_MW_PTR pHandle) {
     }
 
     pstMuxerHandle->bEnableStream = false;
-    pstMuxerHandle->bManualSplit = false;
-    pstMuxerHandle->bManualSplitRecord = false;
+    pstMuxerHandle->stManualSplit.bEnableSplit = false;
+    pstMuxerHandle->stManualSplit.bSplitRecord = false;
     RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_STOP, 0);
     RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
   }
@@ -994,7 +1001,6 @@ RKADK_MUXER_ManualSplit(RKADK_MW_PTR pHandle,
                         RKADK_MUXER_MANUAL_SPLIT_ATTR_S *pstSplitAttr) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
-  RKADK_U32 u32Duration;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstSplitAttr, RKADK_FAILURE);
@@ -1018,9 +1024,9 @@ RKADK_MUXER_ManualSplit(RKADK_MW_PTR pHandle,
     if (!pstMuxerHandle->bEnableStream)
       return -1;
 
-    pstMuxerHandle->bManualSplit = true;
+    pstMuxerHandle->stManualSplit.bEnableSplit = true;
     RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
-    pstMuxerHandle->u32SplitDurationSec = pstSplitAttr->u32DurationSec;
+    pstMuxerHandle->stManualSplit.u32SplitDurationSec = pstSplitAttr->u32DurationSec;
   }
 
   return 0;
@@ -1076,11 +1082,11 @@ RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK
   for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
     pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
 
-    if (!pstMuxerHandle || !pstMuxerHandle->bEnableThumb)
+    if (!pstMuxerHandle || !pstMuxerHandle->stThumbParam.bEnableThumb)
       continue;
 
     MUXER_BUF_CELL_S *cell =
-        RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stThumbFree);
+        RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stThumbParam.stThumbFree);
     if (NULL == cell) {
       RKADK_LOGI("Lose thumbnail data");
       continue;
