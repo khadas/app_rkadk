@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_PHOTO_ATTR_S stPhotoAttr;
+  RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
@@ -162,10 +163,11 @@ int main(int argc, char *argv[]) {
   RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
+  memset(&stTakePhotoAttr, 0, sizeof(RKADK_TAKE_PHOTO_ATTR_S));
+  stTakePhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
+
   memset(&stPhotoAttr, 0, sizeof(RKADK_PHOTO_ATTR_S));
   stPhotoAttr.u32CamId = u32CamId;
-  stPhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
-  stPhotoAttr.unPhotoTypeAttr.stSingleAttr.s32Time_sec = 0;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
   stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
   stPhotoAttr.stThumbAttr.stMPFAttr.eMode = RKADK_PHOTO_MPF_SINGLE;
@@ -194,7 +196,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (RKADK_PHOTO_TakePhoto(pHandle, &stPhotoAttr)) {
+    if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {
       RKADK_LOGE("RKADK_PHOTO_TakePhoto failed");
       break;
     }

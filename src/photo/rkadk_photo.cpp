@@ -763,7 +763,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
-RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_PHOTO_ATTR_S *pstPhotoAttr) {
+RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *pstAttr) {
   VENC_RECV_PIC_PARAM_S stRecvParam;
   RKADK_PHOTO_HANDLE_S *pstHandle;
   int ret;
@@ -779,17 +779,17 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_PHOTO_ATTR_S *pstPho
     return -1;
   }
 
-  if (pstPhotoAttr->enPhotoType == RKADK_PHOTO_TYPE_LAPSE) {
+  if (pstAttr->enPhotoType == RKADK_PHOTO_TYPE_LAPSE) {
     // TODO
-    RKADK_LOGI("nonsupport photo type = %d", pstPhotoAttr->enPhotoType);
+    RKADK_LOGI("nonsupport photo type = %d", pstAttr->enPhotoType);
     return -1;
   }
 
   memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
-  if (pstPhotoAttr->enPhotoType == RKADK_PHOTO_TYPE_SINGLE)
+  if (pstAttr->enPhotoType == RKADK_PHOTO_TYPE_SINGLE)
     stRecvParam.s32RecvPicNum = 1;
   else
-    stRecvParam.s32RecvPicNum = pstPhotoAttr->unPhotoTypeAttr.stMultipleAttr.s32Count;
+    stRecvParam.s32RecvPicNum = pstAttr->unPhotoTypeAttr.stMultipleAttr.s32Count;
 
   pstHandle->u32PhotoCnt = stRecvParam.s32RecvPicNum;
   RKADK_LOGI("Take photo number = %d", pstHandle->u32PhotoCnt);
