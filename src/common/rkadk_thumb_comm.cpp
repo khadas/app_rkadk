@@ -208,7 +208,7 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   stAttr.stVencAttr.u32VirHeight = ptsThumbCfg->thumb_height;
   stAttr.stVencAttr.u32StreamBufCnt = 3;
   stAttr.stVencAttr.u32BufSize = ptsThumbCfg->thumb_width *
-                                 ptsThumbCfg->thumb_height / 2;
+                                 ptsThumbCfg->thumb_height * 3 / 2;
 
   stIfd1[0] = {0x0100, 3, 1, ptsThumbCfg->thumb_width,
               {{.uwv = ptsThumbCfg->thumb_width }}}; // ImageWidth
@@ -468,7 +468,7 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pu8JpegData, RKADK_U32 u32JpegLen,
   //thumbnail
   thumb_data = (char *)RK_MPI_MB_Handle2VirAddr(stThuFrame.pstPack->pMbBlk);
   thumb_len = stThuFrame.pstPack->u32Len;
-  RKADK_LOGI("Thumbnail seq = %d, data %p, size = %d", stThuFrame.u32Seq,
+  RKADK_LOGD("Thumbnail seq = %d, data %p, size = %d", stThuFrame.u32Seq,
               thumb_data, thumb_len);
 
   app0_len = pu8JpegData[5];
