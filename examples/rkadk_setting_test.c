@@ -134,6 +134,8 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[0].venc_chn = 0;
+  stParamRecCfg.attribute[0].vpss_grp = 0;
+  stParamRecCfg.attribute[0].vpss_chn = 0;
   strcpy(stParamRecCfg.attribute[0].rc_mode, "CBR");
   stParamRecCfg.attribute[0].venc_param.max_qp = 48;
   stParamRecCfg.attribute[0].venc_param.min_qp = 8;
@@ -153,6 +155,8 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[1].codec_type = RKADK_CODEC_TYPE_H264;
   stParamRecCfg.attribute[1].venc_chn = 1;
+  stParamRecCfg.attribute[1].vpss_grp = 2;
+  stParamRecCfg.attribute[1].vpss_chn = 0;
   strcpy(stParamRecCfg.attribute[1].rc_mode, "VBR");
   stParamRecCfg.attribute[1].venc_param.max_qp = 48;
   stParamRecCfg.attribute[1].venc_param.min_qp = 8;
@@ -199,6 +203,8 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.profile = VIDEO_PROFILE;
   stStreamCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stStreamCfg.attribute.venc_chn = 1;
+  stStreamCfg.attribute.vpss_grp = 2;
+  stStreamCfg.attribute.vpss_chn = 0;
   strcpy(stStreamCfg.attribute.rc_mode, "VBR");
   stStreamCfg.attribute.venc_param.max_qp = 48;
   stStreamCfg.attribute.venc_param.min_qp = 8;
@@ -232,6 +238,8 @@ static void SetLiveCfg() {
   stLiveCfg.attribute.profile = VIDEO_PROFILE;
   stLiveCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
   stLiveCfg.attribute.venc_chn = 1;
+  stLiveCfg.attribute.vpss_grp = 2;
+  stLiveCfg.attribute.vpss_chn = 0;
   strcpy(stLiveCfg.attribute.rc_mode, "VBR");
   stLiveCfg.attribute.venc_param.max_qp = 48;
   stLiveCfg.attribute.venc_param.min_qp = 8;
@@ -261,7 +269,8 @@ static void SetPhotoCfg() {
   stPhotoCfg.image_height = PHOTO_VIDEO_HEIGHT;
   stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
-  stPhotoCfg.vpss_chn = 2;
+  stPhotoCfg.vpss_grp = 0;
+  stPhotoCfg.vpss_chn = 0;
   stPhotoCfg.enable_combo = false;
   stPhotoCfg.combo_venc_chn = 0;
   stPhotoCfg.qfactor = 70;
@@ -340,7 +349,8 @@ static void SetDispCfg() {
   stDispCfg.enable_buf_pool = true;
   stDispCfg.buf_pool_cnt = 3;
   stDispCfg.rotaion = 90;
-  stDispCfg.vpss_chn = 3;
+  stDispCfg.vpss_grp = 2;
+  stDispCfg.vpss_chn = 0;
   // vo
   strcpy(stDispCfg.device_node, "/dev/dri/card0");
 #ifdef RKADK_ENABLE_DISP
@@ -366,6 +376,7 @@ static void SetThumbCfg() {
   stThumbCfg.photo_venc_chn = THUMB_PHOTO_VENC_CHN;
   stThumbCfg.record_main_venc_chn = THUMB_RECORD_MAIN_VENC_CHN;
   stThumbCfg.record_sub_venc_chn = THUMB_RECORD_SUB_VENC_CHN;
+  stThumbCfg.vpss_grp = THUMB_VPSS_GRP;
   stThumbCfg.vpss_chn = THUMB_VPSS_CHN;
 
   RKADK_Struct2Ini(sensorPath, &stThumbCfg, g_stThumbCfgMapTable,

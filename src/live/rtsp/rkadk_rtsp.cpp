@@ -33,19 +33,23 @@ typedef struct {
   rtsp_session_handle stRtspSession;
 } RKADK_RTSP_HANDLE_S;
 
-static void RKADK_RTSP_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
+static void RKADK_RTSP_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg, RKADK_U32 u32CamId,
                                    MPP_CHN_S *pstViChn, MPP_CHN_S *pstVencChn,
-                                   MPP_CHN_S *pstVpssChn) {
+                                   MPP_CHN_S *pstSrcVpssChn, MPP_CHN_S *pstDstVpssChn) {
   pstViChn->enModId = RK_ID_VI;
-  pstViChn->s32DevId = 0;
+  pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstLiveCfg->vi_attr.u32ViChn;
 
-  pstVpssChn->enModId = RK_ID_VPSS;
-  pstVpssChn->s32DevId = 0;
-  pstVpssChn->s32ChnId = pstLiveCfg->attribute.vpss_chn;
+  pstSrcVpssChn->enModId = RK_ID_VPSS;
+  pstSrcVpssChn->s32DevId = u32CamId;
+  pstSrcVpssChn->s32ChnId = pstLiveCfg->attribute.vpss_chn;
+
+  pstDstVpssChn->enModId = RK_ID_VPSS;
+  pstDstVpssChn->s32DevId = pstLiveCfg->attribute.vpss_grp;
+  pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = 0;
+  pstVencChn->s32DevId = u32CamId;
   pstVencChn->s32ChnId = pstLiveCfg->attribute.venc_chn;
 }
 
@@ -217,8 +221,8 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   int ret = 0;
   bool bSysInit = false;
   bool bUseVpss = false;
-  RKADK_U32 u32VpssGrp;
-  MPP_CHN_S stViChn, stVencChn, stVpssChn;
+  RKADK_S32 S32VpssGrp;
+  MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   RKADK_STREAM_TYPE_E enType;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
@@ -264,7 +268,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     return -1;
   }
 
-  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stVpssChn);
+  RKADK_RTSP_SetVideoChn(pstLiveCfg, u32CamId, &stViChn, &stVencChn, &stSrcVpssChn, &stDstVpssChn);
   enType = RKADK_PARAM_VencChnMux(u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_LIVE) {
     switch (enType) {
@@ -295,7 +299,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
 
   bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
   if (bUseVpss) {
-    u32VpssGrp = u32CamId;
+    S32VpssGrp = u32CamId;
 
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
     memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
@@ -316,7 +320,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     stChnAttr.u32Height = pstLiveCfg->attribute.height;
     stChnAttr.u32Depth = 0;
 
-    ret = RKADK_MPI_VPSS_Init(u32VpssGrp, stVpssChn.s32ChnId,
+    ret = RKADK_MPI_VPSS_Init(S32VpssGrp, stSrcVpssChn.s32ChnId,
                               &stGrpAttr, &stChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VPSS_Init falied[%d]",ret);
@@ -348,19 +352,19 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
 
   if (bUseVpss) {
     // VPSS Bind VENC
-    ret = RKADK_MPI_SYS_Bind(&stVpssChn, &stVencChn);
+    ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+      RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       goto failed;
     }
 
     // VI Bind VPSS
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVpssChn);
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stDstVpssChn);
     if (ret) {
       RKADK_LOGE("Bind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
-                 stVpssChn.s32ChnId, ret);
-      RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+                 stDstVpssChn.s32DevId, ret);
+      RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
       goto failed;
     }
   } else {
@@ -381,7 +385,7 @@ failed:
   RKADK_LOGE("failed");
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
 
-  RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
+  RKADK_MPI_VPSS_DeInit(S32VpssGrp, stSrcVpssChn.s32ChnId);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
 
@@ -396,8 +400,8 @@ failed:
 RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
   bool bUseVpss = false;
-  RKADK_U32 u32VpssGrp;
-  MPP_CHN_S stViChn, stVencChn, stVpssChn;
+  RKADK_S32 S32VpssGrp;
+  MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
@@ -411,7 +415,8 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
-  RKADK_RTSP_VideoSetChn(pstLiveCfg, &stViChn, &stVencChn, &stVpssChn);
+  RKADK_RTSP_SetVideoChn(pstLiveCfg, pstHandle->u32CamId, &stViChn, &stVencChn,
+                         &stSrcVpssChn, &stDstVpssChn);
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)
@@ -419,20 +424,20 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
   if (bUseVpss){
-    u32VpssGrp = pstHandle->u32CamId;
+    S32VpssGrp = pstHandle->u32CamId;
     // VPSS UnBind VENC
-    ret = RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+    ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       return ret;
     }
 
     // VI UnBind VPSS
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVpssChn);
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
     if (ret) {
       RKADK_LOGE("UnBind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
-                 stVpssChn.s32ChnId, ret);
+                 stDstVpssChn.s32DevId, ret);
       return ret;
     }
   } else {
@@ -454,9 +459,9 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   // Destory VPSS
   if (bUseVpss) {
-    ret = RKADK_MPI_VPSS_DeInit(u32VpssGrp, stVpssChn.s32ChnId);
+    ret = RKADK_MPI_VPSS_DeInit(S32VpssGrp, stSrcVpssChn.s32ChnId);
     if (ret) {
-      RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stVpssChn.s32ChnId, ret);
+      RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stSrcVpssChn.s32ChnId, ret);
       return ret;
     }
   }

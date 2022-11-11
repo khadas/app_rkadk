@@ -147,17 +147,21 @@ static void RKADK_STREAM_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
   pstHandle->videoSeq++;
 }
 
-static void RKADK_STREAM_VideoSetChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
+static void RKADK_STREAM_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
                                      RKADK_U32 u32CamId, MPP_CHN_S *pstViChn,
                                      MPP_CHN_S *pstVencChn,
-                                     MPP_CHN_S *pstVpssChn) {
+                                     MPP_CHN_S *pstSrcVpssChn, MPP_CHN_S *pstDstVpssChn) {
   pstViChn->enModId = RK_ID_VI;
   pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstStreamCfg->vi_attr.u32ViChn;
 
-  pstVpssChn->enModId = RK_ID_VPSS;
-  pstVpssChn->s32DevId = u32CamId;
-  pstVpssChn->s32ChnId = pstStreamCfg->attribute.vpss_chn;
+  pstSrcVpssChn->enModId = RK_ID_VPSS;
+  pstSrcVpssChn->s32DevId = u32CamId;
+  pstSrcVpssChn->s32ChnId = pstStreamCfg->attribute.vpss_chn;
+
+  pstDstVpssChn->enModId = RK_ID_VPSS;
+  pstDstVpssChn->s32DevId = pstStreamCfg->attribute.vpss_grp;
+  pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = u32CamId;
@@ -248,14 +252,13 @@ static RKADK_S32 RKADK_STREAM_VencGetData(RKADK_U32 u32CamId,
 RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
                                  RKADK_MW_PTR *ppHandle) {
   int ret = 0;
-  MPP_CHN_S stViChn, stVencChn, stVpssChn;
+  MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   RKADK_STREAM_TYPE_E enType;
   STREAM_VIDEO_HANDLE_S *pVideoHandle = NULL;
   VENC_CHN_ATTR_S stVencChnAttr;
   bool bUseVpss;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
-  RKADK_S32 s32VpssGrp = 0;
 
   RKADK_CHECK_POINTER(pstVideoAttr, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(pstVideoAttr->u32CamId, RKADK_FAILURE);
@@ -291,8 +294,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   pVideoHandle->u32CamId = pstVideoAttr->u32CamId;
   pVideoHandle->pfnVencDataCB = pstVideoAttr->pfnDataCB;
 
-  RKADK_STREAM_VideoSetChn(pstStreamCfg, pstVideoAttr->u32CamId, &stViChn,
-                           &stVencChn, &stVpssChn);
+  RKADK_STREAM_SetVideoChn(pstStreamCfg, pstVideoAttr->u32CamId, &stViChn,
+                           &stVencChn, &stSrcVpssChn,&stDstVpssChn);
 
   enType = RKADK_PARAM_VencChnMux(pVideoHandle->u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_PREVIEW) {
@@ -351,12 +354,12 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     stChnAttr.u32Height = pstStreamCfg->attribute.height;
     stChnAttr.u32Depth = 0;
 
-    ret = RKADK_MPI_VPSS_Init(s32VpssGrp, pstStreamCfg->attribute.vpss_chn,
+    ret = RKADK_MPI_VPSS_Init(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn,
                               &stGrpAttr, &stChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VPSS_Init vpssfalied[%d]",ret);
       RKADK_MPI_VI_DeInit(pVideoHandle->u32CamId, pstStreamCfg->vi_attr.u32ViChn);
-      RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstStreamCfg->attribute.vpss_chn);
+      RKADK_MPI_VPSS_DeInit(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
       return ret;
     }
   }
@@ -378,19 +381,19 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
 
   if (bUseVpss) {
     // VPSS Bind VENC
-    ret = RKADK_MPI_SYS_Bind(&stVpssChn, &stVencChn);
+    ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+      RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       goto failed;
     }
 
     // VI Bind VPSS
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVpssChn);
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stDstVpssChn);
     if (ret) {
       RKADK_LOGE("Bind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
-                 stVpssChn.s32ChnId, ret);
-      RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+                 stDstVpssChn.s32DevId, ret);
+      RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
       goto failed;
     }
   } else {
@@ -410,7 +413,7 @@ failed:
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
 
   if (bUseVpss)
-    RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstStreamCfg->attribute.vpss_chn);
+    RKADK_MPI_VPSS_DeInit(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
 
   RKADK_MPI_VI_DeInit(pstVideoAttr->u32CamId, stViChn.s32ChnId);
 
@@ -422,10 +425,9 @@ failed:
 
 RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
-  MPP_CHN_S stViChn, stVencChn, stVpssChn;
+  MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   STREAM_VIDEO_HANDLE_S *pstHandle;
   bool bUseVpss;
-  RKADK_S32 s32VpssGrp = 0;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
@@ -440,25 +442,25 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
-  RKADK_STREAM_VideoSetChn(pstStreamCfg, pstHandle->u32CamId, &stViChn,
-                           &stVencChn, &stVpssChn);
+  RKADK_STREAM_SetVideoChn(pstStreamCfg, pstHandle->u32CamId, &stViChn,
+                           &stVencChn, &stSrcVpssChn, &stDstVpssChn);
   RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_STREAM_VencOutCb);
 
   bUseVpss = RKADK_STREAM_IsUseVpss(pstStreamCfg);
   if (bUseVpss) {
     // VPSS UnBind VENC
-    ret = RKADK_MPI_SYS_UnBind(&stVpssChn, &stVencChn);
+    ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
     if (ret) {
-      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stVpssChn.s32ChnId,
+      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
       return ret;
     }
 
     // VI UnBind VPSS
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVpssChn);
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
     if (ret) {
       RKADK_LOGE("UnBind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
-                 stVpssChn.s32ChnId, ret);
+                 stDstVpssChn.s32DevId, ret);
       return ret;
     }
   } else {
@@ -479,9 +481,9 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
 
   // destroy VPSS
   if (bUseVpss) {
-    ret = RKADK_MPI_VPSS_DeInit(s32VpssGrp, pstStreamCfg->attribute.vpss_chn);
+    ret = RKADK_MPI_VPSS_DeInit(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
     if (ret) {
-      RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stVpssChn.s32ChnId, ret);
+      RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stSrcVpssChn.s32ChnId, ret);
       return ret;
     }
   }

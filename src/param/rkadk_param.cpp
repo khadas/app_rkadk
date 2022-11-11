@@ -858,7 +858,7 @@ static void RKADK_PARAM_DefRecTime(RKADK_U32 u32CamId,
 static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
                                    RKADK_STREAM_TYPE_E enStrmType, char *path) {
   RKADK_U32 u32Width, u32Height;
-  RKADK_U32 u32Chn;
+  RKADK_U32 u32Chn, u32VpssGrp, u32VpssChn;
   RKADK_U32 u32Bitrate;
   RKADK_PARAM_VENC_ATTR_S *pstAttr = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
@@ -875,6 +875,8 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
     u32Width = RECORD_VIDEO_WIDTH;
     u32Height = RECORD_VIDEO_HEIGHT;
     u32Chn = 0;
+    u32VpssGrp = 0;
+    u32VpssChn = 0;
     u32Bitrate = 30 * 1024 * 1024;
     break;
   case RKADK_STREAM_TYPE_VIDEO_SUB:
@@ -882,6 +884,8 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
     u32Width = RECORD_VIDEO_WIDTH_S;
     u32Height = RECORD_VIDEO_HEIGHT_S;
     u32Chn = 1;
+    u32VpssGrp = 2;
+    u32VpssChn = 0;
     u32Bitrate = 4 * 1024 * 1024;
     break;
   default:
@@ -892,7 +896,8 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
   pstAttr->width = u32Width;
   pstAttr->height = u32Height;
   pstAttr->venc_chn = u32Chn;
-  pstAttr->vpss_chn = u32Chn;
+  pstAttr->vpss_grp = u32VpssGrp;
+  pstAttr->vpss_chn = u32VpssChn;
   pstAttr->bitrate = u32Bitrate;
   pstAttr->gop = VIDEO_GOP;
   pstAttr->profile = VIDEO_PROFILE;
@@ -929,7 +934,8 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
     pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
     pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
     pstPhotoCfg->venc_chn = 2;
-    pstPhotoCfg->vpss_chn = 2;
+    pstPhotoCfg->vpss_grp = 0;
+    pstPhotoCfg->vpss_chn = 0;
     pstPhotoCfg->enable_combo = false;
     pstPhotoCfg->combo_venc_chn = 0;
     pstPhotoCfg->qfactor = 70;
@@ -959,7 +965,8 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
     pstStreamCfg->attribute.width = STREAM_VIDEO_WIDTH;
     pstStreamCfg->attribute.height = STREAM_VIDEO_HEIGHT;
     pstStreamCfg->attribute.venc_chn = 1;
-    pstStreamCfg->attribute.vpss_chn = 1;
+    pstStreamCfg->attribute.vpss_grp = 2;
+    pstStreamCfg->attribute.vpss_chn = 0;
   }
 
   pstStreamCfg->attribute.gop = VIDEO_GOP;
@@ -986,7 +993,8 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
     pstDispCfg->enable_buf_pool = true;
     pstDispCfg->buf_pool_cnt = 3;
     pstDispCfg->rotaion = 90;
-    pstDispCfg->vpss_chn = 3;
+    pstDispCfg->vpss_grp = 2;
+    pstDispCfg->vpss_chn = 0;
     // vo
     memcpy(pstDispCfg->device_node, "/dev/dri/card0", strlen("/dev/dri/card0"));
     memcpy(pstDispCfg->img_type, "RGB888", strlen("RGB888"));
@@ -1010,6 +1018,7 @@ static void RKADK_PARAM_DefThumbCfg(RKADK_U32 u32CamId, char *path) {
   pstThumbCfg->photo_venc_chn = THUMB_PHOTO_VENC_CHN;
   pstThumbCfg->record_main_venc_chn = THUMB_RECORD_MAIN_VENC_CHN;
   pstThumbCfg->record_sub_venc_chn = THUMB_RECORD_SUB_VENC_CHN;
+  pstThumbCfg->vpss_grp = THUMB_VPSS_GRP;
   pstThumbCfg->vpss_chn = THUMB_VPSS_CHN;
   RKADK_PARAM_SaveThumbCfg(path, u32CamId);
 }
@@ -1108,6 +1117,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].profile);
       printf("\t\tsensor[%d] stRecCfg[%d] venc_chn: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_chn);
+      printf("\t\tsensor[%d] stRecCfg[%d] vpss_grp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].vpss_grp);
       printf("\t\tsensor[%d] stRecCfg[%d] vpss_chn: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].vpss_chn);
       printf("\t\tsensor[%d] stRecCfg[%d] codec_type: %d\n", i, j,
@@ -1133,6 +1144,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.snap_num);
     printf("\t\tsensor[%d] stPhotoCfg venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.venc_chn);
+    printf("\t\tsensor[%d] stPhotoCfg vpss_grp: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.vpss_grp);
     printf("\t\tsensor[%d] stPhotoCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.vpss_chn);
     printf("\t\tsensor[%d] stPhotoCfg enable_combo: %d\n", i,
@@ -1155,6 +1168,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.profile);
     printf("\t\tsensor[%d] stStreamCfg venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_chn);
+    printf("\t\tsensor[%d] stStreamCfg vpss_grp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.vpss_grp);
     printf("\t\tsensor[%d] stStreamCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.vpss_chn);
     printf("\t\tsensor[%d] stStreamCfg codec_type: %d\n", i,
@@ -1184,6 +1199,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.profile);
     printf("\t\tsensor[%d] stLiveCfg venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_chn);
+    printf("\t\tsensor[%d] stLiveCfg vpss_grp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.vpss_grp);
     printf("\t\tsensor[%d] stLiveCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.vpss_chn);
     printf("\t\tsensor[%d] stLiveCfg codec_type: %d\n", i,
@@ -1210,6 +1227,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stDispCfg.buf_pool_cnt);
     printf("\t\tsensor[%d] stDispCfg rotaion: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.rotaion);
+    printf("\t\tsensor[%d] stDispCfg vpss_grp: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vpss_grp);
     printf("\t\tsensor[%d] stDispCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vpss_chn);
     printf("\t\tsensor[%d] stDispCfg device_node: %s\n", i,
@@ -1236,6 +1255,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stThumbCfg.record_main_venc_chn);
     printf("\t\tsensor[%d] stThumbCfg record_sub_venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.record_sub_venc_chn);
+    printf("\t\tsensor[%d] stThumbCfg vpss_grp: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vpss_grp);
     printf("\t\tsensor[%d] stThumbCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.vpss_chn);
   }

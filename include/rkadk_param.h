@@ -70,6 +70,7 @@ extern "C" {
 #define THUMB_PHOTO_VENC_CHN 5
 #define THUMB_RECORD_MAIN_VENC_CHN 6
 #define THUMB_RECORD_SUB_VENC_CHN 7
+#define THUMB_VPSS_GRP 1
 #define THUMB_VPSS_CHN 0
 
 #define RECORD_AI_CHN 0
@@ -270,6 +271,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 profile;
   RKADK_CODEC_TYPE_E codec_type;
   RKADK_U32 venc_chn;
+  RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
   RKADK_PARAM_VENC_PARAM_S venc_param;
@@ -308,6 +310,7 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 image_height;
   RKADK_U32 snap_num;
   RKADK_U32 venc_chn;
+  RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
   bool enable_combo;
   RKADK_U32 combo_venc_chn;
@@ -322,6 +325,7 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   bool enable_buf_pool;
   RKADK_U32 buf_pool_cnt;
   RKADK_U32 rotaion;
+  RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
   // vo
   char device_node[RKADK_BUFFER_LEN];
@@ -344,6 +348,7 @@ typedef struct tagRKADK_PARAM_THUMB_CFG_S {
   // record
   RKADK_U32 record_main_venc_chn;
   RKADK_U32 record_sub_venc_chn;
+  RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_THUMB_CFG_S;

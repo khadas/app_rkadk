@@ -1337,7 +1337,7 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
     i = RKADK_BIND_FindUsableIdx(pstInfo, count);
     if (i < 0) {
       RKADK_LOGE("not find usable index, src chn[%d], dst chn[%d]",
-                 pstSrcChn->s32ChnId, pstDestChn->s32ChnId);
+                  pstSrcChn->s32ChnId, pstDestChn->s32ChnId);
       goto exit;
     }
   }
@@ -1346,9 +1346,9 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
     ret = RK_MPI_SYS_Bind(pstSrcChn, pstDestChn);
     if (ret) {
       RKADK_LOGE("Bind src[%d, %d, %d] and dest[%d, %d, %d] failed[%x]",
-                 pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
-                 pstDestChn->s32DevId, pstDestChn->enModId,
-                 pstDestChn->s32ChnId, ret);
+                  pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+                  pstDestChn->s32DevId, pstDestChn->enModId,
+                  pstDestChn->s32ChnId, ret);
       goto exit;
     }
 
@@ -1359,9 +1359,9 @@ RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
 
   pstInfo[i].s32BindCnt++;
   RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d], BindCnt[%d]",
-             pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
-             pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
-             pstInfo[i].s32BindCnt);
+              pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+              pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
+              pstInfo[i].s32BindCnt);
   ret = 0;
 
 exit:
@@ -1395,17 +1395,17 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
 
   if (0 == pstInfo[i].s32BindCnt) {
     RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d] has already UnBind",
-               pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
-               pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId);
+                pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+                pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId);
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.bindMutex);
     return 0;
   } else if (1 == pstInfo[i].s32BindCnt) {
     ret = RK_MPI_SYS_UnBind(pstSrcChn, pstDestChn);
     if (ret) {
       RKADK_LOGE("UnBind src[%d, %d, %d] and dest[%d, %d, %d] failed[%x]",
-                 pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
-                 pstDestChn->s32DevId, pstDestChn->enModId,
-                 pstDestChn->s32ChnId, ret);
+                  pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+                  pstDestChn->s32DevId, pstDestChn->enModId,
+                  pstDestChn->s32ChnId, ret);
       goto exit;
     }
 
@@ -1416,9 +1416,9 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
 
   pstInfo[i].s32BindCnt--;
   RKADK_LOGD("src[%d, %d, %d], dest[%d, %d, %d], BindCnt[%d]",
-             pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
-             pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
-             pstInfo[i].s32BindCnt);
+              pstSrcChn->s32DevId, pstSrcChn->enModId, pstSrcChn->s32ChnId,
+              pstDestChn->s32DevId, pstDestChn->enModId, pstDestChn->s32ChnId,
+              pstInfo[i].s32BindCnt);
   ret = 0;
 
 exit:
