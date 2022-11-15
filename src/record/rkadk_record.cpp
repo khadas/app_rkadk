@@ -763,9 +763,9 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
       pthread_setname_np(pThumbAttr->sThumbTid, name);
 
       //force request I frame and thumbnail
-      RK_MPI_VENC_RequestIDR(pstRecCfg->vi_attr[i].u32ViChn, RK_FALSE);
+      RK_MPI_VENC_RequestIDR(pstRecCfg->attribute[i].venc_chn, RK_FALSE);
 #ifndef THUMB_NORMAL
-      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->vi_attr[i].u32ViChn);
+      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[i].venc_chn);
 #else
       ThumbnailRequest(ptsThumbCfg->record_venc_chn);
 #endif
