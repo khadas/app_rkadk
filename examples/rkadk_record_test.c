@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "MS")) { //Manual Split
-      stSplitAttr.enManualType = MUXER_NORMAL_MANUAL_SPLIT;
+      stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
       stSplitAttr.u32DurationSec = 20;
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
     }

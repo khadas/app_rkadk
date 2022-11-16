@@ -519,7 +519,7 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
 
   change |= RKADK_PARAM_CheckCfgU32(
       (RKADK_U32 *)&pstRecCfg->pre_record_mode, RKADK_MUXER_PRE_RECORD_NONE,
-      RKADK_MUXER_PRE_RECORD_NORMAL, RKADK_MUXER_PRE_RECORD_NONE,
+      RKADK_MUXER_PRE_RECORD_SINGLE, RKADK_MUXER_PRE_RECORD_NONE,
       "pre_record_mode");
   change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->lapse_multiple, 1,
                                     pstSensorCfg->framerate,

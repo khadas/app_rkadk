@@ -133,9 +133,8 @@ typedef struct {
 
 typedef enum {
   RKADK_MUXER_PRE_RECORD_NONE = 0,
-  RKADK_MUXER_PRE_RECORD_MANUAL_SPLIT,
-  RKADK_MUXER_PRE_RECORD_SINGLE,
-  RKADK_MUXER_PRE_RECORD_NORMAL
+  RKADK_MUXER_PRE_RECORD_MANUAL_SPLIT, /* manual split file prerecord */
+  RKADK_MUXER_PRE_RECORD_SINGLE        /* first file prerecord */
 } RKADK_MUXER_PRE_RECORD_MODE_E;
 
 typedef struct {
