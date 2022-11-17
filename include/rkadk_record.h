@@ -48,12 +48,6 @@ typedef struct {
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
 } RKADK_RECORD_ATTR_S;
 
-typedef struct {
-  bool bGetThumb;
-  pthread_t sThumbTid;
-  RKADK_U32 u32ThumbVencChn;
-} RKADK_REC_THUMB_ATTR_S;
-
 /****************************************************************************/
 /*                            Interface Definition                          */
 /****************************************************************************/

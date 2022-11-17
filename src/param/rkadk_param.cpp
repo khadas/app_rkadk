@@ -418,8 +418,10 @@ static void RKADK_PARAM_CheckThumbCfg(char *path, RKADK_U32 u32CamId) {
                                     THUMB_HEIGHT, "thumb_height");
   change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->photo_venc_chn, 0, VENC_MAX_CHN_NUM,
                                     THUMB_PHOTO_VENC_CHN, "thumb photo_venc_chn");
-  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->record_venc_chn, 0, VENC_MAX_CHN_NUM,
-                                    THUMB_RECORD_VENC_CHN, "thumb record_venc_chn");
+  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->record_main_venc_chn, 0, VENC_MAX_CHN_NUM,
+                                    THUMB_RECORD_MAIN_VENC_CHN, "thumb record_main_venc_chn");
+  change |= RKADK_PARAM_CheckCfgU32(&pstThumbCfg->record_sub_venc_chn, 0, VENC_MAX_CHN_NUM,
+                                    THUMB_RECORD_SUB_VENC_CHN, "thumb record_sub_venc_chn");
 
   if (change)
     RKADK_PARAM_SaveThumbCfg(path, u32CamId);
@@ -1006,7 +1008,8 @@ static void RKADK_PARAM_DefThumbCfg(RKADK_U32 u32CamId, char *path) {
   pstThumbCfg->thumb_width = THUMB_WIDTH;
   pstThumbCfg->thumb_height = THUMB_HEIGHT;
   pstThumbCfg->photo_venc_chn = THUMB_PHOTO_VENC_CHN;
-  pstThumbCfg->record_venc_chn = THUMB_RECORD_VENC_CHN;
+  pstThumbCfg->record_main_venc_chn = THUMB_RECORD_MAIN_VENC_CHN;
+  pstThumbCfg->record_sub_venc_chn = THUMB_RECORD_SUB_VENC_CHN;
   pstThumbCfg->vpss_chn = THUMB_VPSS_CHN;
   RKADK_PARAM_SaveThumbCfg(path, u32CamId);
 }
@@ -1229,8 +1232,10 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stThumbCfg.thumb_height);
     printf("\t\tsensor[%d] stThumbCfg photo_venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.photo_venc_chn);
-    printf("\t\tsensor[%d] stThumbCfg record_venc_chn: %d\n", i,
-           pstCfg->stMediaCfg[i].stThumbCfg.record_venc_chn);
+    printf("\t\tsensor[%d] stThumbCfg record_main_venc_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.record_main_venc_chn);
+    printf("\t\tsensor[%d] stThumbCfg record_sub_venc_chn: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.record_sub_venc_chn);
     printf("\t\tsensor[%d] stThumbCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.vpss_chn);
   }

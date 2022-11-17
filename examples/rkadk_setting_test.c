@@ -364,7 +364,8 @@ static void SetThumbCfg() {
   stThumbCfg.thumb_width = THUMB_WIDTH;
   stThumbCfg.thumb_height = THUMB_HEIGHT;
   stThumbCfg.photo_venc_chn = THUMB_PHOTO_VENC_CHN;
-  stThumbCfg.record_venc_chn = THUMB_RECORD_VENC_CHN;
+  stThumbCfg.record_main_venc_chn = THUMB_RECORD_MAIN_VENC_CHN;
+  stThumbCfg.record_sub_venc_chn = THUMB_RECORD_SUB_VENC_CHN;
   stThumbCfg.vpss_chn = THUMB_VPSS_CHN;
 
   RKADK_Struct2Ini(sensorPath, &stThumbCfg, g_stThumbCfgMapTable,

@@ -168,7 +168,6 @@ typedef struct {
   bool bLapseRecord;
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
-  RKADK_MW_PTR pThumbAttr;
   RKADK_U64 u64AudioPts;
 } RKADK_MUXER_HANDLE_S;
 
@@ -243,11 +242,6 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf, RKADK_U32 size
  * @brief write audio frame
  */
 int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts, void *handle);
-
-RKADK_S32 RKADK_MUXER_SendThumbData(RKADK_MW_PTR pHandle, RKADK_CHAR *buf, RKADK_U32 size,
-                              int64_t pts);
-
-RKADK_S32 RKADK_MUXER_CreateThumbList(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
                               RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo);

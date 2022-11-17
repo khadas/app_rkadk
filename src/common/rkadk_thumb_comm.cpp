@@ -260,8 +260,11 @@ static int RKADK_THUMB_SetChn(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg,
   case RKADK_THUMB_MODULE_PHOTO:
     pstVencChn->s32ChnId = ptsThumbCfg->photo_venc_chn;
     break;
-  case RKADK_THUMB_MODULE_RECORD:
-    pstVencChn->s32ChnId = ptsThumbCfg->record_venc_chn;
+  case RKADK_THUMB_MODULE_MAIN_RECORD:
+    pstVencChn->s32ChnId = ptsThumbCfg->record_main_venc_chn;
+    break;
+  case RKADK_THUMB_MODULE_SUB_RECORD:
+    pstVencChn->s32ChnId = ptsThumbCfg->record_sub_venc_chn;
     break;
   default:
     RKADK_LOGE("Not support other module thumbnail!");

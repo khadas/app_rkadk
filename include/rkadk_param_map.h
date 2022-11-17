@@ -287,7 +287,8 @@ static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_width),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, thumb_height),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, photo_venc_chn),
-    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_venc_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_main_venc_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_sub_venc_chn),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vpss_chn),
 };
 

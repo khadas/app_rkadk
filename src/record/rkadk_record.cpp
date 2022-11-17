@@ -26,52 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void *thumbnail_thread(void *arg) {
-  int ret;
-  RKADK_CHAR *pData = NULL;
-  RKADK_U32 BufSize = 0;
-  RKADK_U64 pts = 0;
-  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
-  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
-  VENC_STREAM_S stFrame;
-
-  if (!arg) {
-    RKADK_LOGE("Invalid parameters");
-    return NULL;
-  }
-
-  pstMuxer = (RKADK_MUXER_HANDLE_S *)arg;
-  pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)pstMuxer->pThumbAttr;
-
-  memset(&stFrame, 0, sizeof(stFrame));
-  stFrame.pstPack = (VENC_PACK_S *)(malloc(sizeof(VENC_PACK_S)));
-  if (!stFrame.pstPack) {
-    RKADK_LOGE("No memory!");
-    return NULL;
-  }
-
-  while (pThumbAttr->bGetThumb) {
-    ret = RK_MPI_VENC_GetStream(pThumbAttr->u32ThumbVencChn, &stFrame, 50);
-    if (ret == RK_SUCCESS) {
-      pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
-      BufSize = stFrame.pstPack->u32Len;
-      pts = stFrame.pstPack->u64PTS;
-      RKADK_MUXER_SendThumbData(arg, pData, BufSize, pts);
-      RKADK_LOGI("Thumb seq: %d, len = %d", stFrame.u32Seq,
-                  stFrame.pstPack->u32Len);
-      ret = RK_MPI_VENC_ReleaseStream(pThumbAttr->u32ThumbVencChn, &stFrame);
-      if (ret != RK_SUCCESS) {
-          RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
-      }
-    }
-  }
-
-  if (stFrame.pstPack)
-    free(stFrame.pstPack);
-
-  return NULL;
-}
-
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
 static std::deque<char *>
@@ -262,7 +216,8 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
   RKADK_S32 s32VpssGrp;
-  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_RECORD;
+  RKADK_U32 u32ThumbVencChn;
+  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -343,17 +298,19 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 
     RKADK_PARAM_SetVAdvancedParam(pstRecCfg->attribute[i]);
 
-    if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0) {
-      RKADK_LOGI("VI[%d] VENC[%d] Enable support thumbnail",
-                  pstRecCfg->vi_attr[i].u32ViChn,
-                  pstRecCfg->attribute[i].venc_chn);
-      ThumbnailInit(u32CamId, enThumbModule, ptsThumbCfg);
-#ifndef THUMB_NORMAL
-      ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn,
-                          ptsThumbCfg->record_venc_chn);
-#endif
+    if (i == 0) {
+      enThumbModule = RKADK_THUMB_MODULE_MAIN_RECORD;
+      u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
     }
+    else {
+      enThumbModule = RKADK_THUMB_MODULE_SUB_RECORD;
+      u32ThumbVencChn = ptsThumbCfg->record_sub_venc_chn;
+    }
+
+    ThumbnailInit(u32CamId, enThumbModule, ptsThumbCfg);
+#ifndef THUMB_NORMAL
+    ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn, u32ThumbVencChn);
+#endif
   }
 
   return 0;
@@ -367,8 +324,7 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
-  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
-  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_RECORD;
+  RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
 
   RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
 
@@ -408,26 +364,13 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
       }
     }
 
-    //Destroy thu vi venc
-    if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0) {
-      RKADK_LOGI("VI[%d] VENC[%d] support destroy thumbnail",
-                  pstRecCfg->vi_attr[i].u32ViChn,
-                  pstRecCfg->attribute[i].venc_chn);
-      pstMuxer = (RKADK_MUXER_HANDLE_S *)pRecorder;
-      pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)pstMuxer->pThumbAttr;
-      if (pThumbAttr) {
-        pThumbAttr->bGetThumb = false;
-        if (pThumbAttr->sThumbTid) {
-          ret = pthread_join(pThumbAttr->sThumbTid, NULL);
-          if (ret)
-            RKADK_LOGE("Exit thumbnail thread failed!");
-          pThumbAttr->sThumbTid = 0;
-        }
-        free(pThumbAttr);
-      }
-      ThumbnailDeInit(u32CamId, RKADK_THUMB_MODULE_RECORD, ptsThumbCfg);
-    }
+    //Destroy thumb vi venc
+    if (i == 0)
+      enThumbModule = RKADK_THUMB_MODULE_MAIN_RECORD;
+    else
+      enThumbModule = RKADK_THUMB_MODULE_SUB_RECORD;
+
+    ThumbnailDeInit(u32CamId, enThumbModule, ptsThumbCfg);
 
     // Destroy VI
     ret = RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
@@ -668,7 +611,6 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
-  RKADK_REC_THUMB_ATTR_S *pThumbAttr = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -740,35 +682,6 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
         RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
         return ret;
       }
-    }
-
-    //Thumbnail
-    if (pstRecCfg->vi_attr[i].u32ViChn == 0 &&
-        pstRecCfg->attribute[i].venc_chn == 0) {
-        pThumbAttr = (RKADK_REC_THUMB_ATTR_S *)malloc(sizeof(RKADK_REC_THUMB_ATTR_S));
-        pThumbAttr->bGetThumb = true;
-        pThumbAttr->u32ThumbVencChn = ptsThumbCfg->record_venc_chn;
-        pstMuxer = (RKADK_MUXER_HANDLE_S *)pRecorder;
-        pstMuxer->pThumbAttr = (RKADK_MW_PTR)pThumbAttr;
-        ret = RKADK_MUXER_CreateThumbList(pRecorder);
-        if (ret != 0) {
-          RKADK_LOGE("RKADK_MUXER_CreateThumbList failed(%d)", ret);
-          return ret;
-        }
-      if (pthread_create(&pThumbAttr->sThumbTid, NULL, thumbnail_thread, pRecorder)) {
-          RK_LOGE("Create thumbnail thread failed!");
-          return -1;
-      }
-      snprintf(name, sizeof(name), "RecordThumbJpeg_%d", ptsThumbCfg->record_venc_chn);
-      pthread_setname_np(pThumbAttr->sThumbTid, name);
-
-      //force request I frame and thumbnail
-      RK_MPI_VENC_RequestIDR(pstRecCfg->attribute[i].venc_chn, RK_FALSE);
-#ifndef THUMB_NORMAL
-      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[i].venc_chn);
-#else
-      ThumbnailRequest(ptsThumbCfg->record_venc_chn);
-#endif
     }
   }
 
@@ -1059,19 +972,21 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
       return -1;
     }
 
-    if (index == 0) {
-      RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
+    RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
 #ifndef THUMB_NORMAL
       RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn); //make sure thumbnail
 #else
-      RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
-      if (!ptsThumbCfg) {
-        RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-        return false;
-      }
-      ThumbnailRequest(ptsThumbCfg->record_venc_chn);
-#endif
+    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
+    if (!ptsThumbCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+      return false;
     }
+
+    if (index == 0)
+      ThumbnailRequest(ptsThumbCfg->record_main_venc_chn);
+    else
+      ThumbnailRequest(ptsThumbCfg->record_sub_venc_chn);
+#endif
 
     memset(&stSrcChn, 0, sizeof(MPP_CHN_S));
     memset(&stRecVenChn, 0, sizeof(MPP_CHN_S));
