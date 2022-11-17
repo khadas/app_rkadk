@@ -1069,6 +1069,8 @@ RKADK_S32 RKADK_MUXER_Start(RKADK_MW_PTR pHandle) {
       continue;
     }
 
+    RK_MPI_VENC_RequestIDR(pstMuxerHandle->vChnId, RK_FALSE);
+    RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
     pstMuxerHandle->bEnableStream = true;
     pstMuxerHandle->bFirstFile = true;
     RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_START, 0);
