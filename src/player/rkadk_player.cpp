@@ -348,7 +348,7 @@ static RKADK_S32 CreateVdecCtx(RKADK_PLAYER_VDEC_CTX_S **pVdecCtx) {
   pstVdecCtx->inputMode = VIDEO_MODE_FRAME;
   pstVdecCtx->loopCount = 1;
   pstVdecCtx->compressMode = COMPRESS_MODE_NONE;
-  pstVdecCtx->frameBufferCnt = 8;
+  pstVdecCtx->frameBufferCnt = 2;
   pstVdecCtx->readSize = 1024;
   pstVdecCtx->chNum = 1;
   pstVdecCtx->chnIndex = 0;
@@ -691,14 +691,9 @@ static RKADK_S32 VoStartLayer(VO_LAYER VoLayer, const VO_VIDEO_LAYER_ATTR_S *pst
     RKADK_LOGE("RK_MPI_VO_SetLayerAttr fail = %p", s32Ret);
     return RKADK_FAILURE;
   }
+
   if (bUseRga)
     RK_MPI_VO_SetLayerSpliceMode(VoLayer, VO_SPLICE_MODE_RGA);
-
-  s32Ret = RK_MPI_VO_EnableLayer(VoLayer);
-  if (s32Ret != RKADK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_EnableLayer fail = %p", s32Ret);
-    return RKADK_FAILURE;
-  }
 
   return s32Ret;
 }
@@ -729,16 +724,68 @@ static RKADK_S32 VoStartDev(VO_DEV VoDev, VO_PUB_ATTR_S *pstPubAttr) {
 
 }
 
+static RKADK_S32 VoDevStart(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
+  VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
+  RKADK_U32                u32DispWidth, u32DispHeight;
+  RKADK_U32                u32ImageWidth, u32ImageHeight;
+  PIXEL_FORMAT_E           video_format;
+
+  for (RKADK_U32 j = 0; j < VDEC_ARRAY_ELEMS(pixelFormat); j++) {
+    if (pstVoCtx->s32PixFormat == pixelFormat[j].index) {
+      video_format =  pixelFormat[j].format;
+      break;
+    }
+  }
+
+  RKADK_LOGD("video_format %x", video_format);
+
+  /* Enable Layer */
+  stLayerAttr.enPixFormat           = RK_FMT_RGBA8888;
+  stLayerAttr.stDispRect.s32X       = 0;
+  stLayerAttr.stDispRect.s32Y       = 0;
+  u32DispWidth = pstVoCtx->u32DispWidth;
+  u32DispHeight = pstVoCtx->u32DispHeight;
+  VoGetDisplaySize(pstVoCtx->stPubAttr.enIntfSync, &u32DispWidth, &u32DispHeight);
+
+  u32ImageWidth  = u32DispWidth;
+  u32ImageHeight = u32DispHeight;
+  stLayerAttr.stDispRect.u32Width   = u32DispWidth;
+  stLayerAttr.stDispRect.u32Height  = u32DispHeight;
+  stLayerAttr.stImageSize.u32Width  = u32ImageWidth;
+  stLayerAttr.stImageSize.u32Height = u32ImageHeight;
+  stLayerAttr.u32DispFrmRt          = pstVoCtx->u32DispFrmRt;
+
+  RKADK_LOGD("VoDev = %d", pstVoCtx->VoDev);
+  RKADK_LOGD("stPubAttr enIntfType = %d, enIntfSync = %d, u32BgColor = %d", pstVoCtx->stPubAttr.enIntfType,
+              pstVoCtx->stPubAttr.enIntfSync, pstVoCtx->stPubAttr.u32BgColor);
+  RKADK_LOGD("VoLayer = %d, bUseRga = %d", pstVoCtx->VoLayer, pstVoCtx->bUseRga);
+  RKADK_LOGD("display width = %d, height = %d\n display image size width = %d height = %d, dispFrmRt = %d",
+              stLayerAttr.stDispRect.u32Width, stLayerAttr.stDispRect.u32Height, stLayerAttr.stImageSize.u32Width,
+              stLayerAttr.stImageSize.u32Height, stLayerAttr.u32DispFrmRt);
+  RKADK_LOGD("windows = %d", pstVoCtx->u32Windows);
+  if (VoStartDev(pstVoCtx->VoDev, &pstVoCtx->stPubAttr)) {
+    RKADK_LOGE("Vo start dev failed");
+    return RKADK_FAILURE;
+  }
+
+  if (VoStartLayer(pstVoCtx->VoLayer, &stLayerAttr, pstVoCtx->bUseRga)) {
+    RKADK_LOGE("Vo start layer failed");
+    return RKADK_FAILURE;
+  }
+
+  return RKADK_SUCCESS;
+}
+
 static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
   VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
   RKADK_U32                u32DispWidth, u32DispHeight;
   RKADK_U32                u32ImageWidth, u32ImageHeight;
   VO_LAYER                 VoLayer;
   VO_DEV                   VoDev;
-  RKADK_S32                   u32Windows;
-  RKADK_U32                   u32Fps, i;
+  RKADK_S32                u32Windows;
+  RKADK_U32                u32Fps, i;
   pthread_t                tThreadID;
-  RKADK_S32                   s32Ret = RKADK_SUCCESS;
+  RKADK_S32                s32Ret = RKADK_SUCCESS;
   VO_LAYER_MODE_E          Vo_layer_mode;
 
   VoDev = pstVoCtx->VoDev;
@@ -804,51 +851,9 @@ static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
 }
 
 static RKADK_S32 VoStart(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
-  VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
-  RKADK_U32                u32DispWidth, u32DispHeight;
-  RKADK_U32                u32ImageWidth, u32ImageHeight;
-  PIXEL_FORMAT_E           video_format;
-
-  for (RKADK_U32 j = 0; j < VDEC_ARRAY_ELEMS(pixelFormat); j++) {
-    if (pstVoCtx->s32PixFormat == pixelFormat[j].index) {
-      video_format =  pixelFormat[j].format;
-      break;
-    }
-  }
-
-  RKADK_LOGD("video_format %x", video_format);
-
-  /* Enable Layer */
-  stLayerAttr.enPixFormat           = RK_FMT_RGBA8888;
-  stLayerAttr.stDispRect.s32X       = 0;
-  stLayerAttr.stDispRect.s32Y       = 0;
-  u32DispWidth = pstVoCtx->u32DispWidth;
-  u32DispHeight = pstVoCtx->u32DispHeight;
-  VoGetDisplaySize(pstVoCtx->stPubAttr.enIntfSync, &u32DispWidth, &u32DispHeight);
-
-  u32ImageWidth  = u32DispWidth;
-  u32ImageHeight = u32DispHeight;
-  stLayerAttr.stDispRect.u32Width   = u32DispWidth;
-  stLayerAttr.stDispRect.u32Height  = u32DispHeight;
-  stLayerAttr.stImageSize.u32Width  = u32ImageWidth;
-  stLayerAttr.stImageSize.u32Height = u32ImageHeight;
-  stLayerAttr.u32DispFrmRt          = pstVoCtx->u32DispFrmRt;
-
-  RKADK_LOGD("VoDev = %d", pstVoCtx->VoDev);
-  RKADK_LOGD("stPubAttr enIntfType = %d, enIntfSync = %d, u32BgColor = %d", pstVoCtx->stPubAttr.enIntfType,
-              pstVoCtx->stPubAttr.enIntfSync, pstVoCtx->stPubAttr.u32BgColor);
-  RKADK_LOGD("VoLayer = %d, bUseRga = %d", pstVoCtx->VoLayer, pstVoCtx->bUseRga);
-  RKADK_LOGD("display width = %d, height = %d\n display image size width = %d height = %d, dispFrmRt = %d",
-              stLayerAttr.stDispRect.u32Width, stLayerAttr.stDispRect.u32Height, stLayerAttr.stImageSize.u32Width,
-              stLayerAttr.stImageSize.u32Height, stLayerAttr.u32DispFrmRt);
-  RKADK_LOGD("windows = %d", pstVoCtx->u32Windows);
-  if (VoStartDev(pstVoCtx->VoDev, &pstVoCtx->stPubAttr)) {
-    RKADK_LOGE("Vo start dev failed");
-    return RKADK_FAILURE;
-  }
-
-  if (VoStartLayer(pstVoCtx->VoLayer, &stLayerAttr, pstVoCtx->bUseRga)) {
-    RKADK_LOGE("Vo start layer failed");
+  int ret = RK_MPI_VO_EnableLayer(pstVoCtx->VoLayer);
+  if (ret != RKADK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_EnableLayer fail = %p", ret);
     return RKADK_FAILURE;
   }
 
@@ -879,7 +884,7 @@ static RKADK_S32 CreateVoCtx(RKADK_PLAYER_VO_CTX_S **pVoCtx) {
 
   pstVoCtx->VoDev = RK356X_VO_DEV_HD0;
   pstVoCtx->VoLayer = RK356X_VOP_LAYER_CLUSTER_0;
-  pstVoCtx->VoLayerMode = 1; /* CURSOR = 0,GRAPHIC = 1,VIDEO = 2,*/
+  pstVoCtx->VoLayerMode = 2; /* CURSOR = 0,GRAPHIC = 1,VIDEO = 2,*/
 
   pstVoCtx->u32ImgeWidth = 1920;
   pstVoCtx->u32ImageHeight = 1080;
@@ -898,9 +903,9 @@ static RKADK_S32 CreateVoCtx(RKADK_PLAYER_VO_CTX_S **pVoCtx) {
   pstVoCtx->u32Screen1ImageWidth  = 1024;
   pstVoCtx->u32Screen1ImageHeight = 768;
 
-  pstVoCtx->u32DispWidth  = 1920;
-  pstVoCtx->u32DispHeight = 1080;
-  pstVoCtx->s32PixFormat = 5;
+  pstVoCtx->u32DispWidth  = MAX_VO_DISPLAY_WIDTH;
+  pstVoCtx->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
+  pstVoCtx->s32PixFormat = RK_FMT_RGBA8888;
   pstVoCtx->u32DispFrmRt = 29;
   pstVoCtx->u32DispFrmRtRatio = 1;
   pstVoCtx->uEnMode = 1;
@@ -950,6 +955,11 @@ static RKADK_S32 CreateVoCtx(RKADK_PLAYER_VO_CTX_S **pVoCtx) {
   pstVoCtx->enRotation = ROTATION_0;
   pstVoCtx->bUseRga = RK_TRUE;
 
+  if (VoSetParam(pstVoCtx)) {
+    RKADK_LOGE("Vo set param failed");
+  }
+
+  VoDevStart(pstVoCtx);
   (*pVoCtx) = pstVoCtx;
   return RKADK_SUCCESS;
 }
@@ -1326,31 +1336,27 @@ static void* SendVideoDataThread(void *ptr) {
   }
   #endif
 
-  while (!pstPlayer->bStopFlag) {
+  while (1) {
     if (pstPlayer->pstVdecCtx->chnFd > 0) {
       s32Ret = VdecPollEvent(MAX_TIME_OUT_MS, pstPlayer->pstVdecCtx->chnFd);
-      if (pstPlayer->bStopFlag)
-        break;
-      if (s32Ret < 0) {
-        if (pstPlayer->bStopFlag)
-          break;
+      if (s32Ret < 0)
         continue;
-      }
     }
 
     s32Ret = RK_MPI_VDEC_GetFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame, MAX_TIME_OUT_MS);
     if (s32Ret >= 0) {
       if ((sFrame.stVFrame.u32FrameFlag & FRAME_FLAG_SNAP_END) == FRAME_FLAG_SNAP_END) {
-        //RK_MPI_VDEC_ReleaseFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame);
         RKADK_LOGI("chn %d reach eos frame.", pstPlayer->pstVdecCtx->chnIndex);
         break;
       }
 
-      voFrame = sFrame;
-      if (pstPlayer->pstVoCtx->VoVideoLayer >= 0) {
-        ret = RK_MPI_VO_SendFrame(pstPlayer->pstVoCtx->VoVideoLayer, windowCount, &voFrame, -1);
-        if (!ret) {}
-          //RKADK_LOGE("RK_MPI_VO_SendFrame send fail ret = %08x\n", ret);
+      if (!pstPlayer->bStopFlag) {
+        voFrame = sFrame;
+        if (pstPlayer->pstVoCtx->VoVideoLayer >= 0) {
+          ret = RK_MPI_VO_SendFrame(pstPlayer->pstVoCtx->VoVideoLayer, windowCount, &voFrame, -1);
+          if (!ret) {}
+            //RKADK_LOGE("RK_MPI_VO_SendFrame send fail ret = %08x\n", ret);
+        }
       }
 
       #ifdef WRITE_DECODER_FILE
@@ -1359,8 +1365,10 @@ static void* SendVideoDataThread(void *ptr) {
 
       RK_MPI_VDEC_ReleaseFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame);
     } else {
-      if (pstPlayer->bStopFlag)
+      if ((sFrame.stVFrame.u32FrameFlag & FRAME_FLAG_SNAP_END) == FRAME_FLAG_SNAP_END) {
+        RKADK_LOGI("chn %d reach eos frame.", pstPlayer->pstVdecCtx->chnIndex);
         break;
+      }
     }
   }
 
@@ -1376,11 +1384,6 @@ static void* SendVideoDataThread(void *ptr) {
 
   if (VoStopLayer(pstPlayer->pstVoCtx->VoLayer)) {
     RKADK_LOGE("Vo stop layer failed");
-    return RKADK_NULL;
-  }
-
-  if (VoStopDev(pstPlayer->pstVoCtx->VoDev)) {
-    RKADK_LOGE("Vo stop dev failed");
     return RKADK_NULL;
   }
 
@@ -1447,7 +1450,8 @@ static RKADK_VOID* SendAudioDataThread(RKADK_VOID *ptr) {
 
         RK_MPI_MB_ReleaseMB(frame.pMbBlk);
         if (size <= 0) {
-          RKADK_LOGI("audio data send eof");
+          if (!pstPlayer->bStopFlag)
+            RKADK_LOGI("audio data send eof");
           break;
         }
             //  release frame
@@ -1604,7 +1608,7 @@ static RKADK_S32 VdecStreamPush(RKADK_PLAYER_VDEC_CTX_S *pVdecCtx, DemuxerPacket
   stStream.u32Len = pstDemuxerPacket->s32PacketSize;
   stStream.bEndOfStream = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
   stStream.bEndOfFrame = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
-  stStream.bBypassMbBlk = RK_TRUE;
+  stStream.bBypassMbBlk = RK_FALSE;
 
 __RETRY:
   s32Ret = RK_MPI_VDEC_SendStream(pVdecCtx->chnIndex, &stStream, -1);
@@ -1620,7 +1624,6 @@ __RETRY:
     RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
   }
 
-  usleep(50000llu);
   return RKADK_SUCCESS;
 }
 
@@ -1628,9 +1631,7 @@ static void DoPullDemuxerVideoPacket(void* pHandle) {
   DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
   pstPlayer->bEofFlag = (RKADK_BOOL)pstDemuxerPacket->s8EofFlag;
-  if (!pstPlayer->bStopFlag) {
-    VdecStreamPush(pstPlayer->pstVdecCtx, pstDemuxerPacket, pstPlayer->bStopFlag);
-  }
+  VdecStreamPush(pstPlayer->pstVdecCtx, pstDemuxerPacket, pstPlayer->bStopFlag);
 
   return;
 }
@@ -1806,6 +1807,14 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
   if (pstPlayer->bStopFlag != RKADK_TRUE)
     RKADK_PLAYER_Stop(pPlayer);
 
+  if (VoStopDev(pstPlayer->pstVoCtx->VoDev)) {
+    RKADK_LOGE("Vo stop dev failed");
+    return RKADK_NULL;
+  }
+
+  if (pstPlayer->pstVoCtx)
+    DestroyVo(pstPlayer->pstVoCtx);
+
   if (pstPlayer->pstVdecCtx) {
     free(pstPlayer->pstVdecCtx);
     pstPlayer->pstVdecCtx = NULL;
@@ -1908,16 +1917,6 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
               RKADK_LOGE("Vdec set param failed");
               goto __FAILED;
             }
-            pstPlayer->pstVoCtx->u32DispWidth = MAX_VO_DISPLAY_WIDTH;//pstPlayer->pstVdecCtx->srcWidth;
-            pstPlayer->pstVoCtx->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;//pstPlayer->pstVdecCtx->srcHeight;
-            pstPlayer->pstVoCtx->u32Screen0ImageWidth = pstPlayer->pstVdecCtx->srcWidth;
-            pstPlayer->pstVoCtx->u32Screen0ImageHeight = pstPlayer->pstVdecCtx->srcHeight;
-            pstPlayer->pstVoCtx->s32PixFormat = RK_FMT_RGBA8888;
-            if (VoSetParam(pstPlayer->pstVoCtx)) {
-              RKADK_LOGE("Vo set param failed");
-              goto __FAILED;
-            }
-
           } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
             RKADK_LOGE("Video does not exist and audio exists but cannot be played");
             goto __FAILED;
@@ -2006,15 +2005,11 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
             RKADK_LOGE("Vdec set param failed");
             goto __FAILED;
           }
-          pstPlayer->pstVoCtx->u32DispWidth = MAX_VO_DISPLAY_WIDTH;//pstPlayer->pstVdecCtx->srcWidth;
-          pstPlayer->pstVoCtx->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;//pstPlayer->pstVdecCtx->srcHeight;
+          pstPlayer->pstVoCtx->u32DispWidth = MAX_VO_DISPLAY_WIDTH;
+          pstPlayer->pstVoCtx->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
           pstPlayer->pstVoCtx->u32Screen0ImageWidth = pstPlayer->pstVdecCtx->srcWidth;
           pstPlayer->pstVoCtx->u32Screen0ImageHeight = pstPlayer->pstVdecCtx->srcHeight;
           pstPlayer->pstVoCtx->s32PixFormat = RK_FMT_RGBA8888;
-          if (VoSetParam(pstPlayer->pstVoCtx)) {
-            RKADK_LOGE("Vo set param failed");
-            goto __FAILED;
-          }
 
         } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
           RKADK_LOGE("Video does not exist and audio exists but cannot be played");
@@ -2258,9 +2253,6 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     if (pstPlayer->bVideoExist == RKADK_TRUE || pstPlayer->demuxerFlag == VIDEO_FLAG) {
       if (pstPlayer->pstVdecCtx)
         DestroyVdec(pstPlayer->pstVdecCtx);
-
-      if (pstPlayer->pstVoCtx)
-        DestroyVo(pstPlayer->pstVoCtx);
     }
 
     if (pstPlayer->bAudioExist == RKADK_TRUE) {
