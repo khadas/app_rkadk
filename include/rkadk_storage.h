@@ -35,6 +35,10 @@ typedef enum {
   DISK_MOUNT_BUTT,
 } RKADK_MOUNT_STATUS;
 
+/* mount event callback function */
+typedef RKADK_VOID (*RKADK_MOUNT_STATUS_CALLBACK_FN)(
+    RKADK_MW_PTR pHandle, RKADK_MOUNT_STATUS status);
+
 typedef enum {
   LIST_ASCENDING = 0,
   LIST_DESCENDING,
@@ -65,6 +69,7 @@ typedef struct {
   RKADK_CHAR cVolume[RKADK_MAX_VOLUME_LEN];
   RKADK_S32 s32CheckFormatId;
   RKADK_STR_FOLDER_ATTR *pstFolderAttr;
+  RKADK_MOUNT_STATUS_CALLBACK_FN pfnStatusCallback;
 } RKADK_STR_DEV_ATTR;
 
 typedef struct {

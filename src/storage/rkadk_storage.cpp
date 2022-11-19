@@ -122,9 +122,21 @@ typedef struct {
   RKADK_S32 eventListenerRun;
   RKADK_STR_DEV_STA stDevSta;
   RKADK_STR_DEV_ATTR stDevAttr;
+  RKADK_MOUNT_STATUS_CALLBACK_FN pfnStatusCallback;
 } RKADK_STORAGE_HANDLE;
 
 static RKADK_S32 RKADK_STORAGE_RKFSCK(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_DEV_ATTR *pdevAttr);
+
+void RKADK_STORAGE_ProcessStatus(RKADK_STORAGE_HANDLE *pHandle,
+                              RKADK_MOUNT_STATUS status) {
+
+  if (!pHandle->pfnStatusCallback) {
+    RKADK_LOGD("Unregistered mount status callback");
+    return;
+  }
+
+  pHandle->pfnStatusCallback(pHandle, status);
+}
 
 static RKADK_STR_DEV_ATTR
 RKADK_STORAGE_GetParam(RKADK_STORAGE_HANDLE *pHandle) {
@@ -718,8 +730,10 @@ static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
     nread = 0;
     while (len > 0) {
       event = (struct inotify_event *)&buf[nread];
-      if (event->mask & IN_UNMOUNT)
+      if (event->mask & IN_UNMOUNT) {
         pHandle->stDevSta.s32MountStatus = DISK_UNMOUNTED;
+        //RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
+      }
 
       if (event->len > 0) {
         for (j = 0; j < pHandle->stDevSta.s32FolderNum; j++) {
@@ -821,17 +835,21 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
 
   if (RKADK_STORAGE_RKFSCK(pHandle, &devAttr) == RKFSCK_ID_ERR) {
     RKADK_LOGE("RKFSCK_ID_ERR");
-    if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED)
+    if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
       pHandle->stDevSta.s32MountStatus = DISK_FORMAT_ERR;
+      RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
+    }
     goto file_scan_out;
   }
 
   RKADK_STORAGE_Repair(pHandle, &devAttr);
 
-  if (pHandle->stDevSta.s32MountStatus == DISK_UNMOUNTED)
+  if (pHandle->stDevSta.s32MountStatus == DISK_UNMOUNTED) {
     goto file_scan_out;
-  else
+  } else {
     pHandle->stDevSta.s32MountStatus = DISK_MOUNTED;
+    RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
+  }
 
 
   if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
@@ -1029,6 +1047,7 @@ static RKADK_S32 RKADK_STORAGE_DevAdd(RKADK_CHAR *dev,
     RKADK_LOGE("RKADK_STORAGE_GetMountPath failed[%d]", ret);
     if (stDevAttr.cDevPath[0]) {
       pHandle->stDevSta.s32MountStatus = DISK_NOT_FORMATTED;
+      RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
     }
     return ret;
   }
@@ -1052,6 +1071,7 @@ static RKADK_S32 RKADK_STORAGE_DevAdd(RKADK_CHAR *dev,
   }
 
   pHandle->stDevSta.s32MountStatus = DISK_SCANNING;
+  RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
   if (pthread_create(&pHandle->stDevSta.fileScanTid, NULL,
                      RKADK_STORAGE_FileScanThread, (RKADK_MW_PTR)pHandle))
     RKADK_LOGE("FileScanThread create failed.");
@@ -1066,6 +1086,7 @@ static RKADK_S32 RKADK_STORAGE_DevRemove(RKADK_CHAR *dev,
 
   if (!strcmp(pHandle->stDevSta.cDevPath, dev)) {
     pHandle->stDevSta.s32MountStatus = DISK_UNMOUNTED;
+    RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
     pHandle->stDevSta.s32TotalSize = 0;
     pHandle->stDevSta.s32FreeSize = 0;
     pHandle->stDevSta.s32FsckQuit = 1;
@@ -1513,6 +1534,7 @@ static RKADK_S32 RKADK_STORAGE_AutoDeleteInit(RKADK_STORAGE_HANDLE *pstHandle) {
           stDevAttr.cMountPath, pstHandle->stDevSta.cDevPath,
           pstHandle->stDevSta.cDevType, pstHandle->stDevSta.cDevAttr1)) {
     pstHandle->stDevSta.s32MountStatus = DISK_SCANNING;
+    RKADK_STORAGE_ProcessStatus(pstHandle, pstHandle->stDevSta.s32MountStatus);
     if (pthread_create(&(pstHandle->stDevSta.fileScanTid), NULL,
                        RKADK_STORAGE_FileScanThread,
                        (RKADK_MW_PTR)(pstHandle))) {
@@ -1521,6 +1543,7 @@ static RKADK_S32 RKADK_STORAGE_AutoDeleteInit(RKADK_STORAGE_HANDLE *pstHandle) {
     }
   } else {
     pstHandle->stDevSta.s32MountStatus = DISK_UNMOUNTED;
+    RKADK_STORAGE_ProcessStatus(pstHandle, pstHandle->stDevSta.s32MountStatus);
     RKADK_LOGE("GetMountDev failed.");
     return -1;
   }
@@ -1564,6 +1587,8 @@ RKADK_S32 RKADK_STORAGE_Init(RKADK_MW_PTR *ppHandle,
                              RKADK_STR_DEV_ATTR *pstDevAttr) {
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
 
+  RKADK_CHECK_POINTER(pstDevAttr, RKADK_FAILURE);
+
   if (*ppHandle) {
     RKADK_LOGE("Storage handle has been inited.");
     return -1;
@@ -1575,6 +1600,7 @@ RKADK_S32 RKADK_STORAGE_Init(RKADK_MW_PTR *ppHandle,
     return -1;
   }
   memset(pstHandle, 0, sizeof(RKADK_STORAGE_HANDLE));
+  pstHandle->pfnStatusCallback = pstDevAttr->pfnStatusCallback;
 
   if (RKADK_STORAGE_ParameterInit(pstHandle, pstDevAttr)) {
     RKADK_LOGE("Parameter init failed.");

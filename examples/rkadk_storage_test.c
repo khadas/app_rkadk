@@ -37,6 +37,30 @@ static void SigtermHandler(int sig) {
   quit = true;
 }
 
+static RKADK_VOID MountStatusCallback(RKADK_MW_PTR pHandle,
+              RKADK_MOUNT_STATUS status) {
+  switch(status) {
+  case DISK_UNMOUNTED:
+    RKADK_LOGD("+++++ DISK_UNMOUNTED +++++");
+    break;
+  case DISK_NOT_FORMATTED:
+    RKADK_LOGD("+++++ DISK_NOT_FORMATTED +++++");
+    break;
+  case DISK_FORMAT_ERR:
+    RKADK_LOGD("+++++ DISK_FORMAT_ERR +++++");
+    break;
+  case DISK_SCANNING:
+    RKADK_LOGD("+++++ DISK_SCANNING +++++");
+    break;
+  case DISK_MOUNTED:
+    RKADK_LOGD("+++++ DISK_MOUNTED +++++");
+    break;
+  default:
+    RKADK_LOGE("Unsupport status: %d", status);
+    break;
+  }
+}
+
 RKADK_S32 CreatFile(char *name, long size) {
   int fd;
   int ret;
@@ -185,6 +209,7 @@ RKADK_S32 SetDevAttr(RKADK_STR_DEV_ATTR *pstDevAttr) {
   pstDevAttr->pstFolderAttr[3].bNumLimit = RKADK_FALSE;
   pstDevAttr->pstFolderAttr[3].s32Limit = 15;
   sprintf(pstDevAttr->pstFolderAttr[3].cFolderPath, "/video_urgent/");
+  pstDevAttr->pfnStatusCallback = MountStatusCallback;
 
   return 0;
 }
@@ -196,6 +221,11 @@ RKADK_S32 FreeDevAttr(RKADK_STR_DEV_ATTR devAttr) {
   }
 
   return 0;
+}
+
+static void sigterm_handler(int sig) {
+  fprintf(stderr, "signal %d\n", sig);
+  quit = true;
 }
 
 int main(int argc, char *argv[]) {
@@ -226,6 +256,8 @@ int main(int argc, char *argv[]) {
   if (CreatFileTest(&pHandle))
     RKADK_LOGW("CreatFileTest failed.");
 
+  signal(SIGINT, sigterm_handler);
+
   while (!quit) {
     usleep(5000);
   }
@@ -235,9 +267,9 @@ int main(int argc, char *argv[]) {
       RKADK_LOGI("%s  %lld", list.file[i].filename, list.file[i].stSize);
     }
   }
+
   RKADK_STORAGE_FreeFileList(&list);
   FreeDevAttr(stDevAttr);
-
   RKADK_STORAGE_Deinit(pHandle);
   RKADK_LOGD("%s out", argv[0]);
 
