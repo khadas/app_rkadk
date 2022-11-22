@@ -1787,6 +1787,7 @@ RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle) {
 RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
 {
   RKADK_S32 err = 0;
+  RKADK_CHAR *pDevPath = NULL;
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
@@ -1796,21 +1797,28 @@ RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
     RKADK_S32 ret = 0;
     sync();
 
-    if (!pstHandle->stDevAttr.cDevPath[0])
+    if (pstHandle->stDevAttr.cDevPath[0]) {
+      pDevPath = pstHandle->stDevAttr.cDevPath;
+    } else if (pstHandle->stDevSta.cDevPath[0]) {
+      pDevPath = pstHandle->stDevSta.cDevPath;
+    } else {
+      RKADK_LOGE("cDevPath is null");
       return -1;
+    }
 
     if (pstHandle->stDevSta.s32MountStatus != DISK_NOT_FORMATTED)
-      RKADK_STORAGE_DevRemove(pstHandle->stDevAttr.cDevPath, pstHandle);
+      RKADK_STORAGE_DevRemove(pDevPath, pstHandle);
 
-    ret = rkfsmk_format_ex(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cVolume, pstHandle->stDevAttr.cFormatId);
+    ret = rkfsmk_format_ex(pDevPath, pstHandle->stDevAttr.cVolume, pstHandle->stDevAttr.cFormatId);
     if (!ret)
       err = -1;
-    ret = mount(pstHandle->stDevAttr.cDevPath, pstHandle->stDevAttr.cMountPath, cFormat, MS_NOATIME | MS_NOSUID, NULL);
+    ret = mount(pDevPath, pstHandle->stDevAttr.cMountPath, cFormat, MS_NOATIME | MS_NOSUID, NULL);
     if (ret == 0)
-      RKADK_STORAGE_DevAdd(pstHandle->stDevAttr.cDevPath, pstHandle);
+      RKADK_STORAGE_DevAdd(pDevPath, pstHandle);
     else
       err = -1;
   }
 
+  RKADK_LOGD("Format %s[%d]", pDevPath, err);
   return err;
 }
