@@ -28,41 +28,41 @@ static RKADK_U32 mp3DecInitCnt = 0;
 
 typedef struct _MP3DecInfo
 {
-    /* pointers to platform-specific data structures */
-    void *FrameHeaderPS;
-    void *SideInfoPS;
-    void *ScaleFactorInfoPS;
-    void *HuffmanInfoPS;
-    void *DequantInfoPS;
-    void *IMDCTInfoPS;
-    void *SubbandInfoPS;
+  /* pointers to platform-specific data structures */
+  void *FrameHeaderPS;
+  void *SideInfoPS;
+  void *ScaleFactorInfoPS;
+  void *HuffmanInfoPS;
+  void *DequantInfoPS;
+  void *IMDCTInfoPS;
+  void *SubbandInfoPS;
 
-    /* buffer which must be large enough to hold largest possible main_data section */
-    unsigned char mainBuf[MAINBUF_SIZE];
+  /* buffer which must be large enough to hold largest possible main_data section */
+  unsigned char mainBuf[MAINBUF_SIZE];
 
-    /* special info for "free" bitrate files */
-    int freeBitrateFlag;
-    int freeBitrateSlots;
+  /* special info for "free" bitrate files */
+  int freeBitrateFlag;
+  int freeBitrateSlots;
 
-    /* user-accessible info */
-    int bitrate;
-    int nChans;
-    int samprate;
-    int nGrans;                /* granules per frame */
-    int nGranSamps;            /* samples per granule */
-    int nSlots;
-    int layer;
-    int vbr;                    /* is vbr flag */
-    uint32_t fSize;             /* file length, no tags */
-    uint32_t fCount;            /* frame count */
-    char TOC[100];              /* TOC */
+  /* user-accessible info */
+  int bitrate;
+  int nChans;
+  int samprate;
+  int nGrans;                /* granules per frame */
+  int nGranSamps;            /* samples per granule */
+  int nSlots;
+  int layer;
+  int vbr;                    /* is vbr flag */
+  uint32_t fSize;             /* file length, no tags */
+  uint32_t fCount;            /* frame count */
+  char TOC[100];              /* TOC */
 
-    MPEGVersion version;
+  MPEGVersion version;
 
-    int mainDataBegin;
-    int mainDataBytes;
+  int mainDataBegin;
+  int mainDataBytes;
 
-    int part23Length[MAX_NGRAN][MAX_NCHAN];
+  int part23Length[MAX_NGRAN][MAX_NCHAN];
 
 } MP3DecInfo;
 
@@ -80,7 +80,6 @@ static RKADK_S32 RKAduioMp3DecoderOpen(RK_VOID *pDecoderAttr, RK_VOID **ppDecode
   }
 
   ADEC_ATTR_CODEC_S *attr = (ADEC_ATTR_CODEC_S *)pDecoderAttr;
-
   RKADK_ADEC_MP3_CTX_S *ctx = (RKADK_ADEC_MP3_CTX_S *)malloc(sizeof(RKADK_ADEC_MP3_CTX_S));
   if (!ctx) {
     RKADK_LOGE("malloc adec mp3 ctx failed");
@@ -113,6 +112,9 @@ static RKADK_S32 RKAduioMp3DecoderClose(RK_VOID *pDecoder) {
     MP3FreeDecoder(ctx->pMp3Dec);
     ctx->pMp3Dec = NULL;
   }
+
+  if (ctx)
+    free(ctx);
 
   return RKADK_SUCCESS;
 }
@@ -170,7 +172,7 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
   MP3DecInfo *mp3DecInfo = (MP3DecInfo *)ctx->pMp3Dec;
   pParam->u32OutLen = mp3DecInfo->nGrans * mp3DecInfo->nGranSamps * ctx->frameInfo.nChans * 2;
   memcpy(pParam->pu8OutBuf, (RKADK_U8 *)ctx->decPCMbuf, pParam->u32OutLen);
-  pParam->u64OutTimeStamp+= (((RK_U64)pParam->u32OutLen / 2) * 1000000)/ctx->frameInfo.samprate;
+  pParam->u64OutTimeStamp += (((RK_U64)pParam->u32OutLen / 2) * 1000000) / ctx->frameInfo.samprate;
 
   return ADEC_DECODER_OK;
 }
