@@ -736,13 +736,9 @@ static void RKADK_PARAM_DefCommCfg(char *path) {
 
   memset(pstCommCfg, 0, sizeof(RKADK_PARAM_COMM_CFG_S));
   pstCommCfg->sensor_count = 1;
-  pstCommCfg->rec_unmute = true;
-  pstCommCfg->enable_speaker = true;
+  pstCommCfg->rec_mute = false;
   pstCommCfg->speaker_volume = 70;
-  pstCommCfg->mic_unmute = true;
   pstCommCfg->mic_volume = 70;
-  pstCommCfg->osd = true;
-  pstCommCfg->boot_sound = true;
   pstCommCfg->vpss_devcie = 1;
   RKADK_PARAM_SaveCommCfg(path);
 }
@@ -774,8 +770,6 @@ static void RKADK_PARAM_DefSensorCfg(RKADK_U32 u32CamId, char *path) {
 
   pstSensorCfg->used_isp = true;
   pstSensorCfg->framerate = VIDEO_FRAME_RATE;
-  pstSensorCfg->enable_record = true;
-  pstSensorCfg->enable_photo = true;
   pstSensorCfg->flip = false;
   pstSensorCfg->mirror = false;
   pstSensorCfg->enable_wrap = false;
@@ -1029,13 +1023,9 @@ static void RKADK_PARAM_Dump() {
 
   printf("Common Config\n");
   printf("\tsensor_count: %d\n", pstCfg->stCommCfg.sensor_count);
-  printf("\trec_unmute: %d\n", pstCfg->stCommCfg.rec_unmute);
-  printf("\tenable_speaker: %d\n", pstCfg->stCommCfg.enable_speaker);
+  printf("\trec_mute: %d\n", pstCfg->stCommCfg.rec_mute);
   printf("\tspeaker_volume: %d\n", pstCfg->stCommCfg.speaker_volume);
-  printf("\tmic_unmute: %d\n", pstCfg->stCommCfg.mic_unmute);
   printf("\tmic_volume: %d\n", pstCfg->stCommCfg.mic_volume);
-  printf("\tshow osd: %d\n", pstCfg->stCommCfg.osd);
-  printf("\tboot_sound: %d\n", pstCfg->stCommCfg.boot_sound);
 
   printf("Audio Config\n");
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
@@ -1055,10 +1045,6 @@ static void RKADK_PARAM_Dump() {
     printf("\tsensor[%d] max_height: %d\n", i,
            pstCfg->stSensorCfg[i].max_height);
     printf("\tsensor[%d] framerate: %d\n", i, pstCfg->stSensorCfg[i].framerate);
-    printf("\tsensor[%d] enable_record: %d\n", i,
-           pstCfg->stSensorCfg[i].enable_record);
-    printf("\tsensor[%d] enable_photo: %d\n", i,
-           pstCfg->stSensorCfg[i].enable_photo);
     printf("\tsensor[%d] flip: %d\n", i, pstCfg->stSensorCfg[i].flip);
     printf("\tsensor[%d] mirror: %d\n", i, pstCfg->stSensorCfg[i].mirror);
     printf("\tsensor[%d] enable_wrap: %d\n", i, pstCfg->stSensorCfg[i].enable_wrap);
@@ -2279,21 +2265,19 @@ static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
   return ret;
 }
 
-static void RKADK_PARAM_SetMicVolume(bool mute, RKADK_U32 volume) {
+static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   char buffer[RKADK_VOLUME_LEN];
   if (volume < 0 || volume > 100) {
     RKADK_LOGE("Set mic input volume failed. Mic input volume range is [0,100]");
     return;
   }
 
-  RKADK_LOGI("RKADK_PARAM_SetMicVolume mute = %d, volume = %d", mute, volume);
+  RKADK_LOGI("volume = %d", volume);
   volume = (int)(volume * 2.55 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
-  if (mute != true) {
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
-  }
+  RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
+  RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
@@ -2303,28 +2287,11 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
     return;
   }
 
-  RKADK_LOGI("RKADK_PARAM_SetSpeakerVolume volume = %d", volume);
+  RKADK_LOGI("volume = %d", volume);
   volume = (int)(volume * 0.3 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
   RK_MPI_AMIX_SetControl(0, "DAC LINEOUT Volume", buffer);
-}
-
-static void RKADK_PARAM_MicMute(bool mute, RKADK_U32 volume) {
-  char buffer[RKADK_VOLUME_LEN];
-  RKADK_LOGI("RKADK_PARAM_MicMute mute = %d, volume = %d", mute, volume);
-  volume = (int)(volume * 2.55 + 0.5);
-  memset(buffer, 0, RKADK_VOLUME_LEN);
-  sprintf(buffer, "%d", volume);
-
-  if (mute) {
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", (char *)"0");
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", (char *)"0");
-  }
-  else {
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
-  }
 }
 
 static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
@@ -2347,13 +2314,8 @@ static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
 static void RKADK_PARAM_SetVolume() {
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
-  RKADK_PARAM_MicMute(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
-  RKADK_PARAM_SetMicVolume(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
-
-  if (!pstCommCfg->enable_speaker)
-    RKADK_PARAM_SetSpeakerVolume(0);
-  else
-    RKADK_PARAM_SetSpeakerVolume(pstCommCfg->speaker_volume);
+  RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
+  RKADK_PARAM_SetSpeakerVolume(pstCommCfg->speaker_volume);
 }
 
 VENC_RC_MODE_E RKADK_PARAM_GetRcMode(char *rcMode,
@@ -3157,12 +3119,6 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
   case RKADK_PARAM_TYPE_HDR:
     *(RKADK_U32 *)pvParam = pstSensorCfg->hdr;
     break;
-  case RKADK_PARAM_TYPE_REC:
-    *(bool *)pvParam = pstSensorCfg->enable_record;
-    break;
-  case RKADK_PARAM_TYPE_PHOTO_ENABLE:
-    *(bool *)pvParam = pstSensorCfg->enable_photo;
-    break;
   case RKADK_PARAM_TYPE_RES:
     *(RKADK_PARAM_RES_E *)pvParam = RKADK_PARAM_GetResType(
         pstRecCfg->attribute[0].width, pstRecCfg->attribute[0].height);
@@ -3302,18 +3258,6 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
     pstSensorCfg->hdr = *(RKADK_U32 *)pvParam;
     bSaveSensorCfg = true;
     break;
-  case RKADK_PARAM_TYPE_REC:
-    RKADK_CHECK_EQUAL(pstSensorCfg->enable_record, *(bool *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstSensorCfg->enable_record = *(bool *)pvParam;
-    bSaveSensorCfg = true;
-    break;
-  case RKADK_PARAM_TYPE_PHOTO_ENABLE:
-    RKADK_CHECK_EQUAL(pstSensorCfg->enable_photo, *(bool *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstSensorCfg->enable_photo = *(bool *)pvParam;
-    bSaveSensorCfg = true;
-    break;
   case RKADK_PARAM_TYPE_RES:
     type = *(RKADK_PARAM_RES_E *)pvParam;
     RKADK_PARAM_GetResolution(type, &(pstRecCfg->attribute[0].width),
@@ -3425,22 +3369,12 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   RKADK_LOGI("RKADK_PARAM_SetCommParam enParamType = %d", enParamType);
   switch (enParamType) {
-  case RKADK_PARAM_TYPE_REC_UNMUTE:
-    RKADK_CHECK_EQUAL(pstCommCfg->rec_unmute, *(bool *)pvParam,
+  case RKADK_PARAM_TYPE_REC_MUTE:
+    RKADK_CHECK_EQUAL(pstCommCfg->rec_mute, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
 
-    pstCommCfg->rec_unmute = *(bool *)pvParam;
-    RKADK_PARAM_RecMute(!pstCommCfg->rec_unmute, pstCommCfg->mic_volume);
-    break;
-  case RKADK_PARAM_TYPE_AUDIO:
-    RKADK_CHECK_EQUAL(pstCommCfg->enable_speaker, *(bool *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-
-    pstCommCfg->enable_speaker = *(bool *)pvParam;
-    if (!pstCommCfg->enable_speaker)
-      RKADK_PARAM_SetSpeakerVolume(0);
-    else
-      RKADK_PARAM_SetSpeakerVolume(pstCommCfg->speaker_volume);
+    pstCommCfg->rec_mute = *(bool *)pvParam;
+    RKADK_PARAM_RecMute(pstCommCfg->rec_mute, pstCommCfg->mic_volume);
     break;
   case RKADK_PARAM_TYPE_VOLUME:
     RKADK_CHECK_EQUAL(pstCommCfg->speaker_volume, *(bool *)pvParam,
@@ -3449,31 +3383,12 @@ RKADK_S32 RKADK_PARAM_SetCommParam(RKADK_PARAM_TYPE_E enParamType,
     pstCommCfg->speaker_volume = *(RKADK_U32 *)pvParam;
     RKADK_PARAM_SetSpeakerVolume(pstCommCfg->speaker_volume);
     break;
-  case RKADK_PARAM_TYPE_MIC_UNMUTE:
-    RKADK_CHECK_EQUAL(pstCommCfg->mic_unmute, *(bool *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-
-    pstCommCfg->mic_unmute = *(bool *)pvParam;
-    RKADK_PARAM_MicMute(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
-    break;
   case RKADK_PARAM_TYPE_MIC_VOLUME:
     RKADK_CHECK_EQUAL(pstCommCfg->mic_volume, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
 
     pstCommCfg->mic_volume = *(RKADK_U32 *)pvParam;
-    RKADK_PARAM_SetMicVolume(!pstCommCfg->mic_unmute, pstCommCfg->mic_volume);
-    break;
-  case RKADK_PARAM_TYPE_OSD:
-    RKADK_CHECK_EQUAL(pstCommCfg->osd, *(bool *)pvParam, g_stPARAMCtx.mutexLock,
-                      RKADK_SUCCESS);
-
-    pstCommCfg->osd = *(bool *)pvParam;
-    break;
-  case RKADK_PARAM_TYPE_BOOTSOUND:
-    RKADK_CHECK_EQUAL(pstCommCfg->boot_sound, *(bool *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-
-    pstCommCfg->boot_sound = *(bool *)pvParam;
+    RKADK_PARAM_SetMicVolume(pstCommCfg->mic_volume);
     break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);
@@ -3497,26 +3412,14 @@ RKADK_S32 RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_E enParamType,
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
   switch (enParamType) {
-  case RKADK_PARAM_TYPE_REC_UNMUTE:
-    *(bool *)pvParam = pstCommCfg->rec_unmute;
-    break;
-  case RKADK_PARAM_TYPE_AUDIO:
-    *(bool *)pvParam = pstCommCfg->enable_speaker;
+  case RKADK_PARAM_TYPE_REC_MUTE:
+    *(bool *)pvParam = pstCommCfg->rec_mute;
     break;
   case RKADK_PARAM_TYPE_VOLUME:
     *(RKADK_U32 *)pvParam = pstCommCfg->speaker_volume;
     break;
-  case RKADK_PARAM_TYPE_MIC_UNMUTE:
-    *(bool *)pvParam = pstCommCfg->mic_unmute;
-    break;
   case RKADK_PARAM_TYPE_MIC_VOLUME:
     *(RKADK_U32 *)pvParam = pstCommCfg->mic_volume;
-    break;
-  case RKADK_PARAM_TYPE_OSD:
-    *(bool *)pvParam = pstCommCfg->osd;
-    break;
-  case RKADK_PARAM_TYPE_BOOTSOUND:
-    *(bool *)pvParam = pstCommCfg->boot_sound;
     break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);

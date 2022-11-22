@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 /* version */
-#define RKADK_PARAM_VERSION "1.3.1"
+#define RKADK_PARAM_VERSION "1.4"
 
 #define RKADK_BUFFER_LEN 64
 #define RKADK_VOLUME_LEN 3
@@ -148,7 +148,6 @@ typedef enum {
   RKADK_PARAM_TYPE_ANTIFOG,         /* antifog value, [0,10] */
   RKADK_PARAM_TYPE_WDR,             /* wdr level, [0,10] */
   RKADK_PARAM_TYPE_HDR,             /* 0: normal, 1: HDR2, 2: HDR3, [0,2] */
-  RKADK_PARAM_TYPE_REC,             /* record  enable, bool*/
   RKADK_PARAM_TYPE_RECORD_TYPE,     /* specify RKADK_REC_TYPE_E */
   RKADK_PARAM_TYPE_RECORD_TIME,     /* specify RKADK_PARAM_REC_TIME_S, record time(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_TIME, /* pre record time, unit in second(s) */
@@ -157,17 +156,12 @@ typedef enum {
   RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX */
   RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
   RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
-  RKADK_PARAM_TYPE_PHOTO_ENABLE,   /* photo enable, bool*/
   RKADK_PARAM_TYPE_SNAP_NUM,       /* continue snap num */
 
   // COMM Dependent Param
-  RKADK_PARAM_TYPE_REC_UNMUTE,      /* record audio mute, bool */
-  RKADK_PARAM_TYPE_AUDIO,           /* speaker enable, bool */
+  RKADK_PARAM_TYPE_REC_MUTE,      /* record audio mute, bool */
   RKADK_PARAM_TYPE_VOLUME,          /* speaker volume, [0,100] */
-  RKADK_PARAM_TYPE_MIC_UNMUTE,      /* mic(mute) enable, bool */
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
-  RKADK_PARAM_TYPE_OSD,             /* show osd or not, bool */
-  RKADK_PARAM_TYPE_BOOTSOUND,       /* boot sound enable, bool */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
 
@@ -209,13 +203,9 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
 
 typedef struct tagRKADK_PARAM_COMM_CFG_S {
   RKADK_U32 sensor_count;
-  bool rec_unmute;          /* false:disable record audio, true:enable */
-  bool enable_speaker;      /* speaker enable, default true */
+  bool rec_mute;          /* false:disable record audio, true:enable */
   RKADK_U32 speaker_volume; /* speaker volume, [0,100] */
-  bool mic_unmute;          /* 0:close mic(mute),  1:open mic(unmute) */
   RKADK_U32 mic_volume;     /* mic input volume, [0,100] */
-  bool osd;        /* Whether to display OSD */
-  bool boot_sound; /* boot sound */
   RKADK_U32 vpss_devcie; /* 0: GPU device, 1: RGA device */
 } RKADK_PARAM_COMM_CFG_S;
 
@@ -224,8 +214,6 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
   RKADK_U32 max_width;
   RKADK_U32 max_height;
   RKADK_U32 framerate;
-  bool enable_record; /* record enable */
-  bool enable_photo;  /* photo enable, default true */
   bool flip;          /* FLIP */
   bool mirror;        /* MIRROR */
   bool enable_wrap;

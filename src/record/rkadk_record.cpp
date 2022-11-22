@@ -456,7 +456,7 @@ static int RKADK_RECORD_CreateAudioChn() {
     stAencAttr.stCodecAttr.u32Resv[1] = pstAudioParam->bitrate;
   }
 
-  stAencAttr.stCodecAttr.u32Resv[3] = !pstCommCfg->rec_unmute;
+  stAencAttr.stCodecAttr.u32Resv[3] = pstCommCfg->rec_mute;
 
   ret = RKADK_MPI_AENC_Init(RECORD_AENC_CHN, &stAencAttr);
   if (ret) {

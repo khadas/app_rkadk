@@ -59,13 +59,9 @@ static RKADK_SI_CONFIG_MAP_S g_stVersionMapTable[] = {
 /* common map table */
 static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, sensor_count),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, rec_unmute),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, enable_speaker),
+    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, rec_mute),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, speaker_volume),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, mic_unmute),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, mic_volume),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, osd),
-    DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, bool_e, boot_sound),
     DEFINE_MAP(common, tagRKADK_PARAM_COMM_CFG_S, int_e, vpss_devcie),
 };
 
@@ -88,8 +84,6 @@ static RKADK_SI_CONFIG_MAP_S g_stSensorCfgMapTable[] = {
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, max_width),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, max_height),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, int_e, framerate),
-    DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, enable_record),
-    DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, enable_photo),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, flip),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, mirror),
     DEFINE_MAP(sensor, tagRKADK_PARAM_SENSOR_CFG_S, bool_e, enable_wrap),

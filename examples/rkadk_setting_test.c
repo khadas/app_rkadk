@@ -58,13 +58,9 @@ static void SetCommCfg() {
 
   memset(&stParamCommCfg, 0, sizeof(RKADK_PARAM_COMM_CFG_S));
   stParamCommCfg.sensor_count = 1;
-  stParamCommCfg.rec_unmute = true;
-  stParamCommCfg.enable_speaker = true;
-  stParamCommCfg.speaker_volume = 70;
-  stParamCommCfg.mic_unmute = true;
-  stParamCommCfg.mic_volume = 70;
-  stParamCommCfg.osd = true;
-  stParamCommCfg.boot_sound = true;
+  stParamCommCfg.rec_mute = false;
+  stParamCommCfg.speaker_volume = 100;
+  stParamCommCfg.mic_volume = 100;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
@@ -79,8 +75,6 @@ static void SetSensorCfg() {
   stSensorCfg.max_height = SENSOR_MAX_HEIGHT;
   stSensorCfg.used_isp = true;
   stSensorCfg.framerate = VIDEO_FRAME_RATE;
-  stSensorCfg.enable_record = true;
-  stSensorCfg.enable_photo = true;
   stSensorCfg.flip = false;
   stSensorCfg.mirror = false;
   stSensorCfg.enable_wrap = false;
