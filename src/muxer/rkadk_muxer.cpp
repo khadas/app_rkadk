@@ -466,6 +466,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
 
 static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   int ret;
+  bool bBuildInOk = false;
   int position = 0;
   RKADK_CHAR *pData = NULL;
   VENC_PACK_S stPack;
@@ -486,15 +487,23 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
         return false;
       }
 
-      fwrite(pData, 1, stFrame.pstPack->u32Len, fp);
+      if (!fseek(fp, position, SEEK_SET)) {
+        fwrite(pData, 1, stFrame.pstPack->u32Len, fp);
+        RKADK_LOGI("Stream [%d] thumbnail [seq: %d, len: %d] build in %s file position = %d done!",
+                    pstMuxerHandle->u32VencChn, stFrame.u32Seq, stFrame.pstPack->u32Len,
+                    pstMuxerHandle->cFileName, position);
+        bBuildInOk = false;
+      } else {
+        RKADK_LOGE("Seek failed");
+        bBuildInOk = true;
+      }
+
       fclose(fp);
-      RKADK_LOGI("Stream [%d] thumbnail [seq: %d, len: %d] build in %s file position = %d done!",
-                  pstMuxerHandle->u32VencChn, stFrame.u32Seq, stFrame.pstPack->u32Len, pstMuxerHandle->cFileName, position);
       ret = RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
       }
-      return false;
+      return bBuildInOk;
     } else {
       return true;
     }
