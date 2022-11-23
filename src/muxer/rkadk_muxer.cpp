@@ -83,6 +83,8 @@ typedef struct {
   bool bEnableStream;
   bool bMuxering;
   bool bFirstFile;
+  bool bFirstKeyFrame;
+  bool bWriteFirstFrame;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
 
@@ -327,25 +329,27 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
                                 RKADK_U32 size, int64_t pts, int isKeyFrame,
                                 void *handle) {
   int cnt = 0;
+  MUXER_BUF_CELL_S *cell;
+
   RKADK_CHECK_POINTER(handle, RKADK_FAILURE);
 
   RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)handle;
   MUXER_HANDLE_S *pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
-  if (!pstMuxerHandle) {
-    // RKADK_LOGE("don't find muxer handle");
+  if (!pstMuxerHandle)
     return -1;
+
+  if (pstMuxerHandle->bFirstKeyFrame && isKeyFrame) {
+    RKADK_KLOG("Muxer[%d] Stream[%d] first key frame pts: %lld",
+               pstMuxerHandle->muxerId, chnId, pts);
+    pstMuxerHandle->bFirstKeyFrame = false;
   }
 
-  if (!pstMuxerHandle->bEnableStream) {
-    //RKADK_LOGI("Muxer is not enable stream");
+  if (!pstMuxerHandle->bEnableStream)
     return 0;
-  }
-
-  MUXER_BUF_CELL_S *cell;
 
   while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
       if (cnt % 100 == 0)
-        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d",chnId, cnt);
+        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", chnId, cnt);
       cnt++;
       usleep(10000);
   }
@@ -733,6 +737,13 @@ static bool RKADK_MUXER_Proc(void *params) {
         if (cell->pool == &pstMuxerHandle->stVFree) {
           rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
+
+          if (pstMuxerHandle->bWriteFirstFrame) {
+            RKADK_KLOG("Muxer[%d] Stream[%d] write first frame pts: %lld",
+                       pstMuxerHandle->muxerId, pstMuxerHandle->u32VencChn, cell->pts);
+            pstMuxerHandle->bWriteFirstFrame = false;
+          }
+
           if (cell->pts < pstMuxerHandle->startTime)
             RKADK_LOGE("Stream [%d] muxer pts err pts = %lld, startTime = %lld",
                         pstMuxerHandle->u32VencChn, cell->pts, pstMuxerHandle->startTime);
@@ -802,6 +813,8 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     pMuxerHandle->duration = pstSrcStreamAttr->u32TimeLenSec;
     pMuxerHandle->gop = pstRecCfg->attribute[i].gop;
     pMuxerHandle->bFirstFile = true;
+    pMuxerHandle->bFirstKeyFrame = true;
+    pMuxerHandle->bWriteFirstFrame = true;
 
     memcpy(&pMuxerHandle->stPreRecParam.stAttr, &pstMuxerAttr->stPreRecordAttr,
             sizeof(RKADK_MUXER_PRE_RECORD_ATTR_S));

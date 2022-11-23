@@ -28,6 +28,7 @@ typedef struct {
   bool bRequestIDR;
   bool bWaitIDR;
   bool bVencChnMux;
+  bool bFirstKeyFrame;
   RKADK_U32 u32CamId;
   rtsp_demo_handle stRtspHandle;
   rtsp_session_handle stRtspSession;
@@ -158,16 +159,45 @@ static RKADK_S32 RKADK_RTSP_RequestIDR(RKADK_U32 u32CamId, RKADK_U32 u32ChnId) {
 
 static void RKADK_RTSP_VencOutCb(RKADK_MEDIA_VENC_DATA_S mb, RKADK_VOID *handle) {
   RKADK_MEDIA_VENC_DATA_S stData = mb;
+  RKADK_PARAM_STREAM_CFG_S *pstLiveCfg;
   RKADK_RTSP_HANDLE_S *pHandle = (RKADK_RTSP_HANDLE_S *)handle;
   RKADK_VOID *data;
+
   if (!pHandle) {
     RKADK_LOGE("Can't find rtsp handle");
     RK_MPI_VENC_ReleaseStream(stData.u32ChnId, &stData.stFrame);
     return;
   }
 
+  pstLiveCfg = RKADK_PARAM_GetStreamCfg(pHandle->u32CamId, RKADK_STREAM_TYPE_LIVE);
+  if (!pstLiveCfg) {
+    RKADK_LOGE("Live RKADK_PARAM_GetStreamCfg Live failed");
+    return;
+  }
+
   if (!pHandle->start)
     return;
+
+  if (!pHandle->bWaitIDR) {
+    if (!RKADK_MEDIA_CheckIdrFrame(pstLiveCfg->attribute.codec_type,
+                                   stData.stFrame.pstPack->DataType)) {
+      if (!pHandle->bRequestIDR) {
+        RKADK_LOGD("requst idr frame");
+        RKADK_RTSP_RequestIDR(pHandle->u32CamId, pstLiveCfg->attribute.venc_chn);
+        pHandle->bRequestIDR = true;
+      } else {
+        RKADK_LOGD("wait first idr frame");
+      }
+
+      return;
+    }
+
+    pHandle->bWaitIDR = true;
+    if (pHandle->bFirstKeyFrame) {
+      RKADK_KLOG("Rtsp first key frame pts: %lld", stData.stFrame.pstPack->u64PTS);
+      pHandle->bFirstKeyFrame = false;
+    }
+  }
 
   data = RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
   if (pHandle->stRtspHandle && pHandle->stRtspSession) {
@@ -259,6 +289,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   }
   memset(pHandle, 0, sizeof(RKADK_RTSP_HANDLE_S));
   pHandle->u32CamId = u32CamId;
+  pHandle->bFirstKeyFrame = true;
 
   ret = RKADK_RTSP_InitService(pstLiveCfg->attribute.codec_type, port, path,
                                pHandle);

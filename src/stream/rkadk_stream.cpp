@@ -28,6 +28,7 @@ typedef struct {
   bool bVencChnMux;
   bool bRequestIDR;
   bool bWaitIDR;
+  bool bFirstKeyFrame;
   RKADK_U32 u32CamId;
   RKADK_U32 videoSeq;
   RKADK_CODEC_TYPE_E enCodecType;
@@ -118,6 +119,10 @@ static void RKADK_STREAM_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
     }
 
     pstHandle->bWaitIDR = true;
+    if (pstHandle->bFirstKeyFrame) {
+      RKADK_KLOG("Stream first key frame pts: %lld", stData.stFrame.pstPack->u64PTS);
+      pstHandle->bFirstKeyFrame = false;
+    }
   }
 
   memset(&vStreamData, 0, sizeof(RKADK_VIDEO_STREAM_S));
@@ -290,6 +295,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   }
   memset(pVideoHandle, 0, sizeof(STREAM_VIDEO_HANDLE_S));
 
+  pVideoHandle->bFirstKeyFrame = true;
   pVideoHandle->enCodecType = pstStreamCfg->attribute.codec_type;
   pVideoHandle->u32CamId = pstVideoAttr->u32CamId;
   pVideoHandle->pfnVencDataCB = pstVideoAttr->pfnDataCB;

@@ -60,6 +60,15 @@ extern "C" {
     printf("[RKADK_D] %s[%d]: " format "\n", __func__, __LINE__, ##__VA_ARGS__);\
   } while (0)
 
+#define RKADK_KLOG(format, ...)                                                \
+  do {                                                                         \
+    FILE *fp = fopen("/dev/kmsg", "w");                                        \
+    if (NULL != fp) {                                                          \
+      fprintf(fp, "[RKADK]: " format"\n", ##__VA_ARGS__);                      \
+      fclose(fp);                                                              \
+    }                                                                          \
+  } while (0)
+
 #ifdef __cplusplus
 }
 #endif
