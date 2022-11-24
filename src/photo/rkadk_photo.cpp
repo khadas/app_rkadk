@@ -797,7 +797,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
-  ret = RK_MPI_SYS_Bind(&stSrcChn, &stPhoVenChn);
+  ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stPhoVenChn);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo VI Bind VENC [%d %d] fail %x",stSrcChn.s32ChnId,
                 stPhoVenChn.s32ChnId, ret);
