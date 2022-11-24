@@ -604,8 +604,6 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
   const char *deviceName;
   const char *module;
   RKADK_U32 u32DefWidth, u32DefHeight;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
   RKADK_PARAM_VI_CFG_S *pstViCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stViCfg[index];
 
@@ -1483,19 +1481,16 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
       RKADK_MAP_TABLE_CFG_S *pstTimeMapTable = NULL;
       RKADK_MAP_TABLE_CFG_S *pstParamMapTable = NULL;
-      RKADK_STREAM_TYPE_E enStrmType;
 
       memset(&pstCfg->stMediaCfg[i].stRecCfg.attribute[j], 0,
              sizeof(RKADK_PARAM_VENC_ATTR_S));
       if (j == 0) {
-        enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
         pstTimeMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_MAP);
         pstParamMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_MAIN_PARAM_MAP);
       } else {
-        enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
         pstTimeMapTable =
             RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_TIME_MAP);
         pstMapTableCfg = RKADK_PARAM_GetMapTable(i, RKADK_PARAM_REC_SUB_MAP);
@@ -2323,8 +2318,8 @@ static void RKADK_PARAM_MicMute(bool mute, RKADK_U32 volume) {
   sprintf(buffer, "%d", volume);
 
   if (mute) {
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", "0");
-    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", "0");
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", (char *)"0");
+    RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", (char *)"0");
   }
   else {
     RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
@@ -2473,7 +2468,8 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
 }
 
 static RKADK_S32 RKADK_PARAM_SetVencTrans(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
-  int ret = 0, scalingList;
+  int ret = 0;
+  RKADK_U32 scalingList;
   VENC_H264_TRANS_S stH264Trans;
   VENC_H265_TRANS_S stH265Trans;
 
@@ -2631,7 +2627,7 @@ RKADK_S32 RKADK_PARAM_SetVAdvancedParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
   ret = RKADK_PARAM_SetRcParam(stVencAttr);
   ret |= RKADK_PARAM_SetVencTrans(stVencAttr);
   ret |= RKADK_PARAM_SetVencVui(stVencAttr);
-  ret != RKADK_PARAM_SetVencHierarchicalQp(stVencAttr);
+  ret |= RKADK_PARAM_SetVencHierarchicalQp(stVencAttr);
 
   return ret;
 }

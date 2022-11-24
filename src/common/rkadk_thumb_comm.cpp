@@ -123,25 +123,6 @@ static int PackageApp1(IFD ifd0[], IFD ifd1[], int ifd0_len, int ifd1_len,
   return total_len;
 }
 
-static void split(char *src,const char *separator,char **dest,int *num) {
-  char *pNext;
-  int count = 0;
-  if (src == NULL || strlen(src) == 0)
-    return;
-
-  if (separator == NULL || strlen(separator) == 0)
-    return;
-
-  char *strtok(char *str, const char *delim);
-  pNext = strtok(src,separator);
-  while(pNext != NULL) {
-    *dest++ = pNext;
-    ++count;
-    pNext = strtok(NULL,separator);
-  }
-  *num = count;
-}
-
 static int RKADK_Thumbnail_Vi(RKADK_S32 u32CamId, RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
   int ret = 0;
 
@@ -211,9 +192,9 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
                                  ptsThumbCfg->thumb_height * 3 / 2;
 
   stIfd1[0] = {0x0100, 3, 1, ptsThumbCfg->thumb_width,
-              {{.uwv = ptsThumbCfg->thumb_width }}}; // ImageWidth
+              {{.uwv = (uint16_t)ptsThumbCfg->thumb_width }}}; // ImageWidth
   stIfd1[1] = {0x0100, 3, 1, ptsThumbCfg->thumb_height,
-              {{.uwv = ptsThumbCfg->thumb_height}}}; // ImageLength
+              {{.uwv = (uint16_t)ptsThumbCfg->thumb_height}}}; // ImageLength
 
   ret = RKADK_MPI_VENC_Init(u32CamId, ChnId, &stAttr);
   if (ret != 0) {
@@ -453,7 +434,6 @@ RKADK_S32 ThumbnailDeInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule
 RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pu8JpegData, RKADK_U32 u32JpegLen,
                                VENC_STREAM_S stThuFrame,
                                RKADK_U8 *pu8Photo) {
-  int ret = 0;
   char *thumb_data;
   int thumb_len;
   int app0_len;
@@ -549,8 +529,7 @@ static RKADK_S32 SeekToMp4Thm(const RKADK_U8 *pFile, int size) {
 static RKADK_S32 GetThmInMp4Box(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
                                 RKADK_THUMB_ATTR_S *pstThumbAttr) {
   FILE *fp = NULL;
-  RKADK_U64 u64BoxSize;
-  int ret, len, cur, fd;
+  int len, cur, boxSize;
   RKADK_U8 *pFile;
 
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
@@ -591,10 +570,10 @@ static RKADK_S32 GetThmInMp4Box(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
   fclose(fp);
 
   cur = SeekToMp4Thm(pFile, len);
-  if (cur > 0 && (u64BoxSize = bswap_32(*(RKADK_U32*) (pFile + cur))) > 0 &&
-      cur + u64BoxSize <= len) {
+  if (cur > 0 && (boxSize = bswap_32(*(int*) (pFile + cur))) > 0 &&
+      cur + boxSize <= len) {
     // 16: 4bytes width + 4bytes height + 4bytes VirWidth + 4bytes VirHeight
-    RKADK_U32 u32DataSize = u64BoxSize - THM_BOX_HEADER_LEN - 16;
+    RKADK_U32 u32DataSize = boxSize - THM_BOX_HEADER_LEN - 16;
 
     if (!pstThumbAttr->pu8Buf) {
       pstThumbAttr->pu8Buf = (RKADK_U8 *)malloc(u32DataSize);

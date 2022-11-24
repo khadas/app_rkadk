@@ -83,7 +83,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_Create(RKADK_S8 decoderMode, RKADK_CODEC_TYPE_E eC
 
   memset(pstAudioDecoder, 0, sizeof(AUDIO_DECODER_PARAM_S));
   pstAudioDecoder->eCodecType = eCodecType;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     player_init();
     if (eCodecType == RKADK_CODEC_TYPE_MP3)
       player_register_mp3dec();
@@ -132,7 +133,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_Create(RKADK_S8 decoderMode, RKADK_CODEC_TYPE_E eC
   }
 
 __FAILED:
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     if (pstAudioDecoder->pAudioPlayerCfg) {
       free(pstAudioDecoder->pAudioPlayerCfg);
       pstAudioDecoder->pAudioPlayerCfg = NULL;
@@ -153,7 +155,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_Destroy(RKADK_S8 decoderMode, RKADK_MW_PTR *pAudio
   RKADK_CHECK_POINTER(pstAudioDecoder->audioPlayer, RKADK_FAILURE);
 
   RKADK_AUDIO_DECODER_Stop(*pAudioDecoder);
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     if (pstAudioDecoder->pAudioPlayerCfg) {
       free(pstAudioDecoder->pAudioPlayerCfg);
       pstAudioDecoder->pAudioPlayerCfg = NULL;
@@ -192,7 +195,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_StreamPush(RKADK_MW_PTR pAudioDecoder, RKADK_CHAR 
 
   RKADK_CHECK_POINTER(pAudioDecoder, RKADK_FAILURE);
   AUDIO_DECODER_PARAM_S *pstAudioDecoder = (AUDIO_DECODER_PARAM_S *)pAudioDecoder;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     if (packetSize <= 0) {
       player_push(pstAudioDecoder->audioPlayer, pPacketData, 0);
     } else {
@@ -216,7 +220,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_FilePush(RKADK_MW_PTR pAudioDecoder, RKADK_BOOL bS
   RKADK_CHECK_POINTER(pstAudioDecoder->pFin, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstAudioDecoder->pAudioBuf, RKADK_FAILURE);
 
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     while (pstAudioDecoder->pFin && bStopFlag == RKADK_FALSE) {
       len = fread(pstAudioDecoder->pAudioBuf, 1, AUDIO_BUF_SIZE, pstAudioDecoder->pFin);
       if (len <= 0) {
@@ -245,7 +250,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_FilePush(RKADK_MW_PTR pAudioDecoder, RKADK_BOOL bS
 RKADK_S32 RKADK_AUDIO_DECODER_GetData(RKADK_MW_PTR pAudioDecoder, RKADK_CHAR *buf, RKADK_U32 len) {
   RKADK_CHECK_POINTER(pAudioDecoder, RKADK_FAILURE);
   AUDIO_DECODER_PARAM_S *pstAudioDecoder = (AUDIO_DECODER_PARAM_S *)pAudioDecoder;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     return player_pull(pstAudioDecoder->audioPlayer, buf, len);
   } else {
     RKADK_LOGE("Cannot pull unsupported audio decoding format data");
@@ -256,7 +262,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_GetData(RKADK_MW_PTR pAudioDecoder, RKADK_CHAR *bu
 RKADK_S32 RKADK_AUDIO_DECODER_Start(RKADK_MW_PTR pAudioDecoder) {
   RKADK_CHECK_POINTER(pAudioDecoder, RKADK_FAILURE);
   AUDIO_DECODER_PARAM_S *pstAudioDecoder = (AUDIO_DECODER_PARAM_S *)pAudioDecoder;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     player_play(pstAudioDecoder->audioPlayer, pstAudioDecoder->pAudioPlayerCfg);
   }
 
@@ -266,7 +273,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_Start(RKADK_MW_PTR pAudioDecoder) {
 RKADK_S32 RKADK_AUDIO_DECODER_Stop(RKADK_MW_PTR pAudioDecoder) {
   RKADK_CHECK_POINTER(pAudioDecoder, RKADK_FAILURE);
   AUDIO_DECODER_PARAM_S *pstAudioDecoder = (AUDIO_DECODER_PARAM_S *)pAudioDecoder;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     player_push(pstAudioDecoder->audioPlayer, pstAudioDecoder->pAudioBuf, 0);
 
     int ret = player_stop(pstAudioDecoder->audioPlayer);
@@ -285,7 +293,8 @@ RKADK_S32 RKADK_AUDIO_DECODER_Stop(RKADK_MW_PTR pAudioDecoder) {
 RKADK_S32 RKADK_AUDIO_DECODER_GetInfo(RKADK_S8 decoderMode, RKADK_MW_PTR pAudioDecoder, AUDIO_DECODER_CTX_S *pCtx) {
   RKADK_CHECK_POINTER(pAudioDecoder, RKADK_FAILURE);
   AUDIO_DECODER_PARAM_S *pstAudioDecoder = (AUDIO_DECODER_PARAM_S *)pAudioDecoder;
-  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3 || RKADK_CODEC_TYPE_PCM) {
+  if (pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_MP3
+      || pstAudioDecoder->eCodecType == RKADK_CODEC_TYPE_PCM) {
     struct audio_config config;
     if (player_audio_info(pstAudioDecoder->audioPlayer, &config, -1) != RKADK_SUCCESS) {
       return RKADK_FAILURE;

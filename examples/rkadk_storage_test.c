@@ -104,7 +104,7 @@ RKADK_S32 CreatFile(char *name, long size) {
 }
 
 static void *CreatFileThread(void *arg) {
-  int ch = (int *)arg;
+  int ch = *(int *)arg;
   char name[400];
   time_t timep;
   struct tm *p;
@@ -139,7 +139,7 @@ RKADK_S32 CreatFileTest(RKADK_MW_PTR *ppHandle) {
   pthread_t tid[MAX_CH];
 
   for (i = 0; i < MAX_CH; i++) {
-    ret = pthread_create(&tid[i], NULL, CreatFileThread, (void *)(i));
+    ret = pthread_create(&tid[i], NULL, CreatFileThread, (void *)(&i));
 
     if (ret) {
       RKADK_LOGE("pthread_create failed.");

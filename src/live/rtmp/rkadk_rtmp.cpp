@@ -430,7 +430,7 @@ static RKADK_S32 RKADK_RTMP_InitMuxer(RKADK_U32 u32CamId, char *path,
     return ret;
   }
 
-  ret = rkmuxer_init(pHandle->u32MuxerId, "flv", path,
+  ret = rkmuxer_init(pHandle->u32MuxerId, (char *)"flv", path,
                      &pHandle->stVideo, &pHandle->stAudio);
   if (ret) {
     RKADK_LOGE("rkmuxer_init failed[%d]", ret);

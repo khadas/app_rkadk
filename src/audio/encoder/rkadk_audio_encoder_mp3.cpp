@@ -122,7 +122,7 @@ RKADK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
     return AENC_ENCODER_ERROR;
   }
 
-  RKADK_S32 encoded_size = 0;
+  RKADK_U32 u32EncSize = 0;
   RKADK_U8 *inData = pParam->pu8InBuf;
   RKADK_U64 inPts = pParam->u64InTimeStamp;
   RKADK_U32 inbufSize = 0;
@@ -137,12 +137,12 @@ RKADK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
   copySize = (pParam->u32InLen > inbufSize) ? inbufSize : pParam->u32InLen;
   memcpy(&in_buf, inData, copySize);
   pParam->u32InLen = pParam->u32InLen - copySize;
-  encoded_size = L3_compress(ctx->u32FrameSize, &out_ptr);
+  u32EncSize = L3_compress(ctx->u32FrameSize, &out_ptr);
 
-  encoded_size = (encoded_size > pParam->u32OutLen) ? pParam->u32OutLen : encoded_size;
-  memcpy(pParam->pu8OutBuf, out_ptr, encoded_size);
+  u32EncSize = (u32EncSize > pParam->u32OutLen) ? pParam->u32OutLen : u32EncSize;
+  memcpy(pParam->pu8OutBuf, out_ptr, u32EncSize);
   pParam->u64OutTimeStamp = inPts;
-  pParam->u32OutLen = encoded_size;
+  pParam->u32OutLen = u32EncSize;
 
   return AENC_ENCODER_OK;
 }
@@ -151,7 +151,6 @@ RKADK_S32 RegisterAencMp3(void) {
   if (!u32MP3InitCnt) {
     RKADK_S32 ret;
     AENC_ENCODER_S aencCtx;
-    AUDIO_SOUND_MODE_E soundMode;
     memset(&aencCtx, 0, sizeof(AENC_ENCODER_S));
 
     s32ExtCodecHandle = -1;
@@ -166,7 +165,7 @@ RKADK_S32 RegisterAencMp3(void) {
     RKADK_LOGD("register external aenc(%s)", aencCtx.aszName);
     ret = RK_MPI_AENC_RegisterEncoder(&s32ExtCodecHandle, &aencCtx);
     if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("aenc %s register decoder fail", aencCtx.aszName, ret);
+      RKADK_LOGE("aenc[%s] register decoder fail[%d]", aencCtx.aszName, ret);
       return RKADK_FAILURE;
     }
   }
@@ -186,7 +185,7 @@ RKADK_S32 UnRegisterAencMp3(void) {
     RKADK_LOGD("unregister external aenc");
     RKADK_S32 ret = RK_MPI_AENC_UnRegisterEncoder(s32ExtCodecHandle);
     if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("aenc unregister decoder fail", ret);
+      RKADK_LOGE("aenc unregister decoder fail[%d]", ret);
       return RKADK_FAILURE;
     }
 

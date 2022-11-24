@@ -30,12 +30,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+
 extern int optind;
 extern char *optarg;
-
-RKADK_MW_PTR pPlayer = NULL;
-int retplayer = 0;
-
 static bool is_quit = false;
 static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
 
@@ -148,7 +145,8 @@ int main(int argc, char *argv[]) {
   int c, ret;
   char *file = "/userdata/16000_2.mp3";
   RKADK_BOOL bVideoEnable = false;
-  RKADK_U32 duration = 0;
+  RKADK_MW_PTR pPlayer = NULL;
+  int retplayer = 0;
 
   param_init(&stFrmInfo);
 
@@ -230,9 +228,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  //RKADK_PLAYER_GetDuration(pPlayer, &duration);
-  //RKADK_LOGD("%s: duration = %d", file, duration);
-  pthread_t tidaudioplay;
   retplayer = RKADK_PLAYER_Play(pPlayer);
   if (retplayer) {
     RKADK_LOGE("Play failed, ret = %d", retplayer);

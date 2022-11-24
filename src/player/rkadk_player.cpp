@@ -515,8 +515,8 @@ RKADK_S32 CreateAOCtx(RKADK_MW_PTR pPlayer) {
   pstPlayer->pAOCtx->bitWidth        = AUDIO_BIT_WIDTH;
   pstPlayer->pAOCtx->periodCount     = 2;
   pstPlayer->pAOCtx->periodSize      = AUDIO_FRAME_COUNT;
-  pstPlayer->pAOCtx->cardName         = RK_NULL;
-  pstPlayer->pAOCtx->cardName         = AI_DEVICE_NAME;
+  pstPlayer->pAOCtx->cardName        = RK_NULL;
+  pstPlayer->pAOCtx->cardName        = (RKADK_CHAR *)AI_DEVICE_NAME;
   pstPlayer->pAOCtx->devId           = 0;
   pstPlayer->pAOCtx->setVolume       = 100;
   pstPlayer->pAOCtx->setMute         = 0;

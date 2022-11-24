@@ -324,7 +324,6 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
-  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
 
   RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
@@ -553,8 +552,7 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
       stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_IDRSLICE)) {
     //RKADK_LOGD("write I frame chnid = %d", stData.u32ChnId);
     if (pstMuxer->bLapseRecord) {
-      RKADK_U64 u64LapsePts =
-        stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
+      u64LapsePts = stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                 stData.stFrame.pstPack->u32Len,
                                 u64LapsePts, 1, pHandle);
@@ -566,8 +564,7 @@ static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
   } else {
     // RKADK_LOGD("write P frame");
     if (pstMuxer->bLapseRecord) {
-      RKADK_U64 u64LapsePts =
-        stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
+      u64LapsePts = stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
       RKADK_MUXER_WriteVideoFrame(stData.u32ChnId, data,
                                 stData.stFrame.pstPack->u32Len,
                                 u64LapsePts, 0, pHandle);
@@ -604,13 +601,11 @@ static RKADK_S32 RKADK_RECORD_VencGetData(RKADK_U32 u32CamId,
 
 static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   int ret;
-  char name[256];
   bool bUseVpss;
   MPP_CHN_S stSrcChn, stDestChn, stSrcVpssChn, stDstVpssChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
-  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -963,7 +958,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
   VENC_CHN_ATTR_S stRecAttr;
   VI_CHN_ATTR_S stChnAttr;
 
-  for (int index = 0; index < pstRecCfg->file_num; index++) {
+  for (RKADK_U32 index = 0; index < pstRecCfg->file_num; index++) {
     ret = RKADK_MUXER_Reset(pRecorder,
                             pstRecCfg->attribute[index].venc_chn);
     if (ret) {
@@ -1068,8 +1063,6 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
 static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                          RKADK_MW_PTR pRecorder) {
   int ret;
-  bool bReset;
-  RKADK_U32 u32DstFrameRateNum;
   MPP_CHN_S stSrcChn, stDestChn;
   RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
   RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;

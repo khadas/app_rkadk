@@ -81,7 +81,6 @@ typedef struct {
 
 static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
-static pthread_mutex_t g_mediaMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool g_bVpssGrpInit[VPSS_MAX_GRP_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
@@ -693,7 +692,7 @@ RKADK_S32 RKADK_MPI_VI_DeInit(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId) {
     }
 
     for (j = 0; j < RKADK_MEDIA_VI_MAX_CNT; j++) {
-      if (g_stMediaCtx.stViInfo[j].s32DevId == u32CamId) {
+      if (g_stMediaCtx.stViInfo[j].s32DevId == (RKADK_S32)u32CamId) {
         if (j == i)
           continue;
         if (g_stMediaCtx.stViInfo[j].s32InitCnt > 0)

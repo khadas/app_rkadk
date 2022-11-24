@@ -199,9 +199,6 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
 }
 
 static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
-  RKADK_U8 mp3_header[7];
-  RKADK_AUDIO_INFO_S audioInfo;
-
   if (!g_output_file) {
     g_output_file = fopen(g_output_path, "w");
     if (!g_output_file) {

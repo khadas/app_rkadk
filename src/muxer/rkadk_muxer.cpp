@@ -79,7 +79,7 @@ typedef struct {
   int32_t duration;     // s
   int32_t realDuration; // ms
   int64_t startTime;    // us
-  int frameCnt;
+  RKADK_U32 frameCnt;
   bool bEnableStream;
   bool bMuxering;
   bool bFirstFile;
@@ -666,8 +666,6 @@ static int RKADK_MUXER_PreRecPro(MUXER_HANDLE_S *pstMuxerHandle) {
 
 static bool RKADK_MUXER_Proc(void *params) {
   int ret = 0;
-  bool bThumbFrame;
-  bool bThumbPts;
   RKADK_U32 u32Duration;
   MUXER_BUF_CELL_S *cell = NULL;
 
@@ -875,7 +873,8 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         pMuxerHandle->stVideo.thumb.data_size = ptsThumbCfg->thumb_width *
                                                 ptsThumbCfg->thumb_height * 3 / 2;
         pMuxerHandle->stVideo.thumb.data = (unsigned char *)malloc(pMuxerHandle->stVideo.thumb.data_size);
-        memset(pMuxerHandle->stVideo.thumb.data, 0, sizeof(pMuxerHandle->stVideo.thumb.data));
+        if (pMuxerHandle->stVideo.thumb.data)
+          memset(pMuxerHandle->stVideo.thumb.data, 0, pMuxerHandle->stVideo.thumb.data_size);
       } else if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_AUDIO) {
         RKADK_TRACK_AUDIO_SOURCE_INFO_S *audioInfo =
             &(pstTrackSource->unTrackSourceAttr.stAudioInfo);

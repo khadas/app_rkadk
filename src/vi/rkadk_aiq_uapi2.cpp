@@ -373,7 +373,6 @@ int RKADK_VI_ISP_GET_AeExpResInfo(RKADK_U32 u32CamId,
 int RKADK_VI_ISP_DumpExpInfo(RKADK_U32 u32CamId,
                              rk_aiq_working_mode_t WDRMode) {
   int ret = 0;
-  char aStr[128] = {'\0'};
   Uapi_ExpQueryInfo_t stExpInfo;
   rk_aiq_wb_cct_t stCCT;
 

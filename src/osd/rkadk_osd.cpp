@@ -42,12 +42,13 @@ static const struct RKADK_FORMAT_MAP fmt[] = {
 };
 
 static PIXEL_FORMAT_E TO_RK_FORMAT_FMT(RKADK_FORMAT_E Format) {
-  int i;
-	for (i = 0; i < sizeof(fmt) / sizeof(fmt[0]); i++) {
-		if (fmt[i].Format == Format)
-			return fmt[i].enPixelFormat;
-	}
-	return RK_FMT_BUTT;
+  RKADK_U32 i;
+
+  for (i = 0; i < sizeof(fmt) / sizeof(fmt[0]); i++) {
+    if (fmt[i].Format == Format)
+    return fmt[i].enPixelFormat;
+  }
+  return RK_FMT_BUTT;
 }
 
 RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
@@ -174,7 +175,6 @@ RKADK_S32 RKADK_OSD_DettachFromStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
       RKADK_STREAM_TYPE_E enStrmType) {
   int ret;
   RGN_HANDLE RgnHandle = 0;
-  RGN_CHN_ATTR_S stRgnChnAttr;
   MPP_CHN_S stMppChn;
   RgnHandle = u32OsdId;
 
