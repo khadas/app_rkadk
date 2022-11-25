@@ -107,15 +107,15 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
 
   memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAMEINFO_S));
 
-  pstFrmInfo->u32DispWidth = 720;
-  pstFrmInfo->u32DispHeight = 1280;
+  pstFrmInfo->u32DispWidth = MAX_VO_DISPLAY_WIDTH;
+  pstFrmInfo->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
   pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
-  pstFrmInfo->u32VoLayerMode = 1;
+  pstFrmInfo->u32VoLayerMode = 2;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = VO_DEV_HD0;
-  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
-  pstFrmInfo->u32DispFrmRt = 30;
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_DEFAULT;//DISPLAY_TYPE_MIPI;
+  pstFrmInfo->u32DispFrmRt = 29;
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderColor = 0x0000FA;
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
   char *file = "/userdata/16000_2.mp3";
-  RKADK_BOOL bVideoEnable = false;
+  RKADK_BOOL bVideoEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
   int retplayer = 0;
 

@@ -79,7 +79,6 @@ static RKADK_S32 RKAduioMp3DecoderOpen(RK_VOID *pDecoderAttr, RK_VOID **ppDecode
     return RKADK_FAILURE;
   }
 
-  ADEC_ATTR_CODEC_S *attr = (ADEC_ATTR_CODEC_S *)pDecoderAttr;
   RKADK_ADEC_MP3_CTX_S *ctx = (RKADK_ADEC_MP3_CTX_S *)malloc(sizeof(RKADK_ADEC_MP3_CTX_S));
   if (!ctx) {
     RKADK_LOGE("malloc adec mp3 ctx failed");
@@ -95,8 +94,8 @@ static RKADK_S32 RKAduioMp3DecoderOpen(RK_VOID *pDecoderAttr, RK_VOID **ppDecode
     return RKADK_FAILURE;
   }
 
-  memset(ctx->decMp3buf, 0, MP3MAXFRAMESIZE);
-  memset(ctx->decPCMbuf, 0, MP3MAXFRAMESIZE);
+  memset(ctx->decMp3buf, 0, sizeof(ctx->decMp3buf));
+  memset(ctx->decPCMbuf, 0, sizeof(ctx->decPCMbuf));
 
   *ppDecoder = (RK_VOID *)ctx;
   return RKADK_SUCCESS;
@@ -163,7 +162,7 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
       return ADEC_DECODER_ERROR;
     }
 
-    RKADK_LOGE("mp3 decode failed ret:%d", ret);
+    RKADK_LOGW("An error occurred while decoding mp3 current frame, ret:%d", ret);
     return ADEC_DECODER_ERROR;
   }
 
