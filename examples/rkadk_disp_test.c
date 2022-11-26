@@ -19,7 +19,7 @@
 #include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
-#include "rkadk_vi_isp.h"
+#include "sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -118,13 +118,13 @@ int main(int argc, char *argv[]) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
   ret = RKADK_DISP_Init(u32CamId);
   if (ret) {
     RKADK_LOGE("RKADK_DISP_Init failed(%d)", ret);
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamId);
+    SAMPLE_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
   RKADK_DISP_DeInit(u32CamId);
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(u32CamId);
+  SAMPLE_ISP_Stop(u32CamId);
 #endif
   RKADK_MPI_SYS_Exit();
   return 0;

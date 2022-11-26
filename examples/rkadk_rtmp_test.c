@@ -19,7 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_rtmp.h"
-#include "rkadk_vi_isp.h"
+#include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
   ret = RKADK_RTMP_Init(u32CamId, "rtmp://127.0.0.1:1935/live/substream",
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
   if (ret) {
     RKADK_LOGE("RKADK_RTMP_Init failed(%d)", ret);
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamId);
+    SAMPLE_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
   pHandle = NULL;
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(u32CamId);
+  SAMPLE_ISP_Stop(u32CamId);
 #endif
   RKADK_MPI_SYS_Exit();
   return 0;

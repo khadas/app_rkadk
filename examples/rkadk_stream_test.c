@@ -19,7 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_stream.h"
-#include "rkadk_vi_isp.h"
+#include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -96,7 +96,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
   memset(&stVideoAttr, 0, sizeof(RKADK_STREAM_VIDEO_ATTR_S));
@@ -115,7 +115,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VideoInit failed = %d", ret);
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamId);
+    SAMPLE_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -124,7 +124,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_VencStart failed");
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamId);
+    SAMPLE_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -158,7 +158,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_GOP, &stGopCfg);
 
       // set aiq fps
-      RKADK_VI_ISP_SET_FrameRate(u32CamId, fpsTest);
+      SAMPLE_ISP_SET_FrameRate(u32CamId, fpsTest);
 
       // set mpp fps and gop
       s32VencChn =
@@ -187,7 +187,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
     RKADK_LOGE("RKADK_STREAM_VideoDeInit failed = %d", ret);
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(u32CamId);
+  SAMPLE_ISP_Stop(u32CamId);
 #endif
 
   if (g_output_file) {

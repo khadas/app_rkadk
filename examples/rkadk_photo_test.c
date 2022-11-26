@@ -19,7 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_photo.h"
-#include "rkadk_vi_isp.h"
+#include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  RKADK_VI_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 #endif
 
   memset(&stTakePhotoAttr, 0, sizeof(RKADK_TAKE_PHOTO_ATTR_S));
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_Init failed(%d)", ret);
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(u32CamId);
+    SAMPLE_ISP_Stop(u32CamId);
 #endif
     return -1;
   }
@@ -189,11 +189,25 @@ int main(int argc, char *argv[]) {
   char cmd[64];
   printf("\n#Usage: input 'quit' to exit programe!\n"
          "peress any other key to capture one picture to file\n");
+
+  RKADK_PARAM_RES_E type;
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
+    } else if (strstr(cmd, "1080")) {
+      type = RKADK_RES_1080P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PHOTO_Reset(pHandle);
+    } else if (strstr(cmd, "720")) {
+      type = RKADK_RES_720P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PHOTO_Reset(pHandle);
+    } else if (strstr(cmd, "1620")) {
+      type = RKADK_RES_1620P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PHOTO_Reset(pHandle);
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {
@@ -207,7 +221,7 @@ int main(int argc, char *argv[]) {
   RKADK_PHOTO_DeInit(pHandle);
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(u32CamId);
+  SAMPLE_ISP_Stop(u32CamId);
 #endif
   RKADK_MPI_SYS_Exit();
   return 0;

@@ -19,7 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_record.h"
-#include "rkadk_vi_isp.h"
+#include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -121,16 +121,16 @@ static int IspProcess(RKADK_S32 u32CamId) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam flip failed");
 
   if (mirror || flip) {
-    ret = RKADK_VI_ISP_SET_MirrorFlip(u32CamId, mirror, flip);
+    ret = SAMPLE_ISP_SET_MirrorFlip(u32CamId, mirror, flip);
     if (ret)
-      RKADK_LOGE("RKADK_VI_ISP_SET_MirrorFlip failed");
+      RKADK_LOGE("SAMPLE_ISP_SET_MirrorFlip failed");
   }
 
 #ifdef RKADK_DUMP_ISP_RESULT
   // mirror flip
-  ret = RKADK_VI_ISP_GET_MirrorFlip(u32CamId, &mirror, &flip);
+  ret = SAMPLE_ISP_GET_MirrorFlip(u32CamId, &mirror, &flip);
   if (ret)
-    RKADK_LOGE("RKADK_VI_ISP_GET_MirrorFlip failed");
+    RKADK_LOGE("SAMPLE_ISP_GET_MirrorFlip failed");
   else
     RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
 #endif
@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  RKADK_VI_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
+  SAMPLE_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
                      fps);
 
   IspProcess(stRecAttr.s32CamID);
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("Create recorder failed");
 #ifdef RKAIQ
-    RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
+    SAMPLE_ISP_Stop(stRecAttr.s32CamID);
 #endif
     return -1;
   }
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]) {
   RKADK_RECORD_Destroy(pRecorder);
 
 #ifdef RKAIQ
-  RKADK_VI_ISP_Stop(stRecAttr.s32CamID);
+  SAMPLE_ISP_Stop(stRecAttr.s32CamID);
 #endif
   RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
