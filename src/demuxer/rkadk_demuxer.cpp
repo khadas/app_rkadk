@@ -26,11 +26,13 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *
   DemuxerInput tempDemuxerInput;
 
   tempDemuxerInput.ptr = demuxerInput->ptr;
+  tempDemuxerInput.s8ReadModeFlag = 0;
   tempDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
   tempDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
   tempDemuxerInput.pstReadPacketCallback.read_video_packet = demuxerInput->pstReadPacketCallback.pfnReadVideoPacketCallback;
   tempDemuxerInput.pstReadPacketCallback.read_audio_packet = demuxerInput->pstReadPacketCallback.pfnReadAudioPacketCallback;
-  int ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
+
+  RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
   if (ret != 0) {
     RKADK_LOGE("RKADK_DEMUXER_Create failed");
     return RKADK_FAILURE;
@@ -46,10 +48,10 @@ RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg) {
 RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam) {
   DemuxerParam tempDemuxerParam;
 
-  int ret = rkdemuxer_get_param(demuxerCfg, inputName, &tempDemuxerParam);
+  RKADK_S32 ret = rkdemuxer_get_param(demuxerCfg, inputName, &tempDemuxerParam);
   if (ret != 0) {
-      RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
-      return RKADK_FAILURE;
+    RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+    return RKADK_FAILURE;
   }
 
   demuxerParam->totalTime = tempDemuxerParam.s32TotalTime;
@@ -72,20 +74,20 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
 }
 
 RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg) {
-  int ret = rkdemuxer_read_packet_start(demuxerCfg);
+  RKADK_S32 ret = rkdemuxer_read_packet_start(demuxerCfg);
   if (ret != 0) {
-      RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-      return RKADK_FAILURE;
+    RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+    return RKADK_FAILURE;
   }
 
   return RKADK_SUCCESS;
 }
 
 RKADK_S32 RKADK_DEMUXER_ReadPacketStop(RKADK_MW_PTR demuxerCfg) {
-  int ret = rkdemuxer_read_packet_stop(demuxerCfg);
+  RKADK_S32 ret = rkdemuxer_read_packet_stop(demuxerCfg);
   if (ret != 0) {
-      RKADK_LOGE("RKADK_DEMUXER_ReadPacketStop failed");
-      return RKADK_FAILURE;
+    RKADK_LOGE("RKADK_DEMUXER_ReadPacketStop failed");
+    return RKADK_FAILURE;
   }
 
   return RKADK_SUCCESS;
