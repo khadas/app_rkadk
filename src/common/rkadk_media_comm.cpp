@@ -1646,7 +1646,7 @@ bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
   RKADK_LOGD("Old width height[%d %d], new width height[%d %d]",
             pstRecAttr->stVencAttr.u32PicWidth, pstRecAttr->stVencAttr.u32PicHeight,
             u32Width, u32Height);
-  if (pstRecAttr->stVencAttr.u32PicWidth == u32Width ||
+  if (pstRecAttr->stVencAttr.u32PicWidth == u32Width &&
       pstRecAttr->stVencAttr.u32PicHeight == u32Height)
     return false;
 
