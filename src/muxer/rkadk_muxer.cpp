@@ -803,7 +803,6 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     pMuxerHandle->u32CamId = pstMuxerAttr->u32CamId;
     pMuxerHandle->muxerId =
         i + (pstMuxerAttr->u32CamId * RKADK_MUXER_STREAM_MAX_CNT);
-    pMuxerHandle->bEnableStream = true;
     pMuxerHandle->pcbRequestFileNames = pstMuxerAttr->pcbRequestFileNames;
     pMuxerHandle->pfnEventCallback = pstMuxerAttr->pfnEventCallback;
 
