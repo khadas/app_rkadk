@@ -53,8 +53,8 @@ extern "C" {
 #define RKADK_ISPP_VI_NODE_CNT 3
 
 /* sensor default parameters */
-#define SENSOR_MAX_WIDTH 2560
-#define SENSOR_MAX_HEIGHT 1440
+#define SENSOR_MAX_WIDTH 2880
+#define SENSOR_MAX_HEIGHT 1620
 
 //default vi device name
 #define DEF_DEVICE_NEME_VI_0 "rkisp_mainpath"
