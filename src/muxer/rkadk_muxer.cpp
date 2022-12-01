@@ -63,6 +63,7 @@ typedef struct {
   struct list_head stVList;
   struct list_head stAList;
   RKADK_MUXER_PRE_RECORD_ATTR_S stAttr;
+  pthread_mutex_t mutex;
 } MANUAL_PRE_RECORD_PARAM;
 
 typedef struct {
@@ -289,7 +290,7 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   pstPreRecCell->bIsPool = false;
   pstPreRecCell->pool = one->pool;
 
-  RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
+  RKADK_MUTEX_LOCK(pstMuxerHandle->stPreRecParam.mutex);
   do {
     list_for_each_entry_safe(cell, cell_n, pstList, mark) {
       if (cell->pts > pstPreRecCell->pts) {
@@ -316,7 +317,7 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
     }
   }
 
-  RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
+  RKADK_MUTEX_UNLOCK(pstMuxerHandle->stPreRecParam.mutex);
 }
 
 static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
@@ -631,7 +632,6 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
     return 0;
 
   pstAttr = &pstMuxerHandle->stPreRecParam.stAttr;
-
   switch (pstAttr->enPreRecordMode) {
   case RKADK_MUXER_PRE_RECORD_MANUAL_SPLIT:
     bPreRecord = pstMuxerHandle->stManualSplit.bSplitRecord && (pstAttr->u32PreRecTimeSec > 0);
@@ -646,9 +646,8 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   if (!bPreRecord)
     return 0;
 
+  RKADK_MUTEX_LOCK(pstMuxerHandle->stPreRecParam.mutex);
   RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
-
-  RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
   while (!list_empty(&pstMuxerHandle->stPreRecParam.stVList)) {
     cell = list_first_entry(&pstMuxerHandle->stPreRecParam.stVList, MUXER_BUF_CELL_S, mark);
     list_del_init(&cell->mark);
@@ -665,7 +664,7 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
 
   if (!bFindKeyFrame) {
     RKADK_LOGD("don't find KeyFrame, pre_record fialed");
-    RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
+    RKADK_MUTEX_UNLOCK(pstMuxerHandle->stPreRecParam.mutex);
     return 0;
   }
 
@@ -675,7 +674,7 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
     list_add_tail(&cell->mark, &pstMuxerHandle->stProcList);
   }
 
-  RKADK_MUTEX_UNLOCK(pstMuxerHandle->mutex);
+  RKADK_MUTEX_UNLOCK(pstMuxerHandle->stPreRecParam.mutex);
   return 1;
 }
 
@@ -912,6 +911,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
     memcpy(&pMuxerHandle->stPreRecParam.stAttr, &pstMuxerAttr->stPreRecordAttr,
             sizeof(RKADK_MUXER_PRE_RECORD_ATTR_S));
+    pMuxerHandle->stPreRecParam.mutex = PTHREAD_MUTEX_INITIALIZER;
 
     if (i == 0)
       pMuxerHandle->u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
