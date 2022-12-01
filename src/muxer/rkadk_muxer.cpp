@@ -83,6 +83,7 @@ typedef struct {
   bool bEnableStream;
   bool bMuxering;
   bool bFirstFile;
+  bool bLapseRecord;
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
@@ -256,6 +257,13 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   MUXER_BUF_CELL_S *pstPreRecCell = NULL;
   MANUAL_PRE_RECORD_PARAM *pstPreRecParam;
 
+  if (pstMuxerHandle->bLapseRecord) {
+    if (RKADK_MUXER_GetListSize(pstMuxerHandle, pstList) > 0)
+      RKADK_MUXER_ListRelease(pstMuxerHandle, pstList);
+
+    return;
+  }
+
   pstPreRecParam = &pstMuxerHandle->stPreRecParam;
   if (pstPreRecParam->stAttr.u32PreRecTimeSec <= 0)
       return;
@@ -367,7 +375,6 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
   cell->size = size;
   cell->bIsPool = true;
   RKADK_MUXER_PreRecPush(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList, cell);
-  RKADK_MUXER_GetListSize(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
   RKADK_MUXER_CellPush(pstMuxerHandle, &pstMuxerHandle->stProcList, cell);
   RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
   return 0;
@@ -610,10 +617,18 @@ static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->stThumbParam.bRequestThumb = false;
 }
 
-static int RKADK_MUXER_PreRecPro(MUXER_HANDLE_S *pstMuxerHandle) {
+static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
+  int size;
   bool bPreRecord = false, bFindKeyFrame = false;
   MUXER_BUF_CELL_S *cell = NULL;
   RKADK_MUXER_PRE_RECORD_ATTR_S *pstAttr;
+
+  if (pstMuxerHandle->bLapseRecord)
+    return 0;
+
+  size = RKADK_MUXER_GetListSize(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+  if (size < pstMuxerHandle->stVideo.frame_rate_num)
+    return 0;
 
   pstAttr = &pstMuxerHandle->stPreRecParam.stAttr;
 
@@ -703,7 +718,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           if (ret) {
             RKADK_LOGE("rkmuxer_init failed[%d]", ret);
           } else {
-            if (RKADK_MUXER_PreRecPro(pstMuxerHandle)) {
+            if (RKADK_MUXER_PreRecProc(pstMuxerHandle)) {
               MUXER_BUF_CELL_S *firstCell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
               if (firstCell)
                 cell = firstCell;
@@ -887,6 +902,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         i + (pstMuxerAttr->u32CamId * RKADK_MUXER_STREAM_MAX_CNT);
     pMuxerHandle->pcbRequestFileNames = pstMuxerAttr->pcbRequestFileNames;
     pMuxerHandle->pfnEventCallback = pstMuxerAttr->pfnEventCallback;
+    pMuxerHandle->bLapseRecord = pstMuxer->bLapseRecord;
 
     pstSrcStreamAttr = &(pstMuxerAttr->astStreamAttr[i]);
     pMuxerHandle->duration = pstSrcStreamAttr->u32TimeLenSec;
@@ -1209,6 +1225,7 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
     return -1;
   }
 
+  pstMuxerHandle->bLapseRecord = pstMuxerAttr->bLapseRecord;
   pstMuxerHandle->duration = pstMuxerAttr->astStreamAttr[index].u32TimeLenSec;
   ret = RKADK_MUXER_SetAVParam(pstMuxerHandle, &pstMuxerAttr->astStreamAttr[index]);
   if (ret) {
