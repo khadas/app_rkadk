@@ -1598,49 +1598,6 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
   return 0;
 }
 
-bool RKADK_MEDIA_CompareFrameRate(VENC_RC_ATTR_S *pstRcAttr,
-                                    RKADK_U32 u32DstFrameRate) {
-  switch (pstRcAttr->enRcMode) {
-  case VENC_RC_MODE_H265CBR:
-    if (pstRcAttr->stH265Cbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_H265VBR:
-    if (pstRcAttr->stH265Vbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_H265AVBR:
-    if (pstRcAttr->stH265Avbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_MJPEGCBR:
-    if (pstRcAttr->stMjpegCbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_MJPEGVBR:
-    if (pstRcAttr->stMjpegVbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_H264CBR:
-    if (pstRcAttr->stH264Cbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_H264VBR:
-    if (pstRcAttr->stH264Vbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  case VENC_RC_MODE_H264AVBR:
-    if (pstRcAttr->stH264Avbr.fr32DstFrameRateNum == u32DstFrameRate)
-      return false;
-    break;
-  default:
-    RKADK_LOGE("Invalid rc mode: %d", pstRcAttr->enRcMode);
-    return false;
-  }
-
-  return true;
-}
-
 bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
                                 RKADK_U32 u32Width, RKADK_U32 u32Height) {
   RKADK_LOGD("Old width height[%d %d], new width height[%d %d]",
@@ -1653,14 +1610,79 @@ bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
   return true;
 }
 
-bool RKADK_MEDIA_CompareCodecType(VENC_CHN_ATTR_S *pstRecAttr,
-                                  RK_CODEC_ID_E enType) {
-  RKADK_LOGD("Old codec type [%d], new codec type [%d]",
-              pstRecAttr->stVencAttr.enType, enType);
-  if (pstRecAttr->stVencAttr.enType == enType)
-    return false;
+bool RKADK_MEDIA_VencAttrCmp(VENC_CHN_ATTR_S *pstRecAttr,
+                                  RK_CODEC_ID_E enType, RKADK_U32 u32DstFrameRate,
+                                  RKADK_U32 u32Bitrate) {
+  bool reset = false;
+  VENC_RC_ATTR_S *pstRcAttr = &pstRecAttr->stRcAttr;
 
-  return true;
+  if (pstRecAttr->stVencAttr.enType != enType)
+    reset = true;
+
+  u32Bitrate = u32Bitrate / 1000;
+  switch (pstRcAttr->enRcMode) {
+  case VENC_RC_MODE_H265CBR:
+    if (pstRcAttr->stH265Cbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH265Cbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_H265VBR:
+    if (pstRcAttr->stH265Vbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH265Vbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_H265AVBR:
+    if (pstRcAttr->stH265Avbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH265Avbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_MJPEGCBR:
+    if (pstRcAttr->stMjpegCbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stMjpegCbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_MJPEGVBR:
+    if (pstRcAttr->stMjpegVbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stMjpegVbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_H264CBR:
+    if (pstRcAttr->stH264Cbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH264Cbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_H264VBR:
+    if (pstRcAttr->stH264Vbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH264Vbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  case VENC_RC_MODE_H264AVBR:
+    if (pstRcAttr->stH264Avbr.fr32DstFrameRateNum != u32DstFrameRate)
+      reset |= true;
+
+    if (pstRcAttr->stH264Avbr.u32BitRate != u32Bitrate)
+      reset |= true;
+    break;
+  default:
+    RKADK_LOGE("Invalid rc mode: %d", pstRcAttr->enRcMode);
+    break;
+  }
+
+  return reset;
 }
 
 RKADK_S32 RKADK_MEDIA_FrameBufMalloc(RKADK_FRAME_ATTR_S *pstFrameAttr) {

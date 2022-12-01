@@ -243,9 +243,22 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "MS")) { //Manual Split
+      RKADK_PARAM_REC_TIME_S stRecTime;
+      stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      stRecTime.time = 20; //default time
+
+      RKADK_PARAM_GetCamParam(0, RKADK_PARAM_TYPE_SPLITTIME, &stRecTime);
       stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
-      stSplitAttr.u32DurationSec = 20;
+      stSplitAttr.u32DurationSec = stRecTime.time;
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
+    } else if (strstr(cmd, "LR")) { //Lapse Record
+      RKADK_REC_TYPE_E type = RKADK_REC_TYPE_LAPSE;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "NR")) { //Normal Record
+      RKADK_REC_TYPE_E type = RKADK_REC_TYPE_NORMAL;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_RECORD_Reset(pRecorder);
     }
 
     usleep(500000);

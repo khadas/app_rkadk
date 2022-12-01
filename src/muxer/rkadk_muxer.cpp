@@ -770,21 +770,103 @@ static bool RKADK_MUXER_Proc(void *params) {
   return pstMuxerHandle->bEnableStream;
 }
 
+static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
+                                    RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr) {
+  int i;
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
+  RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
+
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pMuxerHandle->u32CamId);
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  for (i = 0; i < (int)pstSrcStreamAttr->u32TrackCnt; i++) {
+    pstTrackSource = &(pstSrcStreamAttr->aHTrackSrcHandle[i]);
+
+    if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_VIDEO) {
+      RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo =
+          &(pstTrackSource->unTrackSourceAttr.stVideoInfo);
+
+      pMuxerHandle->gop = pstVideoInfo->u32Gop;
+      pMuxerHandle->u32VencChn = pstTrackSource->u32ChnId;
+      pMuxerHandle->stVideo.width = pstVideoInfo->u32Width;
+      pMuxerHandle->stVideo.height = pstVideoInfo->u32Height;
+      pMuxerHandle->stVideo.bit_rate = pstVideoInfo->u32BitRate;
+      pMuxerHandle->stVideo.frame_rate_den = 1;
+      pMuxerHandle->stVideo.frame_rate_num = pstVideoInfo->u32FrameRate;
+      pMuxerHandle->stVideo.profile = pstVideoInfo->u16Profile;
+      pMuxerHandle->stVideo.level = pstVideoInfo->u16Level;
+
+      switch (pstVideoInfo->enCodecType) {
+      case RKADK_CODEC_TYPE_H264:
+        memcpy(pMuxerHandle->stVideo.codec, "H.264", strlen("H.264"));
+        break;
+      case RKADK_CODEC_TYPE_H265:
+        memcpy(pMuxerHandle->stVideo.codec, "H.265", strlen("H.265"));
+        break;
+      default:
+        RKADK_LOGE("not support enCodecType: %d", pstVideoInfo->enCodecType);
+        return -1;
+      }
+
+      //thumbnail infomation
+      if (!pMuxerHandle->stVideo.thumb.data) {
+        pMuxerHandle->stVideo.thumb.width = ptsThumbCfg->thumb_width;
+        pMuxerHandle->stVideo.thumb.height = ptsThumbCfg->thumb_height;
+        pMuxerHandle->stVideo.thumb.vir_width = ptsThumbCfg->thumb_width;
+        pMuxerHandle->stVideo.thumb.vir_height = ptsThumbCfg->thumb_height;
+        pMuxerHandle->stVideo.thumb.data_size = ptsThumbCfg->thumb_width *
+                                                ptsThumbCfg->thumb_height * 3 / 2;
+        pMuxerHandle->stVideo.thumb.data = (unsigned char *)malloc(pMuxerHandle->stVideo.thumb.data_size);
+        if (pMuxerHandle->stVideo.thumb.data)
+          memset(pMuxerHandle->stVideo.thumb.data, 0, pMuxerHandle->stVideo.thumb.data_size);
+      }
+    } else if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_AUDIO) {
+      RKADK_TRACK_AUDIO_SOURCE_INFO_S *pstAudioInfo =
+          &(pstTrackSource->unTrackSourceAttr.stAudioInfo);
+
+      pMuxerHandle->stAudio.channels = pstAudioInfo->u32ChnCnt;
+      pMuxerHandle->stAudio.frame_size = pstAudioInfo->u32SamplesPerFrame;
+      pMuxerHandle->stAudio.sample_rate = pstAudioInfo->u32SampleRate;
+
+      switch (pstAudioInfo->u32BitWidth) {
+      case 16:
+        memcpy(pMuxerHandle->stAudio.format, "S16", strlen("S16"));
+        break;
+      case 32:
+        memcpy(pMuxerHandle->stAudio.format, "S32", strlen("S32"));
+        break;
+      default:
+        RKADK_LOGE("not support u32BitWidth: %d", pstAudioInfo->u32BitWidth);
+        return -1;
+      }
+
+      switch (pstAudioInfo->enCodecType) {
+      case RKADK_CODEC_TYPE_MP3:
+        memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
+        break;
+      case RKADK_CODEC_TYPE_MP2:
+        memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
+        break;
+      default:
+        RKADK_LOGE("not support enCodecType: %d", pstAudioInfo->enCodecType);
+        return -1;
+      }
+    }
+  }
+
+  return 0;
+}
+
 static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                                     RKADK_MUXER_HANDLE_S *pstMuxer) {
-  int i, j;
+  int i;
   char name[256];
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
-  RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
-  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
-
-  pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxerAttr->u32CamId);
-  if (!pstRecCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
-    return -1;
-  }
 
   ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxer->u32CamId);
   if (!ptsThumbCfg) {
@@ -808,7 +890,6 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
     pstSrcStreamAttr = &(pstMuxerAttr->astStreamAttr[i]);
     pMuxerHandle->duration = pstSrcStreamAttr->u32TimeLenSec;
-    pMuxerHandle->gop = pstRecCfg->attribute[i].gop;
     pMuxerHandle->bFirstFile = true;
     pMuxerHandle->bFirstKeyFrame = true;
     pMuxerHandle->bWriteFirstFrame = true;
@@ -836,76 +917,9 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       return -1;
     }
 
-    for (j = 0; j < (int)pstSrcStreamAttr->u32TrackCnt; j++) {
-      pstTrackSource = &(pstSrcStreamAttr->aHTrackSrcHandle[j]);
-
-      if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_VIDEO) {
-        RKADK_TRACK_VIDEO_SOURCE_INFO_S *videoInfo =
-            &(pstTrackSource->unTrackSourceAttr.stVideoInfo);
-
-        pMuxerHandle->u32VencChn = pstTrackSource->u32ChnId;
-        pMuxerHandle->stVideo.width = videoInfo->u32Width;
-        pMuxerHandle->stVideo.height = videoInfo->u32Height;
-        pMuxerHandle->stVideo.bit_rate = videoInfo->u32BitRate;
-        pMuxerHandle->stVideo.frame_rate_den = 1;
-        pMuxerHandle->stVideo.frame_rate_num = videoInfo->u32FrameRate;
-        pMuxerHandle->stVideo.profile = videoInfo->u16Profile;
-        pMuxerHandle->stVideo.level = videoInfo->u16Level;
-
-        switch (videoInfo->enCodecType) {
-        case RKADK_CODEC_TYPE_H264:
-          memcpy(pMuxerHandle->stVideo.codec, "H.264", strlen("H.264"));
-          break;
-        case RKADK_CODEC_TYPE_H265:
-          memcpy(pMuxerHandle->stVideo.codec, "H.265", strlen("H.265"));
-          break;
-        default:
-          RKADK_LOGE("not support enCodecType: %d", videoInfo->enCodecType);
-          return -1;
-        }
-
-        //thumbnail infomation
-        pMuxerHandle->stVideo.thumb.width = ptsThumbCfg->thumb_width;
-        pMuxerHandle->stVideo.thumb.height = ptsThumbCfg->thumb_height;
-        pMuxerHandle->stVideo.thumb.vir_width = ptsThumbCfg->thumb_width;
-        pMuxerHandle->stVideo.thumb.vir_height = ptsThumbCfg->thumb_height;
-        pMuxerHandle->stVideo.thumb.data_size = ptsThumbCfg->thumb_width *
-                                                ptsThumbCfg->thumb_height * 3 / 2;
-        pMuxerHandle->stVideo.thumb.data = (unsigned char *)malloc(pMuxerHandle->stVideo.thumb.data_size);
-        if (pMuxerHandle->stVideo.thumb.data)
-          memset(pMuxerHandle->stVideo.thumb.data, 0, pMuxerHandle->stVideo.thumb.data_size);
-      } else if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_AUDIO) {
-        RKADK_TRACK_AUDIO_SOURCE_INFO_S *audioInfo =
-            &(pstTrackSource->unTrackSourceAttr.stAudioInfo);
-
-        pMuxerHandle->stAudio.channels = audioInfo->u32ChnCnt;
-        pMuxerHandle->stAudio.frame_size = audioInfo->u32SamplesPerFrame;
-        pMuxerHandle->stAudio.sample_rate = audioInfo->u32SampleRate;
-
-        switch (audioInfo->u32BitWidth) {
-        case 16:
-          memcpy(pMuxerHandle->stAudio.format, "S16", strlen("S16"));
-          break;
-        case 32:
-          memcpy(pMuxerHandle->stAudio.format, "S32", strlen("S32"));
-          break;
-        default:
-          RKADK_LOGE("not support u32BitWidth: %d", audioInfo->u32BitWidth);
-          return -1;
-        }
-
-        switch (audioInfo->enCodecType) {
-        case RKADK_CODEC_TYPE_MP3:
-          memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
-          break;
-        case RKADK_CODEC_TYPE_MP2:
-          memcpy(pMuxerHandle->stAudio.codec, "MP2", strlen("MP2"));
-          break;
-        default:
-          RKADK_LOGE("not support enCodecType: %d", audioInfo->enCodecType);
-          return -1;
-        }
-      }
+    if (RKADK_MUXER_SetAVParam(pMuxerHandle, pstSrcStreamAttr)) {
+      RKADK_LOGE("RKADK_MUXER_SetAVParam failed");
+      return -1;
     }
 
     // Init List
@@ -1177,37 +1191,28 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId) {
   return bEnable;
 }
 
-RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
-                             RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo) {
+RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
+                             RKADK_MUXER_ATTR_S *pstMuxerAttr, int index) {
+  int ret;
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstMuxerAttr, RKADK_FAILURE);
 
   pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
   RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
 
   pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
   if (!pstMuxerHandle) {
-    // RKADK_LOGE("don't find muxer handle");
+    RKADK_LOGE("don't find muxer handle");
     return -1;
   }
 
-  pstMuxerHandle->stVideo.width = pstVideoInfo->u32Width;
-  pstMuxerHandle->stVideo.height = pstVideoInfo->u32Height;
-  pstMuxerHandle->stVideo.bit_rate = pstVideoInfo->u32BitRate;
-  pstMuxerHandle->stVideo.profile = pstVideoInfo->u16Profile;
-  pstMuxerHandle->stVideo.level = pstVideoInfo->u16Level;
-
-  switch (pstVideoInfo->enCodecType) {
-  case RKADK_CODEC_TYPE_H264:
-    memcpy(pstMuxerHandle->stVideo.codec, "H.264", strlen("H.264"));
-    break;
-  case RKADK_CODEC_TYPE_H265:
-    memcpy(pstMuxerHandle->stVideo.codec, "H.265", strlen("H.265"));
-    break;
-  default:
-    RKADK_LOGE("not support enCodecType: %d", pstVideoInfo->enCodecType);
+  pstMuxerHandle->duration = pstMuxerAttr->astStreamAttr[index].u32TimeLenSec;
+  ret = RKADK_MUXER_SetAVParam(pstMuxerHandle, &pstMuxerAttr->astStreamAttr[index]);
+  if (ret) {
+    RKADK_LOGE("RKADK_MUXER_SetAVParam failed");
     return -1;
   }
 

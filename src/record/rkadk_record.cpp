@@ -750,6 +750,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
 static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
                                            RKADK_MUXER_ATTR_S *pstMuxerAttr) {
   bool bEnableAudio = false;
+  RKADK_U32 bitrate;
   RKADK_U32 u32Integer = 0, u32Remainder = 0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
@@ -800,10 +801,12 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
   for (int i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
     pstMuxerAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
     if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+      bitrate = pstRecCfg->attribute[i].bitrate / pstRecCfg->lapse_multiple;
       pstMuxerAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].lapse_interval;
       pstMuxerAttr->astStreamAttr[i].u32TrackCnt = 1; // only video track
     } else {
+      bitrate = pstRecCfg->attribute[i].bitrate;
       pstMuxerAttr->astStreamAttr[i].u32TimeLenSec =
           pstRecCfg->record_time_cfg[i].record_time;
       pstMuxerAttr->astStreamAttr[i].u32TrackCnt = RKADK_MUXER_TRACK_MAX_CNT;
@@ -829,12 +832,13 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Level = 41;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Profile =
         pstRecCfg->attribute[i].profile;
-    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32BitRate =
-        pstRecCfg->attribute[i].bitrate;
+    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32BitRate = bitrate;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Width =
         pstRecCfg->attribute[i].width;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
         pstRecCfg->attribute[i].height;
+    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Gop =
+        pstRecCfg->attribute[i].gop;
 
     if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE || !bEnableAudio)
       continue;
@@ -879,12 +883,12 @@ static void RKADK_RECORD_ResetVideoChn(RKADK_U32 index, RKADK_U32 u32CamId,
   pstRecVenChn->s32ChnId = pstRecCfg->attribute[index].venc_chn;
 }
 
-static RKADK_S32 RKADK_RECORD_ResetAttr(RKADK_U32 index,
+static RKADK_S32 RKADK_RECORD_ResetVideoAttr(RKADK_U32 index,
                                         RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                         RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
-                                        VENC_CHN_ATTR_S *pstRecAttr,
-                                        VI_CHN_ATTR_S *pstChnAttr) {
-  bool bReset;
+                                        VENC_CHN_ATTR_S *pstVencAttr,
+                                        VI_CHN_ATTR_S *pstViAttr) {
+  bool bReset = false;
   RKADK_U32 u32DstFrameRateNum;
   RKADK_U32 bitrate;
   RKADK_U32 u32Gop;
@@ -909,39 +913,37 @@ static RKADK_S32 RKADK_RECORD_ResetAttr(RKADK_U32 index,
 
   enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
 
-  bReset = RKADK_MEDIA_CompareFrameRate(&pstRecAttr->stRcAttr, u32DstFrameRateNum);
+  bReset = RKADK_MEDIA_CompareResolution(pstVencAttr, u32Width, u32Height);
 
-  bReset |= RKADK_MEDIA_CompareResolution(pstRecAttr, u32Width, u32Height);
-
-  bReset |= RKADK_MEDIA_CompareCodecType(pstRecAttr, enType);
+  bReset |= RKADK_MEDIA_VencAttrCmp(pstVencAttr, enType, u32DstFrameRateNum, bitrate);
 
   if (!bReset)
     return -1;
 
   if (index == 0) {
-    pstRecAttr->stVencAttr.u32MaxPicWidth = pstSensorCfg->max_width;
-    pstRecAttr->stVencAttr.u32MaxPicHeight = pstSensorCfg->max_height;
-    pstChnAttr->stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
-    pstChnAttr->stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
+    pstVencAttr->stVencAttr.u32MaxPicWidth = pstSensorCfg->max_width;
+    pstVencAttr->stVencAttr.u32MaxPicHeight = pstSensorCfg->max_height;
+    pstViAttr->stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
+    pstViAttr->stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
   } else {
-    pstRecAttr->stVencAttr.u32MaxPicWidth = u32Width;
-    pstRecAttr->stVencAttr.u32MaxPicHeight = u32Height;
-    pstChnAttr->stIspOpt.stMaxSize.u32Width = u32Width;
-    pstChnAttr->stIspOpt.stMaxSize.u32Height = u32Height;
+    pstVencAttr->stVencAttr.u32MaxPicWidth = u32Width;
+    pstVencAttr->stVencAttr.u32MaxPicHeight = u32Height;
+    pstViAttr->stIspOpt.stMaxSize.u32Width = u32Width;
+    pstViAttr->stIspOpt.stMaxSize.u32Height = u32Height;
   }
-  pstRecAttr->stVencAttr.u32PicWidth = u32Width;
-  pstRecAttr->stVencAttr.u32PicHeight = u32Height;
-  pstRecAttr->stVencAttr.u32VirWidth = u32Width;
-  pstRecAttr->stVencAttr.u32VirHeight = u32Height;
-  pstRecAttr->stVencAttr.enType = enType;
-  pstRecAttr->stRcAttr.enRcMode =
+  pstVencAttr->stVencAttr.u32PicWidth = u32Width;
+  pstVencAttr->stVencAttr.u32PicHeight = u32Height;
+  pstVencAttr->stVencAttr.u32VirWidth = u32Width;
+  pstVencAttr->stVencAttr.u32VirHeight = u32Height;
+  pstVencAttr->stVencAttr.enType = enType;
+  pstVencAttr->stRcAttr.enRcMode =
         RKADK_PARAM_GetRcMode(pstRecCfg->attribute[index].rc_mode,
                               pstRecCfg->attribute[index].codec_type);
-  RKADK_MEDIA_SetRcAttr(&pstRecAttr->stRcAttr, u32Gop, bitrate,
+  RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, u32Gop, bitrate,
                           pstSensorCfg->framerate, u32DstFrameRateNum);
 
-  pstChnAttr->stSize.u32Width = pstRecCfg->attribute[index].width;
-  pstChnAttr->stSize.u32Height = pstRecCfg->attribute[index].height;
+  pstViAttr->stSize.u32Width = pstRecCfg->attribute[index].width;
+  pstViAttr->stSize.u32Height = pstRecCfg->attribute[index].height;
 
   return 0;
 }
@@ -953,10 +955,16 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
   int ret;
   bool bChangeResolution;
   bool bUseVpss = false;
-  RKADK_TRACK_VIDEO_SOURCE_INFO_S stVideoInfo;
   MPP_CHN_S stSrcChn, stRecVenChn;
-  VENC_CHN_ATTR_S stRecAttr;
-  VI_CHN_ATTR_S stChnAttr;
+  VENC_CHN_ATTR_S stVencAttr;
+  VI_CHN_ATTR_S stViAttr;
+  RKADK_MUXER_ATTR_S stMuxerAttr;
+
+  ret = RKADK_RECORD_SetMuxerAttr(u32CamId, &stMuxerAttr);
+  if (ret) {
+    RKADK_LOGE("RKADK_RECORD_SetMuxerAttr failed");
+    return -1;
+  }
 
   for (RKADK_U32 index = 0; index < pstRecCfg->file_num; index++) {
     ret = RKADK_MUXER_Reset(pRecorder,
@@ -990,22 +998,28 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
     RKADK_RECORD_ResetVideoChn(index, u32CamId, pstRecCfg,
                                &stSrcChn, &stRecVenChn, bUseVpss);
 
-    memset(&stRecAttr, 0, sizeof(VENC_CHN_ATTR_S));
-    memset(&stChnAttr, 0, sizeof(VI_CHN_ATTR_S));
+    memset(&stVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
+    memset(&stViAttr, 0, sizeof(VI_CHN_ATTR_S));
 
-    ret = RK_MPI_VENC_GetChnAttr(stRecVenChn.s32ChnId, &stRecAttr);
+    ret = RK_MPI_VI_GetChnAttr(u32CamId, stSrcChn.s32ChnId, &stViAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("RK_MPI_VI_GetChnAttr(%d) failed %x", stSrcChn.s32ChnId, ret);
+      return -1;
+    }
+
+    ret = RK_MPI_VENC_GetChnAttr(stRecVenChn.s32ChnId, &stVencAttr);
     if (ret != RK_SUCCESS) {
       RKADK_LOGE("RK_MPI_VENC_GetChnAttr(%d) failed %x",
                   stRecVenChn.s32ChnId, ret);
       return -1;
     }
 
-    bChangeResolution = RKADK_MEDIA_CompareResolution(&stRecAttr,
+    bChangeResolution = RKADK_MEDIA_CompareResolution(&stVencAttr,
                                   pstRecCfg->attribute[index].width,
                                   pstRecCfg->attribute[index].height);
 
-    ret = RKADK_RECORD_ResetAttr(index, pstRecCfg, pstSensorCfg,
-                                 &stRecAttr, &stChnAttr);
+    ret = RKADK_RECORD_ResetVideoAttr(index, pstRecCfg, pstSensorCfg,
+                                 &stVencAttr, &stViAttr);
     if (ret) {
       RKADK_LOGI("Record [%d] stream venc attr is not changed",
                   index);
@@ -1019,7 +1033,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
       return -1;
     }
 
-    ret = RK_MPI_VENC_SetChnAttr(stRecVenChn.s32ChnId, &stRecAttr);
+    ret = RK_MPI_VENC_SetChnAttr(stRecVenChn.s32ChnId, &stVencAttr);
     if (ret != RK_SUCCESS) {
       RKADK_LOGE("Record index[%d] set venc[%d] attr failed %x",
                   index, stRecVenChn.s32ChnId, ret);
@@ -1028,7 +1042,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
 
     if (bChangeResolution) {
       ret = RK_MPI_VI_SetChnAttr(u32CamId, stSrcChn.s32ChnId,
-                            &stChnAttr);
+                            &stViAttr);
       if (ret != RK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VI_SetChnAttr(%d) failed %x",
                     stSrcChn.s32ChnId, ret);
@@ -1036,14 +1050,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
       }
     }
 
-    memset(&stVideoInfo, 0, sizeof(RKADK_TRACK_VIDEO_SOURCE_INFO_S));
-    stVideoInfo.enCodecType = pstRecCfg->attribute[index].codec_type;
-    stVideoInfo.u16Profile = pstRecCfg->attribute[index].profile;
-    stVideoInfo.u16Level = 41;
-    stVideoInfo.u32BitRate = pstRecCfg->attribute[index].bitrate;
-    stVideoInfo.u32Width = pstRecCfg->attribute[index].width;
-    stVideoInfo.u32Height = pstRecCfg->attribute[index].height;
-    ret = RKADK_MUXER_ConfigVideoParam(stRecVenChn.s32ChnId, pRecorder, &stVideoInfo);
+    ret = RKADK_MUXER_ResetParam(stRecVenChn.s32ChnId, pRecorder, &stMuxerAttr, index);
     if (ret) {
       RKADK_LOGE("RKADK_MUXER_Change(%d) failed", stRecVenChn.s32ChnId);
       return -1;
@@ -1326,7 +1333,6 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
   RKADK_MUXER_Start(pRecorder);
 
   RKADK_LOGI("Change [%d] end...", u32CamId);
-
   return 0;
 
 failed:

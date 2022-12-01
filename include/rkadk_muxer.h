@@ -100,6 +100,7 @@ typedef struct {
   RKADK_U32 u32Height;
   RKADK_U32 u32BitRate;
   RKADK_U32 u32FrameRate;
+  RKADK_U32 u32Gop;
   RKADK_U16 u16Profile;
   RKADK_U16 u16Level;
 } RKADK_TRACK_VIDEO_SOURCE_INFO_S;
@@ -243,8 +244,8 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf, RKADK_U32 size
  */
 int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts, void *handle);
 
-RKADK_S32 RKADK_MUXER_ConfigVideoParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
-                              RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo);
+RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
+                              RKADK_MUXER_ATTR_S *pstMuxerAttr, int index);
 
 RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId);
 
