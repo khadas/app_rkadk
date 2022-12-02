@@ -757,6 +757,12 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
   memset(&stPhoAttr, 0, sizeof(VENC_CHN_ATTR_S));
   memset(&stChnAttr, 0, sizeof(stChnAttr));
 
+  ret = RK_MPI_VI_GetChnAttr(pstHandle->u32CamId, stSrcChn.s32ChnId, &stChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Photo get vi[%d] attr failed %x", stSrcChn.s32ChnId, ret);
+    return -1;
+  }
+
   ret = RK_MPI_VENC_GetChnAttr(stPhoVenChn.s32ChnId, &stPhoAttr);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo get venc[%d] attr failed %x",
