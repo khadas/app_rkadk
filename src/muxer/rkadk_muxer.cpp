@@ -1270,7 +1270,11 @@ RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
     return -1;
   }
 
-  RKADK_LOGI("Reset Muxer[%d] End...", chnId);
+  // Release list
+  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
+  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList);
+  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
 
+  RKADK_LOGI("Reset Muxer[%d] End...", chnId);
   return 0;
 }
