@@ -151,6 +151,8 @@ int main(int argc, char *argv[]) {
   RK_BOOL fec_enable = RK_FALSE;
   RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
+  RKADK_PARAM_RES_E type;
+  RKADK_PARAM_CODEC_CFG_S stCodecType;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
@@ -237,6 +239,7 @@ int main(int argc, char *argv[]) {
   char cmd[64];
   printf("\n#Usage: input 'quit' to exit programe!\n"
          "peress any other key to quit\n");
+
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
@@ -252,12 +255,38 @@ int main(int argc, char *argv[]) {
       stSplitAttr.u32DurationSec = stRecTime.time;
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
     } else if (strstr(cmd, "LR")) { //Lapse Record
-      RKADK_REC_TYPE_E type = RKADK_REC_TYPE_LAPSE;
+      type = RKADK_REC_TYPE_LAPSE;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
       RKADK_RECORD_Reset(pRecorder);
     } else if (strstr(cmd, "NR")) { //Normal Record
-      RKADK_REC_TYPE_E type = RKADK_REC_TYPE_NORMAL;
+      type = RKADK_REC_TYPE_NORMAL;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "1620")) {
+      type = RKADK_RES_1620P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "1600")) {
+      type = RKADK_RES_1600P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "1440")) {
+      type = RKADK_RES_1440P;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "264")) {
+      stCodecType.enCodecType = RKADK_CODEC_TYPE_H264;
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "265")) {
+      stCodecType.enCodecType = RKADK_CODEC_TYPE_H265;
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       RKADK_RECORD_Reset(pRecorder);
     }
 

@@ -715,7 +715,7 @@ static bool RKADK_MUXER_Proc(void *params) {
                             pstMuxerHandle->cFileName, &pstMuxerHandle->stVideo,
                             &pstMuxerHandle->stAudio);
           if (ret) {
-            RKADK_LOGE("rkmuxer_init failed[%d]", ret);
+            RKADK_LOGE("rkmuxer_init[%d] failed[%d]", pstMuxerHandle->muxerId, ret);
           } else {
             if (RKADK_MUXER_PreRecProc(pstMuxerHandle)) {
               MUXER_BUF_CELL_S *firstCell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
@@ -733,8 +733,10 @@ static bool RKADK_MUXER_Proc(void *params) {
           }
         }
       } else if (!pstMuxerHandle->bMuxering) {
-        RKADK_LOGI("Stream [%d] request idr!", pstMuxerHandle->u32VencChn);
-        RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
+        if(cell->pool == &pstMuxerHandle->stVFree) {
+          RKADK_LOGI("Stream [%d] request idr!", pstMuxerHandle->u32VencChn);
+          RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
+        }
       }
 
       if (pstMuxerHandle->stThumbParam.bGetThumb)
@@ -1227,6 +1229,9 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
 
   pstMuxerHandle->bLapseRecord = pstMuxerAttr->bLapseRecord;
   pstMuxerHandle->duration = pstMuxerAttr->astStreamAttr[index].u32TimeLenSec;
+  if (pstMuxerHandle->bLapseRecord)
+    memset(&pstMuxerHandle->stAudio, 0, sizeof(AudioParam));
+
   ret = RKADK_MUXER_SetAVParam(pstMuxerHandle, &pstMuxerAttr->astStreamAttr[index]);
   if (ret) {
     RKADK_LOGE("RKADK_MUXER_SetAVParam failed");
