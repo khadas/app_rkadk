@@ -489,7 +489,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
   position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
   if (position > 0) {
-    ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 0);
+    ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1);
     if (ret == RK_SUCCESS) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
       fp = fopen(pstMuxerHandle->cFileName, "r+");
@@ -601,7 +601,7 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_C
 
   if (bRequestThumb && (bThumbFrame || bThumbPts) ) {
     RKADK_LOGI("Request thumbnail frameCnt = %d, realDuration = %d", pstMuxerHandle->frameCnt, pstMuxerHandle->realDuration);
-    ThumbnailRequest(ppstMuxerHandle->u32ThumbVencChn);
+    ThumbnailRequest(pstMuxerHandle->u32ThumbVencChn);
     pstMuxerHandle->stThumbParam.bRequestThumb = false;
   }
 #endif
@@ -732,7 +732,7 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->stThumbParam.bRequestThumb = true;
           }
         }
-      } else if (!pstMuxerHandle->bMuxering){
+      } else if (!pstMuxerHandle->bMuxering) {
         RKADK_LOGI("Stream [%d] request idr!", pstMuxerHandle->u32VencChn);
         RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
       }

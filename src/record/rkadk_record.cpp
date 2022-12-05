@@ -948,6 +948,48 @@ static RKADK_S32 RKADK_RECORD_ResetVideoAttr(RKADK_U32 index,
   return 0;
 }
 
+static RKADK_U32 RKADK_RECORD_ResetThumb(RKADK_U32 u32CamId, RKADK_U32 index,
+                                        RKADK_PARAM_REC_CFG_S *pstRecCfg) {
+  int ret;
+  RKADK_U32 u32ThumbChn;
+  VENC_PACK_S stPack;
+  VENC_STREAM_S stFrame;
+
+  RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
+  if (!ptsThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  if (index == 0)
+    u32ThumbChn = ptsThumbCfg->record_main_venc_chn;
+  else
+    u32ThumbChn = ptsThumbCfg->record_sub_venc_chn;
+
+  //clean thumbnail
+  stFrame.pstPack = &stPack;
+  do {
+    ret = RK_MPI_VENC_GetStream(u32ThumbChn, &stFrame, 1);
+    if (ret == RK_SUCCESS) {
+      ret = RK_MPI_VENC_ReleaseStream(u32ThumbChn, &stFrame);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
+    } else {
+      break;
+    }
+  } while(1);
+
+  //make sure thumbnail
+  RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
+#ifndef THUMB_NORMAL
+  RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn);
+#else
+  ThumbnailRequest(u32ThumbChn);
+#endif
+
+  return 0;
+}
+
 static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
                                          RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                          RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
@@ -975,21 +1017,9 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
       return -1;
     }
 
-    RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);
-#ifndef THUMB_NORMAL
-      RK_MPI_VENC_ThumbnailRequest(pstRecCfg->attribute[index].venc_chn); //make sure thumbnail
-#else
-    RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
-    if (!ptsThumbCfg) {
-      RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
-      return false;
-    }
-
-    if (index == 0)
-      ThumbnailRequest(ptsThumbCfg->record_main_venc_chn);
-    else
-      ThumbnailRequest(ptsThumbCfg->record_sub_venc_chn);
-#endif
+    ret = RKADK_RECORD_ResetThumb(u32CamId, index, pstRecCfg);
+    if (ret)
+      RKADK_LOGE("RKADK_RECORD_ResetThumb failed");
 
     memset(&stSrcChn, 0, sizeof(MPP_CHN_S));
     memset(&stRecVenChn, 0, sizeof(MPP_CHN_S));
