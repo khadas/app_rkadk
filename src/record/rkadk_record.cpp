@@ -322,6 +322,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       return ret;
     }
 
+    RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[i].venc_chn, RKADK_ENCODE_SENSE_CVR);
     RKADK_PARAM_SetVAdvancedParam(pstRecCfg->attribute[i]);
 
     if (i == 0) {

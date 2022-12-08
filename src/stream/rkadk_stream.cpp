@@ -377,6 +377,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     goto failed;
   }
 
+  RK_MPI_VENC_SetSceneMode(stVencChn.s32ChnId, RKADK_ENCODE_SENSE_CVR);
   RKADK_PARAM_SetVAdvancedParam(pstStreamCfg->attribute);
 
   ret = RKADK_STREAM_VencGetData(pVideoHandle->u32CamId, &stVencChn, pVideoHandle);

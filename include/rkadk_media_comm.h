@@ -34,6 +34,8 @@ extern "C" {
 #include "rkadk_common.h"
 #include <stdbool.h>
 
+#define RKADK_ENCODE_SENSE_CVR SCENE_2
+
 /* audio capture maximum count */
 #define RKADK_MEDIA_AI_MAX_CNT (1)
 

@@ -373,6 +373,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
+  RK_MPI_VENC_SetSceneMode(stVencChn.s32ChnId, RKADK_ENCODE_SENSE_CVR);
   RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
 
   ret = RKADK_RTSP_VencGetData(u32CamId, &stVencChn, pHandle);
