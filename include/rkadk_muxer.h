@@ -21,15 +21,17 @@
 extern "C" {
 #endif
 
-#include "rkadk_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "rkadk_common.h"
+#include "rkadk_media_comm.h"
 
 #define RKADK_MUXER_FILE_NAME_LEN 256
 #define RKADK_MUXER_STREAM_MAX_CNT RECORD_FILE_NUM_MAX
 #define RKADK_MUXER_TRACK_MAX_CNT 2 /* a video track and a audio track */
+#define RKADK_MUXER_CELL_MAX_CNT 40
 
 typedef enum {
   RKADK_MUXER_EVENT_STREAM_START = 0,
@@ -67,6 +69,9 @@ typedef RKADK_VOID (*RKADK_MUXER_EVENT_CALLBACK_FN)(
 /* Muxer request file name callback function */
 typedef int (*RKADK_MUXER_REQUEST_FILE_NAME_CB)(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
                                           RKADK_U32 u32MuxerId);
+
+/* cell release buf callback */
+typedef int (*RKADK_MUXER_CELL_CALLBACK)(void *pMbBlk);
 
 /* muxer manual split type enum */
 typedef enum {
@@ -236,13 +241,12 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId);
 /**
  * @brief write video frame
  */
-int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf, RKADK_U32 size,
-                           int64_t pts, int isKeyFrame, void *handle);
+int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, int64_t pts, void *handle);
 
 /**
  * @brief write audio frame
  */
-int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts, void *handle);
+int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts, void *handle);
 
 RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
                               RKADK_MUXER_ATTR_S *pstMuxerAttr, int index);

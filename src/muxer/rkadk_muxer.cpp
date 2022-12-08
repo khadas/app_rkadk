@@ -15,7 +15,6 @@
  */
 
 #include "rkadk_muxer.h"
-#include "rkadk_media_comm.h"
 #include "rkadk_thumb_comm.h"
 #include "rkadk_param.h"
 #include "linux_list.h"
@@ -40,6 +39,8 @@
 
 typedef struct {
   struct list_head mark;
+  MB_BLK pMbBlk;
+  RKADK_MUXER_CELL_CALLBACK pfnCellReleaseBuf;
   unsigned char *buf;
   RKADK_U32 size;
   int isKeyFrame;
@@ -95,8 +96,8 @@ typedef struct {
   void *pSignal;
 
   // list param
-  MUXER_BUF_CELL_S stVCell[40]; // video list cache size
-  MUXER_BUF_CELL_S stACell[40]; // audio list cache size
+  MUXER_BUF_CELL_S stVCell[RKADK_MUXER_CELL_MAX_CNT]; // video list cache size
+  MUXER_BUF_CELL_S stACell[RKADK_MUXER_CELL_MAX_CNT]; // audio list cache size
   struct list_head stVFree;     // video list remain size
   struct list_head stAFree;     // audio list remain size
   struct list_head stProcList;  // process list
@@ -132,10 +133,11 @@ static void RKADK_MUXER_CellFree(MUXER_HANDLE_S *pstMuxerHandle,
   struct list_head *pool = cell->pool;
 
   list_del_init(&cell->mark);
-  if (cell->buf) {
-    free(cell->buf);
+  if (cell->buf)
     cell->buf = NULL;
-  }
+
+  if (cell->pfnCellReleaseBuf)
+    cell->pfnCellReleaseBuf(cell->pMbBlk);
 
   if (bIsPool) {
     memset(cell, 0, sizeof(MUXER_BUF_CELL_S));
@@ -148,6 +150,21 @@ static void RKADK_MUXER_CellFree(MUXER_HANDLE_S *pstMuxerHandle,
     free(cell);
     cell = NULL;
   }
+}
+
+static int RKADK_MUXER_CellReleaseBuf(MB_BLK pMbBlk) {
+  int ret;
+
+  if (pMbBlk == NULL)
+    return -1;
+
+  ret = RK_MPI_MB_ReleaseMB(pMbBlk);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_MB_ReleaseMB failed[%x]", ret);
+    return -1;
+  }
+
+  return 0;
 }
 
 static void RKADK_MUXER_ListRelease(MUXER_HANDLE_S *pstMuxerHandle,
@@ -275,7 +292,7 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
     return;
   }
 
-  pstPreRecCell->buf = (unsigned char *)malloc(one->size);
+  pstPreRecCell->buf = (unsigned char *)RK_MPI_MB_Handle2VirAddr(one->pMbBlk);
   if (NULL == pstPreRecCell->buf) {
     RKADK_LOGE("malloc pre_record cell buf failed");
     free(pstPreRecCell);
@@ -283,12 +300,14 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   }
 
   INIT_LIST_HEAD(&pstPreRecCell->mark);
-  memcpy(pstPreRecCell->buf, one->buf, one->size);
   pstPreRecCell->isKeyFrame = one->isKeyFrame;
   pstPreRecCell->pts = one->pts;
   pstPreRecCell->size = one->size;
   pstPreRecCell->bIsPool = false;
   pstPreRecCell->pool = one->pool;
+  pstPreRecCell->pMbBlk = one->pMbBlk;
+  pstPreRecCell->pfnCellReleaseBuf = RKADK_MUXER_CellReleaseBuf;
+  RK_MPI_MB_AddUserCnt(one->pMbBlk);
 
   RKADK_MUTEX_LOCK(pstMuxerHandle->stPreRecParam.mutex);
   do {
@@ -334,22 +353,27 @@ static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
   return pstMuxerHandle;
 }
 
-int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
-                                RKADK_U32 size, int64_t pts, int isKeyFrame,
-                                void *handle) {
-  int cnt = 0;
+int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData,
+                                int64_t pts, void *handle) {
+  int cnt = 0, isKeyFrame = 0;
   MUXER_BUF_CELL_S *cell;
 
   RKADK_CHECK_POINTER(handle, RKADK_FAILURE);
 
   RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)handle;
-  MUXER_HANDLE_S *pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
+  MUXER_HANDLE_S *pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, stData.u32ChnId);
   if (!pstMuxerHandle)
     return -1;
 
+  if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE ||
+      stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_IDRSLICE) ||
+      (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE ||
+      stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_IDRSLICE))
+      isKeyFrame = 1;
+
   if (pstMuxerHandle->bFirstKeyFrame && isKeyFrame) {
     RKADK_KLOG("Muxer[%d] Stream[%d] first key frame pts: %lld",
-               pstMuxerHandle->muxerId, chnId, pts);
+               pstMuxerHandle->muxerId, stData.u32ChnId, pts);
     pstMuxerHandle->bFirstKeyFrame = false;
   }
 
@@ -358,30 +382,32 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_U32 chnId, RKADK_CHAR *buf,
 
   while ((cell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
       if (cnt % 100 == 0)
-        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", chnId, cnt);
+        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
       cnt++;
       usleep(10000);
   }
 
-  cell->buf = (unsigned char *)malloc(size);
+  cell->buf = (unsigned char *)RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
   if (NULL == cell->buf) {
     RKADK_LOGE("malloc video cell buf failed");
     RKADK_MUXER_CellFree(pstMuxerHandle, cell);
     return -1;
   }
 
-  memcpy(cell->buf, buf, size);
   cell->isKeyFrame = isKeyFrame;
   cell->pts = pts;
-  cell->size = size;
+  cell->size = stData.stFrame.pstPack->u32Len;
   cell->bIsPool = true;
+  cell->pMbBlk = stData.stFrame.pstPack->pMbBlk;
+  cell->pfnCellReleaseBuf = RKADK_MUXER_CellReleaseBuf;
+  RK_MPI_MB_AddUserCnt(stData.stFrame.pstPack->pMbBlk);
   RKADK_MUXER_PreRecPush(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList, cell);
   RKADK_MUXER_CellPush(pstMuxerHandle, &pstMuxerHandle->stProcList, cell);
   RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
   return 0;
 }
 
-int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
+int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
                                 void *handle) {
   int cnt = 0;
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
@@ -409,15 +435,19 @@ int RKADK_MUXER_WriteAudioFrame(RKADK_CHAR *buf, RKADK_U32 size, int64_t pts,
       headerSize = 7; //ACC header size
 
     cell->size = size - headerSize;
-    cell->buf = (unsigned char *)malloc(cell->size);
+    cell->buf = (unsigned char *)RK_MPI_MB_Handle2VirAddr(pMbBlk) + headerSize;
     if (NULL == cell->buf) {
       RKADK_LOGE("malloc audio cell buf failed");
+      RKADK_MUXER_CellFree(pstMuxerHandle, cell);
       return -1;
     }
-    memcpy(cell->buf, (buf + headerSize), cell->size);
+
     cell->isKeyFrame = 0;
     cell->pts = pts;
     cell->bIsPool = true;
+    cell->pMbBlk = pMbBlk;
+    cell->pfnCellReleaseBuf = RKADK_MUXER_CellReleaseBuf;
+    RK_MPI_MB_AddUserCnt(pMbBlk);
     RKADK_MUXER_PreRecPush(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList, cell);
     RKADK_MUXER_CellPush(pstMuxerHandle, &pstMuxerHandle->stProcList, cell);
     RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
@@ -650,15 +680,17 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
   while (!list_empty(&pstMuxerHandle->stPreRecParam.stVList)) {
     cell = list_first_entry(&pstMuxerHandle->stPreRecParam.stVList, MUXER_BUF_CELL_S, mark);
-    list_del_init(&cell->mark);
 
     if (!bFindKeyFrame) {
-      if (cell->isKeyFrame)
+      if (cell->isKeyFrame) {
         bFindKeyFrame = true;
-      else
+      } else {
+        RKADK_MUXER_CellFree(pstMuxerHandle, cell);
         continue;
+      }
     }
 
+    list_del_init(&cell->mark);
     list_add_tail(&cell->mark, &pstMuxerHandle->stProcList);
   }
 
@@ -719,15 +751,17 @@ static bool RKADK_MUXER_Proc(void *params) {
           } else {
             if (RKADK_MUXER_PreRecProc(pstMuxerHandle)) {
               MUXER_BUF_CELL_S *firstCell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
-              if (firstCell)
+              if (firstCell) {
+                RKADK_MUXER_CellFree(pstMuxerHandle, cell);
                 cell = firstCell;
-              else
-                RKADK_LOGE("pre_record pro ok, but cell pop fialed");
+              } else {
+                RKADK_LOGE("pre_record proc ok, but cell pop fialed");
+                RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
+              }
             }
 
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
-            pstMuxerHandle->frameCnt = 0;
             pstMuxerHandle->stThumbParam.bGetThumb = true;
             pstMuxerHandle->stThumbParam.bRequestThumb = true;
           }
@@ -738,9 +772,6 @@ static bool RKADK_MUXER_Proc(void *params) {
           RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
         }
       }
-
-      if (pstMuxerHandle->stThumbParam.bGetThumb)
-        pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
 
       // Process
       if (pstMuxerHandle->bMuxering) {
@@ -761,8 +792,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           if (cell->pts < pstMuxerHandle->startTime)
             RKADK_LOGE("Stream [%d] muxer pts err pts = %lld, startTime = %lld",
                         pstMuxerHandle->u32VencChn, cell->pts, pstMuxerHandle->startTime);
-          pstMuxerHandle->realDuration =
-              (cell->pts - pstMuxerHandle->startTime) / 1000;
+          pstMuxerHandle->realDuration = (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
@@ -772,6 +802,9 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_LOGE("unknow pool");
         }
       }
+
+      if (pstMuxerHandle->stThumbParam.bGetThumb)
+        pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
     }
 
     // free and next
