@@ -100,6 +100,16 @@ target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtmp_test DESTINATION "bin")
 
+#--------------------------
+# rkadk_media_test
+#--------------------------
+add_executable(rkadk_media_test rkadk_media_test.c ${ISP_SRC})
+add_dependencies(rkadk_media_test rkadk)
+target_link_libraries(rkadk_media_test rockit rkadk rkaiq)
+target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_media_test DESTINATION "bin")
+
 if(COMPILE)
 #--------------------------
 # rkadk_disp_test
