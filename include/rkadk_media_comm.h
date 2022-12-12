@@ -27,9 +27,11 @@ extern "C" {
 #include "rk_mpi_mb.h"
 #include "rk_mpi_sys.h"
 #include "rk_mpi_venc.h"
-#include "rk_mpi_vdec.h"
 #include "rk_mpi_vi.h"
+#ifdef RV1126_1109
+#include "rk_mpi_vdec.h"
 #include "rk_mpi_vo.h"
+#endif
 #include "rk_mpi_vpss.h"
 #include "rk_mpi_rgn.h"
 #include "rk_mpi_amix.h"
