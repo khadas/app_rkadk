@@ -29,8 +29,6 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *
   tempDemuxerInput.s8ReadModeFlag = 0;
   tempDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
   tempDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
-  tempDemuxerInput.pstReadPacketCallback.read_video_packet = demuxerInput->pstReadPacketCallback.pfnReadVideoPacketCallback;
-  tempDemuxerInput.pstReadPacketCallback.read_audio_packet = demuxerInput->pstReadPacketCallback.pfnReadAudioPacketCallback;
 
   RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
   if (ret != 0) {
@@ -48,6 +46,8 @@ RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg) {
 RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam) {
   DemuxerParam tempDemuxerParam;
 
+  tempDemuxerParam.pstReadPacketCallback.read_video_packet = demuxerParam->pstReadPacketCallback.pfnReadVideoPacketCallback;
+  tempDemuxerParam.pstReadPacketCallback.read_audio_packet = demuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback;
   RKADK_S32 ret = rkdemuxer_get_param(demuxerCfg, inputName, &tempDemuxerParam);
   if (ret != 0) {
     RKADK_LOGE("RKADK_DEMUXER_GetParam failed");

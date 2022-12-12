@@ -38,7 +38,6 @@ typedef struct {
   RKADK_VOID *ptr;
   RKADK_BOOL  videoEnableFlag;
   RKADK_BOOL  audioEnableFlag;
-  RKADK_DEMUXER_READ_PACKET_CALLBACK_S pstReadPacketCallback;
 } RKADK_DEMUXER_INPUT_S;
 
 typedef struct {
@@ -57,6 +56,7 @@ typedef struct {
   RKADK_S64   audioFirstPTS;
   RKADK_S32   audioTimeBaseNum;
   RKADK_S32   audioTimeBaseDen;
+  RKADK_DEMUXER_READ_PACKET_CALLBACK_S pstReadPacketCallback;
 } RKADK_DEMUXER_PARAM_S;
 
 /**
