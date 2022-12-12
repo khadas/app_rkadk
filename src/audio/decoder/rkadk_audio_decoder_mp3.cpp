@@ -71,6 +71,7 @@ typedef struct {
   MP3FrameInfo frameInfo;
   RK_U8 decMp3buf[MP3MAXFRAMESIZE];
   short int decPCMbuf[MP3MAXFRAMESIZE];
+  RK_U64 audioPts;
 } RKADK_ADEC_MP3_CTX_S;
 
 static RKADK_S32 RKAduioMp3DecoderOpen(RK_VOID *pDecoderAttr, RK_VOID **ppDecoder) {
@@ -127,10 +128,11 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
     return ADEC_DECODER_ERROR;
 
   AUDIO_ADENC_PARAM_S *pParam = (AUDIO_ADENC_PARAM_S *)pDecParam;
+  RK_BOOL eos = RK_FALSE;
   RKADK_U8 *pInput = NULL;
   RKADK_S32 inLength = pParam->u32InLen;
   RKADK_S32 copySize = 0;
-  RK_BOOL eos = RK_FALSE;
+  RKADK_U64 calcPts = 0;
 
   if ((pParam->pu8InBuf == NULL) || (inLength == 0))
     eos = RK_TRUE;
@@ -158,12 +160,16 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
 
     pParam->u32InLen = inLength;
     if (ret == ERR_MP3_INDATA_UNDERFLOW) {
-      RKADK_LOGE("mp3 decode inout data underflow");
+      RKADK_LOGE("mp3 decode input data underflow");
       return ADEC_DECODER_ERROR;
     }
 
-    RKADK_LOGW("An error occurred while decoding mp3 current frame, ret:%d", ret);
-    return ADEC_DECODER_ERROR;
+    if(ret == -2) {
+      RKADK_LOGW("mp3 encoded data does not start from the first frame");
+    } else {
+      RKADK_LOGE("mp3 decode error, ret = %d", ret);
+      return ADEC_DECODER_ERROR;
+    }
   }
 
   MP3GetLastFrameInfo(ctx->pMp3Dec, &ctx->frameInfo);
@@ -171,7 +177,25 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
   MP3DecInfo *mp3DecInfo = (MP3DecInfo *)ctx->pMp3Dec;
   pParam->u32OutLen = mp3DecInfo->nGrans * mp3DecInfo->nGranSamps * ctx->frameInfo.nChans * 2;
   memcpy(pParam->pu8OutBuf, (RKADK_U8 *)ctx->decPCMbuf, pParam->u32OutLen);
-  pParam->u64OutTimeStamp += (((RK_U64)pParam->u32OutLen / 2) * 1000000) / ctx->frameInfo.samprate;
+
+  calcPts = (((RK_U64)pParam->u32OutLen / 2) * 1000000) / ctx->frameInfo.samprate;
+
+  if (pParam->u64InTimeStamp) {
+    if (pParam->u64InTimeStamp > ctx->audioPts) {
+      if (pParam->u64InTimeStamp - ctx->audioPts > calcPts)
+        pParam->u64OutTimeStamp = ctx->audioPts + calcPts;
+      else
+        pParam->u64OutTimeStamp = pParam->u64InTimeStamp;
+    } else
+      pParam->u64OutTimeStamp = pParam->u64InTimeStamp;
+  } else if (ctx->audioPts)
+    pParam->u64OutTimeStamp = ctx->audioPts + calcPts;
+
+  if (pParam->u64OutTimeStamp)
+    ctx->audioPts = pParam->u64OutTimeStamp;
+  else {
+    ctx->audioPts += calcPts;
+  }
 
   return ADEC_DECODER_OK;
 }
