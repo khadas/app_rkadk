@@ -1505,15 +1505,20 @@ __RETRY:
     }
 
     RK_MPI_MB_ReleaseMB(frame.pMbBlk);
+  }
 
-    if (pstDemuxerPacket->s32PacketSize <= 0) {
-      pstPlayer->bAudioStopFlag = RKADK_TRUE;
-      RKADK_LOGI("read eos packet, now send eos packet!");
+  if (pstDemuxerPacket->s32PacketSize <= 0) {
+    pstPlayer->bAudioStopFlag = RKADK_TRUE;
+    if (pstPlayer->bAudioStopFlag == RKADK_TRUE) {
+      if (!pstPlayer->bStopFlag)
+        RKADK_LOGI("read eos packet, now send eos packet!");
       pthread_mutex_lock(&pstPlayer->WavMutex);
       pthread_cond_signal(&pstPlayer->WavCond);
       pthread_mutex_unlock(&pstPlayer->WavMutex);
+      pstPlayer->bAudioStopFlag = RKADK_FALSE;
     }
   }
+
 
   return;
 }
@@ -1704,6 +1709,9 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
     free(pstPlayer->pstDemuxerParam);
     pstPlayer->pstDemuxerParam = NULL;
   }
+
+  pthread_mutex_destroy(&(pstPlayer->WavMutex));
+  pthread_cond_destroy(&(pstPlayer->WavCond));
 
   if (pstPlayer)
     free(pstPlayer);
@@ -1996,7 +2004,8 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
   if (pstPlayer->stThreadParam.tidAudioCommand)
     pthread_join(pstPlayer->stThreadParam.tidAudioCommand, RKADK_NULL);
 
-  if (pstPlayer->pstAdecCtx->eCodecType == RKADK_CODEC_TYPE_PCM) {
+  if (!pstPlayer->bStopFlag && pstPlayer->pstAdecCtx->eCodecType == RKADK_CODEC_TYPE_PCM) {
+    pstPlayer->bAudioStopFlag = RKADK_TRUE;
     pthread_mutex_lock(&pstPlayer->WavMutex);
     pthread_cond_wait(&pstPlayer->WavCond, &pstPlayer->WavMutex);
     pthread_mutex_unlock(&pstPlayer->WavMutex);
