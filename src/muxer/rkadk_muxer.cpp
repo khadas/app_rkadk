@@ -557,6 +557,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
 static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
   bool bFileSwitch;
+  int position = 0;
   RKADK_U32 u32Duration;
 
   if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
@@ -568,6 +569,10 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_
     u32Duration = pstMuxerHandle->duration;
 
   if (pstMuxerHandle->stManualSplit.bEnableSplit) {
+    position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
+    if(position <= 0)
+      return false;
+
     RKADK_LOGI("File switch: manual_split[%d]", pstMuxerHandle->u32VencChn);
     pstMuxerHandle->stManualSplit.bEnableSplit = false;
     RKADK_MUXER_Close(pstMuxerHandle);
