@@ -1126,6 +1126,8 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
 
   pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
 
+  pstRecorder->u64AudioPts = 0;
+
   if (pstRecorder->bLapseRecord)
     enRecType = RKADK_REC_TYPE_LAPSE;
 
