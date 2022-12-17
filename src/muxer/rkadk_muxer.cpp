@@ -214,7 +214,7 @@ static void RKADK_MUXER_CellPush(MUXER_HANDLE_S *pstMuxerHandle,
   RKADK_MUTEX_LOCK(pstMuxerHandle->mutex);
   do {
     list_for_each_entry_safe(cell, cell_n, head, mark) {
-      if (cell->pts > one->pts) {
+      if ((cell->pts > one->pts) && (cell->pool == one->pool)) {
         list_add_tail(&one->mark, &cell->mark);
         ret = 0;
         break;
@@ -573,7 +573,8 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_
     if(position <= 0)
       return false;
 
-    RKADK_LOGI("File switch: manual_split[%d]", pstMuxerHandle->u32VencChn);
+    RKADK_LOGI("File switch: manual_split[%d], duration: %d",
+        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration);
     pstMuxerHandle->stManualSplit.bEnableSplit = false;
     RKADK_MUXER_Close(pstMuxerHandle);
     pstMuxerHandle->stManualSplit.bSplitRecord = true;
@@ -583,7 +584,8 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_
   bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
                 (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
   if (bFileSwitch) {
-    RKADK_LOGI("File switch: chn = %d, frameCnt = %d", pstMuxerHandle->u32VencChn, pstMuxerHandle->frameCnt + 1);
+    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d",
+        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt + 1);
     RKADK_MUXER_Close(pstMuxerHandle);
     return true;
   }
