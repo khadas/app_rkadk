@@ -29,7 +29,7 @@ static RKADK_S32 extCodecHandle = -1;
 static RKADK_U32 mp3InitCnt = 0;
 
 typedef struct _RKADK_AENC_MP3_CTX_S {
-  mp3_enc stMp3Enc;
+  mp3_enc *pMp3Enc;
   RKADK_S32 frameLength;
 } RKADK_AENC_MP3_CTX_S;
 
@@ -61,13 +61,13 @@ RKADK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
   ctx->frameLength = attr->u32Resv[0];
   bitrate = attr->u32Resv[1] / 1000;
   RKADK_LOGD("MP3Encode: sample_rate = %d, channel = %d, bitrate = %d.", attr->u32SampleRate, attr->u32Channels, bitrate);
-  ctx->stMp3Enc = *(Mp3EncodeVariableInit(attr->u32SampleRate, attr->u32Channels, bitrate));
-  if (ctx->stMp3Enc.frame_size <= 0){
+  ctx->pMp3Enc = Mp3EncodeVariableInit(attr->u32SampleRate, attr->u32Channels, bitrate);
+  if (ctx->pMp3Enc->frame_size <= 0){
     RKADK_LOGE("MP3Encode init failed! r:%d c:%d\n", attr->u32SampleRate, attr->u32Channels);
     goto __FAILED;
   }
 
-  RKADK_LOGD("MP3Encode FrameSize = %d", ctx->stMp3Enc.frame_size);
+  RKADK_LOGD("MP3Encode FrameSize = %d", ctx->pMp3Enc->frame_size);
   *ppEncoder = (RK_VOID *)ctx;
 
   return RKADK_SUCCESS;
@@ -84,6 +84,7 @@ RKADK_S32 RKAduioMp3EncoderClose(RK_VOID *pEncoder) {
   if (ctx == NULL)
     return RKADK_SUCCESS;
 
+  Mp3EncodeDeinit(ctx->pMp3Enc);
   free(ctx);
   ctx = NULL;
   return RKADK_SUCCESS;
@@ -109,15 +110,14 @@ RKADK_S32 RKAduioMp3EncoderEncode(RK_VOID *pEncoder, RK_VOID *pEncParam) {
     pParam->u64OutTimeStamp = inPts;
   }
 
-  //inbufSize = 2 * ctx->s32FrameLength;
-  inbufSize = 2 * ctx->stMp3Enc.frame_size;
+  inbufSize = 2 * ctx->pMp3Enc->frame_size;
   copySize = (pParam->u32InLen > inbufSize) ? inbufSize : pParam->u32InLen;
-  memcpy(ctx->stMp3Enc.config.in_buf, inData, copySize);
+  memcpy(ctx->pMp3Enc->config.in_buf, inData, copySize);
   pParam->u32InLen = pParam->u32InLen - copySize;
-  u32EncSize = L3_compress(&ctx->stMp3Enc, 0, (unsigned char **)(&ctx->stMp3Enc.config.out_buf));
+  u32EncSize = L3_compress(ctx->pMp3Enc, 0, (unsigned char **)(&ctx->pMp3Enc->config.out_buf));
 
   u32EncSize = (u32EncSize > pParam->u32OutLen) ? pParam->u32OutLen : u32EncSize;
-  memcpy(pParam->pu8OutBuf, ctx->stMp3Enc.config.out_buf, u32EncSize);
+  memcpy(pParam->pu8OutBuf, ctx->pMp3Enc->config.out_buf, u32EncSize);
   pParam->u64OutTimeStamp = inPts;
   pParam->u32OutLen = u32EncSize;
 
