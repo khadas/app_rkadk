@@ -657,6 +657,7 @@ static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
 static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   int size;
+  int64_t s64FirstTime = 0, s64SeekTime = 0;
   bool bPreRecord = false, bFindKeyFrame = false;
   MUXER_BUF_CELL_S *cell = NULL;
   RKADK_MUXER_PRE_RECORD_ATTR_S *pstAttr;
@@ -687,10 +688,13 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
   while (!list_empty(&pstMuxerHandle->stPreRecParam.stVList)) {
     cell = list_first_entry(&pstMuxerHandle->stPreRecParam.stVList, MUXER_BUF_CELL_S, mark);
+    if (!s64FirstTime)
+      s64FirstTime = cell->pts;
 
     if (!bFindKeyFrame) {
       if (cell->isKeyFrame) {
         bFindKeyFrame = true;
+        s64SeekTime = cell->pts - s64FirstTime;
       } else {
         RKADK_MUXER_CellFree(pstMuxerHandle, cell);
         continue;
@@ -707,8 +711,17 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
     return 0;
   }
 
+  s64FirstTime = 0;
   while (!list_empty(&pstMuxerHandle->stPreRecParam.stAList)) {
     cell = list_first_entry(&pstMuxerHandle->stPreRecParam.stAList, MUXER_BUF_CELL_S, mark);
+    if (!s64FirstTime)
+      s64FirstTime = cell->pts;
+
+    if ((cell->pts - s64FirstTime) < s64SeekTime) {
+      RKADK_MUXER_CellFree(pstMuxerHandle, cell);
+      continue;
+    }
+
     list_del_init(&cell->mark);
     list_add_tail(&cell->mark, &pstMuxerHandle->stProcList);
   }
