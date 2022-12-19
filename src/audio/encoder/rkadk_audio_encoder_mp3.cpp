@@ -134,7 +134,7 @@ RKADK_S32 RegisterAencMp3(void) {
     aencCtx.enType = RK_AUDIO_ID_MP3;
     snprintf((RK_CHAR*)(aencCtx.aszName),
              sizeof(aencCtx.aszName), "rkaudio");
-    aencCtx.u32MaxFrmLen = 9216;
+    aencCtx.u32MaxFrmLen = 2048;
     aencCtx.pfnOpenEncoder = RKAduioMp3EncoderOpen;
     aencCtx.pfnEncodeFrm = RKAduioMp3EncoderEncode;
     aencCtx.pfnCloseEncoder = RKAduioMp3EncoderClose;
