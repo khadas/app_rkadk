@@ -32,14 +32,22 @@
 #include <string.h>
 #include <unistd.h>
 
+//#define ENABLE_PALYER
+//#define ENABLE_RTSP
+//#define ENABLE_STREAM
+
 extern int optind;
 extern char *optarg;
 
 static RKADK_CHAR optstr[] = "a:I:p:P";
+
+#ifdef ENABLE_STREAM
 static FILE *g_aenc_file = NULL;
 static FILE *g_pcm_file = NULL;
 static char *g_aenc_path = "/mnt/sdcard/aenc.bin";
 static char *g_pcm_path = "/mnt/sdcard/ai.pcm";
+#endif
+
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -115,6 +123,7 @@ RecordEventCallback(RKADK_MW_PTR pRecorder,
   }
 }
 
+#if ENABLE_PALYER
 static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
                                     RKADK_PLAYER_EVENT_E enEvent,
                                     RKADK_VOID *pData) {
@@ -158,6 +167,7 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
     break;
   }
 }
+#endif
 
 static int IspProcess(RKADK_S32 u32CamId) {
   int ret;
@@ -190,6 +200,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
   return 0;
 }
 
+#ifdef ENABLE_STREAM
 static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   if (!g_aenc_file) {
     g_aenc_file = fopen(g_aenc_path, "w");
@@ -218,6 +229,7 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
 
   return 0;
 }
+#endif
 
 static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   static RKADK_U32 photoId = 0;
@@ -274,14 +286,23 @@ int main(int argc, char *argv[]) {
   RKADK_PHOTO_ATTR_S stPhotoAttr;
   RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
   RKADK_MW_PTR pPhotoHandle = NULL;
+
+#ifdef ENABLE_STREAM
   //stream
   RKADK_STREAM_AUDIO_ATTR_S stAudioAttr;
   RKADK_MW_PTR pAudioHandle = NULL;
+#endif
+
+#ifdef ENABLE_RTSP
   //rtsp
   RKADK_MW_PTR pRtsHandle = NULL;
+#endif
+
+#ifdef ENABLE_PLAYER
   //player
   RKADK_PLAYER_CFG_S stPlayCfg;
   RKADK_MW_PTR pPlayerHandle = NULL;
+#endif
 
   stRecAttr.s32CamID = u32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
@@ -299,14 +320,18 @@ int main(int argc, char *argv[]) {
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
 
+#ifdef ENABLE_STREAM
   memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
   stAudioAttr.enCodecType = RKADK_CODEC_TYPE_PCM;
   stAudioAttr.pfnPcmDataCB = PcmDataCb;
   stAudioAttr.pfnAencDataCB = AencDataCb;
+#endif
 
+#if ENABLE_PALYER
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   stPlayCfg.bEnableAudio = true;
   stPlayCfg.pfnPlayerCallback = PlayerEventFnTest;
+#endif
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -385,6 +410,7 @@ int main(int argc, char *argv[]) {
     goto _FAILURE;
   }
 
+#ifdef ENABLE_STREAM
   ret = RKADK_STREAM_AudioInit(&stAudioAttr, &pAudioHandle);
   if (ret) {
     RKADK_LOGE("RKADK_STREAM_AudioInit failed = %d", ret);
@@ -396,7 +422,9 @@ int main(int argc, char *argv[]) {
     RKADK_LOGE("RKADK_STREAM_AencStart failed");
     goto _FAILURE;
   }
+#endif
 
+#ifdef ENABLE_RTSP
   ret = RKADK_RTSP_Init(u32CamId, 554, "/live/main_stream", &pRtsHandle);
   if (ret) {
     RKADK_LOGE("RKADK_RTSP_Init failed");
@@ -404,11 +432,14 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_RTSP_Start(pRtsHandle);
+#endif
 
+#if ENABLE_PALYER
   if (RKADK_PLAYER_Create(&pPlayerHandle, &stPlayCfg)) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
     goto _FAILURE;
   }
+#endif
 
   signal(SIGINT, sigterm_handler);
 
@@ -425,11 +456,14 @@ int main(int argc, char *argv[]) {
       RKADK_RECORD_Reset(pRecordHandle);
       RKADK_PHOTO_Reset(pPhotoHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
+
+#if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);
       RKADK_PLAYER_Prepare(pPlayerHandle);
       RKADK_PLAYER_Play(pPlayerHandle);
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
+#endif
       RKADK_LOGI("===================Reset resolution = %d", stResType);
     } else if (change == 1){
       RKADK_LOGI("===================Rand type [%d] switch encode types enter", change);
@@ -441,11 +475,13 @@ int main(int argc, char *argv[]) {
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       RKADK_RECORD_Reset(pRecordHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
+#if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);
       RKADK_PLAYER_Prepare(pPlayerHandle);
       RKADK_PLAYER_Play(pPlayerHandle);
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
+#endif
       RKADK_LOGI("===================Reset encode type = %d", stCodecType.enCodecType);
     } else if (change == 2) {
       RKADK_LOGI("Rand type [%d] switch recrd types enter", change);
@@ -455,11 +491,13 @@ int main(int argc, char *argv[]) {
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &stRecType);
       RKADK_RECORD_Reset(pRecordHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
+#if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);
       RKADK_PLAYER_Prepare(pPlayerHandle);
       RKADK_PLAYER_Play(pPlayerHandle);
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
+#endif
       RKADK_LOGI("===================Reset record type = %d", stRecType);
     } else {
       RKADK_LOGI("===================Rand type [%d] switch manual types enter", change);
@@ -473,27 +511,33 @@ int main(int argc, char *argv[]) {
       stSplitAttr.u32DurationSec = stRecTime.time;
       RKADK_RECORD_ManualSplit(pRecordHandle, &stSplitAttr);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
+#if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);
       RKADK_PLAYER_Prepare(pPlayerHandle);
       RKADK_PLAYER_Play(pPlayerHandle);
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
+#endif
       RKADK_LOGI("===================Manual record stream = %d", stRecTime.enStreamType);
     }
 
-    usleep(2000000);
+    usleep(1000000);
   }
 
 _FAILURE:
   RKADK_LOGD("exit!");
+
+#ifdef ENABLE_RTSP
   RKADK_RTSP_Stop(pRtsHandle);
   RKADK_RTSP_DeInit(pRtsHandle);
+#endif
 
   RKADK_RECORD_Stop(pRecordHandle);
   RKADK_RECORD_Destroy(pRecordHandle);
 
   RKADK_PHOTO_DeInit(pPhotoHandle);
 
+#ifdef ENABLE_STREAM
   RKADK_STREAM_AencStop(pAudioHandle);
   RKADK_STREAM_AudioDeInit(pAudioHandle);
   if (g_aenc_file)
@@ -501,9 +545,12 @@ _FAILURE:
 
   if (g_pcm_file)
     fclose(g_pcm_file);
+#endif
 
+#if ENABLE_PALYER
   RKADK_PLAYER_Stop(pPlayerHandle);
   RKADK_PLAYER_Destroy(pPlayerHandle);
+#endif
 
 #ifdef RKAIQ
   SAMPLE_ISP_Stop(stRecAttr.s32CamID);
