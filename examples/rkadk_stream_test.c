@@ -231,13 +231,14 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   return 0;
 }
 
-static int AudioTest() {
+static int AudioTest(RKADK_U32 u32CamId) {
   RKADK_S32 ret;
   RKADK_MW_PTR pHandle = NULL;
   RKADK_STREAM_AUDIO_ATTR_S stAudioAttr;
   RKADK_AUDIO_INFO_S stAudioInfo;
 
   memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
+  stAudioAttr.u32CamId = u32CamId;
   stAudioAttr.enCodecType = g_enCodecType;
   stAudioAttr.pfnPcmDataCB = PcmDataCb;
   stAudioAttr.pfnAencDataCB = AencDataCb;
@@ -388,7 +389,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (!strcmp(pMode, "audio"))
-    AudioTest();
+    AudioTest(u32CamId);
   else if (!strcmp(pMode, "video"))
     VideoTest(u32CamId, pIqfilesPath);
   else {

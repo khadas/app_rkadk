@@ -254,6 +254,7 @@ typedef struct tagRKADK_PARAM_VENC_PARAM_S {
 typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 width;
   RKADK_U32 height;
+  RKADK_U32 bufsize;
   RKADK_U32 bitrate;
   RKADK_U32 gop;
   RKADK_U32 profile;
@@ -479,6 +480,8 @@ RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
                                            RKADK_U32 u32ChnId);
 
 PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt, COMPRESS_MODE_E *enCompressMode);
+
+RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio);
 
 #ifdef __cplusplus
 }

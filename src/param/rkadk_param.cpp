@@ -468,6 +468,9 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                  "stream width");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->height, STREAM_VIDEO_HEIGHT,
                                  "stream height");
+  change |= RKADK_PARAM_CheckCfg(&pstAttribute->bufsize,
+                                 STREAM_VIDEO_WIDTH * STREAM_VIDEO_HEIGHT * 3 / 2,
+                                 "stream bufsize");
   change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0,
                                     VENC_MAX_CHN_NUM, 1, "stream venc_chn");
   change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->vpss_chn, 0, VPSS_MAX_CHN_NUM,
@@ -577,6 +580,8 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
         RKADK_PARAM_CheckCfg(&pstAttribute->width, u32DefWidth, "rec width");
     change |=
         RKADK_PARAM_CheckCfg(&pstAttribute->height, u32DefHeight, "rec height");
+    change |=
+        RKADK_PARAM_CheckCfg(&pstAttribute->bufsize, u32DefWidth * u32DefHeight * 3 / 2, "rec bufsize");
     change |=
         RKADK_PARAM_CheckCfgU32(&pstAttribute->venc_chn, 0, VENC_MAX_CHN_NUM,
                                 u32DefChn, "rec venc_chn");
@@ -887,6 +892,7 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
   memset(pstAttr, 0, sizeof(RKADK_PARAM_VENC_ATTR_S));
   pstAttr->width = u32Width;
   pstAttr->height = u32Height;
+  pstAttr->bufsize = u32Width * u32Height * 3 / 2;
   pstAttr->venc_chn = u32Chn;
   pstAttr->vpss_grp = u32VpssGrp;
   pstAttr->vpss_chn = u32VpssChn;
@@ -922,16 +928,14 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
 
   memset(pstPhotoCfg, 0, sizeof(RKADK_PARAM_PHOTO_CFG_S));
   pstPhotoCfg->snap_num = 1;
-  if (u32CamId == 0) {
-    pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
-    pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
-    pstPhotoCfg->venc_chn = 2;
-    pstPhotoCfg->vpss_grp = 0;
-    pstPhotoCfg->vpss_chn = 0;
-    pstPhotoCfg->enable_combo = false;
-    pstPhotoCfg->combo_venc_chn = 0;
-    pstPhotoCfg->qfactor = 70;
-  }
+  pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
+  pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
+  pstPhotoCfg->venc_chn = 2;
+  pstPhotoCfg->vpss_grp = 0;
+  pstPhotoCfg->vpss_chn = 0;
+  pstPhotoCfg->enable_combo = false;
+  pstPhotoCfg->combo_venc_chn = 0;
+  pstPhotoCfg->qfactor = 70;
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -953,14 +957,12 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
   }
 
   memset(pstStreamCfg, 0, sizeof(RKADK_PARAM_STREAM_CFG_S));
-  if (u32CamId == 0) {
-    pstStreamCfg->attribute.width = STREAM_VIDEO_WIDTH;
-    pstStreamCfg->attribute.height = STREAM_VIDEO_HEIGHT;
-    pstStreamCfg->attribute.venc_chn = 1;
-    pstStreamCfg->attribute.vpss_grp = 2;
-    pstStreamCfg->attribute.vpss_chn = 0;
-  }
-
+  pstStreamCfg->attribute.width = STREAM_VIDEO_WIDTH;
+  pstStreamCfg->attribute.height = STREAM_VIDEO_HEIGHT;
+  pstStreamCfg->attribute.bufsize = STREAM_VIDEO_WIDTH * STREAM_VIDEO_HEIGHT * 3 / 2;
+  pstStreamCfg->attribute.venc_chn = 1;
+  pstStreamCfg->attribute.vpss_grp = 2;
+  pstStreamCfg->attribute.vpss_chn = 0;
   pstStreamCfg->attribute.gop = VIDEO_GOP;
   pstStreamCfg->attribute.bitrate = 10 * 1024;
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
@@ -1093,6 +1095,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].width);
       printf("\t\tsensor[%d] stRecCfg[%d] height: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].height);
+      printf("\t\tsensor[%d] stRecCfg[%d] bufsize: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].bufsize);
       printf("\t\tsensor[%d] stRecCfg[%d] bitrate: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].bitrate);
       printf("\t\tsensor[%d] stRecCfg[%d] gop: %d\n", i, j,
@@ -1144,6 +1148,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.width);
     printf("\t\tsensor[%d] stStreamCfg height: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.height);
+    printf("\t\tsensor[%d] stStreamCfg bufsize: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.bufsize);
     printf("\t\tsensor[%d] stStreamCfg bitrate: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.bitrate);
     printf("\t\tsensor[%d] stStreamCfg gop: %d\n", i,
@@ -1175,6 +1181,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.width);
     printf("\t\tsensor[%d] stLiveCfg height: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.height);
+    printf("\t\tsensor[%d] stLiveCfg bufsize: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.bufsize);
     printf("\t\tsensor[%d] stLiveCfg bitrate: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.bitrate);
     printf("\t\tsensor[%d] stLiveCfg gop: %d\n", i,
@@ -3580,4 +3588,48 @@ RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
     return RKADK_STREAM_TYPE_LIVE;
 
   return RKADK_STREAM_TYPE_BUTT;
+}
+
+RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio) {
+  RKADK_U32 u32Integer = 0, u32Remainder = 0;
+  RKADK_U32 u32PreRecCacheTime = 0;
+  RKADK_U32 u32BufCount = RKADK_MUXER_CELL_MAX_CNT;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
+
+  pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return u32BufCount;
+  }
+
+  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    return u32BufCount;
+  }
+
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+    return u32BufCount;
+  }
+
+  if(pstRecCfg->pre_record_time == 0)
+    return u32BufCount;
+
+  u32Integer = pstRecCfg->attribute[0].gop / pstSensorCfg->framerate;
+  u32Remainder = pstRecCfg->attribute[0].gop % pstSensorCfg->framerate;
+  u32PreRecCacheTime = pstRecCfg->pre_record_time + u32Integer;
+  if (u32Remainder)
+    u32PreRecCacheTime += 1;
+
+  if (bIsAudio)
+    u32BufCount = pstAudioParam->channels * (pstAudioParam->samplerate
+                  / pstAudioParam->samples_per_frame) * (u32PreRecCacheTime + 2);
+  else
+    u32BufCount = (u32PreRecCacheTime + 2) * pstSensorCfg->framerate;
+
+  return u32BufCount;
 }

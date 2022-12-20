@@ -86,6 +86,7 @@ typedef struct {
 } RKADK_AUDIO_INFO_S;
 
 typedef struct {
+  RKADK_U32 u32CamId;
   RKADK_CODEC_TYPE_E enCodecType;
   RKADK_AUDIO_DATA_PROC_FUNC pfnPcmDataCB;
   RKADK_AUDIO_DATA_PROC_FUNC pfnAencDataCB;

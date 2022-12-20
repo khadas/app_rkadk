@@ -225,9 +225,8 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32VirWidth = pstStreamCfg->attribute.width;
   pstVencAttr->stVencAttr.u32VirHeight = pstStreamCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstStreamCfg->attribute.profile;
-  pstVencAttr->stVencAttr.u32StreamBufCnt = 3; // 5
-  pstVencAttr->stVencAttr.u32BufSize =
-      pstStreamCfg->attribute.width * pstStreamCfg->attribute.height / 2;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = RKADK_PARAM_GetStreamBufCnt(u32CamId, false);
+  pstVencAttr->stVencAttr.u32BufSize = pstStreamCfg->attribute.bufsize;
 
   return 0;
 }
@@ -760,7 +759,8 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
   return 0;
 }
 
-static RKADK_S32 RKADK_STREAM_SetAencConfig(STREAM_AUDIO_HANDLE_S *pstHandle,
+static RKADK_S32 RKADK_STREAM_SetAencConfig(RKADK_U32 u32CamId,
+                                            STREAM_AUDIO_HANDLE_S *pstHandle,
                                             AENC_CHN_ATTR_S *pstAencAttr) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
 
@@ -775,7 +775,7 @@ static RKADK_S32 RKADK_STREAM_SetAencConfig(STREAM_AUDIO_HANDLE_S *pstHandle,
 
   memset(pstAencAttr, 0, sizeof(AENC_CHN_ATTR_S));
   pstAencAttr->enType = RKADK_MEDIA_GetRkCodecType(pstHandle->enCodecType);
-  pstAencAttr->u32BufCount = 4;
+  pstAencAttr->u32BufCount = RKADK_PARAM_GetStreamBufCnt(u32CamId, true);
   pstAencAttr->stCodecAttr.enType = pstAencAttr->enType;
   pstAencAttr->stCodecAttr.u32Channels = pstAudioParam->channels;
   pstAencAttr->stCodecAttr.u32SampleRate = pstAudioParam->samplerate;
@@ -803,6 +803,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
   STREAM_AUDIO_HANDLE_S *pAudioHandle = NULL;
 
   RKADK_CHECK_POINTER(pstAudioAttr, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(pstAudioAttr->u32CamId, RKADK_FAILURE);
 
   if (*ppHandle) {
     RKADK_LOGE("Audio handle has been created");
@@ -870,7 +871,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
 
   if (pAudioHandle->enCodecType != RKADK_CODEC_TYPE_PCM) {
     AENC_CHN_ATTR_S aencAttr;
-    if (RKADK_STREAM_SetAencConfig(pAudioHandle, &aencAttr)) {
+    if (RKADK_STREAM_SetAencConfig(pstAudioAttr->u32CamId, pAudioHandle, &aencAttr)) {
       RKADK_LOGE("StreamSetAencChnAttr failed");
       goto pcm_mode;
     }

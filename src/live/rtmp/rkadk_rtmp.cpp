@@ -70,7 +70,8 @@ static RKADK_S32 RKADK_RTMP_SetAiAttr(AIO_ATTR_S *pstAiAttr,
   return 0;
 }
 
-static RKADK_S32 RKADK_RTMP_SetAencAttr(RKADK_PARAM_AUDIO_CFG_S *pstAudioParam,
+static RKADK_S32 RKADK_RTMP_SetAencAttr(RKADK_U32 u32CamId,
+                                        RKADK_PARAM_AUDIO_CFG_S *pstAudioParam,
                                         AENC_CHN_ATTR_S *pstAencAttr) {
 
   RKADK_CHECK_POINTER(pstAudioParam, RKADK_FAILURE);
@@ -78,7 +79,7 @@ static RKADK_S32 RKADK_RTMP_SetAencAttr(RKADK_PARAM_AUDIO_CFG_S *pstAudioParam,
 
   memset(pstAencAttr, 0, sizeof(AENC_CHN_ATTR_S));
   pstAencAttr->enType = RKADK_MEDIA_GetRkCodecType(pstAudioParam->codec_type);
-  pstAencAttr->u32BufCount = 4;
+  pstAencAttr->u32BufCount = RKADK_PARAM_GetStreamBufCnt(u32CamId, true);
   pstAencAttr->stCodecAttr.enType = pstAencAttr->enType;
   pstAencAttr->stCodecAttr.u32Channels = pstAudioParam->channels;
   pstAencAttr->stCodecAttr.u32SampleRate = pstAudioParam->samplerate;
@@ -148,9 +149,8 @@ static int RKADK_RTMP_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32VirWidth = pstLiveCfg->attribute.width;
   pstVencAttr->stVencAttr.u32VirHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstLiveCfg->attribute.profile;
-  pstVencAttr->stVencAttr.u32StreamBufCnt = 3;
-  pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.width *
-                                       pstLiveCfg->attribute.height / 2;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = RKADK_PARAM_GetStreamBufCnt(u32CamId, false);
+  pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.bufsize;
 
   return 0;
 }
@@ -338,8 +338,8 @@ static RKADK_S32 RKADK_RTMP_DisableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
   return 0;
 }
 
-static RKADK_S32 RKADK_RTMP_EnableAudio(MPP_CHN_S stAiChn, MPP_CHN_S stAencChn,
-                                        RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
+static RKADK_S32 RKADK_RTMP_EnableAudio(RKADK_U32 u32CamId, MPP_CHN_S stAiChn,
+                                        MPP_CHN_S stAencChn, RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
   int ret;
   AIO_ATTR_S stAiAttr;
   AENC_CHN_ATTR_S stAencAttr;
@@ -366,7 +366,7 @@ static RKADK_S32 RKADK_RTMP_EnableAudio(MPP_CHN_S stAiChn, MPP_CHN_S stAencChn,
     goto unregist;
   }
 
-  if (RKADK_RTMP_SetAencAttr(pstAudioParam, &stAencAttr)) {
+  if (RKADK_RTMP_SetAencAttr(u32CamId, pstAudioParam, &stAencAttr)) {
     RKADK_LOGE("RKADK_RTMP_SetAencAttr error");
     goto failed;
   }
@@ -611,7 +611,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
 
   if (bEnableAudio) {
     RKADK_RTMP_AudioSetChn(&stAiChn, &stAencChn);
-    ret = RKADK_RTMP_EnableAudio(stAiChn, stAencChn, pstAudioParam);
+    ret = RKADK_RTMP_EnableAudio(u32CamId, stAiChn, stAencChn, pstAudioParam);
     if (ret) {
       RKADK_LOGE("RKADK_RTMP_EnableAudio failed[%d]", ret);
       RKADK_RTMP_DisableVideo(u32CamId, stViChn, stVencChn, stSrcVpssChn, pstLiveCfg, bUseVpss);

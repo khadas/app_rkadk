@@ -90,9 +90,8 @@ static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
   pstVencAttr->stVencAttr.u32VirWidth = pstLiveCfg->attribute.width;
   pstVencAttr->stVencAttr.u32VirHeight = pstLiveCfg->attribute.height;
   pstVencAttr->stVencAttr.u32Profile = pstLiveCfg->attribute.profile;
-  pstVencAttr->stVencAttr.u32StreamBufCnt = 3;
-  pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.width *
-                                       pstLiveCfg->attribute.height / 2;
+  pstVencAttr->stVencAttr.u32StreamBufCnt = RKADK_PARAM_GetStreamBufCnt(u32CamId, false);
+  pstVencAttr->stVencAttr.u32BufSize = pstLiveCfg->attribute.bufsize;
 
   return 0;
 }

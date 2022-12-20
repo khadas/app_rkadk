@@ -113,6 +113,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecTimeCfgMapTable_0[] = {
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, width),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, height),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, bufsize),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
@@ -142,6 +143,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecTimeCfgMapTable_1[] = {
 static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_1[] = {
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, width),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, height),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, bufsize),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
@@ -166,6 +168,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_1[] = {
 static RKADK_SI_CONFIG_MAP_S g_stPreviewCfgMapTable[] = {
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, width),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, height),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, bufsize),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),
@@ -190,6 +193,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPreviewParamMapTable[] = {
 static RKADK_SI_CONFIG_MAP_S g_stLiveCfgMapTable[] = {
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, width),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, height),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, bufsize),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, bitrate),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, gop),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, profile),

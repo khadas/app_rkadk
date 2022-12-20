@@ -2051,9 +2051,9 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
 
 RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
                                     RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo) {
+#ifdef RV1126_1109
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  #ifdef RV1126_1109
   if (VoSetParam(pstPlayer->pstVoCtx, pstFrameInfo)) {
     RKADK_LOGE("Vo set param failed");
     return RKADK_FAILURE;
@@ -2063,7 +2063,8 @@ RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
     RKADK_LOGE("Vo dev start failed");
     return RKADK_FAILURE;
   }
-  #endif
+#endif
+
   return RKADK_SUCCESS;
 }
 
@@ -2113,7 +2114,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   if (pstPlayer->pfnPlayerCallback != NULL)
     pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STARTED, NULL);
 
-  #ifdef RV1126_1109
+#ifdef RV1126_1109
   if (pstPlayer->demuxerFlag == MIX_VIDEO_FLAG) {
     if (pstPlayer->bVideoExist == RKADK_TRUE) {
       ret = RK_MPI_VDEC_StartRecvStream(pstPlayer->pstVdecCtx->chnIndex);
@@ -2189,7 +2190,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
       }
     }
   }
-  #else
+#else
   if (pstPlayer->demuxerFlag == AUDIO_FLAG) {
     if (pstPlayer->bAudioExist == RKADK_TRUE) {
       if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
@@ -2218,8 +2219,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
       }
     }
   }
-  #endif
-
+#endif
 
   pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
   return RKADK_SUCCESS;

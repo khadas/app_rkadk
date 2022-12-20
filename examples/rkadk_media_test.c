@@ -322,6 +322,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef ENABLE_STREAM
   memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
+  stAudioAttr.u32CamId = u32CamId;
   stAudioAttr.enCodecType = RKADK_CODEC_TYPE_PCM;
   stAudioAttr.pfnPcmDataCB = PcmDataCb;
   stAudioAttr.pfnAencDataCB = AencDataCb;

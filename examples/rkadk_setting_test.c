@@ -144,6 +144,7 @@ static void SetRecCfg() {
   stParamRecCfg.record_time_cfg[1].lapse_interval = 60;
   stParamRecCfg.attribute[1].width = RECORD_VIDEO_WIDTH_S;
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
+  stParamRecCfg.attribute[1].bufsize = RECORD_VIDEO_WIDTH_S * RECORD_VIDEO_HEIGHT_S * 3 / 2;
   stParamRecCfg.attribute[1].bitrate = 4 * 1024 * 1024;
   stParamRecCfg.attribute[1].gop = VIDEO_GOP;
   stParamRecCfg.attribute[1].profile = VIDEO_PROFILE;
@@ -192,6 +193,7 @@ static void SetStreamCfg() {
   memset(&stStreamCfg, 0, sizeof(RKADK_PARAM_STREAM_CFG_S));
   stStreamCfg.attribute.width = STREAM_VIDEO_WIDTH;
   stStreamCfg.attribute.height = STREAM_VIDEO_HEIGHT;
+  stStreamCfg.attribute.bufsize = STREAM_VIDEO_WIDTH * STREAM_VIDEO_HEIGHT * 3 / 2;
   stStreamCfg.attribute.bitrate = 10 * 1024;
   stStreamCfg.attribute.gop = VIDEO_GOP;
   stStreamCfg.attribute.profile = VIDEO_PROFILE;
