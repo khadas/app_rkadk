@@ -288,6 +288,10 @@ int main(int argc, char *argv[]) {
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       RKADK_RECORD_Reset(pRecorder);
+    } else if (strstr(cmd, "start")) {
+      RKADK_RECORD_Start(pRecorder);
+    } else if (strstr(cmd, "stop")) {
+      RKADK_RECORD_Stop(pRecorder);
     }
 
     usleep(500000);

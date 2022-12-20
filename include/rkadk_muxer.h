@@ -253,6 +253,8 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
 
 RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId);
 
+void RKADK_MUXER_SetResetState(RKADK_MW_PTR pHandle, bool state);
+
 #ifdef __cplusplus
 }
 #endif

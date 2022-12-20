@@ -1369,6 +1369,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
+  RKADK_MUXER_SetResetState(pRecorder, true);
   ret = RKADK_RECORD_ResetVideo(u32CamId, pstRecCfg,
                                 pstSensorCfg, pRecorder);
   if (ret) {
@@ -1382,6 +1383,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
     goto failed;
   }
 
+  RKADK_MUXER_SetResetState(pRecorder, false);
   RKADK_MUXER_Start(pRecorder);
 
   RKADK_LOGI("Change [%d] end...", u32CamId);

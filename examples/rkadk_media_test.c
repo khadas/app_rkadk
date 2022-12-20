@@ -521,7 +521,7 @@ int main(int argc, char *argv[]) {
       RKADK_LOGI("===================Manual record stream = %d", stRecTime.enStreamType);
     }
 
-    usleep(1000000);
+    usleep(5000000);
   }
 
 _FAILURE:
