@@ -199,15 +199,15 @@ int main(int argc, char *argv[]) {
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(pHandle);
+      RKADK_PHOTO_Reset(&pHandle);
     } else if (strstr(cmd, "720")) {
       type = RKADK_RES_720P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(pHandle);
+      RKADK_PHOTO_Reset(&pHandle);
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(pHandle);
+      RKADK_PHOTO_Reset(&pHandle);
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {

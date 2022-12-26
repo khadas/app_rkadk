@@ -343,15 +343,13 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   return 0;
 }
 
-static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
+static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId) {
   int ret;
   bool bUseVpss = false;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
   RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
-
-  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -1118,16 +1116,12 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
 }
 
 static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
-                                         RKADK_MW_PTR pRecorder) {
+                                         RKADK_MUXER_HANDLE_S *pstRecorder) {
   int ret;
   MPP_CHN_S stSrcChn, stDestChn;
-  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
   RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
 
-  pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
-
   pstRecorder->u64AudioPts = 0;
-
   if (pstRecorder->bLapseRecord)
     enRecType = RKADK_REC_TYPE_LAPSE;
 
@@ -1151,17 +1145,16 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_UnBind failed(%d)", ret);
       RKADK_MEDIA_GetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb,
-                                pRecorder);
+                                pstRecorder);
       return ret;
     }
 
     RKADK_RECORD_DestoryAudioChn();
-
     pstRecorder->bLapseRecord = true;
   } else if (pstRecCfg->record_type == RKADK_REC_TYPE_NORMAL &&
              RKADK_MUXER_EnableAudio(pstRecorder->u32CamId)){
     if (RKADK_RECORD_CreateAudioChn(pstRecorder->u32CamId)) {
-      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId, pRecorder);
+      RKADK_LOGE("RKADK_RECORD_CreateAudioChn failed");
       return -1;
     }
 
@@ -1169,14 +1162,14 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
 
     // Get aenc data
     RKADK_MEDIA_GetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb,
-                                    pRecorder);
+                                    pstRecorder);
 
     // Bind AI to AENC
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
       RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
-      RKADK_RECORD_DestoryVideoChn(pstRecorder->u32CamId, pRecorder);
+      RKADK_RECORD_DestoryAudioChn();
       return ret;
     }
 
@@ -1220,7 +1213,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->s32CamID);
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio) {
     if (RKADK_RECORD_CreateAudioChn(pstRecAttr->s32CamID)) {
-      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID, *ppRecorder);
+      RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
       return -1;
     }
   }
@@ -1248,7 +1241,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
 failed:
   RKADK_LOGE("Create Record[%d, %d] failed", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
-  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID, *ppRecorder);
+  RKADK_RECORD_DestoryVideoChn(pstRecAttr->s32CamID);
 
   if (pstRecCfg->record_type != RKADK_REC_TYPE_LAPSE && bEnableAudio)
     RKADK_RECORD_DestoryAudioChn();
@@ -1298,7 +1291,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     return ret;
   }
 
-  ret = RKADK_RECORD_DestoryVideoChn(u32CamId, pRecorder);
+  ret = RKADK_RECORD_DestoryVideoChn(u32CamId);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_DestoryVideoChn failed[%x]", ret);
     return ret;
@@ -1332,15 +1325,15 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
   return RKADK_MUXER_Stop(pRecorder);
 }
 
-RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
+RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   int ret;
   RKADK_U32 u32CamId;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
 
-  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
-  pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
+  RKADK_CHECK_POINTER(*pRecorder, RKADK_FAILURE);
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)*pRecorder;
   if (!pstRecorder) {
     RKADK_LOGE("pstRecorder is null");
     return -1;
@@ -1363,35 +1356,34 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder) {
     return -1;
   }
 
-  ret = RKADK_MUXER_Stop(pRecorder);
+  ret = RKADK_MUXER_Stop(*pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_MUXER_Stop failed[%d]", ret);
     return -1;
   }
 
-  RKADK_MUXER_SetResetState(pRecorder, true);
-  ret = RKADK_RECORD_ResetVideo(u32CamId, pstRecCfg,
-                                pstSensorCfg, pRecorder);
+  RKADK_MUXER_SetResetState(*pRecorder, true);
+  ret = RKADK_RECORD_ResetVideo(u32CamId, pstRecCfg, pstSensorCfg, *pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_ResetVideo failed");
     goto failed;
   }
 
-  ret = RKADK_RECORD_ResetAudio(pstRecCfg, pRecorder);
+  ret = RKADK_RECORD_ResetAudio(pstRecCfg, pstRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_ResetAudio failed");
     goto failed;
   }
 
-  RKADK_MUXER_SetResetState(pRecorder, false);
-  RKADK_MUXER_Start(pRecorder);
+  RKADK_MUXER_SetResetState(*pRecorder, false);
+  RKADK_MUXER_Start(*pRecorder);
 
   RKADK_LOGI("Change [%d] end...", u32CamId);
   return 0;
 
 failed:
   RKADK_LOGI("Change [%d] failed...", u32CamId);
-  RKADK_MUXER_Start(pRecorder);
+  RKADK_MUXER_Start(*pRecorder);
 
   return -1;
 }

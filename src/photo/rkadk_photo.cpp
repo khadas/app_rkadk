@@ -710,7 +710,7 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
   return ret;
 }
 
-RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   int ret;
   bool bPhoto;
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = NULL;
@@ -720,8 +720,8 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR pHandle) {
   VI_CHN_ATTR_S stChnAttr;
   RKADK_PHOTO_HANDLE_S *pstHandle;
 
-  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
-  pstHandle = (RKADK_PHOTO_HANDLE_S *)pHandle;
+  RKADK_CHECK_POINTER(*pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_PHOTO_HANDLE_S *)*pHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   RKADK_LOGI("Photo[%d] Reset start...", pstHandle->u32CamId);

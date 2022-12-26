@@ -453,8 +453,8 @@ int main(int argc, char *argv[]) {
 
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &stResType);
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &stResType);
-      RKADK_RECORD_Reset(pRecordHandle);
-      RKADK_PHOTO_Reset(pPhotoHandle);
+      RKADK_RECORD_Reset(&pRecordHandle);
+      RKADK_PHOTO_Reset(&pPhotoHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
 
 #if ENABLE_PALYER
@@ -473,7 +473,7 @@ int main(int argc, char *argv[]) {
 
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
-      RKADK_RECORD_Reset(pRecordHandle);
+      RKADK_RECORD_Reset(&pRecordHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
 #if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);
@@ -489,7 +489,7 @@ int main(int argc, char *argv[]) {
       if (stRecType >= RKADK_REC_TYPE_BUTT)
         stRecType = RKADK_REC_TYPE_NORMAL;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &stRecType);
-      RKADK_RECORD_Reset(pRecordHandle);
+      RKADK_RECORD_Reset(&pRecordHandle);
       RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
 #if ENABLE_PALYER
       RKADK_PLAYER_SetDataSource(pPlayerHandle, file);

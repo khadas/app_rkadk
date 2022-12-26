@@ -90,7 +90,7 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder);
  * @return 0 success
  * @return others failure
  */
-RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR pRecorder);
+RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder);
 
 /**
  * @brief set recorder framerate

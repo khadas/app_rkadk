@@ -257,37 +257,37 @@ int main(int argc, char *argv[]) {
     } else if (strstr(cmd, "LR")) { //Lapse Record
       type = RKADK_REC_TYPE_LAPSE;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "NR")) { //Normal Record
       type = RKADK_REC_TYPE_NORMAL;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "1600")) {
       type = RKADK_RES_1600P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "1440")) {
       type = RKADK_RES_1440P;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "264")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H264;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "265")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H265;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
       RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
-      RKADK_RECORD_Reset(pRecorder);
+      RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "start")) {
       RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "stop")) {
