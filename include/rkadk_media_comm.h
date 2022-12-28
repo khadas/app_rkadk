@@ -34,7 +34,9 @@ extern "C" {
 #endif
 #include "rk_mpi_vpss.h"
 #include "rk_mpi_rgn.h"
+#ifndef RV1126_1109
 #include "rk_mpi_amix.h"
+#endif
 #include "rk_mpi_cal.h"
 #include "rkadk_common.h"
 #include <stdbool.h>

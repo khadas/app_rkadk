@@ -1765,7 +1765,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
     if ('.' == pszfilePath[i]) {
-      #ifdef RV1126_1109
+#ifdef RV1126_1109
       if(!strcmp(pszfilePath + i + 1, "mp4")) {
         pstPlayer->demuxerFlag = MIX_VIDEO_FLAG;
         pstPlayer->pstDemuxerParam->pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
@@ -1907,7 +1907,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
         }
 
         pstPlayer->demuxerFlag = AUDIO_FLAG;
-        if (!strcmp(pszfilePath + i + 1, "wav")) {
+        if (!strcmp(pszfilePath + i + 1, "wav"))
           pstPlayer->pstDemuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerWavPacket;
         else
           pstPlayer->pstDemuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
@@ -1958,7 +1958,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 
         return RKADK_SUCCESS;
       }
-      #else
+#else
       if ((!strcmp(pszfilePath + i + 1, "mp3")) || (!strcmp(pszfilePath + i + 1, "wav"))) {
         if (!pstPlayer->bEnableAudio) {
           RKADK_LOGE("audio is unable");
@@ -2017,7 +2017,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 
         return RKADK_SUCCESS;
       }
-      #endif
+#endif
       else {
         RKADK_LOGE("Unsupported file format(%s)", pszfilePath);
         goto __FAILED;

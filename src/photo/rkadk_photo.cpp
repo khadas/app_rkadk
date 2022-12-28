@@ -20,6 +20,7 @@
 #include "rkadk_param.h"
 #include "rkadk_thumb_comm.h"
 #include "rkadk_signal.h"
+#include <byteswap.h>
 #include <assert.h>
 #include <malloc.h>
 #include <pthread.h>

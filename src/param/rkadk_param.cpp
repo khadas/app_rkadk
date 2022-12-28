@@ -2292,8 +2292,10 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   volume = (int)(volume * 2.55 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
+#ifndef RV1126_1109
   RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
   RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
+#endif
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
@@ -2307,7 +2309,9 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
   volume = (int)(volume * 0.3 + 0.5);
   memset(buffer, 0, RKADK_VOLUME_LEN);
   sprintf(buffer, "%d", volume);
+#ifndef RV1126_1109
   RK_MPI_AMIX_SetControl(0, "DAC LINEOUT Volume", buffer);
+#endif
 }
 
 static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
@@ -2321,8 +2325,10 @@ static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
   if (mute) {
     RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
   } else {
+#ifndef RV1126_1109
     RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
     RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
+#endif
     RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
   }
 }
