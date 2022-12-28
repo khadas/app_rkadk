@@ -285,7 +285,7 @@ static void RKADK_PHOTO_SetVideoChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
   pstViChn->s32ChnId = pstPhotoCfg->vi_attr.u32ViChn;
 
   pstSrcVpssChn->enModId = RK_ID_VPSS;
-  pstSrcVpssChn->s32DevId = u32CamId;
+  pstSrcVpssChn->s32DevId = pstPhotoCfg->vpss_grp;
   pstSrcVpssChn->s32ChnId = pstPhotoCfg->vpss_chn;
 
   pstDstVpssChn->enModId = RK_ID_VPSS;

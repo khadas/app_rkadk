@@ -115,7 +115,7 @@ static void RKADK_RECORD_SetVideoChn(int index, RKADK_U32 u32CamId,
   pstViChn->s32ChnId = pstRecCfg->vi_attr[index].u32ViChn;
 
   pstSrcVpssChn->enModId = RK_ID_VPSS;
-  pstSrcVpssChn->s32DevId = u32CamId;
+  pstSrcVpssChn->s32DevId = pstRecCfg->attribute[index].vpss_grp;
   pstSrcVpssChn->s32ChnId = pstRecCfg->attribute[index].vpss_chn;
 
   pstDstVpssChn->enModId = RK_ID_VPSS;
