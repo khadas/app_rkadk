@@ -535,7 +535,7 @@ static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
   if (!pstMuxer->u64AudioPts)
     pstMuxer->u64AudioPts = stFrame.u64TimeStamp;
 
-  RKADK_MUXER_WriteAudioFrame(stFrame.pMbBlk, stFrame.u32Len, pstMuxer->u64AudioPts, pHandle);
+  RKADK_MUXER_WriteAudioFrame(stFrame.pMbBlk, stFrame.u32Len, stFrame.u64TimeStamp, pHandle);
   pstMuxer->u64AudioPts += duration;
 }
 
