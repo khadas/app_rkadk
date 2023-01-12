@@ -112,9 +112,9 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   snprintf(hdrStr, sizeof(hdrStr), "%d", (int)WDRMode);
   setenv("HDR_MODE", hdrStr, 1);
 
-  ret = rk_aiq_uapi2_sysctl_enumStaticMetas(u32CamId, &atAiqStaticInfo);
+  ret = rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId(u32CamId, &atAiqStaticInfo);
   if (ret) {
-    RKADK_LOGE("rk_aiq_uapi2_sysctl_enumStaticMetas failed[%d]", ret);
+    RKADK_LOGE("rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId failed[%d]", ret);
     return ret;
   }
 
