@@ -31,3 +31,15 @@ add_definitions(-Wall
 
 add_subdirectory(src)
 add_subdirectory(examples)
+
+#Install rkadk default configuration file
+if(${RKADK_CHIP} STREQUAL "rv1106")
+	set(RKADK_INICFG_PATH inicfg/rv1106_1103)
+elseif(${RKADK_CHIP} STREQUAL "rv1126")
+	set(RKADK_INICFG_PATH inicfg/rv1126_1109)
+else()
+	message(FATAL_ERROR "CMake Error, Select an invalid chip")
+endif()
+
+file(GLOB RKADK_INICFG_LIST ${RKADK_INICFG_PATH}/rkadk_defsetting*.ini)
+install(FILES ${RKADK_INICFG_LIST} DESTINATION etc)
