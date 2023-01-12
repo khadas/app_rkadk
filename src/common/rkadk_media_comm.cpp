@@ -563,8 +563,9 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
   RKADK_S32 i;
   VI_DEV_ATTR_S stDevAttr;
   VI_DEV_BIND_PIPE_S stBindPipe;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-    RKADK_PARAM_GetSensorCfg(u32CamId);
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
+
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
@@ -614,7 +615,7 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
 
       // 1-3.bind dev/pipe
       stBindPipe.u32Num = 1;
-      stBindPipe.PipeId[u32CamId] = u32CamId;
+      stBindPipe.PipeId[0] = u32CamId;
       ret = RK_MPI_VI_SetDevBindPipe(u32CamId, &stBindPipe);
       if (ret != RK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VI_SetDevBindPipe failed[%x]", ret);
@@ -749,8 +750,9 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_U32 u32CamId, RKADK_S32 s32ChnId,
                               VENC_CHN_ATTR_S *pstVencChnAttr) {
   int ret = -1;
   RKADK_S32 i;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-    RKADK_PARAM_GetSensorCfg(u32CamId);
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
+
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;

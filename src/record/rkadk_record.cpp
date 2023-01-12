@@ -123,7 +123,7 @@ static void RKADK_RECORD_SetVideoChn(int index, RKADK_U32 u32CamId,
   pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = u32CamId;
+  pstVencChn->s32DevId = 0;
   pstVencChn->s32ChnId = pstRecCfg->attribute[index].venc_chn;
 }
 
@@ -857,7 +857,7 @@ static void RKADK_RECORD_ResetVideoChn(RKADK_U32 index, RKADK_U32 u32CamId,
   }
 
   pstRecVenChn->enModId = RK_ID_VENC;
-  pstRecVenChn->s32DevId = u32CamId;
+  pstRecVenChn->s32DevId = 0;
   pstRecVenChn->s32ChnId = pstRecCfg->attribute[index].venc_chn;
 }
 

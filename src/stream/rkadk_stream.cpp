@@ -169,7 +169,7 @@ static void RKADK_STREAM_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
   pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = u32CamId;
+  pstVencChn->s32DevId = 0;
   pstVencChn->s32ChnId = pstStreamCfg->attribute.venc_chn;
 }
 

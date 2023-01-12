@@ -293,7 +293,7 @@ static void RKADK_PHOTO_SetVideoChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
   pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = u32CamId;
+  pstVencChn->s32DevId = 0;
   pstVencChn->s32ChnId = pstPhotoCfg->venc_chn;
 }
 
@@ -751,7 +751,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   stSrcChn.s32DevId = pstHandle->u32CamId;
   stSrcChn.s32ChnId = pstPhotoCfg->vi_attr.u32ViChn;
   stPhoVenChn.enModId = RK_ID_VENC;
-  stPhoVenChn.s32DevId = pstHandle->u32CamId;
+  stPhoVenChn.s32DevId = 0;
   stPhoVenChn.s32ChnId = pstPhotoCfg->venc_chn;
 
   memset(&stPhoAttr, 0, sizeof(VENC_CHN_ATTR_S));

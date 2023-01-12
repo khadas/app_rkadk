@@ -239,7 +239,7 @@ static int RKADK_THUMB_SetVideoChn(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg,
   pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVencChn->enModId = RK_ID_VENC;
-  pstVencChn->s32DevId = u32CamId;
+  pstVencChn->s32DevId = 0;
 
   switch (enThumbModule)
   {
