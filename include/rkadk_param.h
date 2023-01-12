@@ -83,8 +83,8 @@ extern "C" {
 #define LIVE_AENC_CHN RECORD_AENC_CHN
 
 /* setting file path */
-#define RKADK_DEFPARAM_PATH "/data/rkadk/rkadk_defsetting.ini"
-#define RKADK_DEFPARAM_PATH_SENSOR_PREFIX "/data/rkadk/rkadk_defsetting_sensor"
+#define RKADK_DEFPARAM_PATH "/oem/etc/rkadk_defsetting.ini"
+#define RKADK_DEFPARAM_PATH_SENSOR_PREFIX "/oem/etc/rkadk_defsetting_sensor"
 #define RKADK_PARAM_PATH "/data/rkadk/rkadk_setting.ini"
 #define RKADK_PARAM_PATH_SENSOR_PREFIX "/data/rkadk/rkadk_setting_sensor"
 
