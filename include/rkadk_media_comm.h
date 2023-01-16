@@ -51,7 +51,7 @@ extern "C" {
 #define RKADK_MEDIA_VI_MAX_CNT (4 * RKADK_MAX_SENSOR_CNT)
 
 /* video encoder maximum count */
-#define RKADK_MEDIA_VENC_MAX_CNT RKADK_MEDIA_VI_MAX_CNT
+#define RKADK_MEDIA_VENC_MAX_CNT (7 * RKADK_MAX_SENSOR_CNT)
 
 /* vpss maximum count */
 #define RKADK_MEDIA_VPSS_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
@@ -133,7 +133,8 @@ RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,
 
 RKADK_S32
 RKADK_MEDIA_StopGetAencBuffer(MPP_CHN_S *pstChn,
-                              RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB);
+                              RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB,
+                              RKADK_VOID *pHandle);
 
 RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
                                     RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
@@ -141,7 +142,8 @@ RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
 
 RKADK_S32
 RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
-                              RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB);
+                              RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
+                              RKADK_VOID *pHandle);
 
 RKADK_S32 RKADK_MEDIA_FrameBufMalloc(RKADK_FRAME_ATTR_S *pstFrameAttr);
 

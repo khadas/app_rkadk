@@ -278,7 +278,6 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
-  RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg = RKADK_PARAM_GetStreamCfg(
       pstVideoAttr->u32CamId, RKADK_STREAM_TYPE_PREVIEW);
@@ -450,7 +449,7 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
 
   RKADK_STREAM_SetVideoChn(pstStreamCfg, pstHandle->u32CamId, &stViChn,
                            &stVencChn, &stSrcVpssChn, &stDstVpssChn);
-  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_STREAM_VencOutCb);
+  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_STREAM_VencOutCb, pstHandle);
 
   bUseVpss = RKADK_STREAM_IsUseVpss(pstStreamCfg);
   if (bUseVpss) {
@@ -582,8 +581,6 @@ RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamId,
   RKADK_CHECK_POINTER(pstVideoInfo, RKADK_FAILURE);
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
-  RKADK_PARAM_Init(NULL, NULL);
-
   pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
@@ -706,7 +703,7 @@ RKADK_STREAM_DestoryDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
   int ret = 0;
   if (pHandle->enCodecType != RKADK_CODEC_TYPE_PCM) {
     ret = RKADK_MEDIA_StopGetAencBuffer(&pHandle->stAencChn,
-                                        RKADK_STREAM_AencOutCb);
+                                        RKADK_STREAM_AencOutCb, pHandle);
   }
 
   if (ret)
@@ -819,7 +816,6 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
-  RKADK_PARAM_Init(NULL, NULL);
 
   pAudioHandle = (STREAM_AUDIO_HANDLE_S *)malloc(sizeof(STREAM_AUDIO_HANDLE_S));
   if (!pAudioHandle) {
@@ -1003,8 +999,6 @@ RKADK_S32 RKADK_STREAM_GetAudioInfo(RKADK_MW_PTR pHandle,
 
   RKADK_CHECK_POINTER(pstAudioInfo, RKADK_FAILURE);
   memset(pstAudioInfo, 0, sizeof(RKADK_AUDIO_INFO_S));
-
-  RKADK_PARAM_Init(NULL, NULL);
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {

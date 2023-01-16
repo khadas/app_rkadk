@@ -668,7 +668,8 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
   return 0;
 }
 
-static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
+static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId,
+                                  RKADK_MUXER_HANDLE_S *pstRecorder) {
   int ret;
   MPP_CHN_S stSrcChn, stDestChn, stSrcVpssChn, pstDstVpssChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
@@ -685,7 +686,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
 
     // Stop get aenc data
-    RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
+    RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb, pstRecorder);
 
     // UnBind AI to AENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
@@ -700,7 +701,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId) {
                              &stSrcVpssChn, &pstDstVpssChn);
 
     // Stop get venc data
-    RKADK_MEDIA_StopGetVencBuffer(&stDestChn, RKADK_RECORD_VencOutCb);
+    RKADK_MEDIA_StopGetVencBuffer(&stDestChn, RKADK_RECORD_VencOutCb, pstRecorder);
 
     bUseVpss = RKADK_RECORD_IsUseVpss(i, pstRecCfg);
     if (bUseVpss) {
@@ -1099,7 +1100,7 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
 
     // Stop get aenc data
-    RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
+    RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb, pstRecorder);
 
     // UnBind AI to AENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stDestChn);
@@ -1122,14 +1123,13 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
     RKADK_RECORD_SetAudioChn(&stSrcChn, &stDestChn);
 
     // Get aenc data
-    RKADK_MEDIA_GetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb,
-                                    pstRecorder);
+    RKADK_MEDIA_GetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb, pstRecorder);
 
     // Bind AI to AENC
     ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stDestChn);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_SYS_Bind failed(%d)", ret);
-      RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb);
+      RKADK_MEDIA_StopGetAencBuffer(&stDestChn, RKADK_RECORD_AencOutCb, pstRecorder);
       RKADK_RECORD_DestoryAudioChn();
       return ret;
     }
@@ -1157,7 +1157,6 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
-  RKADK_PARAM_Init(NULL, NULL);
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
   if (!pstRecCfg) {
@@ -1246,7 +1245,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     g_fileNameDeque[index].clear();
   }
 
-  ret = RKADK_RECORD_UnBindChn(u32CamId);
+  ret = RKADK_RECORD_UnBindChn(u32CamId, stRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_UnBindChn failed, ret = %d", ret);
     return ret;

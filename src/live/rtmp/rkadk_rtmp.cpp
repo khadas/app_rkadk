@@ -544,7 +544,6 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
-  RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
@@ -725,12 +724,12 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
                          &stSrcVpssChn, &stDstVpssChn);
 
   // Stop get venc data
-  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTMP_VencOutCb);
+  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTMP_VencOutCb, pstHandle);
 
    // Stop get aenc data
   if (bDisableAudio) {
     RKADK_RTMP_AudioSetChn(&stAiChn, &stAencChn);
-    RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTMP_AencOutCb);
+    RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTMP_AencOutCb, pstHandle);
   }
 
   bUseVpss = RKADK_RTMP_IsUseVpss(pstLiveCfg);

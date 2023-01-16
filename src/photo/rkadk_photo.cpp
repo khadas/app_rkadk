@@ -361,7 +361,6 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   pHandle->u32CamId = pstPhotoAttr->u32CamId;
   pHandle->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
 
-  RKADK_PARAM_Init(NULL, NULL);
   pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
   if (!pstPhotoCfg) {
     RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
@@ -689,7 +688,7 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
     stRecvParam.s32RecvPicNum = pstAttr->unPhotoTypeAttr.stMultipleAttr.s32Count;
 
   pstHandle->u32PhotoCnt = stRecvParam.s32RecvPicNum;
-  RKADK_LOGI("Take photo number = %d", pstHandle->u32PhotoCnt);
+  RKADK_LOGI("Photo[%d] Take photo number = %d", pstHandle->u32CamId, pstHandle->u32PhotoCnt);
 
 #ifndef THUMB_NORMAL
   ret = RK_MPI_VENC_StartRecvFrame(pstPhotoCfg->venc_chn, &stRecvParam);

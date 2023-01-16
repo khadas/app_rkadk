@@ -272,7 +272,6 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     RKADK_LOGE("System is not initialized");
     return -1;
   }
-  RKADK_PARAM_Init(NULL, NULL);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
@@ -451,7 +450,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)
-    RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb);
+    RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb, pstHandle);
 
   bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
   if (bUseVpss){
