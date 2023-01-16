@@ -38,6 +38,7 @@ typedef struct {
 rk_aiq_wb_gain_t stGsWbAutoGain = {2.083900, 1.000000, 1.000000, 2.018500};
 static SAMPLE_ISP_HANDLE_S gstIspHandle[RKADK_MAX_SENSOR_CNT] = {
     {-1, 0, PTHREAD_MUTEX_INITIALIZER, -1, NULL},
+    {-1, 0, PTHREAD_MUTEX_INITIALIZER, -1, NULL},
     {-1, 0, PTHREAD_MUTEX_INITIALIZER, -1, NULL}};
 
 typedef enum _SHUTTERSPEED_TYPE_E {
@@ -114,7 +115,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
 
   ret = rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId(u32CamId, &atAiqStaticInfo);
   if (ret) {
-    RKADK_LOGE("rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId failed[%d]", ret);
+    RKADK_LOGE("rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
@@ -124,7 +125,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   pstAiqCtx = rk_aiq_uapi2_sysctl_init(atAiqStaticInfo.sensor_info.sensor_name,
                                       iq_file_dir, NULL, NULL);
   if (!pstAiqCtx) {
-    RKADK_LOGE("rk_aiq_uapi2_sysctl2_init failed");
+    RKADK_LOGE("rk_aiq_uapi2_sysctl2_init u32CamId[%d] failed", u32CamId);
     return -1;
   }
 
@@ -133,7 +134,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
 
   gstIspHandle[u32CamId].pstAiqCtx = pstAiqCtx;
 
-  RKADK_LOGI("aiq init done");
+  RKADK_LOGI("u32CamId[%d] aiq init done", u32CamId);
   return 0;
 }
 
@@ -146,19 +147,19 @@ static int SAMPLE_ISP_Run(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode) {
   ret = rk_aiq_uapi2_sysctl_prepare(gstIspHandle[u32CamId].pstAiqCtx, 0, 0,
                                    WDRMode);
   if (ret) {
-    RKADK_LOGE("rkaiq engine prepare failed[%d]", ret);
+    RKADK_LOGE("rkaiq engine prepare u32CamId[%d] failed[%d]", u32CamId, ret);
     gstIspHandle[u32CamId].pstAiqCtx = NULL;
     return ret;
   }
 
   ret = rk_aiq_uapi2_sysctl_start(gstIspHandle[u32CamId].pstAiqCtx);
   if (ret) {
-    RKADK_LOGE("rk_aiq_uapi2_sysctl_start failed[%d]", ret);
+    RKADK_LOGE("rk_aiq_uapi2_sysctl_start u32CamId[%d] failed[%d]", u32CamId, ret);
     gstIspHandle[u32CamId].pstAiqCtx = NULL;
     return ret;
   }
 
-  RKADK_LOGI("aiq prepare and start done");
+  RKADK_LOGI("u32CamId[%d] aiq prepare and start done", u32CamId);
   return 0;
 }
 
@@ -171,7 +172,7 @@ int SAMPLE_ISP_SET_FrameRate(RKADK_U32 u32CamId, RKADK_U32 uFps) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("uFps %d", uFps);
+  RKADK_LOGD("u32CamId[%d] uFps %d", u32CamId, uFps);
   ret = rk_aiq_user_api2_ae_getExpSwAttr(gstIspHandle[u32CamId].pstAiqCtx, &expSwAttr);
   expSwAttr.stAuto.stFrmRate.isFpsFix = true;
   expSwAttr.stAuto.stFrmRate.FpsValue = uFps;
@@ -192,38 +193,38 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   if (index < 0) {
     index = SAMPLE_ISP_FindUsableIdx(u32CamId);
     if (index < 0) {
-      RKADK_LOGE("not find usable index");
+      RKADK_LOGE("u32CamId[%d] not find usable index", u32CamId);
       return -1;
     }
   }
 
   if (gstIspHandle[index].u32StartCnt != 0) {
     gstIspHandle[index].u32StartCnt++;
-    RKADK_LOGI("u32StartCnt: %d", gstIspHandle[index].u32StartCnt);
+    RKADK_LOGI("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
     return 0;
   }
 
   ret = SAMPLE_ISP_Init(u32CamId, WDRMode, bMultiCam, iq_file_dir);
   if (ret) {
-    RKADK_LOGE("SAMPLE_ISP_Init failed[%d]", ret);
+    RKADK_LOGE("SAMPLE_ISP_Init u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
   ret = SAMPLE_ISP_Run(u32CamId, WDRMode);
   if (ret) {
-    RKADK_LOGE("SAMPLE_ISP_Run failed[%d]", ret);
+    RKADK_LOGE("SAMPLE_ISP_Run u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
   ret = SAMPLE_ISP_SET_FrameRate(u32CamId, fps);
   if (ret) {
-    RKADK_LOGE("SAMPLE_ISP_SET_FrameRate failed[%d]", ret);
+    RKADK_LOGE("SAMPLE_ISP_SET_FrameRate u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
   gstIspHandle[index].s32CamId = u32CamId;
   gstIspHandle[index].u32StartCnt++;
-  RKADK_LOGI("done!");
+  RKADK_LOGI("u32CamId[%d] done!", u32CamId);
   return 0;
 }
 
@@ -241,13 +242,13 @@ int SAMPLE_ISP_Stop(RKADK_U32 u32CamId) {
 
   if (gstIspHandle[index].u32StartCnt > 1) {
     gstIspHandle[index].u32StartCnt--;
-    RKADK_LOGI("u32StartCnt: %d", gstIspHandle[index].u32StartCnt);
+    RKADK_LOGI("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
     return 0;
   }
 
   ret = rk_aiq_uapi2_sysctl_stop(gstIspHandle[u32CamId].pstAiqCtx, false);
   if (ret) {
-    RKADK_LOGE("rk_aiq_uapi2_sysctl_stop failed[%d]", ret);
+    RKADK_LOGE("rk_aiq_uapi2_sysctl_stop u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
@@ -256,7 +257,7 @@ int SAMPLE_ISP_Stop(RKADK_U32 u32CamId) {
   gstIspHandle[u32CamId].pstAiqCtx = NULL;
   gstIspHandle[index].s32CamId = -1;
   gstIspHandle[index].u32StartCnt = 0;
-  RKADK_LOGI("done!");
+  RKADK_LOGI("u32CamId[%d] done!", u32CamId);
   return 0;
 }
 

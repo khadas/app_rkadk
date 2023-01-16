@@ -32,7 +32,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:t:h";
+static RKADK_CHAR optstr[] = "a:I:p:t:mh";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -47,6 +47,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-t: data type, default NV12, options: NV12, RGB565, "
          "RBG888, RGBA8888\n");
+  printf("\t-m: multiple sensors, Default:false\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -91,7 +92,8 @@ int main(int argc, char *argv[]) {
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
-  RKADK_MW_PTR pHandle = NULL;
+  RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
+  RKADK_BOOL bMultiCam = RKADK_FALSE;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -119,6 +121,9 @@ int main(int argc, char *argv[]) {
       else if (strstr(optarg, "RGBA8888"))
         enDataType = RKADK_THUMB_TYPE_RGBA8888;
       break;
+    case 'm':
+      bMultiCam = RKADK_TRUE;
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -128,7 +133,10 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#camera id: %d", u32CamId);
+  if (bMultiCam)
+    u32CamId = 0;
+
+  RKADK_LOGD("#camera id: %d, bMultiCam: %d", u32CamId, bMultiCam);
 
   RKADK_MPI_SYS_Init();
 
@@ -154,19 +162,30 @@ int main(int argc, char *argv[]) {
 
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
-    RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
+    RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", u32CamId);
     return -1;
   }
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+
+  if (bMultiCam) {
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    if (ret) {
+      RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
+      SAMPLE_ISP_Stop(u32CamId);
+      return -1;
+    }
+
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  }
 #endif
 
   memset(&stTakePhotoAttr, 0, sizeof(RKADK_TAKE_PHOTO_ATTR_S));
   stTakePhotoAttr.enPhotoType = RKADK_PHOTO_TYPE_SINGLE;
 
   memset(&stPhotoAttr, 0, sizeof(RKADK_PHOTO_ATTR_S));
+
   stPhotoAttr.u32CamId = u32CamId;
   stPhotoAttr.pfnPhotoDataProc = PhotoDataRecv;
   stPhotoAttr.stThumbAttr.bSupportDCF = RKADK_FALSE;
@@ -177,11 +196,25 @@ int main(int argc, char *argv[]) {
 
   ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle);
   if (ret) {
-    RKADK_LOGE("RKADK_PHOTO_Init failed(%d)", ret);
+    RKADK_LOGE("RKADK_PHOTO_Init u32CamId[%d] failed[%d]", u32CamId, ret);
 #ifdef RKAIQ
     SAMPLE_ISP_Stop(u32CamId);
+
+    if (bMultiCam)
+      SAMPLE_ISP_Stop(1);
 #endif
     return -1;
+  }
+
+  if (bMultiCam) {
+    stPhotoAttr.u32CamId = 1;
+    ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle1);
+    if (ret) {
+      RKADK_LOGE("RKADK_PHOTO_Init u32CamId[1] failed[%d]", ret);
+      RKADK_PHOTO_DeInit(pHandle);
+      SAMPLE_ISP_Stop(u32CamId);
+      SAMPLE_ISP_Stop(1);
+    }
   }
 
   signal(SIGINT, sigterm_handler);
@@ -198,21 +231,32 @@ int main(int argc, char *argv[]) {
       break;
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       RKADK_PHOTO_Reset(&pHandle);
     } else if (strstr(cmd, "720")) {
       type = RKADK_RES_720P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       RKADK_PHOTO_Reset(&pHandle);
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      RKADK_PHOTO_Reset(&pHandle);
+    } else if (strstr(cmd, "1296")) {
+      type = RKADK_RES_1296P;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       RKADK_PHOTO_Reset(&pHandle);
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {
-      RKADK_LOGE("RKADK_PHOTO_TakePhoto failed");
+      RKADK_LOGE("RKADK_PHOTO_TakePhoto u32CamId[%d] failed", u32CamId);
       break;
+    }
+
+    if (bMultiCam) {
+      if (RKADK_PHOTO_TakePhoto(pHandle1, &stTakePhotoAttr)) {
+        RKADK_LOGE("RKADK_PHOTO_TakePhoto u32CamId[1] failed");
+        break;
+      }
     }
 
     usleep(500000);
@@ -220,8 +264,14 @@ int main(int argc, char *argv[]) {
 
   RKADK_PHOTO_DeInit(pHandle);
 
+  if (bMultiCam)
+    RKADK_PHOTO_DeInit(pHandle1);
+
 #ifdef RKAIQ
   SAMPLE_ISP_Stop(u32CamId);
+
+  if (bMultiCam)
+    SAMPLE_ISP_Stop(1);
 #endif
   RKADK_MPI_SYS_Exit();
   return 0;

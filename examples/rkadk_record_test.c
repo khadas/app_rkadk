@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:h";
+static RKADK_CHAR optstr[] = "a:I:p:mh";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -44,6 +44,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
+  printf("\t-m: multiple sensors, Default:false\n");
 }
 
 static RKADK_S32
@@ -147,8 +148,8 @@ int main(int argc, char *argv[]) {
   int c, ret, fps;
   RKADK_RECORD_ATTR_S stRecAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
-  RKADK_MW_PTR pRecorder = NULL;
-  RK_BOOL fec_enable = RK_FALSE;
+  RKADK_MW_PTR pRecorder = NULL, pRecorder1 = NULL;
+  RK_BOOL bMultiCam = RK_FALSE;
   RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
   RKADK_PARAM_RES_E type;
@@ -156,11 +157,7 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-
-  // set default value
-  stRecAttr.s32CamID = 0;
-  stRecAttr.pfnRequestFileNames = GetRecordFileName;
-  stRecAttr.pfnEventCallback = RecordEventCallback;
+  RKADK_S32 s32CamId = 0;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -174,11 +171,14 @@ int main(int argc, char *argv[]) {
         pIqfilesPath = (char *)tmp_optarg;
       break;
     case 'I':
-      stRecAttr.s32CamID = atoi(optarg);
+      s32CamId = atoi(optarg);
       break;
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
+      break;
+    case 'm':
+      bMultiCam = RKADK_TRUE;
       break;
     case 'h':
     default:
@@ -188,6 +188,9 @@ int main(int argc, char *argv[]) {
     }
   }
   optind = 0;
+
+  if (bMultiCam)
+    s32CamId = 0;
 
   RKADK_MPI_SYS_Init();
 
@@ -211,29 +214,57 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(stRecAttr.s32CamID, RKADK_PARAM_TYPE_FPS, &fps);
+  ret = RKADK_PARAM_GetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
-    RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
+    RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", s32CamId);
     return -1;
   }
 
-  SAMPLE_ISP_Start(stRecAttr.s32CamID, hdr_mode, fec_enable, pIqfilesPath,
-                     fps);
+  SAMPLE_ISP_Start(s32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  IspProcess(s32CamId);
 
-  IspProcess(stRecAttr.s32CamID);
+  if (bMultiCam) {
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    if (ret) {
+      RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
+      SAMPLE_ISP_Stop(s32CamId);
+      return -1;
+    }
+
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+    IspProcess(1);
+  }
 #endif
+
+  stRecAttr.s32CamID = s32CamId;
+  stRecAttr.pfnRequestFileNames = GetRecordFileName;
+  stRecAttr.pfnEventCallback = RecordEventCallback;
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
-    RKADK_LOGE("Create recorder failed");
+    RKADK_LOGE("s32CamId[%d] Create recorder failed", s32CamId);
 #ifdef RKAIQ
-    SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+    SAMPLE_ISP_Stop(s32CamId);
+    if (bMultiCam)
+      SAMPLE_ISP_Stop(1);
 #endif
     return -1;
+  }
+  RKADK_RECORD_Start(pRecorder);
+
+  if (bMultiCam) {
+    stRecAttr.s32CamID = 1;
+    if (RKADK_RECORD_Create(&stRecAttr, &pRecorder1)) {
+      RKADK_LOGE("s32CamId[1] Create recorder failed");
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(s32CamId);
+      SAMPLE_ISP_Stop(1);
+#endif
+      return -1;
+    }
+    RKADK_RECORD_Start(pRecorder1);
   }
 
   RKADK_LOGD("initial finish\n");
-
-  RKADK_RECORD_Start(pRecorder);
 
   signal(SIGINT, sigterm_handler);
   char cmd[64];
@@ -250,43 +281,47 @@ int main(int argc, char *argv[]) {
       stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       stRecTime.time = 20; //default time
 
-      RKADK_PARAM_GetCamParam(0, RKADK_PARAM_TYPE_SPLITTIME, &stRecTime);
+      RKADK_PARAM_GetCamParam(s32CamId, RKADK_PARAM_TYPE_SPLITTIME, &stRecTime);
       stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
       stSplitAttr.u32DurationSec = stRecTime.time;
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
     } else if (strstr(cmd, "LR")) { //Lapse Record
       type = RKADK_REC_TYPE_LAPSE;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
       RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "NR")) { //Normal Record
       type = RKADK_REC_TYPE_NORMAL;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
+      RKADK_RECORD_Reset(&pRecorder);
+    } else if (strstr(cmd, "720")) {
+      type = RKADK_RES_720P;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
+      RKADK_RECORD_Reset(&pRecorder);
+    } else if (strstr(cmd, "1080")) {
+      type = RKADK_RES_1080P;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
       RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
       RKADK_RECORD_Reset(&pRecorder);
-    } else if (strstr(cmd, "1600")) {
-      type = RKADK_RES_1600P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(&pRecorder);
-    } else if (strstr(cmd, "1440")) {
-      type = RKADK_RES_1440P;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_RES, &type);
+    } else if (strstr(cmd, "1296")) {
+      type = RKADK_RES_1296P;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
       RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "264")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H264;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "265")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H265;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
-      RKADK_PARAM_SetCamParam(0, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       RKADK_RECORD_Reset(&pRecorder);
     } else if (strstr(cmd, "start")) {
       RKADK_RECORD_Start(pRecorder);
@@ -301,8 +336,18 @@ int main(int argc, char *argv[]) {
   RKADK_RECORD_Destroy(pRecorder);
 
 #ifdef RKAIQ
-  SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+  SAMPLE_ISP_Stop(s32CamId);
 #endif
+
+  if (bMultiCam) {
+    RKADK_RECORD_Stop(pRecorder1);
+    RKADK_RECORD_Destroy(pRecorder1);
+
+#ifdef RKAIQ
+    SAMPLE_ISP_Stop(1);
+#endif
+  }
+
   RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
   return 0;
