@@ -42,7 +42,7 @@ static void RKADK_RTSP_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg, RKADK_U
   pstViChn->s32ChnId = pstLiveCfg->vi_attr.u32ViChn;
 
   pstSrcVpssChn->enModId = RK_ID_VPSS;
-  pstSrcVpssChn->s32DevId = u32CamId;
+  pstSrcVpssChn->s32DevId = pstLiveCfg->attribute.vpss_grp;
   pstSrcVpssChn->s32ChnId = pstLiveCfg->attribute.vpss_chn;
 
   pstDstVpssChn->enModId = RK_ID_VPSS;
@@ -230,19 +230,37 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
   return ret;
 }
 
-static bool RKADK_RTSP_IsUseVpss(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
-  RKADK_U32 u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Width;
-  RKADK_U32 u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Height;
-  RKADK_U32 u32DstWidth = pstLiveCfg->attribute.width;
-  RKADK_U32 u32DstHeight = pstLiveCfg->attribute.height;
+static bool RKADK_RTSP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
+  bool bUseVpss = false;
+  RKADK_U32 u32SrcWidth, u32SrcHeight;
+  RKADK_U32 u32DstWidth, u32DstHeight;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
 
-  if (u32DstWidth == u32SrcWidth && u32DstHeight == u32SrcHeight) {
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return false;
-  } else {
+  }
+
+  u32SrcWidth = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Width;
+  u32SrcHeight = pstLiveCfg->vi_attr.stChnAttr.stSize.u32Height;
+  u32DstWidth = pstLiveCfg->attribute.width;
+  u32DstHeight = pstLiveCfg->attribute.height;
+
+  if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
-    return true;
+    bUseVpss = true;
   }
+
+  if (!pstSensorCfg->used_isp) {
+#ifdef RV1126_1109
+    if (pstSensorCfg->flip || pstSensorCfg->mirror)
+#endif
+      bUseVpss = true;
+  }
+
+  return bUseVpss;
 }
 
 RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
@@ -250,7 +268,6 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   int ret = 0;
   bool bSysInit = false;
   bool bUseVpss = false;
-  RKADK_S32 S32VpssGrp;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   RKADK_STREAM_TYPE_E enType;
   VPSS_GRP_ATTR_S stGrpAttr;
@@ -277,6 +294,12 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
       RKADK_PARAM_GetStreamCfg(u32CamId, RKADK_STREAM_TYPE_LIVE);
   if (!pstLiveCfg) {
     RKADK_LOGE("Live RKADK_PARAM_GetStreamCfg Live failed");
+    return -1;
+  }
+
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
   }
 
@@ -326,15 +349,13 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
-  bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
+  bUseVpss = RKADK_RTSP_IsUseVpss(u32CamId, pstLiveCfg);
   if (bUseVpss) {
-    S32VpssGrp = u32CamId;
-
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
     memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
-    stGrpAttr.u32MaxW = 4096;
-    stGrpAttr.u32MaxH = 4096;
+    stGrpAttr.u32MaxW = pstSensorCfg->max_width;
+    stGrpAttr.u32MaxH = pstSensorCfg->max_height;
     stGrpAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
     stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
     stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
@@ -347,9 +368,11 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
     stChnAttr.u32Width = pstLiveCfg->attribute.width;
     stChnAttr.u32Height = pstLiveCfg->attribute.height;
+    stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
+    stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
 
-    ret = RKADK_MPI_VPSS_Init(S32VpssGrp, stSrcVpssChn.s32ChnId,
+    ret = RKADK_MPI_VPSS_Init(stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId,
                               &stGrpAttr, &stChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VPSS_Init falied[%d]",ret);
@@ -415,7 +438,7 @@ failed:
   RKADK_LOGE("failed");
   RKADK_MPI_VENC_DeInit(stVencChn.s32ChnId);
 
-  RKADK_MPI_VPSS_DeInit(S32VpssGrp, stSrcVpssChn.s32ChnId);
+  RKADK_MPI_VPSS_DeInit(stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
 
@@ -430,7 +453,6 @@ failed:
 RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
   bool bUseVpss = false;
-  RKADK_S32 S32VpssGrp;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
@@ -452,9 +474,8 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   if (pstHandle->bVencChnMux)
     RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb, pstHandle);
 
-  bUseVpss = RKADK_RTSP_IsUseVpss(pstLiveCfg);
+  bUseVpss = RKADK_RTSP_IsUseVpss(pstHandle->u32CamId, pstLiveCfg);
   if (bUseVpss){
-    S32VpssGrp = pstHandle->u32CamId;
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
     if (ret) {
@@ -489,7 +510,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   // Destory VPSS
   if (bUseVpss) {
-    ret = RKADK_MPI_VPSS_DeInit(S32VpssGrp, stSrcVpssChn.s32ChnId);
+    ret = RKADK_MPI_VPSS_DeInit(stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId);
     if (ret) {
       RKADK_LOGE("DeInit VPSS[%d] failed[%x]", stSrcVpssChn.s32ChnId, ret);
       return ret;

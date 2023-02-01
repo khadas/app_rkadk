@@ -34,10 +34,11 @@ extern char *optarg;
 #define IQ_FILE_PATH "/etc/iqfiles"
 
 static FILE *g_output_file = NULL;
+static FILE *g_output1_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
 static RKADK_CHAR *g_output_path = "/data/ai.pcm";
-static RKADK_CHAR optstr[] = "a:I:m:e:o:p:h";
+static RKADK_CHAR optstr[] = "a:I:M:e:o:p:mh";
 
 //default use ini audio codec type
 static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_BUTT;
@@ -51,11 +52,12 @@ static void print_usage(const RKADK_CHAR *name) {
          "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
-  printf("\t-m: Test mode, Value: audio, video, Default:\"audio\"\n");
+  printf("\t-M: Test mode, Value: audio, video, Default:\"audio\"\n");
   printf("\t-e: Encode type, Value:pcm, g711a, g711u, mp2, mp3, "
          "Default:ini audio codec type\n");
   printf("\t-o: Output path, Default:\"/data/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
+  printf("\t-m: multiple sensors, Default:false\n");
   ;
 }
 
@@ -65,19 +67,33 @@ static void sigterm_handler(int sig) {
 }
 
 static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
-  if (g_output_file) {
-    fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
-           g_output_file);
-    RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
-               pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+  if (g_output1_file) {
+    if (pVStreamData->u32CamId == 0 && g_output_file) {
+      fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
+             g_output_file);
+      RKADK_LOGD("#Write u32CamId[0] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+    } else if (pVStreamData->u32CamId == 1) {
+      fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
+             g_output1_file);
+      RKADK_LOGD("#Write u32CamId[1] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+    }
+  } else {
+    if (g_output_file) {
+      fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
+             g_output_file);
+      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+    }
   }
 
   return 0;
 }
 
-static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
+static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bMultiCam) {
   RKADK_S32 ret, fps;
-  RKADK_MW_PTR pHandle = NULL;
+  RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
   RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   RKADK_VIDEO_INFO_S stVideoInfo;
 
@@ -87,16 +103,35 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
     return -1;
   }
 
+  if (bMultiCam) {
+    u32CamId = 0;
+    g_output1_file = fopen("/data/venc_cam_1.bin", "w");
+    if (!g_output1_file) {
+      RKADK_LOGE("open /data/venc_cam_1.bin file failed, exit");
+      return -1;
+    }
+  }
+
 #ifdef RKAIQ
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
-    RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
+    RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", u32CamId);
     return -1;
   }
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+
+  if (bMultiCam) {
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    if (ret) {
+      RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
+      SAMPLE_ISP_Stop(u32CamId);
+      return -1;
+    }
+
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  }
 #endif
 
   memset(&stVideoAttr, 0, sizeof(RKADK_STREAM_VIDEO_ATTR_S));
@@ -113,23 +148,52 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
 
   ret = RKADK_STREAM_VideoInit(&stVideoAttr, &pHandle);
   if (ret) {
-    RKADK_LOGE("RKADK_STREAM_VideoInit failed = %d", ret);
+    RKADK_LOGE("RKADK_STREAM_VideoInit u32CamId[%d] failed[%d]", u32CamId, ret);
 #ifdef RKAIQ
     SAMPLE_ISP_Stop(u32CamId);
+    if (bMultiCam)
+      SAMPLE_ISP_Stop(1);
 #endif
     return -1;
   }
 
   ret = RKADK_STREAM_VencStart(pHandle, -1);
   if (ret) {
-    RKADK_LOGE("RKADK_STREAM_VencStart failed");
+    RKADK_LOGE("RKADK_STREAM_VencStart u32CamId[%d] failed", u32CamId);
 #ifdef RKAIQ
     SAMPLE_ISP_Stop(u32CamId);
+    if (bMultiCam)
+      SAMPLE_ISP_Stop(1);
 #endif
     return -1;
   }
 
-  RKADK_LOGD("initial finish\n");
+  if (bMultiCam) {
+    stVideoAttr.u32CamId = 1;
+    ret = RKADK_STREAM_VideoInit(&stVideoAttr, &pHandle1);
+    if (ret) {
+      RKADK_LOGE("RKADK_STREAM_VideoInit u32CamId[1] failed = %d", ret);
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(u32CamId);
+      if (bMultiCam)
+        SAMPLE_ISP_Stop(1);
+#endif
+      return -1;
+    }
+
+    ret = RKADK_STREAM_VencStart(pHandle1, -1);
+    if (ret) {
+      RKADK_LOGE("RKADK_STREAM_VencStart u32CamId[1] failed");
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(u32CamId);
+      if (bMultiCam)
+        SAMPLE_ISP_Stop(1);
+#endif
+      return -1;
+    }
+  }
+
+  RKADK_LOGD("u32CamId[%d] bMultiCam[%d] initial finish\n", u32CamId, bMultiCam);
   signal(SIGINT, sigterm_handler);
 
   char cmd[64];
@@ -180,19 +244,36 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath) {
 
   ret = RKADK_STREAM_VencStop(pHandle);
   if (ret)
-    RKADK_LOGE("RKADK_STREAM_VencStop failed");
+    RKADK_LOGE("RKADK_STREAM_VencStop u32CamId[%d] failed", u32CamId);
 
   ret = RKADK_STREAM_VideoDeInit(pHandle);
   if (ret)
-    RKADK_LOGE("RKADK_STREAM_VideoDeInit failed = %d", ret);
+    RKADK_LOGE("RKADK_STREAM_VideoDeInit u32CamId[%d] failed[%d]", u32CamId, ret);
+
+  if (bMultiCam) {
+    ret = RKADK_STREAM_VencStop(pHandle1);
+    if (ret)
+      RKADK_LOGE("RKADK_STREAM_VencStop u32CamId[1] failed");
+
+    ret = RKADK_STREAM_VideoDeInit(pHandle1);
+    if (ret)
+      RKADK_LOGE("RKADK_STREAM_VideoDeInit u32CamId[1] failed[%d]", ret);
+  }
 
 #ifdef RKAIQ
   SAMPLE_ISP_Stop(u32CamId);
+  if (bMultiCam)
+    SAMPLE_ISP_Stop(1);
 #endif
 
   if (g_output_file) {
     fclose(g_output_file);
     g_output_file = NULL;
+  }
+
+  if (g_output1_file) {
+    fclose(g_output1_file);
+    g_output1_file = NULL;
   }
 
   return 0;
@@ -310,6 +391,7 @@ int main(int argc, char *argv[]) {
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
+  RKADK_BOOL bMultiCam = RKADK_FALSE;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -325,7 +407,7 @@ int main(int argc, char *argv[]) {
     case 'I':
       u32CamId = atoi(optarg);
       break;
-    case 'm':
+    case 'M':
       pMode = optarg;
       break;
     case 'e':
@@ -354,6 +436,9 @@ int main(int argc, char *argv[]) {
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
+      break;
+    case 'm':
+      bMultiCam = RKADK_TRUE;
       break;
     case 'h':
     default:
@@ -391,7 +476,7 @@ int main(int argc, char *argv[]) {
   if (!strcmp(pMode, "audio"))
     AudioTest(u32CamId);
   else if (!strcmp(pMode, "video"))
-    VideoTest(u32CamId, pIqfilesPath);
+    VideoTest(u32CamId, pIqfilesPath, bMultiCam);
   else {
     RKADK_LOGE("Invalid test mode: %s", pMode);
     return -1;
