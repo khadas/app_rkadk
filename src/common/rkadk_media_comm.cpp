@@ -81,10 +81,11 @@ typedef struct {
 
 static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
-static bool g_bVpssGrpInit[VPSS_MAX_GRP_NUM] = {0};
+static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
+  memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM);
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -96,64 +97,66 @@ static void RKADK_MEDIA_CtxInit() {
 static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp, VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
   int ret;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
-  if (g_bVpssGrpInit[s32VpssGrp])
-    return 0;
 
-  pstCommCfg = RKADK_PARAM_GetCommCfg();
-  if (!pstCommCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return -1;
+  if (!g_bVpssGrpInitCnt[s32VpssGrp]) {
+    pstCommCfg = RKADK_PARAM_GetCommCfg();
+    if (!pstCommCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+      return -1;
+    }
+
+    ret = RK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
+    if (ret) {
+      RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+      RKADK_LOGE("RK_MPI_VPSS_CreateGrp(grp:%d) failed with %#x",s32VpssGrp, ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VPSS_StartGrp(s32VpssGrp);
+    if (ret) {
+      RK_MPI_VPSS_StopGrp(s32VpssGrp);
+      RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+      RKADK_LOGE("RK_MPI_VPSS_StartGrp failed with %#x", ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VPSS_ResetGrp(s32VpssGrp);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_ResetGrp failed with %#x", ret);
+    }
+
+    ret = RK_MPI_VPSS_SetVProcDev(s32VpssGrp, (VIDEO_PROC_DEV_TYPE_E)pstCommCfg->vpss_devcie);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_SetVProcDev(grp:%d) failed with %#x!", s32VpssGrp, ret);
+      RK_MPI_VPSS_StopGrp(s32VpssGrp);
+      RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+      return ret;
+    }
   }
 
-  ret = RK_MPI_VPSS_CreateGrp(s32VpssGrp, pstVpssGrpAttr);
-  if (ret) {
-    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-    RKADK_LOGE("RK_MPI_VPSS_CreateGrp(grp:%d) failed with %#x",s32VpssGrp, ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VPSS_StartGrp(s32VpssGrp);
-  if (ret) {
-    RK_MPI_VPSS_StopGrp(s32VpssGrp);
-    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-    RKADK_LOGE("RK_MPI_VPSS_StartGrp failed with %#x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VPSS_ResetGrp(s32VpssGrp);
-  if (ret) {
-    RKADK_LOGE("RK_MPI_VPSS_ResetGrp failed with %#x", ret);
-  }
-
-  ret = RK_MPI_VPSS_SetVProcDev(s32VpssGrp, (VIDEO_PROC_DEV_TYPE_E)pstCommCfg->vpss_devcie);
-  if (ret) {
-    RKADK_LOGE("RK_MPI_VPSS_SetVProcDev(grp:%d) failed with %#x!", s32VpssGrp, ret);
-    RK_MPI_VPSS_StopGrp(s32VpssGrp);
-    RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-    return ret;
-  }
-
-  g_bVpssGrpInit[s32VpssGrp] = true;
+  g_bVpssGrpInitCnt[s32VpssGrp]++;
+  RKADK_LOGD("VpssGrp[%d] InitCnt[%d]", s32VpssGrp, g_bVpssGrpInitCnt[s32VpssGrp]);
   return 0;
 }
 
 static RKADK_U32 RKADK_MPI_VPSS_DestroyGrp(RKADK_S32 s32VpssGrp) {
   int ret;
-  if (!g_bVpssGrpInit[s32VpssGrp])
-    return 0;
 
-  ret = RK_MPI_VPSS_StopGrp(s32VpssGrp);
-  if (ret) {
-    RKADK_LOGE("RK_MPI_VPSS_StopGrp[%d] failed[%x]", s32VpssGrp, ret);
+  if (g_bVpssGrpInitCnt[s32VpssGrp] == 1) {
+    ret = RK_MPI_VPSS_StopGrp(s32VpssGrp);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_StopGrp[%d] failed[%x]", s32VpssGrp, ret);
+    }
+
+    ret = RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
+      return ret;
+    }
   }
 
-  ret = RK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-  if (ret) {
-    RKADK_LOGE("RK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
-    return ret;
-  }
-
-  g_bVpssGrpInit[s32VpssGrp] = false;
+  g_bVpssGrpInitCnt[s32VpssGrp]--;
+  RKADK_LOGD("VpssGrp[%d] InitCnt[%d]", s32VpssGrp, g_bVpssGrpInitCnt[s32VpssGrp]);
   return 0;
 }
 
@@ -952,21 +955,10 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
       goto exit;
     }
 
-    for (j = 0; j < RKADK_MEDIA_VPSS_MAX_CNT; j++) {
-      if (g_stMediaCtx.stVpssInfo[j].s32DevId == s32VpssGrp) {
-        if (j == i)
-          continue;
-        if (g_stMediaCtx.stVpssInfo[j].s32InitCnt > 0)
-          break;
-      }
-    }
-
-    if (j == RKADK_MEDIA_VPSS_MAX_CNT) {
-      ret = RKADK_MPI_VPSS_DestroyGrp(s32VpssGrp);
-      if (ret) {
-        RKADK_LOGE("RKADK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
-        goto exit;
-      }
+    ret = RKADK_MPI_VPSS_DestroyGrp(s32VpssGrp);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_VPSS_DestroyGrp[%d] failed[%x]", s32VpssGrp, ret);
+      goto exit;
     }
 
     g_stMediaCtx.stVpssInfo[i].bUsed = false;
@@ -1606,28 +1598,28 @@ RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,
   return 0;
 }
 
-bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
+bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstVencChnAttr,
                                 RKADK_U32 u32Width, RKADK_U32 u32Height) {
   RKADK_LOGD("Old width height[%d %d], new width height[%d %d]",
-            pstRecAttr->stVencAttr.u32PicWidth, pstRecAttr->stVencAttr.u32PicHeight,
+            pstVencChnAttr->stVencAttr.u32PicWidth, pstVencChnAttr->stVencAttr.u32PicHeight,
             u32Width, u32Height);
-  if (pstRecAttr->stVencAttr.u32PicWidth == u32Width &&
-      pstRecAttr->stVencAttr.u32PicHeight == u32Height)
+  if (pstVencChnAttr->stVencAttr.u32PicWidth == u32Width &&
+      pstVencChnAttr->stVencAttr.u32PicHeight == u32Height)
     return false;
 
   return true;
 }
 
-bool RKADK_MEDIA_VencAttrCmp(VENC_CHN_ATTR_S *pstRecAttr,
+bool RKADK_MEDIA_VencAttrCmp(VENC_CHN_ATTR_S *pstVencChnAttr,
                                   RK_CODEC_ID_E enType, RKADK_U32 u32DstFrameRate,
                                   RKADK_U32 u32Bitrate) {
   bool reset = false;
   RKADK_U32 u32OldFrameRate = 0, u32OldBitrate = 0;
-  VENC_RC_ATTR_S *pstRcAttr = &pstRecAttr->stRcAttr;
+  VENC_RC_ATTR_S *pstRcAttr = &pstVencChnAttr->stRcAttr;
 
-  if (pstRecAttr->stVencAttr.enType != enType) {
+  if (pstVencChnAttr->stVencAttr.enType != enType) {
     RKADK_LOGD("Old codec type [%d], new codec type [%d]",
-              pstRecAttr->stVencAttr.enType, enType);
+              pstVencChnAttr->stVencAttr.enType, enType);
     reset = true;
   }
 

@@ -297,33 +297,52 @@ static void RKADK_PHOTO_SetVideoChn(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
   pstVencChn->s32ChnId = pstPhotoCfg->venc_chn;
 }
 
-static bool RKADK_PHOTO_IsUseVpss(RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
+static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
+                                 RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
+  bool bUseVpss = false;
   RKADK_U32 u32ViWidth = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width;
   RKADK_U32 u32ViHeight = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height;
 
-  if (pstPhotoCfg->image_width == u32ViWidth &&
-      pstPhotoCfg->image_height == u32ViHeight) {
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return false;
-  } else {
+  }
+
+  if (pstPhotoCfg->image_width != u32ViWidth ||
+      pstPhotoCfg->image_height != u32ViHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32ViWidth, u32ViHeight,
                pstPhotoCfg->image_width, pstPhotoCfg->image_height);
-    return true;
+    bUseVpss = true;
   }
+
+  if (!pstSensorCfg->used_isp) {
+#ifdef RV1126_1109
+    if (pstSensorCfg->flip || pstSensorCfg->mirror)
+#endif
+      bUseVpss = true;
+  }
+
+  return bUseVpss;
 }
 
 static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
                                   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg,
-                                  VENC_CHN_ATTR_S *pstPhoAttr,
-                                  VI_CHN_ATTR_S *pstChnAttr) {
-  pstPhoAttr->stVencAttr.u32PicWidth = pstPhotoCfg->image_width;
-  pstPhoAttr->stVencAttr.u32PicHeight = pstPhotoCfg->image_height;
-  pstPhoAttr->stVencAttr.u32VirWidth = pstPhotoCfg->image_width;
-  pstPhoAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
+                                  VENC_CHN_ATTR_S *pstVencAttr,
+                                  VI_CHN_ATTR_S *pstViAttr,
+                                  VPSS_CHN_ATTR_S *pstVpssAttr) {
+  pstVencAttr->stVencAttr.u32PicWidth = pstPhotoCfg->image_width;
+  pstVencAttr->stVencAttr.u32PicHeight = pstPhotoCfg->image_height;
+  pstVencAttr->stVencAttr.u32VirWidth = pstPhotoCfg->image_width;
+  pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
 
-  pstChnAttr->stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
-  pstChnAttr->stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
-  pstChnAttr->stSize.u32Width = pstPhotoCfg->image_width;
-  pstChnAttr->stSize.u32Height = pstPhotoCfg->image_height;
+  pstViAttr->stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
+  pstViAttr->stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
+  pstViAttr->stSize.u32Width = pstPhotoCfg->image_width;
+  pstViAttr->stSize.u32Height = pstPhotoCfg->image_height;
+
+  pstVpssAttr->u32Width = pstPhotoCfg->image_width;
+  pstVpssAttr->u32Height = pstPhotoCfg->image_height;
 }
 
 RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHandle) {
@@ -394,18 +413,18 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   ret = RKADK_MPI_VI_Init(pstPhotoAttr->u32CamId, stViChn.s32ChnId,
                           &(pstPhotoCfg->vi_attr.stChnAttr));
   if (ret) {
-    RKADK_LOGE("RKADK_MPI_VI_Init failed, ret = %d", ret);
+    RKADK_LOGE("RKADK_MPI_VI_Init failed[%x]", ret);
     return ret;
   }
 
-  bUseVpss = RKADK_PHOTO_IsUseVpss(pstPhotoCfg);
+  bUseVpss = RKADK_PHOTO_IsUseVpss(pstPhotoAttr->u32CamId, pstPhotoCfg);
   // Create VPSS
   if (bUseVpss) {
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
     memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
-    stGrpAttr.u32MaxW = 4096;
-    stGrpAttr.u32MaxH = 4096;
+    stGrpAttr.u32MaxW = pstSensorCfg->max_width;
+    stGrpAttr.u32MaxH = pstSensorCfg->max_height;
     stGrpAttr.enPixelFormat = pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
     stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
     stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
@@ -416,14 +435,37 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.enPixelFormat = pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
     stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.u32Width = pstPhotoCfg->image_width;
-    stChnAttr.u32Height = pstPhotoCfg->image_height;
+    stChnAttr.u32Width = pstSensorCfg->max_width;
+    stChnAttr.u32Height = pstSensorCfg->max_height;
+    stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
+    stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
 
     ret = RKADK_MPI_VPSS_Init(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn,
                               &stGrpAttr, &stChnAttr);
     if (ret) {
-      RKADK_LOGE("RKADK_MPI_VPSS_Init vpssfalied[%d]",ret);
+      RKADK_LOGE("RKADK_MPI_VPSS_Init vpss_grp[%d] vpss_chn[%d] falied[%x]",
+                  pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
+      RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamId, pstPhotoCfg->vi_attr.u32ViChn);
+      RKADK_MPI_VPSS_DeInit(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn);
+      return ret;
+    }
+
+    ret = RK_MPI_VPSS_GetChnAttr(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, &stChnAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_GetChnAttr vpss_grp[%d] vpss_chn[%d] falied[%x]",
+                  pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
+      RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamId, pstPhotoCfg->vi_attr.u32ViChn);
+      RKADK_MPI_VPSS_DeInit(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn);
+      return ret;
+    }
+
+    stChnAttr.u32Width = pstPhotoCfg->image_width;
+    stChnAttr.u32Height = pstPhotoCfg->image_height;
+    ret = RK_MPI_VPSS_SetChnAttr(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, &stChnAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VPSS_SetChnAttr vpss_grp[%d] vpss_chn[%d] falied[%x]",
+                  pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
       RKADK_MPI_VI_DeInit(pstPhotoAttr->u32CamId, pstPhotoCfg->vi_attr.u32ViChn);
       RKADK_MPI_VPSS_DeInit(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn);
       return ret;
@@ -596,7 +638,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
     pstHandle->tid = 0;
   }
 
-  bUseVpss = RKADK_PHOTO_IsUseVpss(pstPhotoCfg);
+  bUseVpss = RKADK_PHOTO_IsUseVpss(pstHandle->u32CamId, pstPhotoCfg);
   if (bUseVpss) {
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
@@ -711,12 +753,13 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
 
 RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   int ret;
-  bool bPhoto;
+  bool bPhoto, bUseVpss = false;
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
-  MPP_CHN_S stSrcChn, stPhoVenChn;
-  VENC_CHN_ATTR_S stPhoAttr;
-  VI_CHN_ATTR_S stChnAttr;
+  MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
+  VENC_CHN_ATTR_S stVencAttr;
+  VI_CHN_ATTR_S stViAttr;
+  VPSS_CHN_ATTR_S stVpssAttr;
   RKADK_PHOTO_HANDLE_S *pstHandle;
 
   RKADK_CHECK_POINTER(*pHandle, RKADK_FAILURE);
@@ -743,33 +786,36 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
     return -1;
   }
 
-  memset(&stSrcChn, 0, sizeof(MPP_CHN_S));
-  memset(&stPhoVenChn, 0, sizeof(MPP_CHN_S));
+  RKADK_PHOTO_SetVideoChn(pstPhotoCfg, pstHandle->u32CamId, &stViChn, &stVencChn,
+                     &stSrcVpssChn, &stDstVpssChn);
 
-  stSrcChn.enModId = RK_ID_VI;
-  stSrcChn.s32DevId = pstHandle->u32CamId;
-  stSrcChn.s32ChnId = pstPhotoCfg->vi_attr.u32ViChn;
-  stPhoVenChn.enModId = RK_ID_VENC;
-  stPhoVenChn.s32DevId = 0;
-  stPhoVenChn.s32ChnId = pstPhotoCfg->venc_chn;
+  memset(&stVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
+  memset(&stViAttr, 0, sizeof(VI_CHN_ATTR_S));
+  memset(&stVpssAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
-  memset(&stPhoAttr, 0, sizeof(VENC_CHN_ATTR_S));
-  memset(&stChnAttr, 0, sizeof(stChnAttr));
-
-  ret = RK_MPI_VI_GetChnAttr(pstHandle->u32CamId, stSrcChn.s32ChnId, &stChnAttr);
+  ret = RK_MPI_VI_GetChnAttr(pstHandle->u32CamId, stViChn.s32ChnId, &stViAttr);
   if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Photo get vi[%d] attr failed %x", stSrcChn.s32ChnId, ret);
+    RKADK_LOGE("Photo get vi[%d] attr failed[%x]", stViChn.s32ChnId, ret);
     return -1;
   }
 
-  ret = RK_MPI_VENC_GetChnAttr(stPhoVenChn.s32ChnId, &stPhoAttr);
+  ret = RK_MPI_VENC_GetChnAttr(stVencChn.s32ChnId, &stVencAttr);
   if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Photo get venc[%d] attr failed %x",
-                stPhoVenChn.s32ChnId, ret);
+    RKADK_LOGE("Photo get venc[%d] attr failed[%x]", stVencChn.s32ChnId, ret);
     return -1;
   }
 
-  bPhoto = RKADK_MEDIA_CompareResolution(&stPhoAttr,
+  bUseVpss = RKADK_PHOTO_IsUseVpss(pstHandle->u32CamId, pstPhotoCfg);
+  if (bUseVpss) {
+    ret = RK_MPI_VPSS_GetChnAttr(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, &stVpssAttr);
+    if (ret) {
+      RKADK_LOGE("Photo get vpss grp[%d] chn[%d] attr failed[%x]",
+                  pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
+      return -1;
+    }
+  }
+
+  bPhoto = RKADK_MEDIA_CompareResolution(&stVencAttr,
                                   pstPhotoCfg->image_width,
                                   pstPhotoCfg->image_height);
   if (!bPhoto) {
@@ -778,35 +824,60 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   }
 
   RKADK_PHOTO_ResetAttr(pstSensorCfg, pstPhotoCfg,
-                        &stPhoAttr, &stChnAttr);
+                        &stVencAttr, &stViAttr, &stVpssAttr);
 
-  ret = RKADK_MPI_SYS_UnBind(&stSrcChn, &stPhoVenChn);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Photo VI UnBind VENC [%d %d]fail %x", stSrcChn.s32ChnId,
-                stPhoVenChn.s32ChnId, ret);
-    return -1;
+  if (bUseVpss) {
+    // VPSS UnBind VENC
+    ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      return -1;
+    }
+  } else {
+    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Photo VI UnBind VENC [%d %d]fail %x", stViChn.s32ChnId,
+                  stVencChn.s32ChnId, ret);
+      return -1;
+    }
   }
 
-  ret = RK_MPI_VENC_SetChnAttr(stPhoVenChn.s32ChnId, &stPhoAttr);
+  ret = RK_MPI_VENC_SetChnAttr(stVencChn.s32ChnId, &stVencAttr);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo set venc[%d] attr failed %x",
-                stPhoVenChn.s32ChnId, ret);
+                stVencChn.s32ChnId, ret);
     return -1;
   }
 
-  ret = RK_MPI_VI_SetChnAttr(pstHandle->u32CamId, stSrcChn.s32ChnId,
-                            &stChnAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VI_SetChnAttr(%d) failed %x",
-                stSrcChn.s32ChnId, ret);
-    return -1;
-  }
+  if (bUseVpss) {
+    ret = RK_MPI_VPSS_SetChnAttr(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, &stVpssAttr);
+    if (ret) {
+      RKADK_LOGE("Photo set vpss grp[%d] chn[%d] attr falied[%x]",
+                  pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
+      return -1;
+    }
 
-  ret = RKADK_MPI_SYS_Bind(&stSrcChn, &stPhoVenChn);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Photo VI Bind VENC [%d %d] fail %x",stSrcChn.s32ChnId,
-                stPhoVenChn.s32ChnId, ret);
-    return -1;
+    ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVencChn);
+    if (ret) {
+      RKADK_LOGE("Photo VPSS[%d] Bind VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
+                 stVencChn.s32ChnId, ret);
+      return -1;
+    }
+  } else {
+    ret = RK_MPI_VI_SetChnAttr(pstHandle->u32CamId, stViChn.s32ChnId,
+                              &stViAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Photo set VI[%d] attr failed %x", stViChn.s32ChnId, ret);
+      return -1;
+    }
+
+    ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Photo VI Bind VENC [%d %d] fail %x",stViChn.s32ChnId,
+                  stVencChn.s32ChnId, ret);
+      return -1;
+    }
   }
 
   RKADK_LOGI("Photo[%d] Reset end...", pstHandle->u32CamId);

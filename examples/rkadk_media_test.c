@@ -438,7 +438,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 
   SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
 
-  IspProcess(u32CamId);
+  //IspProcess(u32CamId);
 #endif
 
   ret = RKADK_RECORD_Create(&stRecAttr, &pRecordHandle);
@@ -596,7 +596,8 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 #endif
       RKADK_LOGI("===================Manual record stream = %d", stRecTime.enStreamType);
     }
-
+#else
+    RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
 #endif
     usleep(5000000);
   }

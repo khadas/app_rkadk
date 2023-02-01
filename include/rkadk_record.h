@@ -90,17 +90,7 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder);
  * @return 0 success
  * @return others failure
  */
-RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder);
-
-/**
- * @brief set recorder framerate
- * @param[in]pRecorder : pointer of recorder
- * @param[in]stFpsAttr : fps attribute
- * @return 0 success
- * @return others failure
- */
-RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
-                                    RKADK_RECORD_FPS_ATTR_S stFpsAttr);
+RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *ppRecorder);
 
 /**
  * @brief manual splite file.
@@ -111,17 +101,6 @@ RKADK_S32 RKADK_RECORD_SetFrameRate(RKADK_MW_PTR pRecorder,
  */
 RKADK_S32 RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
                                    RKADK_REC_MANUAL_SPLIT_ATTR_S *pstSplitAttr);
-
-/**
- * @brief register recorder envent callback
- * @param[in]pRecorder : pointer of recorder
- * @param[in]pfnEventCallback : callback function
- * @return 0 success
- * @return others failure
- */
-RKADK_S32
-RKADK_RECORD_RegisterEventCallback(
-    RKADK_MW_PTR pRecorder, RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback);
 
 /**
  * @brief get aenc chn id.
@@ -147,21 +126,6 @@ RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
 RKADK_S32 RKADK_RECORD_ToogleFlip(RKADK_MW_PTR pRecorder,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   int flip);
-
-#if 0
-/**
- * @brief get single frame at time.
- * @param[in]pszFileName : video file
- * @param[in]pstFrameAttr : frame attribute
- * @param[in]u32VeChn : venc channel
- * @param[in]u64TimeUs : frame time(us)
- * @return 0 success
- * @return -1 failure
- */
-RKADK_S32 RKADK_GetSingleFrameAtTime(RKADK_CHAR *pszFileName,
-                                     RKADK_FRAME_ATTR_S *pstFrameAttr,
-                                     RKADK_U32 u32VeChn, RKADK_U64 u64TimeUs);
-#endif
 
 #ifdef __cplusplus
 }

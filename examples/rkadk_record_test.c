@@ -221,7 +221,7 @@ int main(int argc, char *argv[]) {
   }
 
   SAMPLE_ISP_Start(s32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
-  IspProcess(s32CamId);
+  //IspProcess(s32CamId);
 
   if (bMultiCam) {
     ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
     }
 
     SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
-    IspProcess(1);
+    //IspProcess(1);
   }
 #endif
 
