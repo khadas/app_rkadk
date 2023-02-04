@@ -122,6 +122,12 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   RKADK_LOGD("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
              atAiqStaticInfo.sensor_info.sensor_name, iq_file_dir);
 
+  if(bMultiCam) {
+    ret = rk_aiq_uapi2_sysctl_preInit_devBufCnt(atAiqStaticInfo.sensor_info.sensor_name, "rkraw_rx", 2);
+    if (ret)
+      RKADK_LOGE("rk_aiq_uapi2_sysctl_preInit_devBufCnt u32CamId[%d] failed[%d]", u32CamId, ret);
+  }
+
   pstAiqCtx = rk_aiq_uapi2_sysctl_init(atAiqStaticInfo.sensor_info.sensor_name,
                                       iq_file_dir, NULL, NULL);
   if (!pstAiqCtx) {
