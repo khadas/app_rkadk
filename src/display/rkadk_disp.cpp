@@ -18,57 +18,161 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_media_comm.h"
-#include "rkmedia_api.h"
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-static void RKADK_DISP_SetChn(RKADK_PARAM_DISP_CFG_S *pstDispCfg,
+static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
+                               RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
+  int ret = RK_SUCCESS;
+  VO_PUB_ATTR_S            stVoPubAttr;
+  VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
+  VO_CHN_ATTR_S            stChnAttr;
+  COMPRESS_MODE_E enCompressMode = COMPRESS_MODE_NONE;
+
+  ret = RK_MPI_VO_BindLayer(VoLayer, VoDev, VO_LAYER_MODE_VIDEO);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_BindLayer failed, ret = %x", ret);
+    return ret;
+  }
+
+  memset(&stVoPubAttr, 0, sizeof(VO_PUB_ATTR_S));
+  memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
+  memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
+
+  stVoPubAttr.enIntfType = VO_INTF_MIPI;
+  stVoPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
+
+  ret = RK_MPI_VO_SetPubAttr(VoDev, &stVoPubAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_SetPubAttr failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_Enable(VoDev);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_Enable failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_GetPubAttr(VoDev, &stVoPubAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_GetPubAttr failed, ret = %x", ret);
+    return ret;
+  }
+
+  /* Enable Layer */
+  stLayerAttr.enPixFormat      = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type, &enCompressMode);
+  stLayerAttr.enCompressMode   = COMPRESS_AFBC_16x16;
+  stLayerAttr.stDispRect.s32X  = pstDispCfg->x;
+  stLayerAttr.stDispRect.s32Y  = pstDispCfg->y;
+  stLayerAttr.stDispRect.u32Width   = pstDispCfg->width;
+  stLayerAttr.stDispRect.u32Height  = pstDispCfg->height;
+  stLayerAttr.stImageSize.u32Width  = stVoPubAttr.stSyncInfo.u16Hact;
+  stLayerAttr.stImageSize.u32Height = stVoPubAttr.stSyncInfo.u16Vact;
+  stLayerAttr.u32DispFrmRt          = 60;
+
+  ret = RK_MPI_VO_SetLayerAttr(VoLayer, &stLayerAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_SetLayerAttr failed, ret = %x", ret);
+    return ret;
+  }
+
+  RK_MPI_VO_SetLayerSpliceMode(VoLayer, VO_SPLICE_MODE_RGA);
+
+  ret = RK_MPI_VO_EnableLayer(VoLayer);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_EnableLayer failed, ret = %x", ret);
+    return ret;
+  }
+
+  stChnAttr.stRect.s32X = pstDispCfg->x;
+  stChnAttr.stRect.s32Y = pstDispCfg->y;
+  stChnAttr.stRect.u32Width = pstDispCfg->width;
+  stChnAttr.stRect.u32Height = pstDispCfg->height;
+  stChnAttr.u32FgAlpha = 255;
+  stChnAttr.u32BgAlpha = 0;
+  stChnAttr.enMirror = MIRROR_NONE;
+  stChnAttr.enRotation = (ROTATION_E)pstDispCfg->rotation;
+  stChnAttr.u32Priority = 1;
+
+  ret = RK_MPI_VO_SetChnAttr(VoLayer, pstDispCfg->vo_chn, &stChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_SetChnAttr failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_EnableChn(VoLayer, pstDispCfg->vo_chn);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_EnableChn failed, ret = %x", ret);
+    return ret;
+  }
+
+  RKADK_LOGI("Create vo [dev: %d, layer: %d, chn: %d] success!",
+              VoDev, VoLayer, pstDispCfg->vo_chn);
+  return ret;
+}
+
+static int RKADK_DISP_DestroyVo(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
+  int ret = 0;
+
+  ret = RK_MPI_VO_DisableChn(pstDispCfg->vo_layer, pstDispCfg->vo_chn);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_DisableChn failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_DisableLayer(pstDispCfg->vo_layer);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_DisableLayer failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_Disable(pstDispCfg->vo_device);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_Disable failed, ret = %x", ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_UnBindLayer(pstDispCfg->vo_layer, pstDispCfg->vo_device);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_UnBindLayer failed, ret = %x", ret);
+    return ret;
+  }
+
+  RK_MPI_VO_CloseFd();
+
+  RKADK_LOGI("Destroy vo [dev: %d, layer: %d, chn: %d] success!",
+            pstDispCfg->vo_device, pstDispCfg->vo_layer, pstDispCfg->vo_chn);
+  return ret;
+}
+
+static void RKADK_DISP_SetChn(RKADK_U32 u32CamId,
+                              RKADK_PARAM_DISP_CFG_S *pstDispCfg,
                               MPP_CHN_S *pstViChn, MPP_CHN_S *pstVoChn,
-                              MPP_CHN_S *pstRgaChn) {
+                              MPP_CHN_S *pstSrcVpssChn, MPP_CHN_S *pstDstVpssChn) {
   pstViChn->enModId = RK_ID_VI;
-  pstViChn->s32DevId = 0;
+  pstViChn->s32DevId = u32CamId;
   pstViChn->s32ChnId = pstDispCfg->vi_attr.u32ViChn;
 
-  pstRgaChn->enModId = RK_ID_RGA;
-  pstRgaChn->s32DevId = 0;
-  pstRgaChn->s32ChnId = pstDispCfg->rga_chn;
+  pstSrcVpssChn->enModId = RK_ID_VPSS;
+  pstSrcVpssChn->s32DevId = pstDispCfg->vpss_grp;
+  pstSrcVpssChn->s32ChnId = pstDispCfg->vpss_chn;
+
+  pstDstVpssChn->enModId = RK_ID_VPSS;
+  pstDstVpssChn->s32DevId = pstDispCfg->vpss_grp;
+  pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVoChn->enModId = RK_ID_VO;
-  pstVoChn->s32DevId = 0;
+  pstVoChn->s32DevId = pstDispCfg->vo_device;
   pstVoChn->s32ChnId = pstDispCfg->vo_chn;
 }
 
-static bool RKADK_DISP_IsUseRga(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
-  RKADK_U32 u32InWidth, u32InHeight;
-  RKADK_U32 u32OutWidth, u32OutHeight;
-  IMAGE_TYPE_E enInImgType, enOutImgType;
-
-  enInImgType = pstDispCfg->vi_attr.stChnAttr.enPixFmt;
-  u32InWidth = pstDispCfg->vi_attr.stChnAttr.u32Width;
-  u32InHeight = pstDispCfg->vi_attr.stChnAttr.u32Height;
-  u32OutWidth = pstDispCfg->width;
-  u32OutHeight = pstDispCfg->height;
-  enOutImgType = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type);
-
-  if (pstDispCfg->rotaion != 0 || enOutImgType != enInImgType ||
-      (u32InWidth != u32OutWidth || u32InHeight != u32OutHeight)) {
-    RKADK_LOGD("rotaion: %d", pstDispCfg->rotaion);
-    RKADK_LOGD("enInImgType: %d, enOutImgType: %d", enInImgType, enOutImgType);
-    RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32InWidth, u32InHeight, u32OutWidth,
-               u32OutHeight);
-    return true;
-  }
-
-  return false;
-}
-
-static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
-                                   RKADK_PARAM_DISP_CFG_S *pstDispCfg,
-                                   bool bUseRga) {
+static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *pstDispCfg,
+                                   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg) {
   int ret = 0;
-  RGA_ATTR_S stRgaAttr;
-  VO_CHN_ATTR_S stVoAttr;
+  VPSS_GRP_ATTR_S          stGrpAttr;
+  VPSS_CHN_ATTR_S          stChnAttr;
 
   // Create VI
   ret = RKADK_MPI_VI_Init(u32CamId, pstDispCfg->vi_attr.u32ViChn,
@@ -78,64 +182,91 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId,
     return ret;
   }
 
-  // Create RGA
-  if (bUseRga) {
-    memset(&stRgaAttr, 0, sizeof(stRgaAttr));
-    stRgaAttr.bEnBufPool = (RK_BOOL)pstDispCfg->enable_buf_pool;
-    stRgaAttr.u16BufPoolCnt = pstDispCfg->buf_pool_cnt;
-    stRgaAttr.u16Rotaion = pstDispCfg->rotaion;
-    stRgaAttr.stImgIn.u32X = 0;
-    stRgaAttr.stImgIn.u32Y = 0;
-    stRgaAttr.stImgIn.imgType = pstDispCfg->vi_attr.stChnAttr.enPixFmt;
-    stRgaAttr.stImgIn.u32Width = pstDispCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32Height = pstDispCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgIn.u32HorStride = pstDispCfg->vi_attr.stChnAttr.u32Width;
-    stRgaAttr.stImgIn.u32VirStride = pstDispCfg->vi_attr.stChnAttr.u32Height;
-    stRgaAttr.stImgOut.u32X = 0;
-    stRgaAttr.stImgOut.u32Y = 0;
-    stRgaAttr.stImgOut.imgType = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type);
-    stRgaAttr.stImgOut.u32Width = pstDispCfg->width;
-    stRgaAttr.stImgOut.u32Height = pstDispCfg->height;
-    stRgaAttr.stImgOut.u32HorStride = pstDispCfg->width;
-    stRgaAttr.stImgOut.u32VirStride = pstDispCfg->height;
-    ret = RKADK_MPI_RGA_Init(pstDispCfg->rga_chn, &stRgaAttr);
-    if (ret) {
-      RKADK_LOGE("Init rga[%d] falied[%d]", pstDispCfg->rga_chn, ret);
-      RKADK_MPI_VI_DeInit(u32CamId, pstDispCfg->vi_attr.u32ViChn);
-      return ret;
-    }
+  // Create VPSS
+  memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
+  memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
+
+  stGrpAttr.u32MaxW = pstSensorCfg->max_width;
+  stGrpAttr.u32MaxH = pstSensorCfg->max_height;
+  stGrpAttr.enPixelFormat = pstDispCfg->vi_attr.stChnAttr.enPixelFormat;
+  stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
+  stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
+  stGrpAttr.stFrameRate.s32DstFrameRate = -1;
+  stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+  stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
+  stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
+  stChnAttr.enPixelFormat = pstDispCfg->vi_attr.stChnAttr.enPixelFormat;
+  stChnAttr.stFrameRate.s32SrcFrameRate = -1;
+  stChnAttr.stFrameRate.s32DstFrameRate = -1;
+  stChnAttr.u32Width = pstDispCfg->vi_attr.stChnAttr.stSize.u32Width;
+  stChnAttr.u32Height = pstDispCfg->vi_attr.stChnAttr.stSize.u32Height;
+  stChnAttr.u32Depth = 0;
+  if (!pstSensorCfg->used_isp) {
+    stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
+    stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
+  }
+
+  ret = RKADK_MPI_VPSS_Init(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn,
+                            &stGrpAttr, &stChnAttr);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_VPSS_Init vpss falied[%d]",ret);
+    return ret;
   }
 
   // Create VO
-  memset(&stVoAttr, 0, sizeof(VO_CHN_ATTR_S));
-  stVoAttr.pcDevNode = pstDispCfg->device_node;
-  stVoAttr.emPlaneType = pstDispCfg->plane_type;
-  stVoAttr.enImgType = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type);
-  stVoAttr.u16Zpos = pstDispCfg->z_pos;
-  stVoAttr.stImgRect.s32X = 0;
-  stVoAttr.stImgRect.s32Y = 0;
-  stVoAttr.stImgRect.u32Width = pstDispCfg->width;
-  stVoAttr.stImgRect.u32Height = pstDispCfg->height;
-  stVoAttr.stDispRect.s32X = 0;
-  stVoAttr.stDispRect.s32Y = 0;
-  stVoAttr.stDispRect.u32Width = pstDispCfg->width;
-  stVoAttr.stDispRect.u32Height = pstDispCfg->height;
-  ret = RK_MPI_VO_CreateChn(pstDispCfg->vo_chn, &stVoAttr);
+  ret = RKADK_DISP_CreateVo(pstDispCfg->vo_layer, pstDispCfg->vo_device, pstDispCfg);
   if (ret) {
-    RKADK_LOGE("Create VO[%d] failed(%d)", pstDispCfg->vo_chn, ret);
-    RKADK_MPI_RGA_DeInit(pstDispCfg->rga_chn);
-    RKADK_MPI_VI_DeInit(u32CamId, pstDispCfg->vi_attr.u32ViChn);
+    RKADK_LOGE("Create vo [dev: %d, layer: %d, chn: %d] failed, ret = %x",
+                pstDispCfg->vo_device, pstDispCfg->vo_layer, pstDispCfg->vo_chn, ret);
     return ret;
   }
 
   return 0;
 }
 
+static bool RKADK_DISP_CheckParameter(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
+  if (pstDispCfg->x < 0 || pstDispCfg->y < 0 || pstDispCfg->width <= 0 ||
+      pstDispCfg->height <= 0) {
+    RKADK_LOGE("Display rect erro [x: %d, y: %d, width: %d, height: %d]",
+              pstDispCfg->x, pstDispCfg->y, pstDispCfg->width, pstDispCfg->height);
+    return false;
+  }
+
+  return true;
+}
+
+static bool RKADK_DISP_CheckRect(RKADK_RECT_S stRect,
+                                 RKADK_PARAM_DISP_CFG_S *pstDispCfg, bool bVpss) {
+  if (stRect.u32X < 0 || stRect.u32Y < 0 || stRect.u32Width <= 0 ||
+      stRect.u32Height <= 0) {
+    RKADK_LOGE("Rect erro [x: %d, y: %d, width: %d, height: %d]",
+          stRect.u32X, stRect.u32Y, stRect.u32Width, stRect.u32Height);
+    return false;
+  }
+
+  if (bVpss) {
+    if (stRect.u32X + stRect.u32Width > pstDispCfg->vi_attr.stChnAttr.stSize.u32Width) {
+      RKADK_LOGE("Vpss crop rect x: %d + width: %d > input width: %d",
+                stRect.u32X, stRect.u32Width,
+                pstDispCfg->vi_attr.stChnAttr.stSize.u32Width);
+      return false;
+    }
+
+    if (stRect.u32Y + stRect.u32Y > pstDispCfg->vi_attr.stChnAttr.stSize.u32Height) {
+      RKADK_LOGE("Vpss crop rect y: %d + height: %d > input height: %d",
+                stRect.u32Y , stRect.u32Y,
+                pstDispCfg->vi_attr.stChnAttr.stSize.u32Height);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   int ret = 0;
   bool bSysInit = false;
-  bool bUseRga = false;
-  MPP_CHN_S stViChn, stVoChn, stRgaChn;
+  MPP_CHN_S stViChn, stVoChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_LOGI("Disp u32CamId[%d] Init Start...", u32CamId);
@@ -152,40 +283,37 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  bUseRga = RKADK_DISP_IsUseRga(pstDispCfg);
-
-  RKADK_DISP_SetChn(pstDispCfg, &stViChn, &stVoChn, &stRgaChn);
-  ret = RKADK_DISP_Enable(u32CamId, pstDispCfg, bUseRga);
-  if (ret) {
-    RKADK_LOGE("RKADK_DISP_Enable failed(%d)", ret);
-    return ret;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  if (!pstSensorCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+    return -1;
   }
 
-  if (bUseRga) {
-    // Bind RGA to VO
-    ret = RK_MPI_SYS_Bind(&stRgaChn, &stVoChn);
-    if (ret) {
-      RKADK_LOGE("Bind RGA[%d] to VO[%d] failed(%d)", stRgaChn.s32ChnId,
-                 stVoChn.s32ChnId, ret);
-      goto failed;
-    }
+  if (!RKADK_DISP_CheckParameter(pstDispCfg))
+    return -1;
 
-    // Bind VI to RGA
-    ret = RKADK_MPI_SYS_Bind(&stViChn, &stRgaChn);
-    if (ret) {
-      RKADK_LOGE("Bind VI[%d] to RGA[%d] failed(%d)", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
-      RK_MPI_SYS_UnBind(&stRgaChn, &stVoChn);
-      goto failed;
-    }
-  } else {
-    // Bind VI to VO
-    ret = RK_MPI_SYS_Bind(&stViChn, &stVoChn);
-    if (ret) {
-      RKADK_LOGE("Bind VI[%d] to VO[%d] failed(%d)", stViChn.s32ChnId,
-                 stVoChn.s32ChnId, ret);
-      goto failed;
-    }
+  RKADK_DISP_SetChn(u32CamId, pstDispCfg, &stViChn, &stVoChn,
+                    &stSrcVpssChn, &stDstVpssChn);
+  ret = RKADK_DISP_Enable(u32CamId, pstDispCfg, pstSensorCfg);
+  if (ret) {
+    RKADK_LOGE("RKADK_DISP_Enable failed(%d)", ret);
+    goto failed;
+  }
+
+  // Bind VPSS to VO
+  ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVoChn);
+  if (ret) {
+    RKADK_LOGE("Bind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
+                stVoChn.s32ChnId, ret);
+    goto failed;
+  }
+
+  // VI Bind VPSS
+  ret = RKADK_MPI_SYS_Bind(&stViChn, &stDstVpssChn);
+  if (ret) {
+    RKADK_LOGE("Bind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
+                stDstVpssChn.s32DevId, ret);
+    goto failed;
   }
 
   RKADK_LOGI("Disp u32CamId[%d] Init End...", u32CamId);
@@ -193,10 +321,13 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
 
 failed:
   RKADK_LOGI("Disp u32CamId[%d] Init failed...", u32CamId);
-  RK_MPI_VO_DestroyChn(stVoChn.s32ChnId);
+  RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVoChn);
 
-  if (bUseRga)
-    RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
+  RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
+
+  RKADK_DISP_DestroyVo(pstDispCfg);
+
+  RKADK_MPI_VPSS_DeInit(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
   return ret;
@@ -204,8 +335,7 @@ failed:
 
 RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   int ret = 0;
-  bool bUseRga = false;
-  MPP_CHN_S stViChn, stVoChn, stRgaChn;
+  MPP_CHN_S stViChn, stVoChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_LOGI("Disp u32CamId[%d] DeInit Start...", u32CamId);
@@ -216,44 +346,35 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  RKADK_DISP_SetChn(pstDispCfg, &stViChn, &stVoChn, &stRgaChn);
+  RKADK_DISP_SetChn(u32CamId, pstDispCfg, &stViChn,
+                    &stVoChn, &stSrcVpssChn, &stDstVpssChn);
 
-  bUseRga = RKADK_DISP_IsUseRga(pstDispCfg);
-  if (bUseRga) {
-    ret = RK_MPI_SYS_UnBind(&stRgaChn, &stVoChn);
-    if (ret) {
-      RKADK_LOGE("UnBind RGA[%d] to VO[%d] failed(%d)", stRgaChn.s32ChnId,
+  // VPSS UnBind VO
+  ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVoChn);
+  if (ret) {
+      RKADK_LOGE("UnBind VPSS[%d] to VO[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVoChn.s32ChnId, ret);
-      return ret;
-    }
-
-    ret = RKADK_MPI_SYS_UnBind(&stViChn, &stRgaChn);
-    if (ret) {
-      RKADK_LOGE("UnBind VI[%d] to RGA[%d] failed(%d)", stViChn.s32ChnId,
-                 stRgaChn.s32ChnId, ret);
-      return ret;
-    }
-  } else {
-    ret = RK_MPI_SYS_UnBind(&stViChn, &stVoChn);
-    if (ret) {
-      RKADK_LOGE("UnBind VI[%d] to VO[%d] failed(%d)", stViChn.s32ChnId,
-                 stVoChn.s32ChnId, ret);
-      return ret;
-    }
+    return ret;
   }
 
-  ret = RK_MPI_VO_DestroyChn(stVoChn.s32ChnId);
+  // VI UnBind VPSS
+  ret = RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
+  if (ret) {
+    RKADK_LOGE("UnBind VI[%d] to VPSS[%d] failed[%x]", stViChn.s32ChnId,
+                stDstVpssChn.s32DevId, ret);
+    return ret;
+  }
+
+  ret = RKADK_DISP_DestroyVo(pstDispCfg);
   if (ret) {
     RKADK_LOGE("Destory VO[%d] failed(%d)", stVoChn.s32ChnId, ret);
     return ret;
   }
 
-  if (bUseRga) {
-    ret = RKADK_MPI_RGA_DeInit(stRgaChn.s32ChnId);
-    if (ret) {
-      RKADK_LOGE("DeInit RGA[%d] failed(%d)", stRgaChn.s32ChnId, ret);
-      return ret;
-    }
+  ret = RKADK_MPI_VPSS_DeInit(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn);
+  if (ret) {
+    RKADK_LOGE("DeInit VPSS[%d] failed[%x]", pstDispCfg->vpss_chn, ret);
+    return ret;
   }
 
   ret = RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
@@ -266,21 +387,13 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   return 0;
 }
 
-bool RKADK_DISP_CheckRect(RKADK_RECT_S stRect) {
-  if (stRect.u32X < 0 || stRect.u32Y < 0 || stRect.u32Width <= 0 ||
-      stRect.u32Height <= 0)
-    return false;
-
-  return true;
-}
-
-RKADK_S32 RKADK_DISP_SetAttr(RKADK_U32 u32CamId,
-                                RKADK_DISP_ATTR_S *pstAttr) {
+RKADK_S32 RKADK_DISP_SetAttr(RKADK_U32 u32CamId, RKADK_DISP_ATTR_S *pstAttr) {
   int ret;
-  bool bSetRgaAttr = false, bSetVoattr = false;
-  RGA_ATTR_S stRgaAttr;
-  VO_CHN_ATTR_S stVoAttr;
+  VO_CHN_ATTR_S stVoChnAttr;
+  VPSS_CHN_ATTR_S stVpssChnAttr;
+  VPSS_CROP_INFO_S stVpssCropInfo;
 
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstAttr, RKADK_FAILURE);
 
   RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(u32CamId);
@@ -289,120 +402,92 @@ RKADK_S32 RKADK_DISP_SetAttr(RKADK_U32 u32CamId,
     return -1;
   }
 
-  /**************************************************
-   * RGA only supports dynamic modification for
-   * the attributes listed below:
-   *   stRgaAttr.stImgIn.u32X
-   *   stRgaAttr.stImgIn.u32Y
-   *   stRgaAttr.stImgIn.u32Width
-   *   stRgaAttr.stImgIn.u32Height
-   *   stRgaAttr.stImgOut.u32X
-   *   stRgaAttr.stImgOut.u32Y
-   *   stRgaAttr.stImgOut.u32Width
-   *   stRgaAttr.stImgOut.u32Height
-   * ************************************************/
-  memset(&stRgaAttr, 0, sizeof(RGA_ATTR_S));
-  stRgaAttr.u16Rotaion = pstDispCfg->rotaion;
-  if (RKADK_DISP_CheckRect(pstAttr->stRgaRect.stInRect)) {
-    bSetRgaAttr = true;
-    stRgaAttr.stImgIn.u32X = pstAttr->stRgaRect.stInRect.u32X;
-    stRgaAttr.stImgIn.u32Y = pstAttr->stRgaRect.stInRect.u32Y;
-    stRgaAttr.stImgIn.u32Width = pstAttr->stRgaRect.stInRect.u32Width;
-    stRgaAttr.stImgIn.u32Height = pstAttr->stRgaRect.stInRect.u32Height;
+  if ((!RKADK_DISP_CheckRect(pstAttr->stVpssCropRect, pstDispCfg, true) ||
+      !RKADK_DISP_CheckRect(pstAttr->stVoRect, pstDispCfg, false)))
+    return -1;
+
+  ret = RK_MPI_VO_PauseChn(pstDispCfg->vo_layer, pstDispCfg->vo_chn);
+  if (ret) {
+    RKADK_LOGE("Pause vo [layer: %d, chn: %d] failed!, ret: %x",
+                pstDispCfg->vo_layer, pstDispCfg->vo_chn, ret);
+    return ret;
   }
 
-  if (RKADK_DISP_CheckRect(pstAttr->stRgaRect.stOutRect)) {
-    bSetRgaAttr = true;
-    stRgaAttr.stImgOut.u32X = pstAttr->stRgaRect.stOutRect.u32X;
-    stRgaAttr.stImgOut.u32Y = pstAttr->stRgaRect.stOutRect.u32Y;
-    stRgaAttr.stImgOut.u32Width = pstAttr->stRgaRect.stOutRect.u32Width;
-    stRgaAttr.stImgOut.u32Height = pstAttr->stRgaRect.stOutRect.u32Height;
-  }
-
-  if (bSetRgaAttr) {
-    if (!stRgaAttr.stImgIn.u32Width || !stRgaAttr.stImgIn.u32Height) {
-      stRgaAttr.stImgIn.u32Width = pstDispCfg->vi_attr.stChnAttr.u32Width;
-      stRgaAttr.stImgIn.u32Height = pstDispCfg->vi_attr.stChnAttr.u32Height;
-      RKADK_LOGD("RGA used default stImgIn[0, 0, %d, %d]",
-                 stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height);
-    }
-
-    if (!stRgaAttr.stImgOut.u32Width || !stRgaAttr.stImgOut.u32Height) {
-      stRgaAttr.stImgOut.u32Width = pstDispCfg->width;
-      stRgaAttr.stImgOut.u32Height = pstDispCfg->height;
-      RKADK_LOGD("RGA used default stImgOut[0, 0, %d, %d]",
-                 stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height);
-    }
-
-    ret = RK_MPI_RGA_SetChnAttr(pstDispCfg->rga_chn, &stRgaAttr);
-    if (ret) {
-      RKADK_LOGE("RGA Set Attr: ImgIn[%u,%u,%u,%u] "
-                 "ImgOut[%u,%u,%u,%u], rotation=%u failed[%d]",
-                 stRgaAttr.stImgIn.u32X, stRgaAttr.stImgIn.u32Y,
-                 stRgaAttr.stImgIn.u32Width, stRgaAttr.stImgIn.u32Height,
-                 stRgaAttr.stImgOut.u32X, stRgaAttr.stImgOut.u32Y,
-                 stRgaAttr.stImgOut.u32Width, stRgaAttr.stImgOut.u32Height,
-                 stRgaAttr.u16Rotaion, ret);
+  ret = RK_MPI_VPSS_GetChnCrop(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVpssCropInfo);
+  if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Get Vpss[%d, %d] Crop attr failed with %#x!",
+              pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, ret);
       return ret;
-    }
   }
 
-  /**************************************************
-   * Vo only supports dynamic modification for
-   * the attributes listed below:
-   *   stVoRect.stImgRect.s32X
-   *   stVoRect.stImgRect.S32Y
-   *   stVoRect.stImgRect.u32Width
-   *   stVoRect.stImgRect.u32Height
-   *   stVoRect.stDispRect.s32X
-   *   stVoRect.stDispRect.s32Y
-   *   stVoRect.stDispRect.u32Width
-   *   stVoRect.stDispRect.u32Height
-   * ************************************************/
-  memset(&stVoAttr, 0, sizeof(VO_CHN_ATTR_S));
-  if (RKADK_DISP_CheckRect(pstAttr->stVoRect.stInRect)) {
-    bSetVoattr = true;
-    stVoAttr.stImgRect.s32X = pstAttr->stVoRect.stInRect.u32X;
-    stVoAttr.stImgRect.s32Y = pstAttr->stVoRect.stInRect.u32Y;
-    stVoAttr.stImgRect.u32Width = pstAttr->stVoRect.stInRect.u32Width;
-    stVoAttr.stImgRect.u32Height = pstAttr->stVoRect.stInRect.u32Height;
+  stVpssCropInfo.bEnable = RK_TRUE;
+  stVpssCropInfo.enCropCoordinate = VPSS_CROP_ABS_COOR;
+  stVpssCropInfo.stCropRect.s32X = pstAttr->stVpssCropRect.u32X;
+  stVpssCropInfo.stCropRect.s32Y = pstAttr->stVpssCropRect.u32Y;
+  stVpssCropInfo.stCropRect.u32Width = pstAttr->stVpssCropRect.u32Width;
+  stVpssCropInfo.stCropRect.u32Height = pstAttr->stVpssCropRect.u32Height;
+  ret = RK_MPI_VPSS_SetChnCrop(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVpssCropInfo);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Set Vpss[%d, %d] Crop attr failed with %#x!",
+            pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, ret);
+    return ret;
   }
 
-  if (RKADK_DISP_CheckRect(pstAttr->stVoRect.stOutRect)) {
-    bSetVoattr = true;
-    stVoAttr.stDispRect.s32X = pstAttr->stVoRect.stOutRect.u32X;
-    stVoAttr.stDispRect.s32Y = pstAttr->stVoRect.stOutRect.u32Y;
-    stVoAttr.stDispRect.u32Width = pstAttr->stVoRect.stOutRect.u32Width;
-    stVoAttr.stDispRect.u32Height = pstAttr->stVoRect.stOutRect.u32Height;
-  }
-
-  if (bSetVoattr) {
-    if (!stVoAttr.stImgRect.u32Width || !stVoAttr.stImgRect.u32Height) {
-      RKADK_LOGD("VO used default stImgRect[0, 0, %d, %d]", pstDispCfg->width,
-                 pstDispCfg->height);
-      stVoAttr.stImgRect.u32Width = pstDispCfg->width;
-      stVoAttr.stImgRect.u32Height = pstDispCfg->height;
-    }
-
-    if (!stVoAttr.stDispRect.u32Width || !stVoAttr.stDispRect.u32Height) {
-      RKADK_LOGD("VO used default stDispRect[0, 0, %d, %d]", pstDispCfg->width,
-                 pstDispCfg->height);
-      stVoAttr.stDispRect.u32Width = pstDispCfg->width;
-      stVoAttr.stDispRect.u32Height = pstDispCfg->height;
-    }
-
-    ret = RK_MPI_VO_SetChnAttr(pstDispCfg->vo_chn, &stVoAttr);
-    if (ret) {
-      RKADK_LOGE("VO Set Attr: ImgIn[%u,%u,%u,%u] "
-                 "ImgOut[%u,%u,%u,%u] failed[%d]",
-                 stVoAttr.stImgRect.s32X, stVoAttr.stImgRect.s32Y,
-                 stVoAttr.stImgRect.u32Width, stVoAttr.stImgRect.u32Height,
-                 stVoAttr.stDispRect.s32X, stVoAttr.stDispRect.s32Y,
-                 stVoAttr.stDispRect.u32Width, stVoAttr.stDispRect.u32Height,
-                 ret);
+  ret = RK_MPI_VPSS_GetChnAttr(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVpssChnAttr);
+  if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Get Vpss[%d, %d] attr attr failed with %#x!",
+              pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, ret);
       return ret;
-    }
   }
+
+  stVpssChnAttr.u32Width = pstAttr->stVpssCropRect.u32Width;
+  stVpssChnAttr.u32Height = pstAttr->stVpssCropRect.u32Height;
+
+  ret = RK_MPI_VPSS_SetChnAttr(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVpssChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Set Vpss[%d, %d] attr attr failed with %#x!",
+            pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_RefreshChn(pstDispCfg->vo_layer, pstDispCfg->vo_chn);
+  if (ret) {
+    RKADK_LOGE("Refresh vo [layer: %d, chn: %d] failed!, ret: %x",
+                pstDispCfg->vo_layer, pstDispCfg->vo_chn, ret);
+    return ret;
+  }
+
+  ret = RK_MPI_VO_GetChnAttr(pstDispCfg->vo_layer, pstDispCfg->vo_chn, &stVoChnAttr);
+  if (ret) {
+    RKADK_LOGE("Display get vo chn: %d attr failed!, ret: %d",
+              pstDispCfg->vo_chn, ret);
+    return -1;
+  }
+
+  stVoChnAttr.stRect.s32X = pstAttr->stVoRect.u32X;
+  stVoChnAttr.stRect.s32Y = pstAttr->stVoRect.u32Y;
+  stVoChnAttr.stRect.u32Width = pstAttr->stVoRect.u32Width;
+  stVoChnAttr.stRect.u32Height = pstAttr->stVoRect.u32Height;
+
+  ret = RK_MPI_VO_SetChnAttr(pstDispCfg->vo_layer, pstDispCfg->vo_chn, &stVoChnAttr);
+  if (ret) {
+    RKADK_LOGE("Display set vo chn: %d attr failed!, ret: %d",
+              pstDispCfg->vo_chn, ret);
+    return -1;
+  }
+
+  ret = RK_MPI_VO_ResumeChn(pstDispCfg->vo_layer, pstDispCfg->vo_chn);
+  if (ret) {
+    RKADK_LOGE("Resume vo [layer: %d, chn: %d] failed!, ret: %x",
+                pstDispCfg->vo_layer, pstDispCfg->vo_chn, ret);
+    return ret;
+  }
+
+  RKADK_LOGI("Set attr vpss rect: [%d, %d, %d, %d], vo rect: [%d, %d, %d, %d]",
+              pstAttr->stVpssCropRect.u32X, pstAttr->stVpssCropRect.u32Y,
+              pstAttr->stVpssCropRect.u32Width, pstAttr->stVpssCropRect.u32Height,
+              pstAttr->stVpssCropRect.u32X, pstAttr->stVpssCropRect.u32Y,
+              pstAttr->stVpssCropRect.u32Width, pstAttr->stVpssCropRect.u32Height);
 
   return 0;
 }

@@ -270,19 +270,16 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
 
 /* display map table */
 static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable[] = {
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, x),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, y),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, width),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, height),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, bool_e, enable_buf_pool),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, buf_pool_cnt),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, rotaion),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, rotation),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_chn),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, device_node),
-#ifdef RKADK_ENABLE_DISP
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, plane_type),
-#endif
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, img_type),
-    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, z_pos),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_device),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_layer),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_chn),
 };
 

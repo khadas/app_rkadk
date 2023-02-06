@@ -82,6 +82,10 @@ extern "C" {
 #define LIVE_AI_CHN RECORD_AI_CHN
 #define LIVE_AENC_CHN RECORD_AENC_CHN
 
+/* vo default parameters */
+#define VO_DEVICE 0
+#define VOP_LAYER 0
+
 /* setting file path */
 #define RKADK_DEFPARAM_PATH "/oem/usr/etc/rkadk_defsetting.ini"
 #define RKADK_DEFPARAM_PATH_SENSOR_PREFIX "/oem/usr/etc/rkadk_defsetting_sensor"
@@ -308,21 +312,16 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
 } RKADK_PARAM_PHOTO_CFG_S;
 
 typedef struct tagRKADK_PARAM_DISP_CFG_S {
+  RKADK_U32 x;
+  RKADK_U32 y;
   RKADK_U32 width;
   RKADK_U32 height;
-  // vpss
-  bool enable_buf_pool;
-  RKADK_U32 buf_pool_cnt;
-  RKADK_U32 rotaion;
+  RKADK_U32 rotation;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
-  // vo
-  char device_node[RKADK_BUFFER_LEN];
-#ifdef RKADK_ENABLE_DISP
-  VO_PLANE_TYPE_E plane_type;
-#endif
   char img_type[RKADK_PIX_FMT_LEN]; /* specify IMAGE_TYPE_E: NV12/RGB888... */
-  RKADK_U32 z_pos;
+  RKADK_U32 vo_device;
+  RKADK_U32 vo_layer;
   RKADK_U32 vo_chn;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_DISP_CFG_S;

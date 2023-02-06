@@ -671,33 +671,23 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   change |=
       RKADK_PARAM_CheckCfg(&pstDispCfg->height, DISP_HEIGHT, "display height");
 
-  if (pstDispCfg->rotaion != 0 && pstDispCfg->rotaion != 90 &&
-      pstDispCfg->rotaion != 180 && pstDispCfg->rotaion != 270) {
-    RKADK_LOGW("invalid vpss rotaion(%d), use default(0)", pstDispCfg->rotaion);
-    pstDispCfg->rotaion = 0;
+  if (pstDispCfg->rotation != 0 && pstDispCfg->rotation != 1 &&
+      pstDispCfg->rotation != 2 && pstDispCfg->rotation != 3) {
+    RKADK_LOGW("invalid rotation(%d), use default(0)", pstDispCfg->rotation);
+    pstDispCfg->rotation = 0;
     change = true;
   }
 
-  if (pstDispCfg->enable_buf_pool)
-    change |= RKADK_PARAM_CheckCfg(&pstDispCfg->buf_pool_cnt, 3,
-                                   "display buf_pool_cnt");
-  change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->vpss_chn, 0, VPSS_MAX_CHN_NUM, 3,
-                                    "display vpss_chn");
-  change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->device_node, "/dev/dri/card0",
-                                    RKADK_BUFFER_LEN, "display vo device_node");
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->img_type, "RGB888",
                                     RKADK_PIX_FMT_LEN, "display pix_fmt");
 
-#ifdef RKADK_ENABLE_DISP
-  change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstDispCfg->plane_type,
-                                    VO_PLANE_PRIMARY, VO_PLANE_CURSOR,
-                                    VO_PLANE_PRIMARY, "display plane_type");
-#endif
   change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->vo_chn, 0, VO_MAX_CHN_NUM, 0,
                                     "display vo_chn");
+  change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->vpss_chn, 0, VPSS_MAX_CHN_NUM, 3,
+                                    "display vpss_chn");
 
   if (change)
-    RKADK_PARAM_SavePhotoCfg(path, u32CamId);
+    RKADK_PARAM_SaveDispCfg(path, u32CamId);
 }
 
 static bool RKADK_PARAM_CheckVersion(char *path) {
@@ -983,19 +973,12 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
   if (u32CamId == 0) {
     pstDispCfg->width = DISP_WIDTH;
     pstDispCfg->height = DISP_HEIGHT;
-    // vpss
-    pstDispCfg->enable_buf_pool = true;
-    pstDispCfg->buf_pool_cnt = 3;
-    pstDispCfg->rotaion = 90;
-    pstDispCfg->vpss_grp = 2;
+    pstDispCfg->rotation = 1; //0: 0, 1: 90, 2: 180, 3: 270
+    pstDispCfg->vpss_grp = 3;
     pstDispCfg->vpss_chn = 0;
-    // vo
-    memcpy(pstDispCfg->device_node, "/dev/dri/card0", strlen("/dev/dri/card0"));
     memcpy(pstDispCfg->img_type, "RGB888", strlen("RGB888"));
-#ifdef RKADK_ENABLE_DISP
-    pstDispCfg->plane_type = VO_PLANE_PRIMARY;
-#endif
-    pstDispCfg->z_pos = 0;
+    pstDispCfg->vo_device = VO_DEVICE;
+    pstDispCfg->vo_layer = VOP_LAYER;
     pstDispCfg->vo_chn = 0;
   }
 
@@ -1209,30 +1192,26 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.min_qp);
 
     printf("\tDisplay Config\n");
+    printf("\t\tsensor[%d] stDispCfg x: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.x);
+    printf("\t\tsensor[%d] stDispCfg y: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.y);
     printf("\t\tsensor[%d] stDispCfg width: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.width);
     printf("\t\tsensor[%d] stDispCfg height: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.height);
-    printf("\t\tsensor[%d] stDispCfg enable_buf_pool: %d\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.enable_buf_pool);
-    printf("\t\tsensor[%d] stDispCfg buf_pool_cnt: %d\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.buf_pool_cnt);
-    printf("\t\tsensor[%d] stDispCfg rotaion: %d\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.rotaion);
+    printf("\t\tsensor[%d] stDispCfg rotation: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.rotation);
     printf("\t\tsensor[%d] stDispCfg vpss_grp: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vpss_grp);
     printf("\t\tsensor[%d] stDispCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vpss_chn);
-    printf("\t\tsensor[%d] stDispCfg device_node: %s\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.device_node);
     printf("\t\tsensor[%d] stDispCfg img_type: %s\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.img_type);
-#ifdef RKADK_ENABLE_DISP
-    printf("\t\tsensor[%d] stDispCfg plane_type: %d\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.plane_type);
-#endif
-    printf("\t\tsensor[%d] stDispCfg z_pos: %d\n", i,
-           pstCfg->stMediaCfg[i].stDispCfg.z_pos);
+    printf("\t\tsensor[%d] stDispCfg vo_device: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vo_device);
+    printf("\t\tsensor[%d] stDispCfg vo_layer: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vo_layer);
     printf("\t\tsensor[%d] stDispCfg vo_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vo_chn);
 

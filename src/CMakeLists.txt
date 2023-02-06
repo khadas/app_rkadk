@@ -11,7 +11,7 @@ file(GLOB_RECURSE PARAM_SRC "${CMAKE_SOURCE_DIR}/src/param/*.cpp")
 file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
 file(GLOB_RECURSE OSD_SRC "${CMAKE_SOURCE_DIR}/src/osd/*.cpp")
 file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
-#file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
+file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
 file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.cpp")
 file(GLOB_RECURSE INIPARSER_SRC "${CMAKE_SOURCE_DIR}/src/third-party/iniparser/*.c")
 file(GLOB_RECURSE CJSON_SRC "${CMAKE_SOURCE_DIR}/src/third-party/cjson/*.c")
@@ -30,10 +30,10 @@ add_library(rkadk SHARED
 		${STREAM_SRC}
 		${PLAYER_SRC}
 		${PARAM_SRC}
-                ${RTMP_SRC}
+        ${RTMP_SRC}
 		${RTSP_SRC}
 		${OSD_SRC}
-                ${DISP_SRC}
+        ${DISP_SRC}
 		${STORAGE_SRC}
 		${INIPARSER_SRC}
 		${CJSON_SRC})

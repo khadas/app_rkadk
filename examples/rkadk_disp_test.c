@@ -19,7 +19,7 @@
 #include "rkadk_disp.h"
 #include "rkadk_log.h"
 #include "rkadk_param.h"
-#include "sample_isp.h"
+#include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -54,6 +54,7 @@ static void sigterm_handler(int sig) {
 int main(int argc, char *argv[]) {
   int c, ret, fps;
   RKADK_U32 u32CamId = 0;
+  RKADK_DISP_ATTR_S stDispAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
@@ -87,6 +88,16 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#camera id: %d", u32CamId);
+
+  memset(&stDispAttr, 0, sizeof(RKADK_DISP_ATTR_S));
+  stDispAttr.stVpssCropRect.u32X = 120;
+  stDispAttr.stVpssCropRect.u32Y = 120;
+  stDispAttr.stVpssCropRect.u32Width = 720;
+  stDispAttr.stVpssCropRect.u32Height = 480;
+  stDispAttr.stVoRect.u32X = 120;
+  stDispAttr.stVoRect.u32Y = 120;
+  stDispAttr.stVoRect.u32Width = 480;
+  stDispAttr.stVoRect.u32Height = 720;
 
   RKADK_MPI_SYS_Init();
 
@@ -130,8 +141,36 @@ int main(int argc, char *argv[]) {
   }
 
   signal(SIGINT, sigterm_handler);
+  char cmd[64];
+  printf("\n#Usage: input 'quit' to exit programe!\n"
+         "peress any other key to quit\n");
+
   while (!is_quit) {
-    usleep(500000);
+    fgets(cmd, sizeof(cmd), stdin);
+    if (strstr(cmd, "quit") || is_quit) {
+      RKADK_LOGD("#Get 'quit' cmd!");
+      break;
+    } else if (strstr(cmd, "rs")) { //crop and adjust the display area
+      stDispAttr.stVpssCropRect.u32X = 120;
+      stDispAttr.stVpssCropRect.u32Y = 120;
+      stDispAttr.stVpssCropRect.u32Width = 720;
+      stDispAttr.stVpssCropRect.u32Height = 480;
+      stDispAttr.stVoRect.u32X = 120;
+      stDispAttr.stVoRect.u32Y = 120;
+      stDispAttr.stVoRect.u32Width = 480;
+      stDispAttr.stVoRect.u32Height = 720;
+      RKADK_DISP_SetAttr(u32CamId, &stDispAttr);
+    } else if (strstr(cmd, "nm")) {  // full screen display
+      stDispAttr.stVpssCropRect.u32X = 0;
+      stDispAttr.stVpssCropRect.u32Y = 0;
+      stDispAttr.stVpssCropRect.u32Width = 1280;
+      stDispAttr.stVpssCropRect.u32Height = 720;
+      stDispAttr.stVoRect.u32X = 0;
+      stDispAttr.stVoRect.u32Y = 0;
+      stDispAttr.stVoRect.u32Width = 720;
+      stDispAttr.stVoRect.u32Height = 1280;
+      RKADK_DISP_SetAttr(u32CamId, &stDispAttr);
+    }
   }
 
   RKADK_DISP_DeInit(u32CamId);

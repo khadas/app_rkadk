@@ -341,19 +341,12 @@ static void SetDispCfg() {
   memset(&stDispCfg, 0, sizeof(RKADK_PARAM_DISP_CFG_S));
   stDispCfg.width = DISP_WIDTH;
   stDispCfg.height = DISP_HEIGHT;
-  // vpss
-  stDispCfg.enable_buf_pool = true;
-  stDispCfg.buf_pool_cnt = 3;
-  stDispCfg.rotaion = 90;
-  stDispCfg.vpss_grp = 2;
+  stDispCfg.rotation = 1;
+  stDispCfg.vpss_grp = 3;
   stDispCfg.vpss_chn = 0;
-  // vo
-  strcpy(stDispCfg.device_node, "/dev/dri/card0");
-#ifdef RKADK_ENABLE_DISP
-    pstDispCfg->plane_type = VO_PLANE_PRIMARY;
-#endif
   strcpy(stDispCfg.img_type, "RGB888");
-  stDispCfg.z_pos = 0;
+  stDispCfg.vo_device = 0;
+  stDispCfg.vo_layer = 0;
   stDispCfg.vo_chn = 0;
   RKADK_Struct2Ini(sensorPath, &stDispCfg, g_stDispCfgMapTable,
                    sizeof(g_stDispCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));

@@ -12,8 +12,6 @@ else()
 	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi2.cpp")
 endif()
 
-link_directories(${CMAKE_SOURCE_DIR}/lib/arm-rockchip830-linux-gnueabihf)
-
 #--------------------------
 # rkadk_photo_test
 #--------------------------
@@ -110,14 +108,12 @@ target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
 
-if(COMPILE)
 #--------------------------
 # rkadk_disp_test
 #--------------------------
-add_executable(rkadk_disp_test rkadk_disp_test.c)
+add_executable(rkadk_disp_test rkadk_disp_test.c ${ISP_SRC})
 add_dependencies(rkadk_disp_test rkadk)
 target_link_libraries(rkadk_disp_test rockit rkadk rkaiq)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_disp_test DESTINATION "bin")
-endif()

@@ -1299,11 +1299,16 @@ static RKADK_S32 RKADK_MEDIA_GetBindInfo(const MPP_CHN_S *pstSrcChn,
              pstDestChn->enModId == RK_ID_VENC) {
     s32BindCount = RKADK_VI_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViVencInfo;
-  } else if (pstSrcChn->enModId == RK_ID_VI && pstDestChn->enModId == RK_ID_VPSS) {
+  } else if (pstSrcChn->enModId == RK_ID_VI &&
+             pstDestChn->enModId == RK_ID_VPSS) {
     s32BindCount = RKADK_VI_VPSS_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stViVpssInfo;
   } else if (pstSrcChn->enModId == RK_ID_VPSS &&
              pstDestChn->enModId == RK_ID_VENC) {
+    s32BindCount = RKADK_VPSS_VENC_MAX_BIND_CNT;
+    *pstInfo = g_stMediaCtx.stVpssVencInfo;
+  } else if (pstSrcChn->enModId == RK_ID_VPSS &&
+             pstDestChn->enModId == RK_ID_VO) {
     s32BindCount = RKADK_VPSS_VENC_MAX_BIND_CNT;
     *pstInfo = g_stMediaCtx.stVpssVencInfo;
   } else {
