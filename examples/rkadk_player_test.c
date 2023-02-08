@@ -150,6 +150,7 @@ int main(int argc, char *argv[]) {
   RKADK_BOOL bVideoEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
   int retplayer = 0;
+  int pauseFlag = 0;
 
   param_init(&stFrmInfo);
 
@@ -246,32 +247,70 @@ int main(int argc, char *argv[]) {
         goto __FAILED;
       }
       break;
-    }
+    } else if (strstr(cmd, "pause")) {
+      ret = RKADK_PLAYER_Pause(pPlayer);
+      if (ret) {
+        RKADK_LOGE("Pause failed, ret = %d", ret);
+        break;
+      }
 
-    if (retplayer) {
-      goto __FAILED;
-    }
+      pauseFlag = 1;
+    } else if (strstr(cmd, "play")) {
+      if (pauseFlag) {
+        retplayer = RKADK_PLAYER_Play(pPlayer);
+        if (retplayer) {
+          RKADK_LOGE("Play failed, ret = %d", retplayer);
+          break;
+        }
 
-    RKADK_PLAYER_Stop(pPlayer);
+        pauseFlag = 0;
+      } else {
+        if (retplayer) {
+          goto __FAILED;
+        }
 
-    ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
-    if (ret) {
-      RKADK_LOGE("SetDataSource failed, ret = %d", ret);
-      break;
-    }
-    ret = RKADK_PLAYER_Prepare(pPlayer);
-    if (ret) {
-      RKADK_LOGE("Prepare failed, ret = %d", ret);
-      break;
-    }
+        RKADK_PLAYER_Stop(pPlayer);
+        ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+        if (ret) {
+          RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+          break;
+        }
+        ret = RKADK_PLAYER_Prepare(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Prepare failed, ret = %d", ret);
+          break;
+        }
 
-    retplayer = RKADK_PLAYER_Play(pPlayer);
-    if (retplayer) {
-      RKADK_LOGE("Play failed, ret = %d", retplayer);
-      break;
-    }
+        retplayer = RKADK_PLAYER_Play(pPlayer);
+        if (retplayer) {
+          RKADK_LOGE("Play failed, ret = %d", retplayer);
+          break;
+        }
+      }
+    } else if (strstr(cmd, "replay")) {
+      if (retplayer) {
+        goto __FAILED;
+      }
 
-    usleep(500 * 1000);
+      RKADK_PLAYER_Stop(pPlayer);
+
+      ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+      if (ret) {
+        RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+        break;
+      }
+      ret = RKADK_PLAYER_Prepare(pPlayer);
+      if (ret) {
+        RKADK_LOGE("Prepare failed, ret = %d", ret);
+        break;
+      }
+
+      retplayer = RKADK_PLAYER_Play(pPlayer);
+      if (retplayer) {
+        RKADK_LOGE("Play failed, ret = %d", retplayer);
+        break;
+      }
+    }
   }
 
 __FAILED:
