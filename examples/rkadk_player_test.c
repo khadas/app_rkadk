@@ -113,13 +113,16 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
   pstFrmInfo->u32VoLayerMode = 2;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
-  pstFrmInfo->u32VoDev = VO_DEV_HD0;
-  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_DEFAULT;//DISPLAY_TYPE_MIPI;
+  pstFrmInfo->u32VoDev = 0;
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;//DISPLAY_TYPE_MIPI;
   pstFrmInfo->u32DispFrmRt = 29;
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderColor = 0x0000FA;
   pstFrmInfo->u32ChnnNum = 1;
+  pstFrmInfo->bMirror = RKADK_FALSE;
+  pstFrmInfo->bFlip = RKADK_FALSE;
+  pstFrmInfo->u32Rotation = 1;
   pstFrmInfo->stSyncInfo.bIdv = RKADK_TRUE;
   pstFrmInfo->stSyncInfo.bIhs = RKADK_TRUE;
   pstFrmInfo->stSyncInfo.bIvs = RKADK_TRUE;
@@ -156,26 +159,25 @@ int main(int argc, char *argv[]) {
       file = optarg;
       break;
     case 'x':
-      stFrmInfo.stVoAttr.stChnRect.u32X = atoi(optarg);
+      stFrmInfo.u32FrmInfoX = atoi(optarg);
       break;
     case 'y':
-      stFrmInfo.stVoAttr.stChnRect.u32Y = atoi(optarg);
+      stFrmInfo.u32FrmInfoY = atoi(optarg);
       break;
     case 'W':
-      stFrmInfo.stVoAttr.stChnRect.u32Width = atoi(optarg);
+      stFrmInfo.u32DispWidth = atoi(optarg);
       break;
     case 'H':
-      stFrmInfo.stVoAttr.stChnRect.u32Height = atoi(optarg);
+      stFrmInfo.u32DispHeight = atoi(optarg);
       break;
     case 'r':
-      stFrmInfo.stVoAttr.u32Rotation = atoi(optarg);
+      stFrmInfo.u32Rotation = atoi(optarg);
       break;
     case 'm':
-      stFrmInfo.stVoAttr.bMirror = true;
+      stFrmInfo.bMirror = true;
       break;
     case 'f':
-      stFrmInfo.stVoAttr.bFlip = true;
-      break;
+      stFrmInfo.bFlip = true;
     case 'v':
       bVideoEnable = true;
       break;
@@ -190,12 +192,9 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGD("#play file: %s", file);
   RKADK_LOGD(
-      "#video display rect[%d, %d, %d, %d]", stFrmInfo.stVoAttr.stChnRect.u32X,
-      stFrmInfo.stVoAttr.stChnRect.u32Y, stFrmInfo.stVoAttr.stChnRect.u32Width,
-      stFrmInfo.stVoAttr.stChnRect.u32Height);
-  RKADK_LOGD("#Rotation: %d", stFrmInfo.stVoAttr.u32Rotation);
-  RKADK_LOGD("#mirror: %d", stFrmInfo.stVoAttr.bMirror);
-  RKADK_LOGD("#flip: %d", stFrmInfo.stVoAttr.bFlip);
+      "#video display rect[%d, %d, %d, %d]", stFrmInfo.u32FrmInfoX,
+      stFrmInfo.u32FrmInfoY, stFrmInfo.u32DispWidth,
+      stFrmInfo.u32DispHeight);
 
   signal(SIGINT, sigterm_handler);
 

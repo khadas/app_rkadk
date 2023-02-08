@@ -71,6 +71,7 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stLayerAttr.stImageSize.u32Width  = stVoPubAttr.stSyncInfo.u16Hact;
   stLayerAttr.stImageSize.u32Height = stVoPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.u32DispFrmRt          = 60;
+  stLayerAttr.bBypassFrame          = RK_FALSE;
 
   ret = RK_MPI_VO_SetLayerAttr(VoLayer, &stLayerAttr);
   if (ret != RK_SUCCESS) {

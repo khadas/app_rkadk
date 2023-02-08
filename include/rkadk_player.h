@@ -34,8 +34,8 @@ extern "C" {
 #define VDEC_ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 #define MAX_FRAME_QUEUE 8
 #define MAX_TIME_OUT_MS 20
-#define MAX_VO_DISPLAY_WIDTH 1024
-#define MAX_VO_DISPLAY_HEIGTHT 600
+#define MAX_VO_DISPLAY_WIDTH 720
+#define MAX_VO_DISPLAY_HEIGTHT 1280
 
 #define RK356X_VOP_LAYER_CLUSTER_0      0
 #define RK356X_VOP_LAYER_CLUSTER_1      2
@@ -169,6 +169,7 @@ typedef enum {
 
   RKADK_VO_OUTPUT_576P50, /* 720  x  576 at 50 Hz. */
   RKADK_VO_OUTPUT_480P60, /* 720  x  480 at 60 Hz. */
+  RKADK_VO_OUTPUT_1280P60, /* 720  x  1280 at 60 Hz. */
 
   RKADK_VO_OUTPUT_800x600_60,   /* VESA 800 x 600 at 60 Hz (non-interlaced) */
   RKADK_VO_OUTPUT_1024x768_60,  /* VESA 1024 x 768 at 60 Hz (non-interlaced) */
@@ -205,6 +206,7 @@ typedef enum {
   RKADK_VO_OUTPUT_7680x4320_50, /* 7680x4320_50 */
   RKADK_VO_OUTPUT_7680x4320_60, /* 7680x4320_60 */
   RKADK_VO_OUTPUT_3840x1080_60, /* For split mode */
+  RKADK_VO_OUTPUT_1080P120,     /* 1920x1080_120 */
   RKADK_VO_OUTPUT_USER,         /* User timing. */
   RKADK_VO_OUTPUT_DEFAULT,
 
@@ -242,17 +244,10 @@ typedef struct {
   RKADK_U16 u16PixClock;  /* RW; pixel clock, the unit is KHZ */
 } RKADK_VO_SYNC_INFO_S;
 
-typedef struct {
-  RKADK_BOOL bMirror;     /* RW; Mirror enable. */
-  RKADK_BOOL bFlip;       /* RW; Flip enable. */
-  RKADK_U32 u32Rotation;  /* RW; rotation: 0, 90, 180, 270 */
-  RKADK_RECT_S stChnRect; /* RW; Rectangle of video output channel */
-} RKADK_PLAYER_VO_ATTR_S;
-
 /** video output frameinfo */
 typedef struct {
-  RKADK_U32 u32FrmInfoS32x;
-  RKADK_U32 u32FrmInfoS32y;
+  RKADK_U32 u32FrmInfoX;
+  RKADK_U32 u32FrmInfoY;
   RKADK_U32 u32DispWidth;
   RKADK_U32 u32DispHeight;
   RKADK_U32 u32ImgWidth;
@@ -264,6 +259,9 @@ typedef struct {
   RKADK_U32 u32BorderBottomWidth;
   RKADK_U32 u32BorderLeftWidth;
   RKADK_U32 u32BorderRightWidth;
+  RKADK_BOOL bMirror;
+  RKADK_BOOL bFlip;
+  RKADK_U32 u32Rotation; //0: 0, 1: 90, 2: 180, 3: 270
   RKADK_PLAYER_VO_CHNN_MODE_E u32EnMode;
   RKADK_PLAYER_VO_FORMAT_E u32VoFormat;
   RKADK_PLAYER_VO_DEV_E u32VoDev;
@@ -271,7 +269,6 @@ typedef struct {
   RKADK_U32 u32DispFrmRt;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;
-  RKADK_PLAYER_VO_ATTR_S stVoAttr;
 } RKADK_PLAYER_FRAMEINFO_S;
 
 /**

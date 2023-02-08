@@ -112,30 +112,20 @@ typedef struct {
   RKADK_S32  windows;
   RKADK_U32  enIntfType; /* 0 HDMI 1 edp */
   RKADK_U32  enIntfSync; /* VO_OUTPUT_1080P50 */
-  RKADK_U32  enIntfSync_second;
   RKADK_U32  x;
   RKADK_U32  y;
 
-  RKADK_U32  bDoubleScreen;
   RKADK_U32  dispWidth;
   RKADK_U32  dispHeight;
   RKADK_U32  imgeWidth;
   RKADK_U32  imageHeight;
   RKADK_U32  pixFormat;
   RKADK_U32  dispFrmRt;
-  RKADK_U32  dispFrmRtRatio;
   RKADK_U32  uEnMode;
 
-  VO_LAYER    VoVideoLayer;
-  const RKADK_CHAR *cfgFileUri;
-  RKADK_U32   chnDismode;
-
-  VDEC_CFG_S  stVdecCfg;
-  VO_CFG_S    stVoCfg;
   MIRROR_E    enMirror;
   ROTATION_E  enRotation;
   RKADK_BOOL  bUseRga;
-  VO_PUB_ATTR_S stPubAttr;
 } RKADK_PLAYER_VO_CTX_S;
 #endif
 
@@ -352,6 +342,62 @@ static RKADK_S32 DestroyVdec(RKADK_PLAYER_VDEC_CTX_S *ctx) {
   return RKADK_SUCCESS;
 }
 
+static void RKADK_PLAYER_CheckParameter(RKADK_PLAYER_VO_CTX_S *pstVoCtx,
+                                        RKADK_U32 u32Width, RKADK_U32 u32Height){
+  int sum = 0;
+
+  if (pstVoCtx->x > u32Width ||
+      pstVoCtx->x < 0) {
+    RKADK_LOGE("Display x(%d) is out of width range(%d, %d), force to 0",
+                pstVoCtx->x, u32Width);
+    pstVoCtx->x = 0;
+  }
+
+  if (pstVoCtx->y > u32Height ||
+      pstVoCtx->y < 0) {
+    RKADK_LOGE("Display y is out of width range(%d, %d), force to 0",
+                pstVoCtx->y, u32Height);
+    pstVoCtx->y = 0;
+  }
+
+  if (pstVoCtx->dispWidth <= 0 || pstVoCtx->dispWidth > u32Width) {
+    RKADK_LOGE("\tDisplay width(%d) of is less than or equal to 0 or\n"
+               "\tgreater the screen max width (%d),\n"
+               "\tforce to the screen max width(%d)",
+                pstVoCtx->dispWidth, u32Width, u32Width);
+    pstVoCtx->dispWidth = u32Width;
+  }
+
+  if (pstVoCtx->dispHeight <= 0 || pstVoCtx->dispHeight > u32Height) {
+    RKADK_LOGE("\tDisplay width(%d) of is less than or equal to 0 or\n"
+               "\tgreater the screen max height(%d),\n"
+               "\tforce to the screen max height(%d)",
+                pstVoCtx->dispHeight, u32Height, u32Height);
+    pstVoCtx->dispHeight = u32Height;
+  }
+
+  sum = pstVoCtx->x + pstVoCtx->dispWidth;
+  if (sum > u32Width) {
+    RKADK_LOGW("The sum(%d) of the display x coordinate(%d) of the VO \nand the width(%d) of "\
+               "the display image is greater than the screen max width(%d)",
+                sum, pstVoCtx->x, pstVoCtx->dispWidth, u32Width);
+
+    pstVoCtx->dispWidth = u32Width - pstVoCtx->x;
+  }
+
+  sum = pstVoCtx->y + pstVoCtx->dispHeight;
+  if (sum > u32Height) {
+    RKADK_LOGW("The sum(%d) of the display y coordinate(%d) of the VO \nand the height(%d) of "\
+               "the display image is greater than the screen max height(%d)",
+                sum, pstVoCtx->y, pstVoCtx->dispHeight, MAX_VO_DISPLAY_HEIGTHT);
+
+    pstVoCtx->dispHeight = u32Height - pstVoCtx->y;
+  }
+
+  pstVoCtx->imgeWidth = u32Width;
+  pstVoCtx->imageHeight = u32Height;
+}
+
 static RKADK_VOID VoGetDisplaySize(RKADK_S32 enIntfSync, RKADK_U32 *s32W, RKADK_U32 *s32H) {
   switch (enIntfSync) {
     case VO_OUTPUT_640x480_60:
@@ -367,6 +413,10 @@ static RKADK_VOID VoGetDisplaySize(RKADK_S32 enIntfSync, RKADK_U32 *s32W, RKADK_
     case VO_OUTPUT_480P60:
       *s32W = 720;
       *s32H = 480;
+      break;
+    case VO_OUTPUT_1280P60:
+      *s32W = 720;
+      *s32H = 1280;
       break;
     case VO_OUTPUT_800x600_60:
       *s32W = 800;
@@ -479,6 +529,9 @@ static RKADK_S32 VoMultiWindownsStart(RKADK_PLAYER_VO_CTX_S *ctx) {
     stChnAttr.enRotation = ctx->enRotation;
     // set priority
     stChnAttr.u32Priority = 1;
+    RKADK_LOGE("rect: [%d %d %d %d]",
+              stChnAttr.stRect.s32X, stChnAttr.stRect.s32Y = ctx->y,
+              stChnAttr.stRect.u32Width, stChnAttr.stRect.u32Height);
 
     ret = RK_MPI_VO_SetChnAttr(ctx->VoLayer, i, &stChnAttr);
     if (ret != RKADK_SUCCESS) {
@@ -570,73 +623,24 @@ static RKADK_S32 VoStartDev(VO_DEV VoDev, VO_PUB_ATTR_S *pstPubAttr) {
     return RKADK_FAILURE;
   }
 
+  ret = RK_MPI_VO_GetPubAttr(VoDev, pstPubAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_GetPubAttr failed, ret = %x", ret);
+    return ret;
+  }
+
   return ret;
 
 }
 
-static RKADK_S32 VoDevStart(RKADK_PLAYER_VO_CTX_S *pstVoCtx ,RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo) {
+static RKADK_S32 VoDevStart(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
   RKADK_S32                ret = RKADK_SUCCESS;
+  VO_LAYER_MODE_E          Vo_layer_mode;
   VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
-  RKADK_U32                dispWidth, dispHeight;
-  RKADK_U32                u32ImageWidth, u32ImageHeight;
+  VO_PUB_ATTR_S            stPubAttr;
 
-  /* Enable Layer */ //RK_FMT_RGBA8888
-  stLayerAttr.enPixFormat           = (PIXEL_FORMAT_E)pstVoCtx->pixFormat;
-  stLayerAttr.stDispRect.s32X       = 0;
-  stLayerAttr.stDispRect.s32Y       = 0;
-  dispWidth = MAX_VO_DISPLAY_WIDTH;
-  dispHeight = MAX_VO_DISPLAY_HEIGTHT;
-  VoGetDisplaySize(pstVoCtx->stPubAttr.enIntfSync, &dispWidth, &dispHeight);
-
-  u32ImageWidth  = dispWidth;
-  u32ImageHeight = dispHeight;
-  stLayerAttr.stDispRect.u32Width   = dispWidth;
-  stLayerAttr.stDispRect.u32Height  = dispHeight;
-  stLayerAttr.stImageSize.u32Width  = u32ImageWidth;
-  stLayerAttr.stImageSize.u32Height = u32ImageHeight;
-  stLayerAttr.u32DispFrmRt          = pstVoCtx->dispFrmRt;
-
-  RKADK_LOGD("VoDev = %d, windows = %d\n" \
-             "stPubAttr enIntfType = %d, enIntfSync = %d\n" \
-             "VoLayer = %d, bUseRga = %d, pix format %X\n" \
-             "VO max width = %d, max height = %d, dispFrmRt = %d\n" \
-             "VO display width = %d, display height = %d", \
-             pstVoCtx->VoDev, pstVoCtx->windows,
-             pstVoCtx->stPubAttr.enIntfType, pstVoCtx->stPubAttr.enIntfSync,
-             pstVoCtx->VoLayer, pstVoCtx->bUseRga, pstVoCtx->pixFormat,
-             stLayerAttr.stDispRect.u32Width,
-             stLayerAttr.stDispRect.u32Height, stLayerAttr.u32DispFrmRt,
-             pstVoCtx->dispWidth, pstVoCtx->dispHeight);
-
-  ret = VoStartDev(pstVoCtx->VoDev, &pstVoCtx->stPubAttr);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("Vo start dev fail = %X", ret);
-    return RKADK_FAILURE;
-  }
-
-  ret = VoStartLayer(pstVoCtx->VoLayer, &stLayerAttr, pstVoCtx->bUseRga);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("Vo start layer fail = %X", ret);
-    return RKADK_FAILURE;
-  }
-
-  return RKADK_SUCCESS;
-}
-
-static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo) {
-  RKADK_S32        ret = RKADK_SUCCESS, sum = 0;
-  VO_LAYER_MODE_E  Vo_layer_mode;
-
-  pstVoCtx->VoDev = pstFrameInfo->u32VoDev;
-  pstVoCtx->VoLayerMode = pstFrameInfo->u32VoLayerMode;
-  pstVoCtx->dispFrmRt = pstFrameInfo->u32DispFrmRt;
-  pstVoCtx->enIntfType = pstFrameInfo->u32EnIntfType;
-  pstVoCtx->uEnMode = pstFrameInfo->u32EnMode;
-  pstVoCtx->enIntfSync = pstFrameInfo->enIntfSync;
-  if (pstVoCtx->enIntfSync >= VO_OUTPUT_BUTT) {
-    RKADK_LOGE("IntfSync(%d) if unsupport", pstVoCtx->enIntfSync);
-    return RKADK_FAILURE;
-  }
+  memset(&stPubAttr, 0, sizeof(VO_PUB_ATTR_S));
+  memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
   /* Bind Layer */
   switch (pstVoCtx->VoLayerMode) {
@@ -653,43 +657,95 @@ static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAMEI
       Vo_layer_mode = VO_LAYER_MODE_VIDEO;
   }
 
-  RK_MPI_VO_BindLayer(pstVoCtx->VoLayer, pstVoCtx->VoDev, Vo_layer_mode);
+  ret = RK_MPI_VO_BindLayer(pstVoCtx->VoLayer, pstVoCtx->VoDev, Vo_layer_mode);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VO_BindLayer failed, ret = %x", ret);
+    return ret;
+  }
 
   switch (pstVoCtx->enIntfType) {
     case DISPLAY_TYPE_VGA:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_VGA;
+      stPubAttr.enIntfType = VO_INTF_VGA;
       break;
     case DISPLAY_TYPE_HDMI:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_HDMI;
+      stPubAttr.enIntfType = VO_INTF_HDMI;
       break;
     case DISPLAY_TYPE_EDP:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_EDP;
+      stPubAttr.enIntfType = VO_INTF_EDP;
       break;
     case DISPLAY_TYPE_DP:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_DP;
+      stPubAttr.enIntfType = VO_INTF_DP;
       break;
     case DISPLAY_TYPE_HDMI_EDP:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_HDMI | VO_INTF_EDP;
+      stPubAttr.enIntfType = VO_INTF_HDMI | VO_INTF_EDP;
       break;
     case DISPLAY_TYPE_MIPI:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_MIPI;
+      stPubAttr.enIntfType = VO_INTF_MIPI;
       break;
     default:
-      pstVoCtx->stPubAttr.enIntfType = VO_INTF_DEFAULT;
+      stPubAttr.enIntfType = VO_INTF_DEFAULT;
       RKADK_LOGE("IntfType not set,use INTF_HDMI default");
   }
 
-  if (pstFrameInfo->stVoAttr.stChnRect.u32X > MAX_VO_DISPLAY_WIDTH ||
-      pstFrameInfo->stVoAttr.stChnRect.u32X < 0) {
-    RKADK_LOGE("Display x coordinate(%d) of VO is out of width range(%d)",
-                pstFrameInfo->stVoAttr.stChnRect.u32X, MAX_VO_DISPLAY_WIDTH);
+  stPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
+
+  ret = VoStartDev(pstVoCtx->VoDev, &stPubAttr);
+  if (ret != RKADK_SUCCESS) {
+    RKADK_LOGE("Vo start dev fail = %X", ret);
     return RKADK_FAILURE;
   }
 
-  if (pstFrameInfo->stVoAttr.stChnRect.u32Y > MAX_VO_DISPLAY_HEIGTHT ||
-      pstFrameInfo->stVoAttr.stChnRect.u32Y < 0) {
+  RKADK_PLAYER_CheckParameter(pstVoCtx, stPubAttr.stSyncInfo.u16Hact,
+                              stPubAttr.stSyncInfo.u16Vact);
+
+  /* Enable Layer */ //RK_FMT_RGBA8888
+  stLayerAttr.enPixFormat           = (PIXEL_FORMAT_E)pstVoCtx->pixFormat;
+  stLayerAttr.stDispRect.s32X       = pstVoCtx->x;
+  stLayerAttr.stDispRect.s32Y       = pstVoCtx->y;
+  stLayerAttr.stDispRect.u32Width   = pstVoCtx->dispWidth;
+  stLayerAttr.stDispRect.u32Height  = pstVoCtx->dispHeight;
+  stLayerAttr.stImageSize.u32Width  = stPubAttr.stSyncInfo.u16Hact;
+  stLayerAttr.stImageSize.u32Height = stPubAttr.stSyncInfo.u16Vact;
+  stLayerAttr.u32DispFrmRt          = pstVoCtx->dispFrmRt;
+  stLayerAttr.bBypassFrame          = RK_FALSE;
+
+  ret = VoStartLayer(pstVoCtx->VoLayer, &stLayerAttr, pstVoCtx->bUseRga);
+  if (ret != RKADK_SUCCESS) {
+    RKADK_LOGE("Vo start layer fail = %X", ret);
+    return RKADK_FAILURE;
+  }
+
+  RKADK_LOGI("Vo [dev: %d, layer: %d] start success",
+              pstVoCtx->VoDev, pstVoCtx->VoLayer);
+
+  return RKADK_SUCCESS;
+}
+
+static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo) {
+  RKADK_S32 ret = RKADK_SUCCESS, sum = 0;
+
+  pstVoCtx->VoDev = pstFrameInfo->u32VoDev;
+  pstVoCtx->VoLayerMode = pstFrameInfo->u32VoLayerMode;
+  pstVoCtx->dispFrmRt = pstFrameInfo->u32DispFrmRt;
+  pstVoCtx->enIntfType = pstFrameInfo->u32EnIntfType;
+  pstVoCtx->uEnMode = pstFrameInfo->u32EnMode;
+  pstVoCtx->enIntfSync = pstFrameInfo->enIntfSync;
+  if (pstVoCtx->enIntfSync >= VO_OUTPUT_BUTT) {
+    RKADK_LOGE("IntfSync(%d) if unsupport", pstVoCtx->enIntfSync);
+    return RKADK_FAILURE;
+  }
+
+  if (pstFrameInfo->u32FrmInfoX > DISP_WIDTH ||
+      pstFrameInfo->u32FrmInfoX < 0) {
+    RKADK_LOGE("Display x coordinate(%d) of VO is out of width range(%d)",
+                pstFrameInfo->u32FrmInfoX, DISP_WIDTH);
+    return RKADK_FAILURE;
+  }
+
+  if (pstFrameInfo->u32FrmInfoY > DISP_HEIGHT ||
+      pstFrameInfo->u32FrmInfoY < 0) {
     RKADK_LOGE("Display y coordinate(%d) of VO is out of height range(%d)",
-                pstFrameInfo->stVoAttr.stChnRect.u32Y, MAX_VO_DISPLAY_WIDTH);
+                pstFrameInfo->u32FrmInfoY, DISP_WIDTH);
     return RKADK_FAILURE;
   }
 
@@ -705,39 +761,48 @@ static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAMEI
     return RKADK_FAILURE;
   }
 
-  sum = pstFrameInfo->stVoAttr.stChnRect.u32X + pstFrameInfo->u32DispWidth;
-  if (sum > MAX_VO_DISPLAY_WIDTH) {
+  sum = pstFrameInfo->u32FrmInfoX + pstFrameInfo->u32DispWidth;
+  if (sum > DISP_WIDTH) {
     RKADK_LOGW("The sum(%d) of the display x coordinate(%d) of the VO \nand the width(%d) of "\
                "the display image is greater than the screen max width(%d)",
-                sum, pstFrameInfo->stVoAttr.stChnRect.u32X, pstFrameInfo->u32DispWidth, MAX_VO_DISPLAY_WIDTH);
+                sum, pstFrameInfo->u32FrmInfoX, pstFrameInfo->u32DispWidth, DISP_WIDTH);
 
-    pstFrameInfo->u32DispWidth = MAX_VO_DISPLAY_WIDTH - pstFrameInfo->stVoAttr.stChnRect.u32X;
+    pstFrameInfo->u32DispWidth = DISP_WIDTH - pstFrameInfo->u32FrmInfoX;
   }
 
-  sum = pstFrameInfo->stVoAttr.stChnRect.u32Y + pstFrameInfo->u32DispHeight;
-  if (sum > MAX_VO_DISPLAY_HEIGTHT) {
+  sum = pstFrameInfo->u32FrmInfoY + pstFrameInfo->u32DispHeight;
+  if (sum > DISP_HEIGHT) {
     RKADK_LOGW("The sum(%d) of the display y coordinate(%d) of the VO \nand the height(%d) of "\
                "the display image is greater than the screen max height(%d)",
-                sum, pstFrameInfo->stVoAttr.stChnRect.u32Y, pstFrameInfo->u32DispHeight, MAX_VO_DISPLAY_HEIGTHT);
+                sum, pstFrameInfo->u32FrmInfoY, pstFrameInfo->u32DispHeight, DISP_HEIGHT);
 
-    pstFrameInfo->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT - pstFrameInfo->stVoAttr.stChnRect.u32Y;
+    pstFrameInfo->u32DispHeight = DISP_HEIGHT - pstFrameInfo->u32FrmInfoY;
   }
 
-  pstVoCtx->x = pstFrameInfo->stVoAttr.stChnRect.u32X;
-  pstVoCtx->y = pstFrameInfo->stVoAttr.stChnRect.u32Y;
+  pstVoCtx->x = pstFrameInfo->u32FrmInfoX;
+  pstVoCtx->y = pstFrameInfo->u32FrmInfoY;
   pstVoCtx->dispWidth = pstFrameInfo->u32DispWidth;
   pstVoCtx->dispHeight = pstFrameInfo->u32DispHeight;
 
   switch (pstFrameInfo->u32VoFormat) {
     case VO_FORMAT_RGB888:
-      pstVoCtx->pixFormat = RK_FMT_RGBA8888;
+      pstVoCtx->pixFormat = RK_FMT_RGB888;
       break;
     default:
-      RKADK_LOGW("unsupport pix format: %d, use default(%d)", pstVoCtx->pixFormat, RK_FMT_RGBA8888);
-      pstVoCtx->pixFormat = RK_FMT_RGBA8888;
+      RKADK_LOGW("unsupport pix format: %d, use default(%d)", pstVoCtx->pixFormat, RK_FMT_RGB888);
+      pstVoCtx->pixFormat = RK_FMT_RGB888;
   }
 
-  pstVoCtx->stPubAttr.enIntfSync = (VO_INTF_SYNC_E)pstVoCtx->enIntfSync;
+  if (pstFrameInfo->bMirror && !pstFrameInfo->bFlip)
+    pstVoCtx->enMirror = MIRROR_HORIZONTAL;
+  else if (pstFrameInfo->bFlip && !pstFrameInfo->bMirror)
+    pstVoCtx->enMirror = MIRROR_VERTICAL;
+  else if (pstFrameInfo->bMirror && pstFrameInfo->bFlip)
+    pstVoCtx->enMirror = MIRROR_BOTH;
+  else
+    pstVoCtx->enMirror = MIRROR_NONE;
+
+  pstVoCtx->enRotation = (ROTATION_E)pstFrameInfo->u32Rotation;
 
   return ret;
 }
@@ -767,39 +832,26 @@ static RKADK_S32 CreateVoCtx(RKADK_PLAYER_VO_CTX_S **pVoCtx) {
   memset(pstVoCtx, 0, sizeof(RKADK_PLAYER_VO_CTX_S));
 
   pstVoCtx->windows = 1;
-  pstVoCtx->enIntfType = 17;
-  pstVoCtx->enIntfSync = 27;
-  pstVoCtx->enIntfSync_second = 6;
+  pstVoCtx->enIntfType = VO_INTF_MIPI;
+  pstVoCtx->enIntfSync = VO_OUTPUT_DEFAULT;
 
-  pstVoCtx->VoDev = RK356X_VO_DEV_HD0;
-  pstVoCtx->VoLayer = RK356X_VOP_LAYER_CLUSTER_0;
-  pstVoCtx->VoLayerMode = 2; /* CURSOR = 0,GRAPHIC = 1,VIDEO = 2,*/
+  pstVoCtx->VoDev = VO_DEVICE;
+  pstVoCtx->VoLayer = VOP_LAYER;
+  pstVoCtx->VoLayerMode = VO_LAYER_MODE_VIDEO; /* CURSOR = 0,GRAPHIC = 1,VIDEO = 2,*/
 
-  pstVoCtx->imgeWidth = MAX_VO_DISPLAY_WIDTH;
-  pstVoCtx->imageHeight = MAX_VO_DISPLAY_HEIGTHT;
+  pstVoCtx->imgeWidth = DISP_WIDTH;
+  pstVoCtx->imageHeight = DISP_HEIGHT;
 
-  pstVoCtx->bDoubleScreen = RK_TRUE;
-  pstVoCtx->stVoCfg.bDoubleScreen = RK_TRUE;
   pstVoCtx->x = 0;
   pstVoCtx->y = 0;
-
-  pstVoCtx->dispWidth  = MAX_VO_DISPLAY_WIDTH;
-  pstVoCtx->dispHeight = MAX_VO_DISPLAY_HEIGTHT;
-  pstVoCtx->pixFormat = RK_FMT_RGBA8888;
-  pstVoCtx->dispFrmRt = 29;
-  pstVoCtx->dispFrmRtRatio = 1;
+  pstVoCtx->dispWidth  = DISP_WIDTH;
+  pstVoCtx->dispHeight = DISP_HEIGHT;
+  pstVoCtx->pixFormat = RK_FMT_RGB888;
+  pstVoCtx->dispFrmRt = 60;
   pstVoCtx->uEnMode = 1;
-  pstVoCtx->chnDismode = VO_CHANNEL_PLAY_NORMAL;
 
-  pstVoCtx->stVoCfg.u32Screen0VoLayer = RK356X_VOP_LAYER_CLUSTER_0;
-  pstVoCtx->stVoCfg.u32Screen1VoLayer = RK356X_VOP_LAYER_CLUSTER_1;
-  pstVoCtx->stVoCfg.u32Screen0Rows = 4;
-  pstVoCtx->stVoCfg.u32Screen1Rows = 3;
-
-  pstVoCtx->stVdecCfg.u32FrameBufferCnt = MAX_FRAME_QUEUE;
-  pstVoCtx->stVdecCfg.enCompressMode = COMPRESS_MODE_NONE;//COMPRESS_AFBC_16x16;
   pstVoCtx->enMirror = MIRROR_NONE;
-  pstVoCtx->enRotation = ROTATION_0;
+  pstVoCtx->enRotation = ROTATION_90;
   pstVoCtx->bUseRga = RKADK_TRUE;
 
   (*pVoCtx) = pstVoCtx;
@@ -1196,8 +1248,8 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
       }
 
       if (!pstPlayer->bStopFlag) {
-        if (pstPlayer->pstVoCtx->VoVideoLayer >= 0) {
-          ret = RK_MPI_VO_SendFrame(pstPlayer->pstVoCtx->VoVideoLayer, windowCount, &sFrame, -1);
+        if (pstPlayer->pstVoCtx->VoLayer >= 0) {
+          ret = RK_MPI_VO_SendFrame(pstPlayer->pstVoCtx->VoLayer, windowCount, &sFrame, -1);
           if (!ret) {}
             //RKADK_LOGE("RK_MPI_VO_SendFrame send fail ret = %08x\n", ret);
         }
@@ -2081,7 +2133,7 @@ RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
       return RKADK_FAILURE;
     }
 
-    if (VoDevStart(pstPlayer->pstVoCtx, pstFrameInfo)) {
+    if (VoDevStart(pstPlayer->pstVoCtx)) {
       RKADK_LOGE("Vo dev start failed");
       return RKADK_FAILURE;
     }
