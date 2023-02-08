@@ -61,6 +61,7 @@ static void SetCommCfg() {
   stParamCommCfg.rec_mute = false;
   stParamCommCfg.speaker_volume = 100;
   stParamCommCfg.mic_volume = 100;
+  stParamCommCfg.vpss_devcie = 1;
 
   RKADK_Struct2Ini(RKADK_PARAM_PATH, &stParamCommCfg, g_stCommCfgMapTable,
                    sizeof(g_stCommCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
@@ -288,7 +289,7 @@ static void SetViCfg() {
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 0;
-  strcpy(stViCfg.device_name, "rkisp_mainpath");
+  strcpy(stViCfg.device_name, DEF_DEVICE_NEME_VI_0);
   stViCfg.width = RECORD_VIDEO_WIDTH;
   stViCfg.height = RECORD_VIDEO_HEIGHT;
   stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
@@ -299,7 +300,7 @@ static void SetViCfg() {
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 1;
-  strcpy(stViCfg.device_name, "rkisp_selfpath");
+  strcpy(stViCfg.device_name, DEF_DEVICE_NEME_VI_1);
   stViCfg.width = THUMB_WIDTH;
   stViCfg.height = THUMB_HEIGHT;
   stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
@@ -310,7 +311,7 @@ static void SetViCfg() {
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 2;
-  strcpy(stViCfg.device_name, "rkisp_bypasspath");
+  strcpy(stViCfg.device_name, DEF_DEVICE_NEME_VI_2);
   stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;
   stViCfg.width = STREAM_VIDEO_WIDTH;
   stViCfg.height = STREAM_VIDEO_HEIGHT;
@@ -321,7 +322,7 @@ static void SetViCfg() {
 
   memset(&stViCfg, 0, sizeof(RKADK_PARAM_VI_CFG_S));
   stViCfg.chn_id = 3;
-  strcpy(stViCfg.device_name, "rkisp_mainpath_4x4sampling");
+  strcpy(stViCfg.device_name, DEF_DEVICE_NEME_VI_3);
   stViCfg.width = STREAM_VIDEO_WIDTH;
   stViCfg.height = STREAM_VIDEO_HEIGHT;
   stViCfg.buf_cnt = VIDEO_BUFFER_COUNT;

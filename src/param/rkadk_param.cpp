@@ -1011,6 +1011,7 @@ static void RKADK_PARAM_Dump() {
   printf("\trec_mute: %d\n", pstCfg->stCommCfg.rec_mute);
   printf("\tspeaker_volume: %d\n", pstCfg->stCommCfg.speaker_volume);
   printf("\tmic_volume: %d\n", pstCfg->stCommCfg.mic_volume);
+  printf("\tvpss_devcie: %d\n", pstCfg->stCommCfg.vpss_devcie);
 
   printf("Audio Config\n");
   printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
