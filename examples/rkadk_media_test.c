@@ -42,7 +42,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:P";
+static RKADK_CHAR optstr[] = "a:I:p:P:m";
 
 #ifdef ENABLE_STREAM_AUDIO
 static FILE *g_aenc_file = NULL;
@@ -68,6 +68,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-P: player audio path, Default:/mnt/sdcard/photo.wav\n");
+  printf("\t-m: record/photo multiple sensors, Default:false\n");
 }
 
 static RKADK_S32
@@ -291,7 +292,7 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c, ret, fps = 25;
-  RK_BOOL fec_enable = RK_FALSE;
+  RKADK_BOOL bMultiCam = RKADK_FALSE;
   const char *iniPath = NULL;
   char *file = "/mnt/sdcard/photo.wav";
   char path[RKADK_PATH_LEN];
@@ -301,7 +302,7 @@ int main(int argc, char *argv[]) {
   //record
   RKADK_RECORD_ATTR_S stRecAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
-  RKADK_MW_PTR pRecordHandle = NULL;
+  RKADK_MW_PTR pRecordHandle = NULL, pRecordHandle1 = NULL;
 
 #ifdef ENABLE_RESET
     int change;
@@ -316,7 +317,7 @@ int main(int argc, char *argv[]) {
   //photo
   RKADK_PHOTO_ATTR_S stPhotoAttr;
   RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
-  RKADK_MW_PTR pPhotoHandle = NULL;
+  RKADK_MW_PTR pPhotoHandle = NULL, pPhotoHandle1 = NULL;
 #endif
 
 #ifdef ENABLE_STREAM_AUDIO
@@ -362,6 +363,10 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       file = optarg;
       RKADK_LOGD("player audio file: %s", file);
       break;
+    case 'm':
+      bMultiCam = RKADK_TRUE;
+      RKADK_LOGD("enable bMultiCam: %d", bMultiCam);
+      break;
     default:
       print_usage(argv[0]);
       optind = 0;
@@ -369,6 +374,9 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
     }
   }
   optind = 0;
+
+  if (bMultiCam)
+    u32CamId = 0;
 
   stRecAttr.s32CamID = u32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
@@ -432,28 +440,55 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 #ifdef RKAIQ
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
   if (ret) {
-    RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
+    RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", u32CamId);
     return -1;
   }
 
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
-
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
   //IspProcess(u32CamId);
+
+  if (bMultiCam) {
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    if (ret) {
+      RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
+      SAMPLE_ISP_Stop(u32CamId);
+      return -1;
+    }
+
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  }
 #endif
 
   ret = RKADK_RECORD_Create(&stRecAttr, &pRecordHandle);
   if (ret) {
-    RKADK_LOGE("Create recorder failed");
+    RKADK_LOGE("Create recorder u32CamId[%d] failed", u32CamId);
     goto _FAILURE;
   }
-
   RKADK_RECORD_Start(pRecordHandle);
+
+  if (bMultiCam) {
+    stRecAttr.s32CamID = 1;
+    if (RKADK_RECORD_Create(&stRecAttr, &pRecordHandle1)) {
+      RKADK_LOGE("Create recorder u32CamId[1] failed");
+      goto _FAILURE;
+    }
+    RKADK_RECORD_Start(pRecordHandle1);
+  }
 
 #ifdef ENABLE_PHOTO
   ret = RKADK_PHOTO_Init(&stPhotoAttr, &pPhotoHandle);
   if (ret) {
-    RKADK_LOGE("Create photo failed");
+    RKADK_LOGE("Create u32CamId[%d] photo failed", u32CamId);
     goto _FAILURE;
+  }
+
+  if (bMultiCam) {
+    stPhotoAttr.u32CamId = 1;
+    ret = RKADK_PHOTO_Init(&stPhotoAttr, &pPhotoHandle1);
+    if (ret) {
+      RKADK_LOGE("Create u32CamId[1] photo failed");
+      goto _FAILURE;
+    }
   }
 #endif
 
@@ -598,6 +633,10 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
     }
 #else
     RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
+    if (bMultiCam) {
+      if (RKADK_PHOTO_TakePhoto(pPhotoHandle1, &stTakePhotoAttr))
+        RKADK_LOGE("RKADK_PHOTO_TakePhoto u32CamId[1] failed");
+    }
 #endif
     usleep(5000000);
   }
@@ -613,8 +652,15 @@ _FAILURE:
   RKADK_RECORD_Stop(pRecordHandle);
   RKADK_RECORD_Destroy(pRecordHandle);
 
+  if (bMultiCam) {
+    RKADK_RECORD_Stop(pRecordHandle1);
+    RKADK_RECORD_Destroy(pRecordHandle1);
+  }
+
 #ifdef ENABLE_PHOTO
   RKADK_PHOTO_DeInit(pPhotoHandle);
+  if (bMultiCam)
+    RKADK_PHOTO_DeInit(pPhotoHandle1);
 #endif
 
 #ifdef ENABLE_STREAM_AUDIO
@@ -643,6 +689,9 @@ _FAILURE:
 
 #ifdef RKAIQ
   SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+
+  if (bMultiCam)
+    SAMPLE_ISP_Stop(1);
 #endif
   RKADK_MPI_SYS_Exit();
   return 0;
