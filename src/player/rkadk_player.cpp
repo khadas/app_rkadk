@@ -98,19 +98,6 @@ typedef struct {
   VO_INTF_SYNC_E enIntfSync;
 } VO_MODE_S;
 
-static VO_Timing_S stVoTimings[] = {
-  {VO_OUTPUT_640x480_60, 640, 480},
-  {VO_OUTPUT_800x600_60, 800, 600},
-  {VO_OUTPUT_1024x768_60, 1024, 768},
-  {VO_OUTPUT_1280x1024_60, 1280, 1024},
-  {VO_OUTPUT_1366x768_60, 1366, 768},
-  {VO_OUTPUT_1440x900_60, 1440, 900},
-  {VO_OUTPUT_1280x800_60, 1280, 800},
-  {VO_OUTPUT_1600x1200_60, 1600, 1200},
-  {VO_OUTPUT_1680x1050_60, 1680, 1050},
-  {VO_OUTPUT_1920x1200_60, 1920, 1200},
-};
-
 typedef struct {
   RKADK_S32  VoDev;
   RKADK_S32  VoLayer;
@@ -408,81 +395,6 @@ static void RKADK_PLAYER_CheckParameter(RKADK_PLAYER_VO_CTX_S *pstVoCtx,
 
   pstVoCtx->imgeWidth = u32Width;
   pstVoCtx->imageHeight = u32Height;
-}
-
-static RKADK_VOID VoGetDisplaySize(RKADK_S32 enIntfSync, RKADK_U32 *s32W, RKADK_U32 *s32H) {
-  switch (enIntfSync) {
-    case VO_OUTPUT_640x480_60:
-      *s32W = 640;
-      *s32H = 480;
-      break;
-    case VO_OUTPUT_PAL:
-    case VO_OUTPUT_576P50:
-      *s32W = 720;
-      *s32H = 576;
-      break;
-    case VO_OUTPUT_NTSC:
-    case VO_OUTPUT_480P60:
-      *s32W = 720;
-      *s32H = 480;
-      break;
-    case VO_OUTPUT_1280P60:
-      *s32W = 720;
-      *s32H = 1280;
-      break;
-    case VO_OUTPUT_800x600_60:
-      *s32W = 800;
-      *s32H = 600;
-      break;
-    case VO_OUTPUT_1024x768_60:
-      *s32W = 1024;
-      *s32H = 768;
-      break;
-    case VO_OUTPUT_720P50:
-    case VO_OUTPUT_720P60:
-      *s32W = 1280;
-      *s32H = 720;
-      break;
-    case VO_OUTPUT_1280x1024_60:
-      *s32W = 1280;
-      *s32H = 1024;
-      break;
-    case VO_OUTPUT_1080P24:
-    case VO_OUTPUT_1080P25:
-    case VO_OUTPUT_1080P30:
-    case VO_OUTPUT_1080I50:
-    case VO_OUTPUT_1080I60:
-    case VO_OUTPUT_1080P50:
-    case VO_OUTPUT_1080P60:
-      *s32W = 1920;
-      *s32H = 1080;
-      break;
-    case VO_OUTPUT_3840x2160_24:
-    case VO_OUTPUT_3840x2160_25:
-    case VO_OUTPUT_3840x2160_30:
-    case VO_OUTPUT_3840x2160_50:
-    case VO_OUTPUT_3840x2160_60:
-      *s32W = 3840;
-      *s32H = 2160;
-      break;
-    case VO_OUTPUT_4096x2160_24:
-    case VO_OUTPUT_4096x2160_25:
-    case VO_OUTPUT_4096x2160_30:
-    case VO_OUTPUT_4096x2160_50:
-    case VO_OUTPUT_4096x2160_60:
-      *s32W = 4096;
-      *s32H = 2160;
-      break;
-    default:
-      for (RKADK_U32 i = 0; i < ARRAY_LENGTH(stVoTimings); i++) {
-        if (stVoTimings[i].enIntfSync == enIntfSync) {
-          *s32W = stVoTimings[i].u32Width;
-          *s32H = stVoTimings[i].u32Height;
-          break;
-        }
-      }
-      break;
-  }
 }
 
 static RKADK_S32 VoStopDev(VO_DEV VoDev) {
@@ -1314,7 +1226,7 @@ static RKADK_VOID* SendAudioDataThread(RKADK_VOID *ptr) {
   FILE *fp = RKADK_NULL;
   RKADK_CHAR name[128] = {0};
   mkdir("tmp", 0777);
-  snprintf(name, sizeof(name), "/tmp/0133.pcm");
+  snprintf(name, sizeof(name), "/tmp/audio_out.pcm");
 
   fp = fopen(name, "wb");
   if (fp == RKADK_NULL) {
@@ -1571,7 +1483,6 @@ __RETRY:
 
 static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
   RKADK_S32 ret = 0;
-  RKADK_U64 timeStamp = 0;
   RKADK_S32 s32MilliSec = -1;
   DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
   AUDIO_FRAME_S frame;
@@ -2222,7 +2133,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
     #ifdef RV1126_1109
     if (pstPlayer->bVideoExist) {
-      for (RKADK_U32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
+      for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
         ret = RK_MPI_VO_ResumeChn(pstPlayer->pstVoCtx->VoLayer, i);
         if (ret != RKADK_SUCCESS) {
           RKADK_LOGE("RK_MPI_VO_ResumeChn failed, ret = %X\n", ret);
@@ -2370,7 +2281,7 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
       pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
 
       #ifdef RV1126_1109
-      for (RKADK_U32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
+      for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
         ret = RK_MPI_VO_ResumeChn(pstPlayer->pstVoCtx->VoLayer, i);
         if (ret != RKADK_SUCCESS) {
           RKADK_LOGE("RK_MPI_VO_ResumeChn failed, ret = %X\n", ret);
@@ -2458,7 +2369,7 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
 
   #ifdef RV1126_1109
   if (pstPlayer->bVideoExist) {
-    for (RKADK_U32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
+    for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
       ret = RK_MPI_VO_PauseChn(pstPlayer->pstVoCtx->VoLayer, i);
       if (ret != RKADK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VO_PauseChn failed, ret = %X\n", ret);
