@@ -1770,8 +1770,13 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
     return RKADK_FALSE;
   }
 
+  #ifdef RV1126_1109
+  pstPlayer->bVideoExist = RKADK_FALSE;
+  #endif
+
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
+  pstPlayer->bAudioExist = RKADK_FALSE;
   for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
     if ('.' == pszfilePath[i]) {
 #ifdef RV1126_1109
@@ -2086,11 +2091,11 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)arg;
 
   #ifdef RV1126_1109
-  if (pstPlayer->bVideoExist == RKADK_TRUE || pstPlayer->demuxerFlag == VIDEO_FLAG)
+  if (pstPlayer->bVideoExist || pstPlayer->demuxerFlag == VIDEO_FLAG)
     pthread_create(&pstPlayer->stThreadParam.tidVideoSend, RKADK_NULL, SendVideoDataThread, arg);
   #endif
 
-  if (pstPlayer->bAudioExist == RKADK_TRUE) {
+  if (pstPlayer->bAudioExist) {
     if (pstPlayer->pstAdecCtx->eCodecType != RKADK_CODEC_TYPE_PCM)
       pthread_create(&pstPlayer->stThreadParam.tidAudioSend, RKADK_NULL, SendAudioDataThread, arg);
 
@@ -2109,7 +2114,8 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
     pthread_join(pstPlayer->stThreadParam.tidAudioCommand, RKADK_NULL);
 
   pthread_mutex_lock(&pstPlayer->WavMutex);
-  if (!pstPlayer->bStopFlag && pstPlayer->pstAdecCtx->eCodecType == RKADK_CODEC_TYPE_PCM
+  if (!pstPlayer->bStopFlag && pstPlayer->bAudioExist
+      && pstPlayer->pstAdecCtx->eCodecType == RKADK_CODEC_TYPE_PCM
       && pstPlayer->bAudioStopFlag == RKADK_FALSE) {
     pstPlayer->bAudioStopFlag = RKADK_TRUE;
     pthread_cond_wait(&pstPlayer->WavCond, &pstPlayer->WavMutex);
@@ -2281,11 +2287,13 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
       pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
 
       #ifdef RV1126_1109
-      for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
-        ret = RK_MPI_VO_ResumeChn(pstPlayer->pstVoCtx->VoLayer, i);
-        if (ret != RKADK_SUCCESS) {
-          RKADK_LOGE("RK_MPI_VO_ResumeChn failed, ret = %X\n", ret);
-          return RKADK_FAILURE;
+      if (pstPlayer->bVideoExist) {
+        for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
+          ret = RK_MPI_VO_ResumeChn(pstPlayer->pstVoCtx->VoLayer, i);
+          if (ret != RKADK_SUCCESS) {
+            RKADK_LOGE("RK_MPI_VO_ResumeChn failed, ret = %X\n", ret);
+            return RKADK_FAILURE;
+          }
         }
       }
       #endif
