@@ -29,10 +29,10 @@ extern "C" {
 #define MIX_VIDEO_FLAG 1
 #define VIDEO_FLAG 2
 #define AUDIO_FLAG 3
-#define MAX_STREAM_CNT 8
+#define MAX_STREAM_CNT 3
 #define MAX_VDEC_PIXEL 9437184
 #define VDEC_ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
-#define MAX_FRAME_QUEUE 8
+#define MAX_FRAME_QUEUE 3
 #define MAX_TIME_OUT_MS 20
 #define MAX_VO_DISPLAY_WIDTH 720
 #define MAX_VO_DISPLAY_HEIGTHT 1280

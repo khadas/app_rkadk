@@ -43,14 +43,11 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-#define WRITE_DECODER_FILE 0
-
 typedef enum {
   RKADK_PLAYER_PAUSE_FALSE = 0x0,
   RKADK_PLAYER_PAUSE_START,
   RKADK_PLAYER_PAUSE_WAIT_EOF,
 } RKADK_PLAYER_PAUSE_STATUS_E;
-
 
 #ifdef RV1126_1109
 typedef struct {
@@ -1135,26 +1132,8 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
   RKADK_S32 windowCount = 0;
   VIDEO_FRAME_INFO_S sFrame;
   RKADK_S32 ret;
-  #ifdef WRITE_DECODER_FILE
-  FILE *fp = RKADK_NULL;
-  RKADK_CHAR name[128] = {0};
-  #endif
 
   memset(&sFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
-
-  #ifdef WRITE_DECODER_FILE
-  pstPlayer->pstVdecCtx->dstFilePath = "/tmp/";
-  if (pstPlayer->pstVdecCtx->dstFilePath != RKADK_NULL) {
-    mkdir(pstPlayer->pstVdecCtx->dstFilePath, 0777);
-    snprintf(name, sizeof(name), "%stest_%d.bin", pstPlayer->pstVdecCtx->dstFilePath, pstPlayer->pstVdecCtx->chnIndex);
-
-    fp = fopen(name, "wb");
-    if (fp == RKADK_NULL) {
-      RKADK_LOGE("can't open output file %s\n", name);
-      return NULL;
-    }
-  }
-  #endif
 
   while (1) {
     if (pstPlayer->pstVdecCtx->chnFd > 0) {
@@ -1179,10 +1158,6 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
         }
       }
 
-      #ifdef WRITE_DECODER_FILE
-      DumpFrameToFile(&sFrame, fp);
-      #endif
-
       RK_MPI_VDEC_ReleaseFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame);
     } else {
       if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
@@ -1192,11 +1167,6 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
       }
     }
   }
-
-  #ifdef WRITE_DECODER_FILE
-  if (fp)
-    fclose(fp);
-  #endif
 
   if (VoMultiWindownsStop(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->windows)) {
     RKADK_LOGE("Vo stop windowns failed");
