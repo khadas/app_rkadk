@@ -19,6 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_player.h"
+#include <math.h>
 
 #include <getopt.h>
 #include <signal.h>
@@ -147,6 +148,7 @@ int main(int argc, char *argv[]) {
   char *file = "/userdata/16000_2.mp3";
   RKADK_BOOL bVideoEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
+  RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
   int retplayer = 0;
   int pauseFlag = 0;
 
@@ -291,12 +293,12 @@ int main(int argc, char *argv[]) {
       }
 
       RKADK_PLAYER_Stop(pPlayer);
-
       ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
       if (ret) {
         RKADK_LOGE("SetDataSource failed, ret = %d", ret);
         break;
       }
+
       ret = RKADK_PLAYER_Prepare(pPlayer);
       if (ret) {
         RKADK_LOGE("Prepare failed, ret = %d", ret);
@@ -308,6 +310,15 @@ int main(int argc, char *argv[]) {
         RKADK_LOGE("Play failed, ret = %d", retplayer);
         break;
       }
+    } else if (strstr(cmd, "seek")) {
+      fgets(cmd, sizeof(cmd), stdin);
+      seekTimeInMs = atoi(cmd);
+      if ((seekTimeInMs < 0) || (seekTimeInMs > maxSeekTimeInMs)) {
+        RKADK_LOGE("seekTimeInMs(%lld) is out of range", seekTimeInMs);
+        break;
+      }
+
+      RKADK_PLAYER_Seek(pPlayer, seekTimeInMs);
     }
   }
 

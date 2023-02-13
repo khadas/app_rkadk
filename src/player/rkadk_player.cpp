@@ -23,6 +23,7 @@
 #include "rkadk_audio_decoder.h"
 #include "rk_debug.h"
 #include "rk_defines.h"
+#include <math.h>
 #ifdef RV1126_1109
 #include "rk_comm_vdec.h"
 #endif
@@ -47,6 +48,13 @@ typedef enum {
   RKADK_PLAYER_PAUSE_FALSE = 0x0,
   RKADK_PLAYER_PAUSE_START,
 } RKADK_PLAYER_PAUSE_STATUS_E;
+
+typedef enum {
+  RKADK_PLAYER_SEEK_FALSE = 0x0,
+  RKADK_PLAYER_SEEK_WAIT,
+  RKADK_PLAYER_SEEK_START,
+  RKADK_PLAYER_SEEK_SEND,
+} RKADK_PLAYER_SEEK_STATUS_E;
 
 #ifdef RV1126_1109
 typedef struct {
@@ -188,8 +196,10 @@ typedef struct {
   RKADK_VOID *pAudioDecoder;
   RKADK_S8 pauseFlag;
   RKADK_S8 demuxerFlag;
+  RKADK_S8 seekFlag;
   RKADK_S8 audioDecoderMode;
-  RKADK_U64 aduiotimeStamp;
+  RKADK_S64 seekTimeStamp;
+  const RKADK_CHAR *pFilePath;
   RKADK_DEMUXER_INPUT_S *pstDemuxerInput;
   RKADK_DEMUXER_PARAM_S *pstDemuxerParam;
   RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx;
@@ -923,7 +933,7 @@ static AUDIO_BIT_WIDTH_E FindBitWidth(RKADK_S32 bit) {
 }
 
 static RKADK_S32 OpenDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
-  RKADK_S32 bytes = 2; // if the requirement is 16bit
+  RKADK_S32 ret = 0, bytes = 2; // if the requirement is 16bit
   AUDIO_DEV aoDevId = ctx->devId;
   AUDIO_SOUND_MODE_E soundMode;
   AIO_ATTR_S aoAttr;
@@ -959,8 +969,18 @@ static RKADK_S32 OpenDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
 
   aoAttr.u32EXFlag = 0;
   aoAttr.u32ChnCnt = 2;
-  RK_MPI_AO_SetPubAttr(aoDevId, &aoAttr);
-  RK_MPI_AO_Enable(aoDevId);
+  ret = RK_MPI_AO_SetPubAttr(aoDevId, &aoAttr);
+  if (ret != 0) {
+    RKADK_LOGE("RK_MPI_AO_SetPubAttr fail, ret = %X", ret);
+    return RKADK_FAILURE;
+  }
+
+  ret = RK_MPI_AO_Enable(aoDevId);
+  if (ret != 0) {
+    RKADK_LOGE("RK_MPI_AO_Enable fail, ret = %X", ret);
+    return RKADK_FAILURE;
+  }
+
   ctx->openFlag = 1;
   return RKADK_SUCCESS;
 }
@@ -1216,7 +1236,6 @@ static RKADK_VOID* SendAudioDataThread(RKADK_VOID *ptr) {
     ret = RK_MPI_ADEC_GetFrame(pstPlayer->pstAdecCtx->chnIndex, pstFrmInfo, pstPlayer->pstAdecCtx->bBlock);
     if (!ret) {
       size = pstFrmInfo->pstFrame->u32Len;
-      pstPlayer->aduiotimeStamp = pstFrmInfo->pstFrame->u64TimeStamp;
       if (!pstPlayer->bStopFlag) {
         result = RK_MPI_AO_SendFrame(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex, pstFrmInfo->pstFrame, s32MilliSec);
         if (result < 0) {
@@ -1375,48 +1394,52 @@ static RKADK_S32 BufferFree(RKADK_VOID *opaque) {
 }
 
 #ifdef RV1126_1109
-static RKADK_S32 VdecStreamPush(RKADK_PLAYER_VDEC_CTX_S *pVdecCtx, DemuxerPacket *pstDemuxerPacket,
-                                RKADK_BOOL bStopFlag) {
+static RKADK_VOID DoPullDemuxerVideoPacket(RKADK_VOID* pHandle) {
+  DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
   RKADK_S32 ret = 0;
   VDEC_STREAM_S stStream;
   MB_BLK buffer = RKADK_NULL;
   MB_EXT_CONFIG_S pstMbExtConfig;
 
-  pstMbExtConfig.pFreeCB = BufferFree;
-  pstMbExtConfig.pOpaque = (RKADK_VOID *)pstDemuxerPacket->s8PacketData;
-  pstMbExtConfig.pu8VirAddr = (RK_U8 *)pstDemuxerPacket->s8PacketData;
-  pstMbExtConfig.u64Size = pstDemuxerPacket->s32PacketSize;
+  if (!pstPlayer->seekFlag || pstPlayer->seekFlag == RKADK_PLAYER_SEEK_SEND
+      || (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT && pstDemuxerPacket->s8EofFlag)
+      || (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START
+      && pstDemuxerPacket->s8SpecialFlag && pstDemuxerPacket->s64Pts >= pstPlayer->seekTimeStamp)) {
 
-  RK_MPI_SYS_CreateMB(&buffer, &pstMbExtConfig);
-
-  stStream.u64PTS = pstDemuxerPacket->s64Pts;
-  stStream.pMbBlk = buffer;
-  stStream.u32Len = pstDemuxerPacket->s32PacketSize;
-  stStream.bEndOfStream = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
-  stStream.bEndOfFrame = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
-  stStream.bBypassMbBlk = RK_TRUE;
-
-__RETRY:
-  ret = RK_MPI_VDEC_SendStream(pVdecCtx->chnIndex, &stStream, -1);
-  if (ret < 0) {
-    if (bStopFlag) {
-      RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
-      return RKADK_SUCCESS;
+    if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
+      pstPlayer->seekTimeStamp = pstDemuxerPacket->s64Pts;
+      pstPlayer->seekFlag = RKADK_PLAYER_SEEK_SEND;
     }
 
-    usleep(1000llu);
-    goto  __RETRY;
-  } else
-    RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
+    pstMbExtConfig.pFreeCB = BufferFree;
+    pstMbExtConfig.pOpaque = (RKADK_VOID *)pstDemuxerPacket->s8PacketData;
+    pstMbExtConfig.pu8VirAddr = (RK_U8 *)pstDemuxerPacket->s8PacketData;
+    pstMbExtConfig.u64Size = pstDemuxerPacket->s32PacketSize;
 
-  return RKADK_SUCCESS;
-}
+    RK_MPI_SYS_CreateMB(&buffer, &pstMbExtConfig);
 
-static RKADK_VOID DoPullDemuxerVideoPacket(RKADK_VOID* pHandle) {
-  DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
-  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
-  pstPlayer->bEofFlag = (RKADK_BOOL)pstDemuxerPacket->s8EofFlag;
-  VdecStreamPush(pstPlayer->pstVdecCtx, pstDemuxerPacket, pstPlayer->bStopFlag);
+    stStream.u64PTS = pstDemuxerPacket->s64Pts;
+    stStream.pMbBlk = buffer;
+    stStream.u32Len = pstDemuxerPacket->s32PacketSize;
+    stStream.bEndOfStream = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
+    stStream.bEndOfFrame = pstDemuxerPacket->s8EofFlag ? RK_TRUE : RK_FALSE;
+    stStream.bBypassMbBlk = RK_TRUE;
+
+__RETRY:
+    ret = RK_MPI_VDEC_SendStream(pstPlayer->pstVdecCtx->chnIndex, &stStream, -1);
+    if (ret < 0) {
+      if (pstPlayer->bStopFlag) {
+        RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
+        return;
+      }
+
+      usleep(1000llu);
+      goto  __RETRY;
+    } else
+      RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
+  } else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+    return;
 
   return;
 }
@@ -1428,12 +1451,20 @@ static RKADK_VOID DoPullDemuxerAudioPacket(RKADK_VOID* pHandle) {
   AUDIO_STREAM_S stAudioStream;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
 
-  if (pstDemuxerPacket->s8EofFlag) {
-    RK_MPI_ADEC_SendEndOfStream(pstPlayer->pstAdecCtx->chnIndex, RK_FALSE);
-    pstPlayer->bAudioStopFlag = RKADK_TRUE;
-    if (!pstPlayer->bStopFlag)
-      RKADK_LOGI("read eos packet, now send eos packet!");
-  } else {
+  if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+    return;
+  else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
+    while(pstPlayer->seekFlag != RKADK_PLAYER_SEEK_SEND || !pstPlayer->seekFlag)
+      usleep(1000);
+  } else if (pstDemuxerPacket->s8EofFlag) {
+    if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+      RK_MPI_ADEC_SendEndOfStream(pstPlayer->pstAdecCtx->chnIndex, RK_FALSE);
+      pstPlayer->bAudioStopFlag = RKADK_TRUE;
+      if (!pstPlayer->bStopFlag)
+        RKADK_LOGI("read eos packet, now send eos packet!");
+    }
+  } else if (!pstPlayer->seekFlag || (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_SEND
+             && pstDemuxerPacket->s64Pts >= pstPlayer->seekTimeStamp)) {
     stAudioStream.u32Len = pstDemuxerPacket->s32PacketSize;
     stAudioStream.u64TimeStamp = pstDemuxerPacket->s64Pts;
     stAudioStream.u32Seq = pstDemuxerPacket->s32Series;
@@ -1464,8 +1495,15 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
   DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
   AUDIO_FRAME_S frame;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
+
   if (!pstPlayer->bStopFlag) {
-    if (!pstPlayer->bStopFlag) {
+    if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+        return;
+    else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
+      while(pstPlayer->seekFlag != RKADK_PLAYER_SEEK_SEND || !pstPlayer->seekFlag)
+        usleep(1000);
+    } else if (!pstPlayer->seekFlag || pstDemuxerPacket->s8EofFlag || (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_SEND
+               && (pstDemuxerPacket->s64Pts >= pstPlayer->seekTimeStamp))) {
       frame.u32Len = pstDemuxerPacket->s32PacketSize;
       frame.u64TimeStamp = pstDemuxerPacket->s64Pts;
       frame.enBitWidth = FindBitWidth(pstPlayer->pstAoCtx->bitWidth);
@@ -1490,19 +1528,19 @@ __RETRY:
 
       RK_MPI_MB_ReleaseMB(frame.pMbBlk);
       if (pstDemuxerPacket->s32PacketSize <= 0) {
-        pstPlayer->bWavEofFlag = RKADK_TRUE;
+        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+          pstPlayer->bWavEofFlag = RKADK_TRUE;
+          RK_MPI_AO_WaitEos(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex, s32MilliSec);
+          pthread_mutex_lock(&pstPlayer->WavMutex);
+          if (pstPlayer->bAudioStopFlag == RKADK_TRUE) {
+            if (!pstPlayer->bStopFlag)
+              RKADK_LOGI("read eos packet, now send eos packet!");
+            pthread_cond_signal(&pstPlayer->WavCond);
+          } else
+            pstPlayer->bAudioStopFlag = RKADK_TRUE;
 
-        RK_MPI_AO_WaitEos(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex, s32MilliSec);
-        pthread_mutex_lock(&pstPlayer->WavMutex);
-        if (pstPlayer->bAudioStopFlag == RKADK_TRUE) {
-          if (!pstPlayer->bStopFlag)
-            RKADK_LOGI("read eos packet, now send eos packet!");
-
-          pthread_cond_signal(&pstPlayer->WavCond);
-        } else
-          pstPlayer->bAudioStopFlag = RKADK_TRUE;
-
-        pthread_mutex_unlock(&pstPlayer->WavMutex);
+          pthread_mutex_unlock(&pstPlayer->WavMutex);
+        }
       }
     }
   }
@@ -1754,6 +1792,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   pstPlayer->bAudioExist = RKADK_FALSE;
+  pstPlayer->pFilePath = pszfilePath;
   for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
     if ('.' == pszfilePath[i]) {
 #ifdef RV1126_1109
@@ -1816,10 +1855,11 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
             pstPlayer->pstAdecCtx->channel = pstPlayer->pstDemuxerParam->audioChannels;
             pstPlayer->pstAdecCtx->eCodecType = eAudioCodecType;
             pstPlayer->pstAoCtx->reSmpSampleRate = pstPlayer->pstDemuxerParam->audioSampleRate;
-
-            if (AdecSetParam(pstPlayer->pstAdecCtx)) {
-              RKADK_LOGE("set Adec ctx failed");
-              goto __FAILED;
+            if (eAudioCodecType != RKADK_CODEC_TYPE_PCM) {
+              if (AdecSetParam(pstPlayer->pstAdecCtx)) {
+                RKADK_LOGE("set Adec ctx failed");
+                goto __FAILED;
+              }
             }
 
             if (pstPlayer->pstDemuxerParam->audioFormat == 0)
@@ -2007,8 +2047,6 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                         pstPlayer->pstDemuxerParam->audioChannels, pstPlayer->pstDemuxerParam->audioSampleRate);
           }
         }
-
-        return RKADK_SUCCESS;
       }
 #endif
       else {
@@ -2026,6 +2064,10 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   return RKADK_SUCCESS;
 
 __FAILED:
+  pstPlayer->bStopFlag = RKADK_FALSE;
+  pstPlayer->bAudioStopFlag = RKADK_FALSE;
+  pstPlayer->bAudioExist = RKADK_FALSE;
+  pstPlayer->pFilePath = NULL;
   if (pstPlayer->pfnPlayerCallback != NULL)
     pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
 
@@ -2109,10 +2151,15 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   RKADK_S32 ret = 0;
-  if (pstPlayer->pfnPlayerCallback != NULL)
-    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PLAY, NULL);
-  pthread_mutex_lock(&pstPlayer->PauseAudioMutex);
-  if (pstPlayer->pauseFlag == RKADK_PLAYER_PAUSE_START) {
+
+  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+    if (pstPlayer->pfnPlayerCallback != NULL)
+      pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PLAY, NULL);
+
+    pthread_mutex_lock(&pstPlayer->PauseAudioMutex);
+  }
+
+  if (pstPlayer->pauseFlag == RKADK_PLAYER_PAUSE_START && pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
     pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
 
     if (pstPlayer->bAudioExist) {
@@ -2153,10 +2200,12 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         }
       }
 
-      ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
-      if (ret != 0) {
-        RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-        goto __FAILED;
+      if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+        if (ret != 0) {
+          RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+          goto __FAILED;
+        }
       }
     } else if (pstPlayer->demuxerFlag == VIDEO_FLAG) {
       if (pstPlayer->bVideoExist == RKADK_TRUE) {
@@ -2171,10 +2220,12 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
           goto __FAILED;
         }
 
-        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
-        if (ret != 0) {
-          RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-          goto __FAILED;
+        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          if (ret != 0) {
+            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+            goto __FAILED;
+          }
         }
       }
     } else if (pstPlayer->demuxerFlag == AUDIO_FLAG) {
@@ -2192,10 +2243,12 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
           goto __FAILED;
         }
 
-        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
-        if (ret != 0) {
-          RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-          goto __FAILED;
+        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          if (ret != 0) {
+            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+            goto __FAILED;
+          }
         }
       }
     }
@@ -2203,9 +2256,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     if (pstPlayer->demuxerFlag == AUDIO_FLAG) {
       if (pstPlayer->bAudioExist == RKADK_TRUE) {
         if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          if (pstPlayer->pfnPlayerCallback != NULL)
-            pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-          return RKADK_FAILURE;
+          goto __FAILED;
         }
 
         pstPlayer->pstAoCtx->chnIndex = 0;
@@ -2214,26 +2265,26 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
 
         if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
           RKADK_LOGE("InitMpiAO failed");
-          if (pstPlayer->pfnPlayerCallback != NULL)
-            pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-          return RKADK_FAILURE;
+          goto __FAILED;
         }
 
-        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
-        if (ret != 0) {
-          RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-          if (pstPlayer->pfnPlayerCallback != NULL)
-            pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-          return RKADK_FAILURE;
+        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          if (ret != 0) {
+            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+            goto __FAILED;
+          }
         }
       }
     }
   #endif
 
-    pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
+    if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
+      pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
   }
 
-  pthread_mutex_unlock(&pstPlayer->PauseAudioMutex);
+  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
+    pthread_mutex_unlock(&pstPlayer->PauseAudioMutex);
   return RKADK_SUCCESS;
 
 __FAILED:
@@ -2244,14 +2295,18 @@ __FAILED:
 
 RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-  RKADK_S32 ret = 0, ret1 = 0;
+  RKADK_S32 ret = 0, ret1 = 0, seekFlag = RKADK_PLAYER_SEEK_FALSE;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+
+  if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+    seekFlag = RKADK_PLAYER_SEEK_WAIT;
+
   if (pstPlayer->bStopFlag != RKADK_TRUE) {
     pstPlayer->bStopFlag = RKADK_TRUE;
+    pstPlayer->seekFlag = RKADK_PLAYER_SEEK_FALSE;
+    pstPlayer->seekTimeStamp = 0;
 
     if (pstPlayer->pauseFlag == RKADK_PLAYER_PAUSE_START) {
-      pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
-
       #ifdef RV1126_1109
       if (pstPlayer->bVideoExist) {
         for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
@@ -2273,11 +2328,11 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
       }
     }
 
+    pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
     RKADK_DEMUXER_ReadPacketStop(pstPlayer->pDemuxerCfg);
-
     if (pstPlayer->bAudioExist == RKADK_TRUE && pstPlayer->pstAdecCtx->eCodecType != RKADK_CODEC_TYPE_PCM
         && !pstPlayer->bAudioStopFlag)
-      RK_MPI_ADEC_SendEndOfStream(pstPlayer->pstAdecCtx->chnIndex, RK_FALSE);
+          RK_MPI_ADEC_SendEndOfStream(pstPlayer->pstAdecCtx->chnIndex, RK_FALSE);
 
     if (pstPlayer->stThreadParam.tidEof) {
       if (pstPlayer->bWavEofFlag != RKADK_TRUE && pstPlayer->bAudioExist && pstPlayer->pstAdecCtx->eCodecType == RKADK_CODEC_TYPE_PCM) {
@@ -2322,9 +2377,9 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   }
 
   if (pstPlayer->pfnPlayerCallback != NULL) {
-    if (!ret1)
+    if (!ret1 && seekFlag != RKADK_PLAYER_SEEK_WAIT)
       pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
-    else
+    else if (ret1)
       pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
   }
 
@@ -2335,23 +2390,11 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  if (pstPlayer->pfnPlayerCallback != NULL)
+  if (pstPlayer->pfnPlayerCallback != NULL && pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
     pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PAUSED, NULL);
 
   pthread_mutex_lock(&pstPlayer->PauseAudioMutex);
   pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_START;
-
-  #ifdef RV1126_1109
-  if (pstPlayer->bVideoExist) {
-    for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
-      ret = RK_MPI_VO_PauseChn(pstPlayer->pstVoCtx->VoLayer, i);
-      if (ret != RKADK_SUCCESS) {
-        RKADK_LOGE("RK_MPI_VO_PauseChn failed, ret = %X\n", ret);
-        return RKADK_FAILURE;
-      }
-    }
-  }
-  #endif
 
   if (pstPlayer->bAudioExist) {
     ret = RK_MPI_AO_PauseChn(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
@@ -2366,6 +2409,58 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
 
 RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_S32 ret = 0, tmpPauseFlag = RKADK_PLAYER_PAUSE_FALSE;
+  RKADK_CODEC_TYPE_E eAudioCodecType = RKADK_CODEC_TYPE_BUTT;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  RKADK_S64 maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
+
+  if (s64TimeInMs > maxSeekTimeInMs) {
+    RKADK_LOGE("s64TimeInMs(%lld) is out of range", s64TimeInMs);
+    goto __FAILED;
+  }
+
+  if (pstPlayer->pauseFlag == RKADK_PLAYER_PAUSE_START)
+    tmpPauseFlag = RKADK_PLAYER_PAUSE_START;
+
+  pstPlayer->seekFlag = RKADK_PLAYER_SEEK_WAIT;
+  if (pstPlayer->bStopFlag != RKADK_TRUE)
+    RKADK_PLAYER_Stop(pPlayer);
+
+  pstPlayer->seekFlag = RKADK_PLAYER_SEEK_WAIT;
+  RKADK_PLAYER_SetDataSource(pstPlayer, pstPlayer->pFilePath);
+  pstPlayer->seekTimeStamp = s64TimeInMs * 1000;
+  RKADK_PLAYER_Play(pstPlayer);
+
+  pstPlayer->bStopFlag = RKADK_FALSE;
+  ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+  pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
+  if (ret != 0) {
+    RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+    goto __FAILED;
+  }
+
+  if (tmpPauseFlag == RKADK_PLAYER_PAUSE_START) {
+    RKADK_PLAYER_Pause(pstPlayer);
+  }
+
+  if (pstPlayer->bVideoExist) {
+    pstPlayer->seekFlag = RKADK_PLAYER_SEEK_START;
+  }
+
+  if (pstPlayer->bAudioExist) {
+    if (!pstPlayer->bVideoExist)
+      pstPlayer->seekFlag = RKADK_PLAYER_SEEK_SEND;
+  }
+
+  if (pstPlayer->pfnPlayerCallback != NULL)
+    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_SEEK_END, NULL);
+
+  return RKADK_SUCCESS;
+
+__FAILED:
+  if (pstPlayer->pfnPlayerCallback != NULL)
+    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
+
   return RKADK_FAILURE;
 }
 
