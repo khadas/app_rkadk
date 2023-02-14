@@ -212,7 +212,7 @@ static void RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_THUMB_ATTR_S stThumbAttr,
   pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
   pstVencAttr->stVencAttr.u32StreamBufCnt = 1;
   pstVencAttr->stVencAttr.u32BufSize =
-      pstSensorCfg->max_width * pstSensorCfg->max_height * 3 / 2;
+      pstSensorCfg->max_width * pstSensorCfg->max_height;
 
   pstAttrJpege->bSupportDCF = (RK_BOOL)stThumbAttr.bSupportDCF;
   pstAttrJpege->stMPFCfg.u8LargeThumbNailNum =
