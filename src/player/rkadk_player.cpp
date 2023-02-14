@@ -827,12 +827,10 @@ static RKADK_S32 AdecSetParam(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx) {
   pstChnAttr.u32BufSize = 50 * 1024;
 
   ret = RK_MPI_ADEC_CreateChn(pstAdecCtx->chnIndex, &pstChnAttr);
-  if (ret) {
+  if (ret)
     RKADK_LOGE("create adec chn %d err:0x%X\n", pstAdecCtx->chnIndex, ret);
-    ret = RKADK_FAILURE;
-  }
 
-  return RKADK_SUCCESS;
+  return ret;
 }
 
 static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
@@ -2248,7 +2246,7 @@ __FAILED:
 
 RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
-  RKADK_S32 ret = 0;
+  RKADK_S32 ret = 0, ret1 = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   if (pstPlayer->bStopFlag != RKADK_TRUE) {
     pstPlayer->bStopFlag = RKADK_TRUE;
@@ -2272,7 +2270,7 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
         ret = RK_MPI_AO_ResumeChn(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
         if (ret) {
           RKADK_LOGE("RK_MPI_AO_ResumeChn failed(%X)", ret);
-          ret = RKADK_FAILURE;
+          ret1 |= RKADK_FAILURE;
         }
       }
     }
@@ -2297,8 +2295,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     #ifdef RV1126_1109
     if (pstPlayer->bVideoExist == RKADK_TRUE || pstPlayer->demuxerFlag == VIDEO_FLAG) {
       if (pstPlayer->pstVdecCtx) {
-        DestroyVdec(pstPlayer->pstVdecCtx);
-        ret = RKADK_FAILURE;
+        if (DestroyVdec(pstPlayer->pstVdecCtx))
+          ret1 |= RKADK_FAILURE;
       }
     }
     #endif
@@ -2308,31 +2306,31 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
         ret = RK_MPI_ADEC_DestroyChn(pstPlayer->pstAdecCtx->chnIndex);
         if (ret) {
           RKADK_LOGE("destory Adec channel failed(%X)", ret);
-          ret = RKADK_FAILURE;
+          ret1 |= RKADK_FAILURE;
         }
       }
 
       if (DeInitMpiAO(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex,
                       &pstPlayer->pstAoCtx->bopenChannelFlag)) {
         RKADK_LOGE("destory Ao channel failed");
-        ret = RKADK_FAILURE;
+        ret1 |= RKADK_FAILURE;
       }
 
       if (CloseDeviceAO(pstPlayer->pstAoCtx)) {
         RKADK_LOGE("destory Ao failed");
-        ret = RKADK_FAILURE;
+        ret1 |= RKADK_FAILURE;
       }
     }
   }
 
   if (pstPlayer->pfnPlayerCallback != NULL) {
-    if (!ret)
+    if (!ret1)
       pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_STOPPED, NULL);
     else
       pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
   }
 
-  return ret;
+  return ret1;
 }
 
 RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
