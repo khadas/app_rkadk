@@ -976,10 +976,15 @@ static RKADK_S32 RKADK_GetThmInJpg(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
       return RKADK_FAILURE;
     }
     pstThumbAttr->u32BufSize = exif_end - cur;
+  } else {
+    if (pstThumbAttr->u32BufSize < (exif_end - cur))
+        RKADK_LOGW("buffer size[%d] < thm data size[%d]",
+                   pstThumbAttr->u32BufSize, exif_end - cur);
+    else
+      pstThumbAttr->u32BufSize = exif_end - cur;
   }
 
   memcpy(pstThumbAttr->pu8Buf, pFile + cur, pstThumbAttr->u32BufSize);
-
   munmap(pFile, len);
 
   return RKADK_SUCCESS;
