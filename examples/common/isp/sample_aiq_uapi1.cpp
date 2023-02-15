@@ -276,21 +276,6 @@ int SAMPLE_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable) {
   return ret;
 }
 
-int SAMPLE_ISP_SET_FecBypass(RKADK_U32 u32CamId, bool bypass) {
-  int ret = 0;
-
-  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
-  RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
-
-  pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
-
-  RKADK_LOGD("bypass=%d", bypass);
-  ret = rk_aiq_uapi_setFecBypass(gstIspHandle[u32CamId].pstAiqCtx, bypass);
-
-  pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
-  return ret;
-}
-
 int SAMPLE_ISP_GET_FecAttrib(RKADK_U32 u32CamId, rk_aiq_fec_attrib_t *attr) {
   int ret = 0;
 

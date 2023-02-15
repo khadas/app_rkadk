@@ -37,7 +37,6 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
 int SAMPLE_ISP_Stop(RKADK_U32 u32CamId);
 int SAMPLE_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile);
 int SAMPLE_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable);
-int SAMPLE_ISP_SET_FecBypass(RKADK_U32 u32CamId, bool bypass);
 int SAMPLE_ISP_GET_FecAttrib(RKADK_U32 u32CamId, rk_aiq_fec_attrib_t *attr);
 int SAMPLE_ISP_GET_AeExpResInfo(RKADK_U32 u32CamId,
                                   Uapi_ExpQueryInfo_t *pstExpInfo);
