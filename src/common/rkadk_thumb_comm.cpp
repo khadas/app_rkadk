@@ -219,6 +219,8 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
 #else
   stRecvParam.s32RecvPicNum = 1;
 #endif
+
+  // must, for no streams callback running failed
   RK_MPI_VENC_StartRecvFrame(ChnId, &stRecvParam);
 
   return 0;
@@ -301,6 +303,8 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
   int ret = 0;
   bool bUseVpss = false;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
+  VENC_STREAM_S stThumbFrame;
+  VENC_PACK_S stThumbPack;
 
   RKADK_LOGI("Thumbnail [%d, %d] init start!", u32CamId, enThumbModule);
 
@@ -364,6 +368,14 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
       goto failed;
     }
   }
+
+  // drop first thumb frame
+  stThumbFrame.pstPack = &stThumbPack;
+  ret = RK_MPI_VENC_GetStream(stVencChn.s32ChnId, &stThumbFrame, 1000);
+  if (ret == RK_SUCCESS)
+    RK_MPI_VENC_ReleaseStream(stVencChn.s32ChnId, &stThumbFrame);
+  else
+    RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", stVencChn.s32ChnId, ret);
 
   RKADK_LOGI("Thumbnail [%d, %d] init end!", u32CamId, enThumbModule);
   return 0;
