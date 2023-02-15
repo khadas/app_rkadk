@@ -108,6 +108,7 @@ target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
 
+if(${RKADK_CHIP} STREQUAL "rv1126")
 #--------------------------
 # rkadk_disp_test
 #--------------------------
@@ -117,3 +118,4 @@ target_link_libraries(rkadk_disp_test rockit rkadk rkaiq)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_disp_test DESTINATION "bin")
+endif()
