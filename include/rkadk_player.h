@@ -98,7 +98,7 @@ typedef enum {
 typedef enum {
   RKADK_PLAYER_EVENT_STATE_CHANGED = 0x0, /**< the player status changed */
   RKADK_PLAYER_EVENT_PREPARED,
-  RKADK_PLAYER_EVENT_STARTED,
+  RKADK_PLAYER_EVENT_PLAY,
   RKADK_PLAYER_EVENT_PAUSED,
   RKADK_PLAYER_EVENT_STOPPED,
   RKADK_PLAYER_EVENT_EOF, /**< the player is playing the end */
@@ -252,7 +252,6 @@ typedef struct {
   RKADK_U32 u32DispHeight;
   RKADK_U32 u32ImgWidth;
   RKADK_U32 u32ImgHeight;
-  RKADK_U32 u32VoLayerMode;
   RKADK_U32 u32ChnnNum;
   RKADK_U32 u32BorderColor;
   RKADK_U32 u32BorderTopWidth;
@@ -266,7 +265,6 @@ typedef struct {
   RKADK_PLAYER_VO_FORMAT_E u32VoFormat;
   RKADK_PLAYER_VO_DEV_E u32VoDev;
   RKADK_PLAYER_VO_INTF_TYPE_E u32EnIntfType;
-  RKADK_U32 u32DispFrmRt;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;
 } RKADK_PLAYER_FRAMEINFO_S;

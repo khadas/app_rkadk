@@ -161,8 +161,8 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
   case RKADK_PLAYER_EVENT_PREPARED:
     printf("+++++ RKADK_PLAYER_EVENT_PREPARED +++++\n");
     break;
-  case RKADK_PLAYER_EVENT_STARTED:
-    printf("+++++ RKADK_PLAYER_EVENT_STARTED +++++\n");
+  case RKADK_PLAYER_EVENT_PLAY:
+    printf("+++++ RKADK_PLAYER_EVENT_PLAY +++++\n");
     break;
   case RKADK_PLAYER_EVENT_PAUSED:
     printf("+++++ RKADK_PLAYER_EVENT_PAUSED +++++\n");

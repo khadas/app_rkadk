@@ -87,8 +87,8 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
   case RKADK_PLAYER_EVENT_PREPARED:
     printf("+++++ RKADK_PLAYER_EVENT_PREPARED +++++\n");
     break;
-  case RKADK_PLAYER_EVENT_STARTED:
-    printf("+++++ RKADK_PLAYER_EVENT_STARTED +++++\n");
+  case RKADK_PLAYER_EVENT_PLAY:
+    printf("+++++ RKADK_PLAYER_EVENT_PLAY +++++\n");
     break;
   case RKADK_PLAYER_EVENT_PAUSED:
     printf("+++++ RKADK_PLAYER_EVENT_PAUSED +++++\n");
@@ -111,11 +111,9 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   pstFrmInfo->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
   pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
-  pstFrmInfo->u32VoLayerMode = 2;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = 0;
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;//DISPLAY_TYPE_MIPI;
-  pstFrmInfo->u32DispFrmRt = 29;
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderColor = 0x0000FA;
@@ -255,7 +253,7 @@ int main(int argc, char *argv[]) {
       }
 
       pauseFlag = 1;
-    } else if (strstr(cmd, "play")) {
+    } else if (strstr(cmd, "resume")) {
       if (pauseFlag) {
         retplayer = RKADK_PLAYER_Play(pPlayer);
         if (retplayer) {

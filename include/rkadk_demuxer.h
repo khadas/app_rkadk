@@ -48,6 +48,7 @@ typedef struct {
   RKADK_S8    VideoFormat;
   RKADK_S32   videoTimeBaseNum;
   RKADK_S32   videoTimeBaseDen;
+  RKADK_S32   videoAvgFrameRate;
   RKADK_S64   videoFirstPTS;
   RKADK_CHAR *pAudioCodec;
   RKADK_S32   audioChannels;

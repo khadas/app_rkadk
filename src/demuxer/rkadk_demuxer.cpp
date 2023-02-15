@@ -62,6 +62,7 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
   demuxerParam->videoTimeBaseNum = tempDemuxerParam.s32VideoTimeBaseNum;
   demuxerParam->videoTimeBaseDen = tempDemuxerParam.s32VideoTimeBaseDen;
   demuxerParam->videoFirstPTS = tempDemuxerParam.s64VideoFirstPTS;
+  demuxerParam->videoAvgFrameRate = tempDemuxerParam.s32VideoAvgFrameRate;
   demuxerParam->pAudioCodec = (char *)tempDemuxerParam.pAudioCodec;
   demuxerParam->audioChannels = tempDemuxerParam.s32AudioChannels;
   demuxerParam->audioSampleRate = tempDemuxerParam.s32AudioSampleRate;
