@@ -103,9 +103,6 @@ typedef enum {
   RKADK_PLAYER_EVENT_STOPPED,
   RKADK_PLAYER_EVENT_EOF, /**< the player is playing the end */
   RKADK_PLAYER_EVENT_SOF, /**< the player backward tplay to the start of file*/
-  RKADK_PLAYER_EVENT_PROGRESS, /**< current playing progress. it will be called
-                                  every one second. the additional value that in
-                                  the unit of ms is current playing time */
   RKADK_PLAYER_EVENT_SEEK_END, /**< seek time jump, the additional value is the
                                   seek value */
   RKADK_PLAYER_EVENT_ERROR,    /**< play error */
@@ -351,9 +348,16 @@ RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
  * @brief get the current play file duration(ms)
  * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
  * @param[out] pDuration : play duration(ms)
- *  @retval  0 success, others failed
+ * @retval  0 success, others failed
  */
 RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration);
+
+/**
+ * @brief get the current play file duration(ms)
+ * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
+ * @retval  current position(ms)
+ */
+RKADK_S64 RKADK_PLAYER_GetCurrentPosition(RKADK_MW_PTR pPlayer);
 
 #ifdef __cplusplus
 }

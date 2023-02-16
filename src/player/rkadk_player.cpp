@@ -191,6 +191,7 @@ typedef struct {
   RKADK_BOOL bEofFlag;
   RKADK_BOOL bWavEofFlag;
   RKADK_BOOL bAudioStopFlag;
+  RKADK_BOOL bGetPtsFlag;
   RKADK_VOID *pListener;
   RKADK_VOID *pDemuxerCfg;
   RKADK_VOID *pAudioDecoder;
@@ -199,6 +200,7 @@ typedef struct {
   RKADK_S8 seekFlag;
   RKADK_S8 audioDecoderMode;
   RKADK_S64 seekTimeStamp;
+  RKADK_S64 positionTimeStamp;
   const RKADK_CHAR *pFilePath;
   RKADK_DEMUXER_INPUT_S *pstDemuxerInput;
   RKADK_DEMUXER_PARAM_S *pstDemuxerParam;
@@ -1158,7 +1160,7 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
 
   voSendTime = 1000000 / pstPlayer->pstDemuxerParam->videoAvgFrameRate;
   memset(&sFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
-
+  pstPlayer->bGetPtsFlag = RKADK_TRUE;
   while (1) {
     if (pstPlayer->pauseFlag != RKADK_PLAYER_PAUSE_START) {
       if (pstPlayer->pstVdecCtx->chnFd > 0) {
@@ -1177,6 +1179,8 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
 
         if (!pstPlayer->bStopFlag) {
           if (pstPlayer->pstVoCtx->VoLayer >= 0) {
+            if (!pstPlayer->bAudioExist)
+              pstPlayer->positionTimeStamp = sFrame.stVFrame.u64PTS;
             ret = RK_MPI_VO_SendFrame(pstPlayer->pstVoCtx->VoLayer, windowCount, &sFrame, -1);
             usleep(voSendTime);
           }
@@ -1232,11 +1236,14 @@ static RKADK_VOID* SendAudioDataThread(RKADK_VOID *ptr) {
   }
   #endif
 
+  pstPlayer->bGetPtsFlag = RKADK_TRUE;
   while (1) {
     ret = RK_MPI_ADEC_GetFrame(pstPlayer->pstAdecCtx->chnIndex, pstFrmInfo, pstPlayer->pstAdecCtx->bBlock);
     if (!ret) {
       size = pstFrmInfo->pstFrame->u32Len;
       if (!pstPlayer->bStopFlag) {
+        if (size > 0)
+          pstPlayer->positionTimeStamp = pstFrmInfo->pstFrame->u64TimeStamp;
         result = RK_MPI_AO_SendFrame(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex, pstFrmInfo->pstFrame, s32MilliSec);
         if (result < 0) {
           RKADK_LOGE("send frame fail, result = %X, TimeStamp = %lld, s32MilliSec = %d",
@@ -1495,7 +1502,7 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
   DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pHandle;
   AUDIO_FRAME_S frame;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
-
+  pstPlayer->bGetPtsFlag = RKADK_TRUE;
   if (!pstPlayer->bStopFlag) {
     if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
         return;
@@ -1504,6 +1511,10 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
         usleep(1000);
     } else if (!pstPlayer->seekFlag || pstDemuxerPacket->s8EofFlag || (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_SEND
                && (pstDemuxerPacket->s64Pts >= pstPlayer->seekTimeStamp))) {
+
+      if (!pstDemuxerPacket->s8EofFlag)
+        pstPlayer->positionTimeStamp = pstDemuxerPacket->s64Pts;
+
       frame.u32Len = pstDemuxerPacket->s32PacketSize;
       frame.u64TimeStamp = pstDemuxerPacket->s64Pts;
       frame.enBitWidth = FindBitWidth(pstPlayer->pstAoCtx->bitWidth);
@@ -2328,6 +2339,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
       }
     }
 
+    pstPlayer->bGetPtsFlag = RKADK_FALSE;
+    pstPlayer->positionTimeStamp = 0;
     pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
     RKADK_DEMUXER_ReadPacketStop(pstPlayer->pDemuxerCfg);
     if (pstPlayer->bAudioExist == RKADK_TRUE && pstPlayer->pstAdecCtx->eCodecType != RKADK_CODEC_TYPE_PCM
@@ -2477,4 +2490,17 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_LOGE("GetDuration unsupport");
   return RKADK_FAILURE;
+}
+
+RKADK_S64 RKADK_PLAYER_GetCurrentPosition(RKADK_MW_PTR pPlayer) {
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  int ret = 0;
+  RKADK_S64 duration = 0;
+  if (pstPlayer->bGetPtsFlag) {
+    duration = pstPlayer->positionTimeStamp / 1000;
+    return duration;
+  } else
+    return RKADK_FAILURE;
+
 }

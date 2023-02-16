@@ -35,6 +35,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
+static RKADK_BOOL stopFlag = RKADK_FALSE;
 static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
@@ -73,11 +74,6 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
     break;
   case RKADK_PLAYER_EVENT_SOF:
     printf("+++++ RKADK_PLAYER_EVENT_SOF +++++\n");
-    break;
-  case RKADK_PLAYER_EVENT_PROGRESS:
-    if (pData)
-      position = *((int *)pData);
-    printf("+++++ RKADK_PLAYER_EVENT_PROGRESS(%d ms) +++++\n", position);
     break;
   case RKADK_PLAYER_EVENT_SEEK_END:
     printf("+++++ RKADK_PLAYER_EVENT_SEEK_END +++++\n");
@@ -142,6 +138,15 @@ void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
   return;
 }
 
+RKADK_VOID *GetPosition(RKADK_VOID *arg) {
+    RKADK_S64 position = 0;
+    while (!stopFlag) {
+      position = RKADK_PLAYER_GetCurrentPosition(arg);
+      printf("position = %lld\n", position);
+      usleep(1000000);
+    }
+}
+
 int main(int argc, char *argv[]) {
   RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
@@ -151,6 +156,7 @@ int main(int argc, char *argv[]) {
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
   int retplayer = 0;
   int pauseFlag = 0;
+  pthread_t getPosition;
 
   param_init(&stFrmInfo);
 
@@ -200,7 +206,6 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigterm_handler);
 
   RKADK_MPI_SYS_Init();
-
   RKADK_PLAYER_CFG_S stPlayCfg;
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   stPlayCfg.bEnableAudio = true;
@@ -233,6 +238,8 @@ int main(int argc, char *argv[]) {
     RKADK_LOGE("Play failed, ret = %d", retplayer);
     return -1;
   }
+
+  pthread_create(&getPosition, 0, GetPosition, pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
 
   char cmd[64];
@@ -323,7 +330,9 @@ int main(int argc, char *argv[]) {
   }
 
 __FAILED:
+  stopFlag = RKADK_TRUE;
   RKADK_PLAYER_Destroy(pPlayer);
+  pthread_join(GetPosition, RKADK_NULL);
   pPlayer = NULL;
   RKADK_MPI_SYS_Exit();
   return 0;
