@@ -150,9 +150,12 @@ int main(int argc, char *argv[]) {
   OsdAttr.Width = 320;
   OsdAttr.Height = 128;
   OsdAttr.pData = malloc(OsdAttr.Height * OsdAttr.Width * 4);
+  OsdAttr.enOsdType = RKADK_OSD_TYPE_NORMAL;
 
   OsdStreamAttr.Origin_X = 0;
   OsdStreamAttr.Origin_Y = 0;
+  OsdStreamAttr.bEnableShow = RKADK_TRUE;
+  OsdStreamAttr.enOsdType = RKADK_OSD_TYPE_NORMAL;
 
   RKADK_OSD_Init(u32OsdId, &OsdAttr);
   RKADK_OSD_AttachToStream(u32OsdId, u32CamId,

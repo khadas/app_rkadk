@@ -59,7 +59,20 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
   RKADK_CHECK_POINTER(pstOsdAttr, RKADK_FAILURE);
 
   memset(&stRgnAttr, 0, sizeof(RGN_ATTR_S));
-  stRgnAttr.enType = OVERLAY_RGN;
+
+  switch (pstOsdAttr->enOsdType) {
+    case RKADK_OSD_TYPE_NORMAL:
+      stRgnAttr.enType = OVERLAY_RGN;
+      break;
+    case RKADK_OSD_TYPE_EXTRA:
+      stRgnAttr.enType = OVERLAY_EX_RGN;
+      stRgnAttr.unAttr.stOverlay.enVProcDev = VIDEO_PROC_DEV_RGA;
+      break;
+    default:
+      RKADK_LOGE("Unsupport other type: %d", pstOsdAttr->enOsdType);
+      return -1;
+  }
+
   stRgnAttr.unAttr.stOverlay.enPixelFmt = TO_RK_FORMAT_FMT(pstOsdAttr->Format);
   stRgnAttr.unAttr.stOverlay.stSize.u32Width  = UPALIGNTO(pstOsdAttr->Width, 16);
   stRgnAttr.unAttr.stOverlay.stSize.u32Height = UPALIGNTO(pstOsdAttr->Height, 16);
@@ -157,7 +170,19 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
     stRgnChnAttr.bShow = RK_TRUE;
   else
     stRgnChnAttr.bShow = RK_FALSE;
-  stRgnChnAttr.enType = OVERLAY_RGN;
+
+  switch (pstOsdStreamAttr->enOsdType) {
+    case RKADK_OSD_TYPE_NORMAL:
+      stRgnChnAttr.enType = OVERLAY_RGN;
+      break;
+    case RKADK_OSD_TYPE_EXTRA:
+      stRgnChnAttr.enType = OVERLAY_EX_RGN;
+      break;
+    default:
+      RKADK_LOGE("Unsupport other type: %d", pstOsdStreamAttr->enOsdType);
+      return -1;
+  }
+
   stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32X = pstOsdStreamAttr->Origin_X;
   stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32Y = pstOsdStreamAttr->Origin_Y;
 
