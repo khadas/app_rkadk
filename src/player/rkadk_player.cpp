@@ -2163,12 +2163,8 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   RKADK_S32 ret = 0;
 
-  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-    if (pstPlayer->pfnPlayerCallback != NULL)
-      pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PLAY, NULL);
-
+  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
     pthread_mutex_lock(&pstPlayer->PauseAudioMutex);
-  }
 
   if (pstPlayer->pauseFlag == RKADK_PLAYER_PAUSE_START && pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
     pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
@@ -2296,6 +2292,12 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
 
   if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
     pthread_mutex_unlock(&pstPlayer->PauseAudioMutex);
+
+  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+    if (pstPlayer->pfnPlayerCallback != NULL)
+      pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PLAY, NULL);
+  }
+
   return RKADK_SUCCESS;
 
 __FAILED:
@@ -2403,8 +2405,6 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
-  if (pstPlayer->pfnPlayerCallback != NULL && pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
-    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PAUSED, NULL);
 
   pthread_mutex_lock(&pstPlayer->PauseAudioMutex);
   pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_START;
@@ -2417,6 +2417,10 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
     }
   }
   pthread_mutex_unlock(&pstPlayer->PauseAudioMutex);
+
+  if (pstPlayer->pfnPlayerCallback != NULL && pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
+    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_PAUSED, NULL);
+
   return RKADK_SUCCESS;
 }
 
