@@ -199,6 +199,7 @@ typedef struct {
   RKADK_S8 demuxerFlag;
   RKADK_S8 seekFlag;
   RKADK_S8 audioDecoderMode;
+  RKADK_U32 duration;
   RKADK_S64 seekTimeStamp;
   RKADK_S64 positionTimeStamp;
   RKADK_S64 videoTimeStamp;
@@ -2108,6 +2109,7 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
   }
   pthread_mutex_unlock(&pstPlayer->WavMutex);
 
+  pstPlayer->positionTimeStamp = (RKADK_S64)(pstPlayer->duration * 1000);
   if (pstPlayer->pfnPlayerCallback != NULL && !pstPlayer->bStopFlag)
     pstPlayer->pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_EOF, NULL);
 
@@ -2531,6 +2533,7 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
     *pDuration = aDuration / 1000;
   }
 
+  pstPlayer->duration = *pDuration;
   RKADK_DEMUXER_Destroy(&demuxerCfg);
   return RKADK_SUCCESS;
 
