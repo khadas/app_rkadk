@@ -26,12 +26,12 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *
   DemuxerInput tempDemuxerInput;
 
   tempDemuxerInput.ptr = demuxerInput->ptr;
-  tempDemuxerInput.s8ReadModeFlag = 0;
+  tempDemuxerInput.s8ReadModeFlag = demuxerInput->readModeFlag;
   tempDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
   tempDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
 
   RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
-  if (ret != 0) {
+  if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_Create failed");
     return RKADK_FAILURE;
   }
@@ -44,12 +44,14 @@ RKADK_VOID RKADK_DEMUXER_Destroy(RKADK_MW_PTR *demuxerCfg) {
 }
 
 RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inputName, RKADK_DEMUXER_PARAM_S *demuxerParam) {
+  RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(inputName, RKADK_FAILURE);
   DemuxerParam tempDemuxerParam;
 
   tempDemuxerParam.pstReadPacketCallback.read_video_packet = demuxerParam->pstReadPacketCallback.pfnReadVideoPacketCallback;
   tempDemuxerParam.pstReadPacketCallback.read_audio_packet = demuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback;
   RKADK_S32 ret = rkdemuxer_get_param(demuxerCfg, inputName, &tempDemuxerParam);
-  if (ret != 0) {
+  if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
     return RKADK_FAILURE;
   }
@@ -75,8 +77,9 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
 }
 
 RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg) {
+  RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
   RKADK_S32 ret = rkdemuxer_read_packet_start(demuxerCfg);
-  if (ret != 0) {
+  if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
     return RKADK_FAILURE;
   }
@@ -85,9 +88,34 @@ RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg) {
 }
 
 RKADK_S32 RKADK_DEMUXER_ReadPacketStop(RKADK_MW_PTR demuxerCfg) {
+  RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
   RKADK_S32 ret = rkdemuxer_read_packet_stop(demuxerCfg);
-  if (ret != 0) {
+  if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_ReadPacketStop failed");
+    return RKADK_FAILURE;
+  }
+
+  return RKADK_SUCCESS;
+}
+
+RKADK_S32 RKADK_DEMUXER_ReadOneVideoPacket(RKADK_MW_PTR demuxerCfg, void *outputPacket) {
+  RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
+
+  RKADK_S32 ret = rkdemuxer_read_one_video_packet(demuxerCfg, (DemuxerPacket *)outputPacket);
+  if (ret) {
+    RKADK_LOGE("read video packet failed");
+    return RKADK_FAILURE;
+  }
+
+  return RKADK_SUCCESS;
+}
+
+RKADK_S32 RKADK_DEMUXER_ReadOneAudioPacket(RKADK_MW_PTR demuxerCfg, void *outputPacket) {
+  RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
+
+  RKADK_S32 ret = rkdemuxer_read_one_audio_packet(demuxerCfg, (DemuxerPacket *)outputPacket);
+  if (ret) {
+    RKADK_LOGE("read audio packet failed");
     return RKADK_FAILURE;
   }
 

@@ -63,8 +63,6 @@ static void sigterm_handler(int sig) {
 static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
                                     RKADK_PLAYER_EVENT_E enEvent,
                                     RKADK_VOID *pData) {
-  int position = 0;
-
   switch (enEvent) {
   case RKADK_PLAYER_EVENT_STATE_CHANGED:
     printf("+++++ RKADK_PLAYER_EVENT_STATE_CHANGED +++++\n");
@@ -145,6 +143,8 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
       printf("position = %lld\n", position);
       usleep(1000000);
     }
+
+  return NULL;
 }
 
 int main(int argc, char *argv[]) {
@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
   RKADK_BOOL bVideoEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
-  int retplayer = 0;
   int pauseFlag = 0;
   pthread_t getPosition;
+  RKADK_U32 duration = 0;
 
   param_init(&stFrmInfo);
 
@@ -233,9 +233,11 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  retplayer = RKADK_PLAYER_Play(pPlayer);
-  if (retplayer) {
-    RKADK_LOGE("Play failed, ret = %d", retplayer);
+  RKADK_PLAYER_GetDuration(pPlayer, &duration);
+
+  ret = RKADK_PLAYER_Play(pPlayer);
+  if (ret) {
+    RKADK_LOGE("Play failed, ret = %d", ret);
     return -1;
   }
 
@@ -250,7 +252,7 @@ int main(int argc, char *argv[]) {
     RKADK_LOGD("#Input cmd: %s", cmd);
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
-      if (retplayer) {
+      if (ret) {
         goto __FAILED;
       }
       break;
@@ -264,15 +266,15 @@ int main(int argc, char *argv[]) {
       pauseFlag = 1;
     } else if (strstr(cmd, "resume")) {
       if (pauseFlag) {
-        retplayer = RKADK_PLAYER_Play(pPlayer);
-        if (retplayer) {
-          RKADK_LOGE("Play failed, ret = %d", retplayer);
+        ret = RKADK_PLAYER_Play(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Play failed, ret = %d", ret);
           break;
         }
 
         pauseFlag = 0;
       } else {
-        if (retplayer) {
+        if (ret) {
           goto __FAILED;
         }
 
@@ -288,18 +290,19 @@ int main(int argc, char *argv[]) {
           break;
         }
 
-        retplayer = RKADK_PLAYER_Play(pPlayer);
-        if (retplayer) {
-          RKADK_LOGE("Play failed, ret = %d", retplayer);
+        ret = RKADK_PLAYER_Play(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Play failed, ret = %d", ret);
           break;
         }
       }
     } else if (strstr(cmd, "replay")) {
-      if (retplayer) {
+      if (ret) {
         goto __FAILED;
       }
 
       RKADK_PLAYER_Stop(pPlayer);
+      RKADK_PLAYER_GetDuration(pPlayer, &duration);
       ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
       if (ret) {
         RKADK_LOGE("SetDataSource failed, ret = %d", ret);
@@ -312,11 +315,13 @@ int main(int argc, char *argv[]) {
         break;
       }
 
-      retplayer = RKADK_PLAYER_Play(pPlayer);
-      if (retplayer) {
-        RKADK_LOGE("Play failed, ret = %d", retplayer);
+      ret = RKADK_PLAYER_Play(pPlayer);
+      if (ret) {
+        RKADK_LOGE("Play failed, ret = %d", ret);
         break;
       }
+
+      RKADK_PLAYER_GetDuration(pPlayer, &duration);
     } else if (strstr(cmd, "seek")) {
       fgets(cmd, sizeof(cmd), stdin);
       seekTimeInMs = atoi(cmd);
@@ -332,7 +337,7 @@ int main(int argc, char *argv[]) {
 __FAILED:
   stopFlag = RKADK_TRUE;
   RKADK_PLAYER_Destroy(pPlayer);
-  pthread_join(GetPosition, RKADK_NULL);
+  pthread_join(getPosition, RKADK_NULL);
   pPlayer = NULL;
   RKADK_MPI_SYS_Exit();
   return 0;

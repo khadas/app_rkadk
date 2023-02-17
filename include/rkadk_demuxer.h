@@ -27,6 +27,10 @@ extern "C" {
 #include <string.h>
 #include <stdbool.h>
 
+
+#define DEMUXER_TYPE_ACTIVE RKADK_TRUE
+#define DEMUXER_TYPE_PASSIVE RKADK_FALSE
+
 typedef RKADK_VOID (*RKADK_DEMUXER_READ_PACKET_CALLBACK_FN)(RKADK_MW_PTR pHandle);
 
 typedef struct {
@@ -36,6 +40,7 @@ typedef struct {
 
 typedef struct {
   RKADK_VOID *ptr;
+  RKADK_BOOL  readModeFlag;
   RKADK_BOOL  videoEnableFlag;
   RKADK_BOOL  audioEnableFlag;
 } RKADK_DEMUXER_INPUT_S;
@@ -96,12 +101,31 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
 RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg);
 
 /**
+ * @brief actively read one video packet
+ * @param[in]demuxerCfg : pointer of demuxerCfg
+ * @param[in]outputPacket : pointer of output packet
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_DEMUXER_ReadOneVideoPacket(RKADK_MW_PTR demuxerCfg, void *outputPacket);
+
+/**
+ * @brief actively read one audio packet
+ * @param[in]demuxerCfg : pointer of demuxerCfg
+ * @param[in]outputPacket : pointer of output packet
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_DEMUXER_ReadOneAudioPacket(RKADK_MW_PTR demuxerCfg, void *outputPacket);
+
+/**
  * @brief stop demuxer
  * @param[in]demuxerCfg : pointer of demuxerCfg
  * @return 0 success
  * @return others failure
  */
 RKADK_S32 RKADK_DEMUXER_ReadPacketStop(RKADK_MW_PTR demuxerCfg);
+
 
 #ifdef __cplusplus
 }
