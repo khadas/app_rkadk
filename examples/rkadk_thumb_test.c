@@ -29,7 +29,7 @@
 #include "rkadk_thumb.h"
 
 #define THUMB_TEST_SAVE_FILE
-#define THUMB_ONLY_TEST_JPG
+//#define THUMB_ONLY_TEST_JPG
 
 extern int optind;
 extern char *optarg;
@@ -41,8 +41,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-i /tmp/xxx.mp4] [-t 0]\n", name);
   printf("\t-i: test file\n");
-  printf("\t-T: thumbnail type, default JPG, options: NV12, JPG, RGB565, "
-         "RBG888, RGBA8888\n");
+  printf("\t-T: thumbnail type, default JPG, options: NV12, JPG, RGB565, RGBA8888, BGRA8888\n");
   printf("\t-t: JPG thumbnail type, default MFP1, options: DCF, MFP1, MFP2\n");
   printf("\t-f: file type, default mp4, options: mp4, jpg\n");
   printf("\t-W: thumbnail width, default obtained from ini\n");
@@ -104,12 +103,12 @@ int main(int argc, char *argv[]) {
       } else if (strstr(optarg, "RGB565")) {
         stThumbAttr.enType = RKADK_THUMB_TYPE_RGB565;
         postfix = "rgb565";
-      } else if (strstr(optarg, "RGB888")) {
-        stThumbAttr.enType = RKADK_THUMB_TYPE_RGB888;
-        postfix = "rgb888";
       } else if (strstr(optarg, "RGBA8888")) {
         stThumbAttr.enType = RKADK_THUMB_TYPE_RGBA8888;
         postfix = "rgba8888";
+      } else if (strstr(optarg, "BGRA8888")) {
+        stThumbAttr.enType = RKADK_THUMB_TYPE_BGRA8888;
+        postfix = "bgra8888";
       }
       break;
 #endif
@@ -137,6 +136,7 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigterm_handler);
 
+  RKADK_MPI_SYS_Init();
   RKADK_PARAM_Init(NULL, NULL);
 
   while (!is_quit) {
@@ -220,5 +220,6 @@ int main(int argc, char *argv[]) {
     usleep(2 * 1000 * 1000);
   }
 
+  RKADK_MPI_SYS_Exit();
   return 0;
 }

@@ -298,6 +298,34 @@ static bool RKADK_THUMB_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_THUMB_CFG_S *p
   return bUseVpss;
 }
 
+PIXEL_FORMAT_E ThumbToRKPixFmt(RKADK_THUMB_TYPE_E enType) {
+  PIXEL_FORMAT_E enPixelFormat = RK_FMT_YUV420SP;
+
+  switch (enType) {
+  case RKADK_THUMB_TYPE_NV12:
+    enPixelFormat = RK_FMT_YUV420SP;
+    break;
+
+  case RKADK_THUMB_TYPE_RGB565:
+    enPixelFormat = RK_FMT_RGB565;
+    break;
+
+  case RKADK_THUMB_TYPE_RGBA8888:
+    enPixelFormat = RK_FMT_RGBA8888;
+    break;
+
+  case RKADK_THUMB_TYPE_BGRA8888:
+    enPixelFormat = RK_FMT_BGRA8888;
+    break;
+
+  default:
+    RKADK_LOGE("Unsupport thumb format, default NV12");
+    break;
+  }
+
+  return enPixelFormat;
+}
+
 RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
                         RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg) {
   int ret = 0;

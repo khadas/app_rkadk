@@ -85,7 +85,7 @@ static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
-  memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM);
+  memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM * sizeof(int));
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -931,7 +931,7 @@ exit:
 
 RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
   int ret = -1;
-  RKADK_S32 i, j;
+  RKADK_S32 i;
   RKADK_S32 s32InitCnt;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vpssMutex);
@@ -1739,15 +1739,11 @@ RKADK_S32 RKADK_MEDIA_FrameBufMalloc(RKADK_FRAME_ATTR_S *pstFrameAttr) {
     pstFrameAttr->u32BufSize =
         pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 2;
     break;
-  case RKADK_THUMB_TYPE_RGB888:
-    pstFrameAttr->u32BufSize =
-        pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 3;
-    break;
   case RKADK_THUMB_TYPE_RGBA8888:
+  case RKADK_THUMB_TYPE_BGRA8888:
     pstFrameAttr->u32BufSize =
         pstFrameAttr->u32VirWidth * pstFrameAttr->u32VirHeight * 4;
     break;
-
   default:
     RKADK_LOGE("Invalid enType[%d]", pstFrameAttr->enType);
     return -1;

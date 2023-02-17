@@ -32,11 +32,10 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:t:mh";
+static RKADK_CHAR optstr[] = "a:I:p:mh";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
-static RKADK_THUMB_TYPE_E enDataType = RKADK_THUMB_TYPE_NV12;
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-a /etc/iqfiles] [-I 0] [-t NV12]\n", name);
@@ -45,8 +44,6 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
-  printf("\t-t: data type, default NV12, options: NV12, RGB565, "
-         "RBG888, RGBA8888\n");
   printf("\t-m: multiple sensors, Default:false\n");
 }
 
@@ -112,14 +109,6 @@ int main(int argc, char *argv[]) {
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
-      break;
-    case 't':
-      if (strstr(optarg, "RGB565"))
-        enDataType = RKADK_THUMB_TYPE_RGB565;
-      else if (strstr(optarg, "RGB888"))
-        enDataType = RKADK_THUMB_TYPE_RGB888;
-      else if (strstr(optarg, "RGBA8888"))
-        enDataType = RKADK_THUMB_TYPE_RGBA8888;
       break;
     case 'm':
       bMultiCam = RKADK_TRUE;
