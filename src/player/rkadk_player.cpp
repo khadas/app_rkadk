@@ -1125,7 +1125,7 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
 
             if (sFrame.stVFrame.u64PTS) {
               costtime = (t_end.tv_sec - t_begin.tv_sec) * 1000000 + (t_end.tv_nsec - t_begin.tv_nsec) / 1000;
-              if (sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp > costtime) {
+              if ((RKADK_S64)sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp > (RKADK_S64)costtime) {
                 voSendTime = sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp - costtime;
                 usleep(voSendTime);
               }
@@ -2452,9 +2452,8 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   void *demuxerCfg;
   RKADK_DEMUXER_INPUT_S demuxerInput;
   RKADK_DEMUXER_PARAM_S demuxerParam;
-  RKADK_S32 ret = 0, vFrameCnt = 0, aFrameCnt = 0;
-  RKADK_S64 vDuration = 0, vDuration1 = 0, aDuration = 0;
-  DemuxerPacket outputPacket;
+  RKADK_S32 vFrameCnt = 0, aFrameCnt = 0;
+  RKADK_S64 vDuration = 0, aDuration = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
   if (!pstPlayer->pFilePath) {
@@ -2486,49 +2485,16 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
 
   #ifdef RV1126_1109
   if (pstPlayer->bVideoExist) {
-    while(1) {
-      vFrameCnt++;
-      ret = RKADK_DEMUXER_ReadOneVideoPacket(demuxerCfg, &outputPacket);
-      if (ret != 0) {
-        RKADK_LOGE("read %d video packet failed", vFrameCnt);
-        break;
-      }
-
-      if (outputPacket.s8PacketData) {
-        if (outputPacket.s64Duration)
-          vDuration = outputPacket.s64Pts + outputPacket.s64Duration;
-
-        free(outputPacket.s8PacketData);
-        outputPacket.s8PacketData = NULL;
-      }
-
-      if (outputPacket.s8EofFlag)
-        break;
-    }
+    if (RKADK_DEMUXER_ReadVideoDuration(demuxerCfg, &vDuration, &vFrameCnt))
+      goto __FAILED;
 
     *pDuration = vDuration / 1000;
   }
   #endif
 
   if (!pstPlayer->bVideoExist && pstPlayer->bAudioExist) {
-    while(1) {
-      aFrameCnt++;
-      ret = RKADK_DEMUXER_ReadOneAudioPacket(demuxerCfg, &outputPacket);
-      if (ret != 0) {
-          RKADK_LOGE("read %d audio packet failed", aFrameCnt);
-          break;
-      }
-
-      if (outputPacket.s8PacketData) {
-        if (outputPacket.s64Duration)
-          aDuration = outputPacket.s64Pts + outputPacket.s64Duration;
-        free(outputPacket.s8PacketData);
-        outputPacket.s8PacketData = NULL;
-      }
-
-      if (outputPacket.s8EofFlag)
-        break;
-    }
+    if (RKADK_DEMUXER_ReadAudioDuration(demuxerCfg, &aDuration, &aFrameCnt))
+      goto __FAILED;
 
     *pDuration = aDuration / 1000;
   }
