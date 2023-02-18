@@ -1400,8 +1400,12 @@ __RETRY:
       goto  __RETRY;
     } else
       RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
-  } else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+  } else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT) {
+    if (pstDemuxerPacket->s8PacketData)
+      free(pstDemuxerPacket->s8PacketData);
+
     return;
+  }
 
   return;
 }
@@ -1413,11 +1417,17 @@ static RKADK_VOID DoPullDemuxerAudioPacket(RKADK_VOID* pHandle) {
   AUDIO_STREAM_S stAudioStream;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
 
-  if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
+  if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT) {
+    if (pstDemuxerPacket->s8PacketData)
+      free(pstDemuxerPacket->s8PacketData);
+
     return;
-  else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
+  } else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
     while(pstPlayer->seekFlag != RKADK_PLAYER_SEEK_SEND || !pstPlayer->seekFlag)
       usleep(1000);
+
+    if (pstDemuxerPacket->s8PacketData)
+      free(pstDemuxerPacket->s8PacketData);
   } else if (pstDemuxerPacket->s8EofFlag) {
     if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
       RK_MPI_ADEC_SendEndOfStream(pstPlayer->pstAdecCtx->chnIndex, RK_FALSE);
@@ -1459,11 +1469,17 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
   pstPlayer->bGetPtsFlag = RKADK_TRUE;
   if (!pstPlayer->bStopFlag) {
-    if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT)
-        return;
-    else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
+    if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_WAIT) {
+      if (pstDemuxerPacket->s8PacketData)
+        free(pstDemuxerPacket->s8PacketData);
+
+      return;
+    } else if (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_START) {
       while(pstPlayer->seekFlag != RKADK_PLAYER_SEEK_SEND || !pstPlayer->seekFlag)
         usleep(1000);
+
+      if (pstDemuxerPacket->s8PacketData)
+        free(pstDemuxerPacket->s8PacketData);
     } else if (!pstPlayer->seekFlag || pstDemuxerPacket->s8EofFlag || (pstPlayer->seekFlag == RKADK_PLAYER_SEEK_SEND
                && (pstDemuxerPacket->s64Pts >= pstPlayer->seekTimeStamp))) {
 
