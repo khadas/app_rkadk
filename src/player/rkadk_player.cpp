@@ -203,7 +203,7 @@ typedef struct {
   RKADK_S64 seekTimeStamp;
   RKADK_S64 positionTimeStamp;
   RKADK_S64 videoTimeStamp;
-  const RKADK_CHAR *pFilePath;
+  RKADK_CHAR pFilePath[100];
   RKADK_DEMUXER_INPUT_S *pstDemuxerInput;
   RKADK_DEMUXER_PARAM_S *pstDemuxerParam;
   RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx;
@@ -1776,7 +1776,8 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   pstPlayer->bAudioExist = RKADK_FALSE;
-  pstPlayer->pFilePath = pszfilePath;
+  memset(pstPlayer->pFilePath, 0, sizeof(pstPlayer->pFilePath));
+  memcpy(pstPlayer->pFilePath, pszfilePath, strlen(pszfilePath));
   for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
     if ('.' == pszfilePath[i]) {
 #ifdef RV1126_1109
@@ -2051,7 +2052,7 @@ __FAILED:
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   pstPlayer->bAudioExist = RKADK_FALSE;
-  pstPlayer->pFilePath = NULL;
+  memset(pstPlayer->pFilePath, 0, sizeof(pstPlayer->pFilePath));
   if (pstPlayer->pfnPlayerCallback != NULL)
     pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
 
