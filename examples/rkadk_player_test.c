@@ -218,14 +218,14 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  if (bVideoEnable)
+    RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
+
   ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
   if (ret) {
     RKADK_LOGE("SetDataSource failed, ret = %d", ret);
     return -1;
   }
-
-  if (bVideoEnable)
-    RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
 
   ret = RKADK_PLAYER_Prepare(pPlayer);
   if (ret) {
