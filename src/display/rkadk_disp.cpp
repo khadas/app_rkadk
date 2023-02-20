@@ -64,10 +64,10 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   /* Enable Layer */
   stLayerAttr.enPixFormat      = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type, &enCompressMode);
   stLayerAttr.enCompressMode   = COMPRESS_AFBC_16x16;
-  stLayerAttr.stDispRect.s32X  = pstDispCfg->x;
-  stLayerAttr.stDispRect.s32Y  = pstDispCfg->y;
-  stLayerAttr.stDispRect.u32Width   = pstDispCfg->width;
-  stLayerAttr.stDispRect.u32Height  = pstDispCfg->height;
+  stLayerAttr.stDispRect.s32X  = 0;
+  stLayerAttr.stDispRect.s32Y  = 0;
+  stLayerAttr.stDispRect.u32Width   = stVoPubAttr.stSyncInfo.u16Hact;
+  stLayerAttr.stDispRect.u32Height  = stVoPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.stImageSize.u32Width  = stVoPubAttr.stSyncInfo.u16Hact;
   stLayerAttr.stImageSize.u32Height = stVoPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.u32DispFrmRt          = 60;

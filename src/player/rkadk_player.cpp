@@ -635,10 +635,10 @@ static RKADK_S32 VoDevStart(RKADK_PLAYER_VO_CTX_S *pstVoCtx) {
 
   /* Enable Layer */ //RK_FMT_RGBA8888
   stLayerAttr.enPixFormat           = (PIXEL_FORMAT_E)pstVoCtx->pixFormat;
-  stLayerAttr.stDispRect.s32X       = pstVoCtx->x;
-  stLayerAttr.stDispRect.s32Y       = pstVoCtx->y;
-  stLayerAttr.stDispRect.u32Width   = pstVoCtx->dispWidth;
-  stLayerAttr.stDispRect.u32Height  = pstVoCtx->dispHeight;
+  stLayerAttr.stDispRect.s32X       = 0;
+  stLayerAttr.stDispRect.s32Y       = 0;
+  stLayerAttr.stDispRect.u32Width   = stPubAttr.stSyncInfo.u16Hact;
+  stLayerAttr.stDispRect.u32Height  = stPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.stImageSize.u32Width  = stPubAttr.stSyncInfo.u16Hact;
   stLayerAttr.stImageSize.u32Height = stPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.u32DispFrmRt          = pstVoCtx->dispFrmRt;
