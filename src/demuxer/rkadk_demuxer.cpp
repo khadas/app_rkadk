@@ -122,10 +122,10 @@ RKADK_S32 RKADK_DEMUXER_ReadOneAudioPacket(RKADK_MW_PTR demuxerCfg, void *output
   return RKADK_SUCCESS;
 }
 
-RKADK_S32 RKADK_DEMUXER_ReadVideoDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *duration, RKADK_S32 *frameCount) {
+RKADK_S32 RKADK_DEMUXER_ReadVideoDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *duration) {
   RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
 
-  RKADK_S32 ret = rkdemuxer_read_video_duration(demuxerCfg, duration, frameCount);
+  RKADK_S32 ret = rkdemuxer_read_video_duration(demuxerCfg, duration);
   if (ret) {
     RKADK_LOGE("read video duration failed");
     return RKADK_FAILURE;
@@ -134,10 +134,10 @@ RKADK_S32 RKADK_DEMUXER_ReadVideoDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *du
   return RKADK_SUCCESS;
 }
 
-RKADK_S32 RKADK_DEMUXER_ReadAudioDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *duration, RKADK_S32 *frameCount) {
+RKADK_S32 RKADK_DEMUXER_ReadAudioDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *duration) {
   RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
 
-  RKADK_S32 ret = rkdemuxer_read_audio_duration(demuxerCfg, duration, frameCount);
+  RKADK_S32 ret = rkdemuxer_read_audio_duration(demuxerCfg, duration);
   if (ret) {
     RKADK_LOGE("read audio duration failed");
     return RKADK_FAILURE;

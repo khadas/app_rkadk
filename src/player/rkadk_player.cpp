@@ -2472,7 +2472,6 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   void *demuxerCfg;
   RKADK_DEMUXER_INPUT_S demuxerInput;
   RKADK_DEMUXER_PARAM_S demuxerParam;
-  RKADK_S32 vFrameCnt = 0, aFrameCnt = 0;
   RKADK_S64 vDuration = 0, aDuration = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
@@ -2505,7 +2504,7 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
 
   #ifdef RV1126_1109
   if (pstPlayer->bVideoExist) {
-    if (RKADK_DEMUXER_ReadVideoDuration(demuxerCfg, &vDuration, &vFrameCnt))
+    if (RKADK_DEMUXER_ReadVideoDuration(demuxerCfg, &vDuration))
       goto __FAILED;
 
     *pDuration = vDuration / 1000;
@@ -2513,7 +2512,7 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   #endif
 
   if (!pstPlayer->bVideoExist && pstPlayer->bAudioExist) {
-    if (RKADK_DEMUXER_ReadAudioDuration(demuxerCfg, &aDuration, &aFrameCnt))
+    if (RKADK_DEMUXER_ReadAudioDuration(demuxerCfg, &aDuration))
       goto __FAILED;
 
     *pDuration = aDuration / 1000;
