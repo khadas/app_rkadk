@@ -75,6 +75,33 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
   fclose(file);
 
+  RKADK_PHOTO_DATA_ATTR_S stDataAttr;
+  memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
+  stDataAttr.enType = RKADK_THUMB_TYPE_BGRA8888;
+  stDataAttr.u32Width = 1280;
+  stDataAttr.u32Height = 720;
+  stDataAttr.u32VirWidth = 1280;
+  stDataAttr.u32VirHeight = 720;
+
+  if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
+    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
+               stDataAttr.u32Height, stDataAttr.u32VirWidth,
+               stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
+
+    memset(jpegPath, 0, 128);
+    sprintf(jpegPath, "/tmp/PhotoTest_%d.bgra8888", photoId);
+    file = fopen(jpegPath, "w");
+    if (!file) {
+      RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
+    } else {
+      fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
+      fclose(file);
+      RKADK_LOGD("save %s done", jpegPath);
+    }
+
+    RKADK_PHOTO_FreeData(&stDataAttr);
+  }
+
   photoId++;
   if (photoId > 10)
     photoId = 0;
