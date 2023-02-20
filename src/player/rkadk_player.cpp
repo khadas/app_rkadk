@@ -1776,7 +1776,8 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   pstPlayer->bAudioExist = RKADK_FALSE;
-  memset(pstPlayer->pFilePath, 0, sizeof(pstPlayer->pFilePath));
+  if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
+    memset(pstPlayer->pFilePath, 0, sizeof(pstPlayer->pFilePath));
   memcpy(pstPlayer->pFilePath, pszfilePath, strlen(pszfilePath));
   for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
     if ('.' == pszfilePath[i]) {
