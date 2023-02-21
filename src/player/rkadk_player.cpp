@@ -2331,8 +2331,10 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
         pthread_cond_signal(&pstPlayer->WavCond);
         pthread_mutex_unlock(&pstPlayer->WavMutex);
         pthread_join(pstPlayer->stThreadParam.tidEof, RKADK_NULL);
+        pstPlayer->stThreadParam.tidEof = 0;
       } else {
         pthread_join(pstPlayer->stThreadParam.tidEof, RKADK_NULL);
+        pstPlayer->stThreadParam.tidEof = 0;
       }
     }
 
