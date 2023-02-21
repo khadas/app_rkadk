@@ -179,16 +179,9 @@ static RKADK_S32 RKAduioMp3DecoderDecode(RK_VOID *pDecoder, RK_VOID *pDecParam) 
   memcpy(pParam->pu8OutBuf, (RKADK_U8 *)ctx->decPCMbuf, pParam->u32OutLen);
 
   calcPts = (((RK_U64)pParam->u32OutLen / 2) * 1000000) / ctx->frameInfo.samprate;
-
-  if (pParam->u64InTimeStamp) {
-    if (pParam->u64InTimeStamp > ctx->audioPts) {
-      if (pParam->u64InTimeStamp - ctx->audioPts > calcPts)
-        pParam->u64OutTimeStamp = ctx->audioPts + calcPts;
-      else
-        pParam->u64OutTimeStamp = pParam->u64InTimeStamp;
-    } else
-      pParam->u64OutTimeStamp = pParam->u64InTimeStamp;
-  } else if (ctx->audioPts)
+  if (pParam->u64InTimeStamp)
+    pParam->u64OutTimeStamp = pParam->u64InTimeStamp;
+  else if (ctx->audioPts)
     pParam->u64OutTimeStamp = ctx->audioPts + calcPts;
 
   if (pParam->u64OutTimeStamp)
