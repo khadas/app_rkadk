@@ -140,13 +140,6 @@ typedef RKADK_VOID (*RKADK_PLAYER_EVENT_FN)(RKADK_MW_PTR pPlayer,
                                             RKADK_PLAYER_EVENT_E enEvent,
                                             RKADK_VOID *pData);
 
-/** player configuration */
-typedef struct {
-  RKADK_BOOL bEnableVideo;
-  RKADK_BOOL bEnableAudio;
-  RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
-} RKADK_PLAYER_CFG_S;
-
 /* Must be consistent with rockit/rk_comm_vo.h -> VO_INTF_SYNC_E */
 typedef enum {
   RKADK_VO_OUTPUT_PAL = 0, /* PAL standard */
@@ -264,7 +257,15 @@ typedef struct {
   RKADK_PLAYER_VO_INTF_TYPE_E u32EnIntfType;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;
-} RKADK_PLAYER_FRAMEINFO_S;
+} RKADK_PLAYER_FRAME_INFO_S;
+
+/** player configuration */
+typedef struct {
+  RKADK_BOOL bEnableVideo;
+  RKADK_BOOL bEnableAudio;
+  RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
+  RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
+} RKADK_PLAYER_CFG_S;
 
 /**
  * @brief create the player
@@ -297,15 +298,6 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
  * @retval  0 success, others failed
  */
 RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer);
-
-/**
- * @brief setcallback for the playing
- * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
- * @param[in] frameinfo : RKADK_FRAMEINFO_S: record displayer info
- * @retval  0 success, others failed
- */
-RKADK_S32 RKADK_PLAYER_SetVideoSink(RKADK_MW_PTR pPlayer,
-                                    RKADK_PLAYER_FRAMEINFO_S *pstFrameInfo);
 
 /**
  * @brief  do play of the stream

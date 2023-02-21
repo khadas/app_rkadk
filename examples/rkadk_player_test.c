@@ -97,10 +97,10 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
   }
 }
 
-void param_init(RKADK_PLAYER_FRAMEINFO_S *pstFrmInfo) {
+void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   RKADK_CHECK_POINTER_N(pstFrmInfo);
 
-  memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAMEINFO_S));
+  memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAME_INFO_S));
 
   pstFrmInfo->u32DispWidth = MAX_VO_DISPLAY_WIDTH;
   pstFrmInfo->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
@@ -148,7 +148,6 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
 }
 
 int main(int argc, char *argv[]) {
-  RKADK_PLAYER_FRAMEINFO_S stFrmInfo;
   int c, ret;
   char *file = "/userdata/16000_2.mp3";
   RKADK_BOOL bVideoEnable = true;
@@ -157,8 +156,9 @@ int main(int argc, char *argv[]) {
   int pauseFlag = 0;
   pthread_t getPosition;
   RKADK_U32 duration = 0;
-
-  param_init(&stFrmInfo);
+  RKADK_PLAYER_CFG_S stPlayCfg;
+  memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
+  param_init(&stPlayCfg.stFrmInfo);
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
@@ -166,25 +166,25 @@ int main(int argc, char *argv[]) {
       file = optarg;
       break;
     case 'x':
-      stFrmInfo.u32FrmInfoX = atoi(optarg);
+      stPlayCfg.stFrmInfo.u32FrmInfoX = atoi(optarg);
       break;
     case 'y':
-      stFrmInfo.u32FrmInfoY = atoi(optarg);
+      stPlayCfg.stFrmInfo.u32FrmInfoY = atoi(optarg);
       break;
     case 'W':
-      stFrmInfo.u32DispWidth = atoi(optarg);
+      stPlayCfg.stFrmInfo.u32DispWidth = atoi(optarg);
       break;
     case 'H':
-      stFrmInfo.u32DispHeight = atoi(optarg);
+      stPlayCfg.stFrmInfo.u32DispHeight = atoi(optarg);
       break;
     case 'r':
-      stFrmInfo.u32Rotation = atoi(optarg);
+      stPlayCfg.stFrmInfo.u32Rotation = atoi(optarg);
       break;
     case 'm':
-      stFrmInfo.bMirror = true;
+      stPlayCfg.stFrmInfo.bMirror = true;
       break;
     case 'f':
-      stFrmInfo.bFlip = true;
+      stPlayCfg.stFrmInfo.bFlip = true;
     case 'v':
       bVideoEnable = true;
       break;
@@ -199,15 +199,14 @@ int main(int argc, char *argv[]) {
 
   RKADK_LOGD("#play file: %s", file);
   RKADK_LOGD(
-      "#video display rect[%d, %d, %d, %d]", stFrmInfo.u32FrmInfoX,
-      stFrmInfo.u32FrmInfoY, stFrmInfo.u32DispWidth,
-      stFrmInfo.u32DispHeight);
+      "#video display rect[%d, %d, %d, %d]", stPlayCfg.stFrmInfo.u32FrmInfoX,
+      stPlayCfg.stFrmInfo.u32FrmInfoY, stPlayCfg.stFrmInfo.u32DispWidth,
+      stPlayCfg.stFrmInfo.u32DispHeight);
 
   signal(SIGINT, sigterm_handler);
 
   RKADK_MPI_SYS_Init();
-  RKADK_PLAYER_CFG_S stPlayCfg;
-  memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
+
   stPlayCfg.bEnableAudio = true;
   if (bVideoEnable)
     stPlayCfg.bEnableVideo = true;
@@ -217,9 +216,6 @@ int main(int argc, char *argv[]) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
     return -1;
   }
-
-  if (bVideoEnable)
-    RKADK_PLAYER_SetVideoSink(pPlayer, &stFrmInfo);
 
   ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
   if (ret) {
@@ -234,7 +230,6 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
-
   ret = RKADK_PLAYER_Play(pPlayer);
   if (ret) {
     RKADK_LOGE("Play failed, ret = %d", ret);
