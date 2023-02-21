@@ -2054,15 +2054,21 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
   }
 
   #ifdef RV1126_1109
-  if (pstPlayer->stThreadParam.tidVideoSend)
+  if (pstPlayer->stThreadParam.tidVideoSend) {
     pthread_join(pstPlayer->stThreadParam.tidVideoSend, RKADK_NULL);
+    pstPlayer->stThreadParam.tidVideoSend = 0;
+  }
   #endif
 
-  if (pstPlayer->stThreadParam.tidAudioSend)
+  if (pstPlayer->stThreadParam.tidAudioSend) {
     pthread_join(pstPlayer->stThreadParam.tidAudioSend, RKADK_NULL);
+    pstPlayer->stThreadParam.tidAudioSend = 0;
+  }
 
-  if (pstPlayer->stThreadParam.tidAudioCommand)
+  if (pstPlayer->stThreadParam.tidAudioCommand) {
     pthread_join(pstPlayer->stThreadParam.tidAudioCommand, RKADK_NULL);
+    pstPlayer->stThreadParam.tidAudioCommand = 0;
+  }
 
   pthread_mutex_lock(&pstPlayer->WavMutex);
   if (!pstPlayer->bStopFlag && pstPlayer->bAudioExist
