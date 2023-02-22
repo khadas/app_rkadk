@@ -223,6 +223,11 @@ RKADK_S32 RKADK_MPI_SYS_Exit() {
   int ret;
 
   if (g_bSysInit) {
+
+#ifdef RV1126_1109
+    RK_MPI_VO_CloseFd();
+#endif
+
     ret = RK_MPI_SYS_Exit();
     if (ret) {
       RKADK_LOGE("RK_MPI_SYS_Exit failed[%d]", ret);

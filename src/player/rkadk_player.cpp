@@ -1470,7 +1470,6 @@ static RKADK_S32 RKADK_PLAYER_DestroyVO (RKADK_MW_PTR pPlayer) {
     return RKADK_FAILURE;
   }
 
-  RK_MPI_VO_CloseFd();
   return RKADK_SUCCESS;
 }
 #endif

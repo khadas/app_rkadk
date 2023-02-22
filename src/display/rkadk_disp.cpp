@@ -141,8 +141,6 @@ static int RKADK_DISP_DestroyVo(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
     return ret;
   }
 
-  RK_MPI_VO_CloseFd();
-
   RKADK_LOGI("Destroy vo [dev: %d, layer: %d, chn: %d] success!",
             pstDispCfg->vo_device, pstDispCfg->vo_layer, pstDispCfg->vo_chn);
   return ret;
