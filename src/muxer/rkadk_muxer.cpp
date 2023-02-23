@@ -89,6 +89,7 @@ typedef struct {
   bool bLapseRecord;
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
+  bool bIOError;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
 
@@ -521,6 +522,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->frameCnt = 0;
   pstMuxerHandle->bMuxering = false;
   pstMuxerHandle->bFirstFile = false;
+  pstMuxerHandle->bIOError = false;
   pstMuxerHandle->stThumbParam.bGetThumb = false;
   pstMuxerHandle->stThumbParam.bRequestThumb = false;
   pstMuxerHandle->stManualSplit.bEnableSplit = false;
@@ -535,11 +537,15 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   VENC_PACK_S stPack;
   VENC_STREAM_S stFrame;
   FILE *fp = NULL;
+  bool bGetThumb = false;
 
   stFrame.pstPack = &stPack;
 
   position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
-  if (position > 0) {
+  if (pstMuxerHandle->bIOError || position > 0)
+    bGetThumb = true;
+
+  if (bGetThumb) {
     ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1);
     if (ret == RK_SUCCESS) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
@@ -571,50 +577,13 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       return true;
     }
   } else {
-    RKADK_LOGI("Stream [%d] position[%d] invalid value, retry!",pstMuxerHandle->u32VencChn, position);
+    RKADK_LOGI("Stream [%d] position[%d] invalid value!",pstMuxerHandle->u32VencChn, position);
     return true;
   }
 }
 
-static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
-  bool bFileSwitch;
-  int position = 0;
-  RKADK_U32 u32Duration;
-
-  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
-    return false;
-
-  if (pstMuxerHandle->stManualSplit.bSplitRecord)
-    u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
-  else
-    u32Duration = pstMuxerHandle->duration;
-
-  if (pstMuxerHandle->stManualSplit.bEnableSplit) {
-    position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
-    if(position <= 0)
-      return false;
-
-    RKADK_LOGI("File switch: manual_split[%d], duration: %d",
-        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration);
-    pstMuxerHandle->stManualSplit.bEnableSplit = false;
-    RKADK_MUXER_Close(pstMuxerHandle);
-    pstMuxerHandle->stManualSplit.bSplitRecord = true;
-    return true;
-  }
-
-  bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
-                (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
-  if (bFileSwitch) {
-    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d",
-        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt + 1);
-    RKADK_MUXER_Close(pstMuxerHandle);
-    return true;
-  }
-
-  return false;
-}
-
-static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle, MUXER_BUF_CELL_S *cell) {
+static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle,
+                                    MUXER_BUF_CELL_S *cell) {
   RKADK_U32 u32Duration;
   bool bThumbPts, bThumbFrame;
   bool bRequestThumb;
@@ -674,6 +643,57 @@ static void RKADK_MUXER_ForceRequestThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 #endif
 
   pstMuxerHandle->stThumbParam.bRequestThumb = false;
+}
+
+static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle,
+                                    MUXER_BUF_CELL_S *cell) {
+  bool bFileSwitch;
+  int position = 0;
+  RKADK_U32 u32Duration;
+
+  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
+    return false;
+
+  if (pstMuxerHandle->stManualSplit.bSplitRecord)
+    u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
+  else
+    u32Duration = pstMuxerHandle->duration;
+
+  if (pstMuxerHandle->bIOError) {
+    RKADK_LOGW("Muxer[%d]: io_error: record end", pstMuxerHandle->muxerId);
+    //drop current thumb, if there is
+    RKADK_MUXER_GetThumb(pstMuxerHandle);
+
+    RKADK_MUXER_Close(pstMuxerHandle);
+
+    //request thumb for next file
+    RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
+    return true;
+  }
+
+  if (pstMuxerHandle->stManualSplit.bEnableSplit) {
+    position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
+    if(position <= 0)
+      return false;
+
+    RKADK_LOGI("File switch: manual_split[%d], duration: %d",
+        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration);
+    pstMuxerHandle->stManualSplit.bEnableSplit = false;
+    RKADK_MUXER_Close(pstMuxerHandle);
+    pstMuxerHandle->stManualSplit.bSplitRecord = true;
+    return true;
+  }
+
+  bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
+                (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
+  if (bFileSwitch) {
+    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d",
+        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt + 1);
+    RKADK_MUXER_Close(pstMuxerHandle);
+    return true;
+  }
+
+  return false;
 }
 
 static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -821,8 +841,14 @@ static bool RKADK_MUXER_Proc(void *params) {
 
         // Write
         if (cell->pool == &pstMuxerHandle->stVFree) {
-          rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
+          ret = rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
+           if (ret) {
+              RKADK_LOGE("Muxer[%d] write video frame failed", pstMuxerHandle->muxerId);
+              RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL, 0);
+              pstMuxerHandle->bIOError = true;
+              continue;
+           }
 
           if (pstMuxerHandle->bWriteFirstFrame) {
             RKADK_KLOG("Muxer[%d] Stream[%d] write first frame pts: %lld",
@@ -837,8 +863,14 @@ static bool RKADK_MUXER_Proc(void *params) {
           pstMuxerHandle->frameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
-          rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
+          ret = rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
+          if (ret) {
+            RKADK_LOGE("Muxer[%d] write audio frame failed", pstMuxerHandle->muxerId);
+            RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL, 0);
+            pstMuxerHandle->bIOError = true;
+            continue;
+          }
         } else {
           RKADK_LOGE("unknow pool");
         }
