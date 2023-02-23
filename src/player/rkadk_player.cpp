@@ -178,13 +178,13 @@ typedef struct {
 
 typedef struct {
   #ifdef RV1126_1109
-  RKADK_BOOL bEnableVideo;
-  RKADK_BOOL bVideoExist;
   RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx;
   RKADK_PLAYER_VO_CTX_S *pstVoCtx;
   pthread_mutex_t PauseVideoMutex;
   #endif
 
+  RKADK_BOOL bEnableVideo;
+  RKADK_BOOL bVideoExist;
   RKADK_BOOL bEnableAudio;
   RKADK_BOOL bAudioExist;
   RKADK_BOOL bStopFlag;
@@ -2406,7 +2406,7 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
   #ifdef RV1126_1109
   demuxerInput.videoEnableFlag = pstPlayer->bEnableVideo;
   #else
-  demuxerInput.videoEnableFlag = 0;
+  demuxerInput.videoEnableFlag = RKADK_FALSE;
   #endif
 
   demuxerInput.audioEnableFlag = pstPlayer->bEnableAudio;

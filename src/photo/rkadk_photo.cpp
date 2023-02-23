@@ -914,6 +914,7 @@ RKADK_S32 RKADK_PHOTO_GetJpgResolution(RKADK_CHAR *pcFileName, RKADK_PHOTO_DATA_
   return -1;
 }
 
+#ifdef RV1126_1109
 static RKADK_S32 RKADK_PHOTO_VdecFree(void *opaque) {
   RKADK_LOGD("vdec free: %p", opaque);
   if (opaque) {
@@ -922,11 +923,13 @@ static RKADK_S32 RKADK_PHOTO_VdecFree(void *opaque) {
   }
   return 0;
 }
+#endif
 
 static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
                                        RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree,
                                        RKADK_S32 s32VdecChnID, RKADK_S32 s32VpssGrp,
                                        RKADK_S32 s32VpssChn) {
+#ifdef RV1126_1109
   int ret = 0, deinitRet = 0;
   VDEC_CHN_ATTR_S stAttr;
   VDEC_CHN_PARAM_S stVdecParam;
@@ -1109,6 +1112,11 @@ exit:
     RK_MPI_MB_ReleaseMB(jpgMbBlk);
 
   return ret;
+#else
+  RKADK_LOGI("Chip nonsupport vdec");
+  *bFree = true;
+  return -1;
+#endif
 }
 
 static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd,

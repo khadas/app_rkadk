@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpgEx(u32CamId, pInuptPath, eJpgThumbType, &stThumbAttr)) {
-        RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
+        RKADK_LOGE("RKADK_PHOTO_GetThmInJpgEx failed");
         return -1;
       }
     }
