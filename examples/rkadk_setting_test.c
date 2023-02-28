@@ -125,6 +125,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[0].width = RECORD_VIDEO_WIDTH;
   stParamRecCfg.attribute[0].height = RECORD_VIDEO_HEIGHT;
   stParamRecCfg.attribute[0].bitrate = 30 * 1024 * 1024;
+  stParamRecCfg.attribute[0].framerate = VIDEO_FRAME_RATE;
   stParamRecCfg.attribute[0].gop = VIDEO_GOP;
   stParamRecCfg.attribute[0].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[0].codec_type = RKADK_CODEC_TYPE_H264;
@@ -147,6 +148,7 @@ static void SetRecCfg() {
   stParamRecCfg.attribute[1].height = RECORD_VIDEO_HEIGHT_S;
   stParamRecCfg.attribute[1].bufsize = RECORD_VIDEO_WIDTH_S * RECORD_VIDEO_HEIGHT_S * 3 / 2;
   stParamRecCfg.attribute[1].bitrate = 4 * 1024 * 1024;
+  stParamRecCfg.attribute[1].framerate = VIDEO_FRAME_RATE;
   stParamRecCfg.attribute[1].gop = VIDEO_GOP;
   stParamRecCfg.attribute[1].profile = VIDEO_PROFILE;
   stParamRecCfg.attribute[1].codec_type = RKADK_CODEC_TYPE_H264;
@@ -196,6 +198,7 @@ static void SetStreamCfg() {
   stStreamCfg.attribute.height = STREAM_VIDEO_HEIGHT;
   stStreamCfg.attribute.bufsize = STREAM_VIDEO_WIDTH * STREAM_VIDEO_HEIGHT * 3 / 2;
   stStreamCfg.attribute.bitrate = 10 * 1024;
+  stStreamCfg.attribute.framerate = VIDEO_FRAME_RATE;
   stStreamCfg.attribute.gop = VIDEO_GOP;
   stStreamCfg.attribute.profile = VIDEO_PROFILE;
   stStreamCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;
@@ -231,6 +234,7 @@ static void SetLiveCfg() {
   stLiveCfg.attribute.width = STREAM_VIDEO_WIDTH;
   stLiveCfg.attribute.height = STREAM_VIDEO_HEIGHT;
   stLiveCfg.attribute.bitrate = 4 * 1024 * 1024;
+  stLiveCfg.attribute.framerate = VIDEO_FRAME_RATE;
   stLiveCfg.attribute.gop = VIDEO_GOP;
   stLiveCfg.attribute.profile = VIDEO_PROFILE;
   stLiveCfg.attribute.codec_type = RKADK_CODEC_TYPE_H264;

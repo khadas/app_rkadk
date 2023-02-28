@@ -54,7 +54,8 @@ static void sigterm_handler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret, fps;
+  int c, ret;
+  RKADK_PARAM_FPS_S stFps;
   RKADK_OSD_ATTR_S OsdAttr;
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32CamId = 0;
@@ -120,7 +121,8 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
+  stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
+  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam fps failed");
     return -1;
@@ -128,7 +130,7 @@ int main(int argc, char *argv[]) {
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, stFps.u32Framerate);
 #endif
 
   ret = RKADK_RTSP_Init(u32CamId, 554, "/live/main_stream", &pHandle);

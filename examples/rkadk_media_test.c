@@ -78,7 +78,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
 
   RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
-  if (u32FileIdx >= 10)
+  if (u32FileIdx >= 100)
     u32FileIdx = 0;
 
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
@@ -267,7 +267,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   }
 
   memset(jpegPath, 0, 128);
-  sprintf(jpegPath, "/tmp/PhotoTest_%d.jpeg", photoId);
+  sprintf(jpegPath, "/mnt/sdcard/PhotoTest_%d.jpeg", photoId);
   file = fopen(jpegPath, "w");
   if (!file) {
     RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
@@ -280,7 +280,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   fclose(file);
 
   photoId++;
-  if (photoId > 10)
+  if (photoId > 100)
     photoId = 0;
 }
 #endif
@@ -291,7 +291,8 @@ static void sigterm_handler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret, fps = 25;
+  int c, ret;
+  RKADK_PARAM_FPS_S stFps;
   RKADK_BOOL bMultiCam = RKADK_FALSE;
   const char *iniPath = NULL;
   char *file = "/mnt/sdcard/photo.wav";
@@ -438,24 +439,25 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
+  stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
+  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", u32CamId);
     return -1;
   }
 
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
   //IspProcess(u32CamId);
 
   if (bMultiCam) {
-    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &stFps);
     if (ret) {
       RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
       SAMPLE_ISP_Stop(u32CamId);
       return -1;
     }
 
-    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
   }
 #endif
 

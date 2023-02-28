@@ -349,11 +349,11 @@ static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
   return pstMuxerHandle;
 }
 
-int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData,
-                                int64_t pts, void *handle) {
+int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   int cnt = 0, isKeyFrame = 0;
   MUXER_BUF_CELL_S cell;
   MUXER_BUF_CELL_S *pstCell;
+  RKADK_U64 pts = 0;
 
   RKADK_CHECK_POINTER(handle, RKADK_FAILURE);
 
@@ -364,6 +364,11 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData,
 
   if (pstMuxerHandle->bReseting)
     return 0;
+
+  if(pstMuxer->bLapseRecord)
+    pts = stData.stFrame.pstPack->u64PTS / pstMuxerHandle->stVideo.frame_rate_num;
+  else
+    pts = stData.stFrame.pstPack->u64PTS;
 
   if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE ||
       stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_IDRSLICE) ||

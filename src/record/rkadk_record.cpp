@@ -97,8 +97,8 @@ static RKADK_U32 GetPreRecordCacheTime(RKADK_PARAM_REC_CFG_S *pstRecCfg,
   if(pstRecCfg->pre_record_time == 0)
     return 0;
 
-  u32Integer = pstRecCfg->attribute[0].gop / pstSensorCfg->framerate;
-  u32Remainder = pstRecCfg->attribute[0].gop % pstSensorCfg->framerate;
+  u32Integer = pstRecCfg->attribute[0].gop / pstRecCfg->attribute[0].framerate;
+  u32Remainder = pstRecCfg->attribute[0].gop % pstRecCfg->attribute[0].framerate;
   u32PreRecCacheTime = pstRecCfg->pre_record_time + u32Integer;
   if (u32Remainder)
     u32PreRecCacheTime += 1;
@@ -146,6 +146,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
   RKADK_U32 u32DstFrameRateNum = 0;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
   RKADK_U32 bitrate;
+  RKADK_PARAM_FPS_S stFps;
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
 
@@ -159,16 +160,29 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
 
   if(pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
     bitrate = pstRecCfg->attribute[index].bitrate / pstRecCfg->lapse_multiple;
-    u32DstFrameRateNum = pstSensorCfg->framerate / pstRecCfg->lapse_multiple;
+    u32DstFrameRateNum = pstRecCfg->attribute[index].framerate / pstRecCfg->lapse_multiple;
     if (u32DstFrameRateNum < 1)
       u32DstFrameRateNum = 1;
-    else if (u32DstFrameRateNum > pstSensorCfg->framerate)
-      u32DstFrameRateNum = pstSensorCfg->framerate;
+    else if (u32DstFrameRateNum > pstRecCfg->attribute[index].framerate)
+      u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
   } else {
     bitrate = pstRecCfg->attribute[index].bitrate;
-    u32DstFrameRateNum = pstSensorCfg->framerate;
+    u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
   }
   u32Gop = pstRecCfg->attribute[index].gop;
+
+  if (u32DstFrameRateNum > pstSensorCfg->framerate) {
+    RKADK_LOGW("CamId[%d] record[%d] fps[%d] > sensor fps[%d], use sensor fps",
+                u32CamId, index, u32DstFrameRateNum, pstSensorCfg->framerate);
+    u32DstFrameRateNum = pstSensorCfg->framerate;
+
+    if (index == 0)
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+    else
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+    stFps.u32Framerate = pstSensorCfg->framerate;
+    RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+  }
 
   pstVencAttr->stRcAttr.enRcMode =
       RKADK_PARAM_GetRcMode(pstRecCfg->attribute[index].rc_mode,
@@ -598,23 +612,7 @@ static void RKADK_RECORD_AencOutCb(AUDIO_STREAM_S stFrame,
 static void RKADK_RECORD_VencOutCb(RKADK_MEDIA_VENC_DATA_S stData,
                                    RKADK_VOID *pHandle) {
   RKADK_CHECK_POINTER_N(pHandle);
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
-  RKADK_U64 u64Pts = 0;
-
-  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
-
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstMuxer->u32CamId);
-  if (!pstSensorCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
-    return;
-  }
-
-  if(pstMuxer->bLapseRecord)
-    u64Pts = stData.stFrame.pstPack->u64PTS / pstSensorCfg->framerate;
-  else
-    u64Pts = stData.stFrame.pstPack->u64PTS;
-
-  RKADK_MUXER_WriteVideoFrame(stData, u64Pts, pHandle);
+  RKADK_MUXER_WriteVideoFrame(stData, pHandle);
 }
 
 static RKADK_S32 RKADK_RECORD_VencGetData(RKADK_U32 u32CamId,
@@ -863,7 +861,7 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
             aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.cPixFmt))
       return -1;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32FrameRate =
-        pstSensorCfg->framerate;
+        pstRecCfg->attribute[i].framerate;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Level = 41;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Profile =
         pstRecCfg->attribute[i].profile;
@@ -931,20 +929,34 @@ static RKADK_S32 RKADK_RECORD_ResetVideoAttr(RKADK_U32 u32CamId, RKADK_U32 index
   RKADK_U32 u32Width;
   RKADK_U32 u32Height;
   RK_CODEC_ID_E enType;
+  RKADK_PARAM_FPS_S stFps;
 
   bitrate = pstRecCfg->attribute[index].bitrate;
   u32Gop = pstRecCfg->attribute[index].gop;
-  u32DstFrameRateNum = pstSensorCfg->framerate;
+  u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
   u32Width = pstRecCfg->attribute[index].width;
   u32Height = pstRecCfg->attribute[index].height;
 
   if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
     bitrate = pstRecCfg->attribute[index].bitrate / pstRecCfg->lapse_multiple;
-    u32DstFrameRateNum = pstSensorCfg->framerate / pstRecCfg->lapse_multiple;
+    u32DstFrameRateNum = pstRecCfg->attribute[index].framerate / pstRecCfg->lapse_multiple;
     if (u32DstFrameRateNum < 1)
       u32DstFrameRateNum = 1;
-    else if (u32DstFrameRateNum > pstSensorCfg->framerate)
-      u32DstFrameRateNum = pstSensorCfg->framerate;
+    else if (u32DstFrameRateNum > pstRecCfg->attribute[index].framerate)
+      u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
+  }
+
+  if (u32DstFrameRateNum > pstSensorCfg->framerate) {
+    RKADK_LOGW("CamId[%d] record[%d] fps[%d] > sensor fps[%d], use sensor fps",
+                u32CamId, index, u32DstFrameRateNum, pstSensorCfg->framerate);
+    u32DstFrameRateNum = pstSensorCfg->framerate;
+
+    if (index == 0)
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+    else
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+    stFps.u32Framerate = pstSensorCfg->framerate;
+    RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   }
 
   enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);

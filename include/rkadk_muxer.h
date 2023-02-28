@@ -241,7 +241,7 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId);
 /**
  * @brief write video frame
  */
-int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, int64_t pts, void *handle);
+int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle);
 
 /**
  * @brief write audio frame

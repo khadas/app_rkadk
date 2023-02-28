@@ -145,7 +145,7 @@ static void sigterm_handler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret, fps;
+  int c, ret;
   RKADK_RECORD_ATTR_S stRecAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL, pRecorder1 = NULL;
@@ -153,6 +153,8 @@ int main(int argc, char *argv[]) {
   RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
   RKADK_PARAM_RES_E type;
+  RKADK_PARAM_FPS_S stFps;
+  RKADK_PARAM_GOP_S stGop;
   RKADK_PARAM_CODEC_CFG_S stCodecType;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
@@ -214,24 +216,25 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
-  ret = RKADK_PARAM_GetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &fps);
+  stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
+  ret = RKADK_PARAM_GetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", s32CamId);
     return -1;
   }
 
-  SAMPLE_ISP_Start(s32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(s32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
   //IspProcess(s32CamId);
 
   if (bMultiCam) {
-    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &stFps);
     if (ret) {
       RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
       SAMPLE_ISP_Stop(s32CamId);
       return -1;
     }
 
-    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
     //IspProcess(1);
   }
 #endif
@@ -327,6 +330,42 @@ int main(int argc, char *argv[]) {
       RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "stop")) {
       RKADK_RECORD_Stop(pRecorder);
+    } else if (strstr(cmd, "fps-25")) {
+      //set main record fps
+      stFps.u32Framerate = 25;
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+      //set main record gop
+      stGop.enStreamType = stFps.enStreamType;
+      stGop.u32Gop = stFps.u32Framerate;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
+
+      //set sub record fps
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+      //set sub record gop
+      stGop.enStreamType = stFps.enStreamType;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
+
+      RKADK_RECORD_Reset(&pRecorder);
+    } else if (strstr(cmd, "fps-30")) {
+      //set main record fps
+      stFps.u32Framerate = 30;
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+      //set main record gop
+      stGop.enStreamType = stFps.enStreamType;
+      stGop.u32Gop = stFps.u32Framerate;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
+
+      //set sub record fps
+      stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+      //set sub record gop
+      stGop.enStreamType = stFps.enStreamType;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
+
+      RKADK_RECORD_Reset(&pRecorder);
     }
 
     usleep(500000);

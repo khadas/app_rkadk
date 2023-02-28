@@ -75,6 +75,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
   fclose(file);
 
+#if 0
   RKADK_PHOTO_DATA_ATTR_S stDataAttr;
   memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
   stDataAttr.enType = RKADK_THUMB_TYPE_BGRA8888;
@@ -101,6 +102,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
 
     RKADK_PHOTO_FreeData(&stDataAttr);
   }
+#endif
 
   photoId++;
   if (photoId > 10)
@@ -108,7 +110,8 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret, fps;
+  int c, ret;
+  RKADK_PARAM_FPS_S stFps;
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_PHOTO_ATTR_S stPhotoAttr;
@@ -176,24 +179,25 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
-  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fps);
+  stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
+  ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
     RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[%d] fps failed", u32CamId);
     return -1;
   }
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, fps);
+  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
 
   if (bMultiCam) {
-    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &fps);
+    ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &stFps);
     if (ret) {
       RKADK_LOGE("RKADK_PARAM_GetCamParam u32CamId[1] fps failed");
       SAMPLE_ISP_Stop(u32CamId);
       return -1;
     }
 
-    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, fps);
+    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
   }
 #endif
 

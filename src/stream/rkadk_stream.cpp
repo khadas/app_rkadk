@@ -211,6 +211,8 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
                                     VENC_CHN_ATTR_S *pstVencAttr) {
   int ret;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  RKADK_U32 u32DstFrameRateNum;
+  RKADK_PARAM_FPS_S stFps;
 
   RKADK_CHECK_POINTER(pstVencAttr, RKADK_FAILURE);
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
@@ -223,10 +225,22 @@ static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
 
   pstVencAttr->stRcAttr.enRcMode = RKADK_PARAM_GetRcMode(
       pstStreamCfg->attribute.rc_mode, pstStreamCfg->attribute.codec_type);
+
+  u32DstFrameRateNum = pstStreamCfg->attribute.framerate;
+  if (u32DstFrameRateNum > pstSensorCfg->framerate) {
+    RKADK_LOGW("CamId[%d] preview fps[%d] > sensor fps[%d], use sensor fps",
+                u32CamId, u32DstFrameRateNum, pstSensorCfg->framerate);
+    u32DstFrameRateNum = pstSensorCfg->framerate;
+
+    stFps.u32Framerate = pstSensorCfg->framerate;
+    stFps.enStreamType = RKADK_STREAM_TYPE_PREVIEW;
+    RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
+  }
+
   ret =
       RKADK_MEDIA_SetRcAttr(&pstVencAttr->stRcAttr, pstStreamCfg->attribute.gop,
                             pstStreamCfg->attribute.bitrate,
-                            pstSensorCfg->framerate, pstSensorCfg->framerate);
+                            pstSensorCfg->framerate, u32DstFrameRateNum);
   if (ret) {
     RKADK_LOGE("RKADK_MEDIA_SetRcAttr failed");
     return -1;
@@ -625,7 +639,7 @@ RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamId,
   pstVideoInfo->u32Width = pstStreamCfg->attribute.width;
   pstVideoInfo->u32Height = pstStreamCfg->attribute.height;
   pstVideoInfo->u32BitRate = pstStreamCfg->attribute.bitrate;
-  pstVideoInfo->u32FrameRate = pstSensorCfg->framerate;
+  pstVideoInfo->u32FrameRate = pstStreamCfg->attribute.framerate;
   pstVideoInfo->u32Gop = pstStreamCfg->attribute.gop;
   return 0;
 }

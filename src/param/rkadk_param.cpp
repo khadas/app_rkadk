@@ -338,8 +338,8 @@ static bool RKADK_PARAM_CheckCfgU32(RKADK_U32 *u32Value, RKADK_U32 u32Min,
                                     RKADK_U32 u32Max, RKADK_U32 u32DefValue,
                                     const char *tag) {
   if ((*u32Value > u32Max) || (*u32Value < u32Min)) {
-    RKADK_LOGW("%s: invalid value(%d), use default(%d)", tag, *u32Value,
-               u32DefValue);
+    RKADK_LOGW("%s: invalid value(%d)[%d, %d], use default(%d)", tag, *u32Value,
+               u32Min, u32Max, u32DefValue);
     *u32Value = u32DefValue;
     return true;
   } else {
@@ -433,7 +433,7 @@ static void RKADK_PARAM_CheckSensorCfg(char *path, RKADK_U32 u32CamId) {
       &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
 
   change = RKADK_PARAM_CheckCfg(&pstSensorCfg->framerate, VIDEO_FRAME_RATE,
-                                "framerate");
+                                "sensor fps");
 
   if (change)
     RKADK_PARAM_SaveSensorCfg(path, u32CamId);
@@ -443,6 +443,7 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                        RKADK_STREAM_TYPE_E enStrmType) {
   bool change = false;
   RKADK_PARAM_VENC_ATTR_S *pstAttribute = NULL;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
 
   switch (enStrmType) {
   case RKADK_STREAM_TYPE_LIVE:
@@ -477,6 +478,8 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                     1, "stream vpss_chn");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, 4 * 1024 * 1024,
                                  "stream bitrate");
+  change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->framerate, 1, pstSensorCfg->framerate,
+                                    pstSensorCfg->framerate, "stream fps");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "stream gop");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->profile, VIDEO_PROFILE,
                                  "stream profile");
@@ -589,6 +592,8 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
         &pstAttribute->vpss_chn, 0, VPSS_MAX_CHN_NUM, u32DefChn, "rec vpss_chn");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, u32DefBitrate,
                                    "rec bitrate");
+    change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->framerate, 1, pstSensorCfg->framerate,
+                                    pstSensorCfg->framerate, "rec fps");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "rec gop");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->profile, VIDEO_PROFILE,
                                    "rec profile");
@@ -887,6 +892,7 @@ static void RKADK_PARAM_DefRecAttr(RKADK_U32 u32CamId,
   pstAttr->vpss_grp = u32VpssGrp;
   pstAttr->vpss_chn = u32VpssChn;
   pstAttr->bitrate = u32Bitrate;
+  pstAttr->framerate = VIDEO_FRAME_RATE;
   pstAttr->gop = VIDEO_GOP;
   pstAttr->profile = VIDEO_PROFILE;
   pstAttr->codec_type = RKADK_CODEC_TYPE_H264;
@@ -953,6 +959,7 @@ static void RKADK_PARAM_DefStreamCfg(RKADK_U32 u32CamId, char *path,
   pstStreamCfg->attribute.venc_chn = 1;
   pstStreamCfg->attribute.vpss_grp = 2;
   pstStreamCfg->attribute.vpss_chn = 0;
+  pstStreamCfg->attribute.framerate = VIDEO_FRAME_RATE;
   pstStreamCfg->attribute.gop = VIDEO_GOP;
   pstStreamCfg->attribute.bitrate = 10 * 1024;
   pstStreamCfg->attribute.profile = VIDEO_PROFILE;
@@ -1083,6 +1090,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].bufsize);
       printf("\t\tsensor[%d] stRecCfg[%d] bitrate: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].bitrate);
+      printf("\t\tsensor[%d] stRecCfg[%d] framerate: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].framerate);
       printf("\t\tsensor[%d] stRecCfg[%d] gop: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].gop);
       printf("\t\tsensor[%d] stRecCfg[%d] profile: %d\n", i, j,
@@ -1136,6 +1145,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.bufsize);
     printf("\t\tsensor[%d] stStreamCfg bitrate: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.bitrate);
+    printf("\t\tsensor[%d] stStreamCfg framerate: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.framerate);
     printf("\t\tsensor[%d] stStreamCfg gop: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.gop);
     printf("\t\tsensor[%d] stStreamCfg profile: %d\n", i,
@@ -1169,6 +1180,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.bufsize);
     printf("\t\tsensor[%d] stLiveCfg bitrate: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.bitrate);
+    printf("\t\tsensor[%d] stLiveCfg framerate: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.framerate);
     printf("\t\tsensor[%d] stLiveCfg gop: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.gop);
     printf("\t\tsensor[%d] stLiveCfg profile: %d\n", i,
@@ -2931,6 +2944,103 @@ static RKADK_S32 RKADK_PARAM_SetBitrate(RKADK_S32 s32CamId,
   return ret;
 }
 
+static RKADK_U32 RKADK_PARAM_GetFps(RKADK_S32 s32CamId,
+                                    RKADK_STREAM_TYPE_E enStreamType) {
+  RKADK_U32 u32Fps = 0;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
+
+  switch (enStreamType) {
+  case RKADK_STREAM_TYPE_SENSOR:
+    pstSensorCfg = RKADK_PARAM_GetSensorCfg(s32CamId);
+    u32Fps = pstSensorCfg->framerate;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    u32Fps = pstRecCfg->attribute[0].framerate;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    u32Fps = pstRecCfg->attribute[1].framerate;
+    break;
+
+  case RKADK_STREAM_TYPE_PREVIEW:
+  case RKADK_STREAM_TYPE_LIVE:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId, enStreamType);
+    u32Fps = pstStreamCfg->attribute.framerate;
+    break;
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", enStreamType);
+    break;
+  }
+
+  return u32Fps;
+}
+
+static RKADK_S32 RKADK_PARAM_SetFps(RKADK_S32 s32CamId,
+                                    RKADK_PARAM_FPS_S *pstFps) {
+  RKADK_S32 ret;
+  RKADK_PARAM_REC_CFG_S *pstRecCfg;
+  RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
+
+  switch (pstFps->enStreamType) {
+  case RKADK_STREAM_TYPE_SENSOR:
+    pstSensorCfg = RKADK_PARAM_GetSensorCfg(s32CamId);
+    if (pstSensorCfg->framerate == pstFps->u32Framerate)
+      return 0;
+
+    if (pstSensorCfg->used_isp) {
+      pstSensorCfg->framerate = pstFps->u32Framerate;
+      ret = RKADK_PARAM_SaveSensorCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
+    } else {
+      RKADK_LOGW("AHD sensor[%d] nonsupport set fps, please set venc fps!", s32CamId);
+      return -1;
+    }
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[0].framerate == pstFps->u32Framerate)
+      return 0;
+
+    pstRecCfg->attribute[0].framerate = pstFps->u32Framerate;
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_MAIN);
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    pstRecCfg = RKADK_PARAM_GetRecCfg(s32CamId);
+    if (pstRecCfg->attribute[1].framerate == pstFps->u32Framerate)
+      return 0;
+
+    pstRecCfg->attribute[1].framerate = pstFps->u32Framerate;
+    ret = RKADK_PARAM_SaveRecAttr(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                  RKADK_STREAM_TYPE_VIDEO_SUB);
+    break;
+
+  case RKADK_STREAM_TYPE_PREVIEW:
+  case RKADK_STREAM_TYPE_LIVE:
+    pstStreamCfg = RKADK_PARAM_GetStreamCfg(s32CamId, pstFps->enStreamType);
+    if (pstStreamCfg->attribute.framerate == pstFps->u32Framerate)
+      return 0;
+
+    pstStreamCfg->attribute.framerate = pstFps->u32Framerate;
+    ret = RKADK_PARAM_SaveStreamCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId,
+                                    pstFps->enStreamType);
+    break;
+
+  default:
+    RKADK_LOGE("Unsupport enStreamType: %d", pstFps->enStreamType);
+    break;
+  }
+
+  return ret;
+}
+
 static RKADK_U32 RKADK_PARAM_GetGop(RKADK_S32 s32CamId,
                                     RKADK_STREAM_TYPE_E enStreamType) {
   RKADK_U32 u32Gop = 0;
@@ -3101,7 +3211,10 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
 
   switch (enParamType) {
   case RKADK_PARAM_TYPE_FPS:
-    *(RKADK_U32 *)pvParam = pstSensorCfg->framerate;
+    RKADK_PARAM_FPS_S *pstFps;
+
+    pstFps = (RKADK_PARAM_FPS_S *)pvParam;
+    pstFps->u32Framerate = RKADK_PARAM_GetFps(s32CamId, pstFps->enStreamType);
     break;
   case RKADK_PARAM_TYPE_FLIP:
     *(bool *)pvParam = pstSensorCfg->flip;
@@ -3219,11 +3332,9 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
 
   switch (enParamType) {
   case RKADK_PARAM_TYPE_FPS:
-    RKADK_CHECK_EQUAL(pstSensorCfg->framerate, *(RKADK_U32 *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstSensorCfg->framerate = *(RKADK_U32 *)pvParam;
-    bSaveSensorCfg = true;
-    break;
+    ret = RKADK_PARAM_SetFps(s32CamId, (RKADK_PARAM_FPS_S *)pvParam);
+    RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
+    return ret;
   case RKADK_PARAM_TYPE_FLIP:
     RKADK_CHECK_EQUAL(pstSensorCfg->flip, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
@@ -3613,8 +3724,8 @@ RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio) {
   if(pstRecCfg->pre_record_time == 0)
     return u32BufCount;
 
-  u32Integer = pstRecCfg->attribute[0].gop / pstSensorCfg->framerate;
-  u32Remainder = pstRecCfg->attribute[0].gop % pstSensorCfg->framerate;
+  u32Integer = pstRecCfg->attribute[0].gop / pstRecCfg->attribute[0].framerate;
+  u32Remainder = pstRecCfg->attribute[0].gop % pstRecCfg->attribute[0].framerate;
   u32PreRecCacheTime = pstRecCfg->pre_record_time + u32Integer;
   if (u32Remainder)
     u32PreRecCacheTime += 1;
@@ -3623,7 +3734,7 @@ RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio) {
     u32BufCount = pstAudioParam->channels * (pstAudioParam->samplerate
                   / pstAudioParam->samples_per_frame) * (u32PreRecCacheTime + 2);
   else
-    u32BufCount = (u32PreRecCacheTime + 2) * pstSensorCfg->framerate;
+    u32BufCount = (u32PreRecCacheTime + 2) * pstRecCfg->attribute[0].framerate;
 
   return u32BufCount;
 }

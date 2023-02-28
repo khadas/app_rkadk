@@ -186,6 +186,11 @@ typedef struct {
 
 typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_U32 u32Framerate;
+} RKADK_PARAM_FPS_S;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
   RKADK_U32 u32Gop;
 } RKADK_PARAM_GOP_S;
 
@@ -260,6 +265,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 height;
   RKADK_U32 bufsize;
   RKADK_U32 bitrate;
+  RKADK_U32 framerate;
   RKADK_U32 gop;
   RKADK_U32 profile;
   RKADK_CODEC_TYPE_E codec_type;
