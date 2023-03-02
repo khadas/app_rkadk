@@ -19,8 +19,6 @@ file(GLOB_RECURSE INIPARSER_SRC "${CMAKE_SOURCE_DIR}/src/third-party/iniparser/*
 file(GLOB_RECURSE CJSON_SRC "${CMAKE_SOURCE_DIR}/src/third-party/cjson/*.c")
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
-link_directories(${CMAKE_SOURCE_DIR}/lib/arm-rockchip830-linux-gnueabihf)
-
 add_library(rkadk SHARED
 		${AUDIO_ENCODER_SRC}
 		${AUDIO_DECODER_SRC}
@@ -47,11 +45,7 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
-if(CMAKE_C_COMPILER MATCHES "arm-rockchip830-linux-uclibcgnueabihf*")
-	target_link_libraries(rkadk rockit rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
-else()
-	target_link_libraries(rkadk rockit rtsp rkfsmk rkmuxer z rkdemuxer rkaudio)
-endif()
+target_link_libraries(rkadk rockit rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
 
 if(USE_RKAIQ)
     target_link_libraries(rkadk rkaiq)
