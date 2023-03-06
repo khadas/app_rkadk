@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:mh";
+static RKADK_CHAR optstr[] = "a:I:p:m:h";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -44,7 +44,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
-  printf("\t-m: multiple sensors, Default:false\n");
+  printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
 }
 
 static RKADK_S32
@@ -145,11 +145,12 @@ static void sigterm_handler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret;
+  int c, ret, inCmd = 0;
   RKADK_RECORD_ATTR_S stRecAttr;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL, pRecorder1 = NULL;
   RK_BOOL bMultiCam = RK_FALSE;
+  RK_BOOL bMultiSensor = RK_FALSE;
   RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
   RKADK_PARAM_RES_E type;
@@ -180,7 +181,12 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("iniPath: %s", iniPath);
       break;
     case 'm':
-      bMultiCam = RKADK_TRUE;
+      inCmd = atoi(optarg);
+      if (inCmd == 1) {
+        bMultiCam = RKADK_TRUE;
+        bMultiSensor = RKADK_TRUE;
+      } else if (inCmd == 2)
+        bMultiSensor = RKADK_TRUE;
       break;
     case 'h':
     default:
@@ -191,7 +197,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  if (bMultiCam)
+  if (bMultiSensor)
     s32CamId = 0;
 
   RKADK_MPI_SYS_Init();
@@ -254,13 +260,14 @@ int main(int argc, char *argv[]) {
   }
   RKADK_RECORD_Start(pRecorder);
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     stRecAttr.s32CamID = 1;
     if (RKADK_RECORD_Create(&stRecAttr, &pRecorder1)) {
       RKADK_LOGE("s32CamId[1] Create recorder failed");
 #ifdef RKAIQ
       SAMPLE_ISP_Stop(s32CamId);
-      SAMPLE_ISP_Stop(1);
+      if (bMultiCam)
+        SAMPLE_ISP_Stop(1);
 #endif
       return -1;
     }
@@ -378,12 +385,13 @@ int main(int argc, char *argv[]) {
   SAMPLE_ISP_Stop(s32CamId);
 #endif
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     RKADK_RECORD_Stop(pRecorder1);
     RKADK_RECORD_Destroy(pRecorder1);
 
 #ifdef RKAIQ
-    SAMPLE_ISP_Stop(1);
+    if (bMultiCam)
+      SAMPLE_ISP_Stop(1);
 #endif
   }
 

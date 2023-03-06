@@ -32,7 +32,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:mh";
+static RKADK_CHAR optstr[] = "a:I:p:m:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -44,7 +44,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
-  printf("\t-m: multiple sensors, Default:false\n");
+  printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -110,7 +110,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret;
+  int c, ret, inCmd = 0;
   RKADK_PARAM_FPS_S stFps;
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
@@ -121,6 +121,7 @@ int main(int argc, char *argv[]) {
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
   RKADK_BOOL bMultiCam = RKADK_FALSE;
+  RKADK_BOOL bMultiSensor = RK_FALSE;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -141,7 +142,12 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("iniPath: %s", iniPath);
       break;
     case 'm':
-      bMultiCam = RKADK_TRUE;
+      inCmd = atoi(optarg);
+      if (inCmd == 1) {
+        bMultiCam = RKADK_TRUE;
+        bMultiSensor = RKADK_TRUE;
+      } else if (inCmd == 2)
+        bMultiSensor = RKADK_TRUE;
       break;
     case 'h':
     default:
@@ -152,10 +158,10 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  if (bMultiCam)
+  if (bMultiSensor)
     u32CamId = 0;
 
-  RKADK_LOGD("#camera id: %d, bMultiCam: %d", u32CamId, bMultiCam);
+  RKADK_LOGD("#camera id: %d, bMultiCam: %d, bMultiSensor: %d", u32CamId, bMultiCam, bMultiSensor);
 
   RKADK_MPI_SYS_Init();
 
@@ -226,14 +232,15 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     stPhotoAttr.u32CamId = 1;
     ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle1);
     if (ret) {
       RKADK_LOGE("RKADK_PHOTO_Init u32CamId[1] failed[%d]", ret);
       RKADK_PHOTO_DeInit(pHandle);
       SAMPLE_ISP_Stop(u32CamId);
-      SAMPLE_ISP_Stop(1);
+      if (bMultiCam)
+        SAMPLE_ISP_Stop(1);
     }
   }
 
@@ -272,7 +279,7 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (bMultiCam) {
+    if (bMultiSensor) {
       if (RKADK_PHOTO_TakePhoto(pHandle1, &stTakePhotoAttr)) {
         RKADK_LOGE("RKADK_PHOTO_TakePhoto u32CamId[1] failed");
         break;
@@ -284,7 +291,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_PHOTO_DeInit(pHandle);
 
-  if (bMultiCam)
+  if (bMultiSensor)
     RKADK_PHOTO_DeInit(pHandle1);
 
 #ifdef RKAIQ

@@ -38,7 +38,7 @@ static FILE *g_output1_file = NULL;
 static FILE *g_pcm_file = NULL;
 static bool is_quit = false;
 static RKADK_CHAR *g_output_path = "/data/ai.pcm";
-static RKADK_CHAR optstr[] = "a:I:M:e:o:p:mh";
+static RKADK_CHAR optstr[] = "a:I:M:e:o:p:m:h";
 
 //default use ini audio codec type
 static RKADK_CODEC_TYPE_E g_enCodecType = RKADK_CODEC_TYPE_BUTT;
@@ -57,7 +57,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "Default:ini audio codec type\n");
   printf("\t-o: Output path, Default:\"/data/ai.pcm\"\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
-  printf("\t-m: multiple sensors, Default:false\n");
+  printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
   ;
 }
 
@@ -91,7 +91,7 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
   return 0;
 }
 
-static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bMultiCam) {
+static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bMultiCam, RKADK_BOOL bMultiSensor) {
   RKADK_S32 ret;
   RKADK_PARAM_FPS_S stFps;
   RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
@@ -104,7 +104,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
     return -1;
   }
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     u32CamId = 0;
     g_output1_file = fopen("/data/venc_cam_1.bin", "w");
     if (!g_output1_file) {
@@ -170,7 +170,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
     return -1;
   }
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     stVideoAttr.u32CamId = 1;
     ret = RKADK_STREAM_VideoInit(&stVideoAttr, &pHandle1);
     if (ret) {
@@ -195,7 +195,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
     }
   }
 
-  RKADK_LOGD("u32CamId[%d] bMultiCam[%d] initial finish\n", u32CamId, bMultiCam);
+  RKADK_LOGD("u32CamId[%d] bMultiCam[%d] bMultiSensor[%d] initial finish\n", u32CamId, bMultiCam, bMultiSensor);
   signal(SIGINT, sigterm_handler);
 
   char cmd[64];
@@ -252,7 +252,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
   if (ret)
     RKADK_LOGE("RKADK_STREAM_VideoDeInit u32CamId[%d] failed[%d]", u32CamId, ret);
 
-  if (bMultiCam) {
+  if (bMultiSensor) {
     ret = RKADK_STREAM_VencStop(pHandle1);
     if (ret)
       RKADK_LOGE("RKADK_STREAM_VencStop u32CamId[1] failed");
@@ -389,11 +389,12 @@ int main(int argc, char *argv[]) {
   RKADK_U32 u32CamId = 0;
   RKADK_CHAR *pMode = "audio";
   RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
-  int c;
+  int c, inCmd = 0;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_BOOL bMultiCam = RKADK_FALSE;
+  RKADK_BOOL bMultiSensor = RK_FALSE;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -440,7 +441,12 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("iniPath: %s", iniPath);
       break;
     case 'm':
-      bMultiCam = RKADK_TRUE;
+      inCmd = atoi(optarg);
+      if (inCmd == 1) {
+        bMultiCam = RKADK_TRUE;
+        bMultiSensor = RKADK_TRUE;
+      } else if (inCmd == 2)
+        bMultiSensor = RKADK_TRUE;
       break;
     case 'h':
     default:
@@ -478,7 +484,7 @@ int main(int argc, char *argv[]) {
   if (!strcmp(pMode, "audio"))
     AudioTest(u32CamId);
   else if (!strcmp(pMode, "video"))
-    VideoTest(u32CamId, pIqfilesPath, bMultiCam);
+    VideoTest(u32CamId, pIqfilesPath, bMultiCam, bMultiSensor);
   else {
     RKADK_LOGE("Invalid test mode: %s", pMode);
     return -1;
