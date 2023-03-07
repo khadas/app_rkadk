@@ -152,6 +152,13 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   else
     RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", pstPhotoCfg->venc_chn, ret);
 
+  // drop first thumb frame
+  ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
+  if (ret == RK_SUCCESS)
+    RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
+  else
+    RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", ptsThumbCfg->photo_venc_chn, ret);
+
   while (pHandle->bGetJpeg) {
     ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
     if (ret == RK_SUCCESS) {
@@ -503,16 +510,6 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     }
   }
 
-  pHandle->bGetJpeg = true;
-  ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
-  if (ret) {
-    RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamId,
-               ret);
-    goto failed;
-  }
-  snprintf(name, sizeof(name), "PhotoGetJpeg_%d", stVencChn.s32ChnId);
-  pthread_setname_np(pHandle->tid, name);
-
   ret = ThumbnailInit(pstPhotoAttr->u32CamId, enThumbModule, ptsThumbCfg);
   if (ret) {
     RKADK_LOGI("Thumbnail venc [%d] Init fail [%d]",
@@ -551,6 +548,16 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
       }
     }
   }
+
+  pHandle->bGetJpeg = true;
+  ret = pthread_create(&pHandle->tid, NULL, RKADK_PHOTO_GetJpeg, pHandle);
+  if (ret) {
+    RKADK_LOGE("Create get jpg(%d) thread failed [%d]", pstPhotoAttr->u32CamId,
+               ret);
+    goto failed;
+  }
+  snprintf(name, sizeof(name), "PhotoGetJpeg_%d", stVencChn.s32ChnId);
+  pthread_setname_np(pHandle->tid, name);
 
   *ppHandle = (RKADK_MW_PTR)pHandle;
   RKADK_LOGI("Photo[%d] Init End...", pstPhotoAttr->u32CamId);
