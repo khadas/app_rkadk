@@ -1143,6 +1143,17 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     } else {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
+
+      //dump video info
+#ifdef RV1126_1109
+      system("dumpsys sys");
+      system("dumpsys vi");
+      system("dumpsys vpss");
+      system("dumpsys venc");
+#else
+      system("cat /dev/mpi/vsys");
+      system("cat /proc/vcodec/enc/venc_info");
+#endif
     }
   }
 
