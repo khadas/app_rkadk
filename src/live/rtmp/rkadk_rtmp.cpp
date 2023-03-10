@@ -337,6 +337,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     goto failed;
   }
 
+  RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
   return 0;
 
 failed:

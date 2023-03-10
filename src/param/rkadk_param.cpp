@@ -1114,6 +1114,16 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.max_qp);
       printf("\t\tsensor[%d] stRecCfg[%d] min_qp: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.min_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_en: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_qp_en);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_delta: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_qp_delta);
+      printf("\t\tsensor[%d] stRecCfg[%d] hier_frame_num: %s\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_frame_num);
+      printf("\t\tsensor[%d] stRecCfg[%d] full_range: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.full_range);
+      printf("\t\tsensor[%d] stRecCfg[%d] scaling_list: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.scaling_list);
     }
 
     printf("\tPhoto Config\n");
@@ -1170,6 +1180,16 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.max_qp);
     printf("\t\tsensor[%d] stStreamCfg min_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.min_qp);
+    printf("\t\tsensor[%d] stStreamCfg hier_qp_en: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_qp_en);
+    printf("\t\tsensor[%d] stStreamCfg hier_qp_delta: %s\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_qp_delta);
+    printf("\t\tsensor[%d] stStreamCfg hier_frame_num: %s\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_frame_num);
+    printf("\t\tsensor[%d] stStreamCfg full_range: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.full_range);
+    printf("\t\tsensor[%d] stStreamCfg scaling_list: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.scaling_list);
 
     printf("\tLive Config\n");
     printf("\t\tsensor[%d] stLiveCfg width: %d\n", i,
@@ -1204,6 +1224,16 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.max_qp);
     printf("\t\tsensor[%d] stLiveCfg min_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.min_qp);
+    printf("\t\tsensor[%d] stLiveCfg hier_qp_en: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.hier_qp_en);
+    printf("\t\tsensor[%d] stLiveCfg hier_qp_delta: %s\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.hier_qp_delta);
+    printf("\t\tsensor[%d] stLiveCfg hier_frame_num: %s\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.hier_frame_num);
+    printf("\t\tsensor[%d] stLiveCfg full_range: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.full_range);
+    printf("\t\tsensor[%d] stLiveCfg scaling_list: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.scaling_list);
 
     printf("\tDisplay Config\n");
     printf("\t\tsensor[%d] stDispCfg x: %d\n", i,
@@ -2581,11 +2611,11 @@ static RKADK_S32 RKADK_PARAM_SetVencHierarchicalQp(RKADK_PARAM_VENC_ATTR_S stVen
   }
 
   stHierarchicalQp.bHierarchicalQpEn = RK_TRUE;
-  if (!strcmp(stVencAttr.venc_param.hier_qp_delta, "NONE"))
+  if (strcmp(stVencAttr.venc_param.hier_qp_delta, "NONE"))
     RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_qp_delta,
                        stHierarchicalQp.s32HierarchicalQpDelta, 4, ",");
 
-  if (!strcmp(stVencAttr.venc_param.hier_frame_num, "NONE"))
+  if (strcmp(stVencAttr.venc_param.hier_frame_num, "NONE"))
     RKADK_PARAM_Strtok(stVencAttr.venc_param.hier_frame_num,
                        stHierarchicalQp.s32HierarchicalFrameNum, 4, ",");
 
