@@ -201,8 +201,7 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   stAttr.stVencAttr.u32VirWidth = ptsThumbCfg->thumb_width;
   stAttr.stVencAttr.u32VirHeight = ptsThumbCfg->thumb_height;
   stAttr.stVencAttr.u32StreamBufCnt = 3;
-  stAttr.stVencAttr.u32BufSize = ptsThumbCfg->thumb_width *
-                                 ptsThumbCfg->thumb_height * 3 / 2;
+  stAttr.stVencAttr.u32BufSize = ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
   stIfd1[0] = {0x0100, 3, 1, ptsThumbCfg->thumb_width,
               {{.uwv = (uint16_t)ptsThumbCfg->thumb_width }}}; // ImageWidth
