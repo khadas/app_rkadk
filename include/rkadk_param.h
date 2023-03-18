@@ -131,7 +131,7 @@ typedef enum {
   RKADK_RES_1440P,    /* 2560*1440 */
   RKADK_RES_1520P,    /* 2688*1520 */
   RKADK_RES_1600P,    /* 2560*1600 */
-  RKADK_RES_1620P,    /* 2880*1620 */
+  RKADK_RES_1620P,    /* 2880*1616, height 8 alignment */
   RKADK_RES_1944P,    /* 2592*1944 */
   RKADK_RES_2160P,    /* 3840*2160 */
   RKADK_RES_BUTT,

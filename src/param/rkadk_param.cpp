@@ -324,7 +324,7 @@ static RKADK_S32 RKADK_PARAM_SaveDispCfg(char *path, RKADK_U32 u32CamId) {
 
 static bool RKADK_PARAM_CheckCfg(RKADK_U32 *u32Value, RKADK_U32 u32DefValue,
                                  const char *tag) {
-  if (*u32Value == 0) {
+  if (*u32Value <= 0) {
     RKADK_LOGW("%s: invalid value(%d), use default(%d)", tag, *u32Value,
                u32DefValue);
     *u32Value = u32DefValue;
@@ -478,8 +478,7 @@ static void RKADK_PARAM_CheckStreamCfg(char *path, RKADK_U32 u32CamId,
                                     1, "stream vpss_chn");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, 4 * 1024 * 1024,
                                  "stream bitrate");
-  change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->framerate, 1, pstSensorCfg->framerate,
-                                    pstSensorCfg->framerate, "stream fps");
+  change |= RKADK_PARAM_CheckCfg(&pstAttribute->framerate, pstSensorCfg->framerate, "stream fps");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "stream gop");
   change |= RKADK_PARAM_CheckCfg(&pstAttribute->profile, VIDEO_PROFILE,
                                  "stream profile");
@@ -529,9 +528,8 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
       (RKADK_U32 *)&pstRecCfg->pre_record_mode, RKADK_MUXER_PRE_RECORD_NONE,
       RKADK_MUXER_PRE_RECORD_SINGLE, RKADK_MUXER_PRE_RECORD_NONE,
       "pre_record_mode");
-  change |= RKADK_PARAM_CheckCfgU32(&pstRecCfg->lapse_multiple, 1,
-                                    pstSensorCfg->framerate,
-                                    pstSensorCfg->framerate, "lapse_multiple");
+  change |= RKADK_PARAM_CheckCfg(&pstRecCfg->lapse_multiple,
+                                    pstRecCfg->attribute[0].framerate, "lapse_multiple");
   change |=
       RKADK_PARAM_CheckCfgU32(&pstRecCfg->file_num, 1, RECORD_FILE_NUM_MAX,
                               RECORD_FILE_NUM_MAX, "file_num");
@@ -592,8 +590,7 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
         &pstAttribute->vpss_chn, 0, VPSS_MAX_CHN_NUM, u32DefChn, "rec vpss_chn");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->bitrate, u32DefBitrate,
                                    "rec bitrate");
-    change |= RKADK_PARAM_CheckCfgU32(&pstAttribute->framerate, 1, pstSensorCfg->framerate,
-                                    pstSensorCfg->framerate, "rec fps");
+    change |= RKADK_PARAM_CheckCfg(&pstAttribute->framerate, pstSensorCfg->framerate, "rec fps");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->gop, VIDEO_GOP, "rec gop");
     change |= RKADK_PARAM_CheckCfg(&pstAttribute->profile, VIDEO_PROFILE,
                                    "rec profile");
@@ -3012,7 +3009,7 @@ static RKADK_U32 RKADK_PARAM_GetFps(RKADK_S32 s32CamId,
 
 static RKADK_S32 RKADK_PARAM_SetFps(RKADK_S32 s32CamId,
                                     RKADK_PARAM_FPS_S *pstFps) {
-  RKADK_S32 ret;
+  RKADK_S32 ret = -1;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -3103,7 +3100,7 @@ static RKADK_U32 RKADK_PARAM_GetGop(RKADK_S32 s32CamId,
 
 static RKADK_S32 RKADK_PARAM_SetGop(RKADK_S32 s32CamId,
                                     RKADK_PARAM_GOP_S *pstGop) {
-  RKADK_S32 ret;
+  RKADK_S32 ret = -1;
   RKADK_PARAM_REC_CFG_S *pstRecCfg;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
 
