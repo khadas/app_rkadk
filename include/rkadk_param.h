@@ -204,6 +204,7 @@ typedef struct tagRKADK_PARAM_VI_CFG_S {
   RKADK_U32 buf_cnt;
   RKADK_U32 width;
   RKADK_U32 height;
+  RKADK_U32 depth;
   char pix_fmt[RKADK_PIX_FMT_LEN]; /* options: NV12/NV16/YUYV/FBC0/FBC2 */
 
   /* options: NONE/RECORD_MAIN/RECORD_SUB/PREVIEW/PHOTO/LIVE/DISP */

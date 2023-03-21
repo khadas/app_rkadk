@@ -238,6 +238,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_0[] = {
     DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, int_e, depth),
     DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
     DEFINE_MAP(vi.0, tagRKADK_PARAM_VI_CFG_S, string_e, module),
 };
@@ -248,6 +249,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_1[] = {
     DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, int_e, depth),
     DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
     DEFINE_MAP(vi.1, tagRKADK_PARAM_VI_CFG_S, string_e, module),
 };
@@ -258,6 +260,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_2[] = {
     DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, int_e, depth),
     DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
     DEFINE_MAP(vi.2, tagRKADK_PARAM_VI_CFG_S, string_e, module),
 };
@@ -268,6 +271,7 @@ static RKADK_SI_CONFIG_MAP_S g_stViCfgMapTable_3[] = {
     DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, buf_cnt),
     DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, width),
     DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, height),
+    DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, int_e, depth),
     DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, pix_fmt),
     DEFINE_MAP(vi.3, tagRKADK_PARAM_VI_CFG_S, string_e, module),
 };

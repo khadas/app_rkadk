@@ -659,6 +659,13 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
   change |= RKADK_PARAM_CheckCfgStr(pstViCfg->pix_fmt, pixFmt,
                                     RKADK_PIX_FMT_LEN, "vi pix_fmt");
 
+  if (pstViCfg->depth > (pstViCfg->buf_cnt - 2)) {
+    RKADK_LOGW("illogical CamId[%d] vi[%d] depth[%d], buf_cnt[%d]",
+                u32CamId, index, pstViCfg->depth, pstViCfg->buf_cnt);
+    pstViCfg->depth = pstViCfg->buf_cnt - 2;
+    change = true;
+  }
+
   if (change)
     RKADK_PARAM_SaveViCfg(path, index, u32CamId);
 }
@@ -1050,6 +1057,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stViCfg[j].chn_id);
       printf("\t\tsensor[%d] VI[%d] buf_cnt: %d\n", i, j,
              pstCfg->stMediaCfg[i].stViCfg[j].buf_cnt);
+      printf("\t\tsensor[%d] VI[%d] depth: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stViCfg[j].depth);
       printf("\t\tsensor[%d] VI[%d] pix_fmt: %s\n", i, j,
              pstCfg->stMediaCfg[i].stViCfg[j].pix_fmt);
       printf("\t\tsensor[%d] VI[%d] width: %d\n", i, j,
@@ -1282,33 +1291,26 @@ static void RKADK_PARAM_DumpViAttr() {
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
       printf("\tRec VI Attribute\n");
       printf("\t\tsensor[%d] stRecCfg[%d] stIspOpt.aEntityName: %s\n", i, j,
-             pstCfg->stMediaCfg[i]
-                 .stRecCfg.vi_attr[j]
-                 .stChnAttr.stIspOpt.aEntityName);
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stIspOpt.aEntityName);
       printf("\t\tsensor[%d] stRecCfg[%d] u32ViChn: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].u32ViChn);
-      printf(
-          "\t\tsensor[%d] stRecCfg[%d] u32Width: %d\n", i, j,
-          pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stSize.u32Width);
-      printf(
-          "\t\tsensor[%d] stRecCfg[%d] u32Height: %d\n", i, j,
-          pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stSize.u32Height);
+      printf("\t\tsensor[%d] stRecCfg[%d] u32Width: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stSize.u32Width);
+      printf("\t\tsensor[%d] stRecCfg[%d] u32Height: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stSize.u32Height);
       printf("\t\tsensor[%d] stRecCfg[%d] stIspOpt.u32BufCount: %d\n", i, j,
-             pstCfg->stMediaCfg[i]
-                 .stRecCfg.vi_attr[j]
-                 .stChnAttr.stIspOpt.u32BufCount);
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stIspOpt.u32BufCount);
+      printf("\t\tsensor[%d] stRecCfg[%d] u32Depth: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.u32Depth);
       printf("\t\tsensor[%d] stRecCfg[%d] enPixelFormat: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.enPixelFormat);
       printf("\t\tsensor[%d] stRecCfg[%d] stIspOpt.enMemoryType: %d\n", i, j,
-             pstCfg->stMediaCfg[i]
-                 .stRecCfg.vi_attr[j]
-                 .stChnAttr.stIspOpt.enMemoryType);
+             pstCfg->stMediaCfg[i].stRecCfg.vi_attr[j].stChnAttr.stIspOpt.enMemoryType);
     }
 
     printf("\tPhoto VI Attribute\n");
     printf("\t\tsensor[%d] stPhotoCfg stIspOpt.aEntityName: %s\n", i,
-           pstCfg->stMediaCfg[i]
-               .stPhotoCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+           pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
     printf("\t\tsensor[%d] stPhotoCfg u32ViChn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.u32ViChn);
     printf("\t\tsensor[%d] stPhotoCfg u32Width: %d\n", i,
@@ -1316,76 +1318,71 @@ static void RKADK_PARAM_DumpViAttr() {
     printf("\t\tsensor[%d] stPhotoCfg u32Height: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.stSize.u32Height);
     printf("\t\tsensor[%d] stPhotoCfg stIspOpt.u32BufCount: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stPhotoCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+           pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stPhotoCfg u32Depth: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.u32Depth);
     printf("\t\tsensor[%d] stPhotoCfg enPixelFormat: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.enPixelFormat);
     printf("\t\tsensor[%d] stPhotoCfg stIspOpt.enMemoryType: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stPhotoCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+           pstCfg->stMediaCfg[i].stPhotoCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
 
     printf("\tStream VI Attribute\n");
     printf("\t\tsensor[%d] stStreamCfg stIspOpt.aEntityName: %s\n", i,
-           pstCfg->stMediaCfg[i]
-               .stStreamCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+           pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
     printf("\t\tsensor[%d] stStreamCfg u32ViChn: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.u32ViChn);
     printf("\t\tsensor[%d] stStreamCfg u32Width: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stSize.u32Width);
-    printf(
-        "\t\tsensor[%d] stStreamCfg u32Height: %d\n", i,
-        pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stSize.u32Height);
+    printf("\t\tsensor[%d] stStreamCfg u32Height: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stSize.u32Height);
     printf("\t\tsensor[%d] stStreamCfg stIspOpt.u32BufCount: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stStreamCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+           pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stStreamCfg u32Depth: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.u32Depth);
     printf("\t\tsensor[%d] stStreamCfg enPixelFormat: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.enPixelFormat);
     printf("\t\tsensor[%d] stStreamCfg stIspOpt.enMemoryType: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stStreamCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+           pstCfg->stMediaCfg[i].stStreamCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
 
     printf("\tLive VI Attribute\n");
-    printf(
-        "\t\tsensor[%d] stLiveCfg stIspOpt.aEntityName: %s\n", i,
-        pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+    printf("\t\tsensor[%d] stLiveCfg stIspOpt.aEntityName: %s\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
     printf("\t\tsensor[%d] stLiveCfg u32ViChn: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.u32ViChn);
     printf("\t\tsensor[%d] stLiveCfg u32Width: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stSize.u32Width);
     printf("\t\tsensor[%d] stLiveCfg u32Height: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stSize.u32Height);
-    printf(
-        "\t\tsensor[%d] stLiveCfg stIspOpt.u32BufCount: %d\n", i,
-        pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stLiveCfg stIspOpt.u32BufCount: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stLiveCfg u32Depth: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.u32Depth);
     printf("\t\tsensor[%d] stLiveCfg enPixelFormat: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.enPixelFormat);
     printf("\t\tsensor[%d] stLiveCfg stIspOpt.enMemoryType: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stLiveCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+           pstCfg->stMediaCfg[i].stLiveCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
 
     printf("\tDisplay VI Attribute\n");
-    printf(
-        "\t\tsensor[%d] stDispCfg stIspOpt.aEntityName: %s\n", i,
-        pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+    printf("\t\tsensor[%d] stDispCfg stIspOpt.aEntityName: %s\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
     printf("\t\tsensor[%d] stDispCfg u32ViChn: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vi_attr.u32ViChn);
     printf("\t\tsensor[%d] stDispCfg u32Width: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stSize.u32Width);
     printf("\t\tsensor[%d] stDispCfg u32Height: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stSize.u32Height);
-    printf(
-        "\t\tsensor[%d] stDispCfg stIspOpt.u32BufCount: %d\n", i,
-        pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stDispCfg stIspOpt.u32BufCount: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stDispCfg u32Depth: %d\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.u32Depth);
     printf("\t\tsensor[%d] stDispCfg enPixelFormat: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.enPixelFormat);
     printf("\t\tsensor[%d] stDispCfg stIspOpt.enMemoryType: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stDispCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+           pstCfg->stMediaCfg[i].stDispCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
 
     printf("\tThumb VI Attribute\n");
     printf("\t\tsensor[%d] stThumbCfg stIspOpt.aEntityName: %s\n", i,
-           pstCfg->stMediaCfg[i]
-               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stIspOpt.aEntityName);
     printf("\t\tsensor[%d] stThumbCfg u32ViChn: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.u32ViChn);
     printf("\t\tsensor[%d] stThumbCfg u32Width: %d\n", i,
@@ -1393,13 +1390,13 @@ static void RKADK_PARAM_DumpViAttr() {
     printf("\t\tsensor[%d] stThumbCfg u32Height: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stSize.u32Height);
     printf("\t\tsensor[%d] stThumbCfg stIspOpt.u32BufCount: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stIspOpt.u32BufCount);
+    printf("\t\tsensor[%d] stThumbCfg u32Depth: %d\n", i,
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.u32Depth);
     printf("\t\tsensor[%d] stThumbCfg enPixelFormat: %d\n", i,
            pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.enPixelFormat);
     printf("\t\tsensor[%d] stThumbCfg stIspOpt.enMemoryType: %d\n", i,
-           pstCfg->stMediaCfg[i]
-               .stThumbCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
+           pstCfg->stMediaCfg[i].stThumbCfg.vi_attr.stChnAttr.stIspOpt.enMemoryType);
   }
 }
 
@@ -1865,11 +1862,6 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
     }
   }
 
-  if (enStrmType == RKADK_STREAM_TYPE_VIDEO_MAIN) {
-    pstSensorCfg->wrap_buf_line = height;
-    RKADK_PARAM_SaveSensorCfg(g_stPARAMCtx.sensorPath[s32CamId], s32CamId);
-  }
-
   pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
   RKADK_LOGD("Sensor[%d] %s[%d x %d] match vi.%d[%d x %d] bSaveViCfg[%d]\n", s32CamId,
              module, width, height, index, pstViCfg->width, pstViCfg->height, bSaveViCfg);
@@ -2046,7 +2038,7 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstStreamCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstStreamCfg->vi_attr.stChnAttr.enCompressMode));
-  pstStreamCfg->vi_attr.stChnAttr.u32Depth = 0;
+  pstStreamCfg->vi_attr.stChnAttr.u32Depth = pstViCfg->depth;
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
@@ -2090,7 +2082,7 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstPhotoCfg->vi_attr.stChnAttr.enCompressMode));
-  pstPhotoCfg->vi_attr.stChnAttr.u32Depth = 0;
+  pstPhotoCfg->vi_attr.stChnAttr.u32Depth = pstViCfg->depth;
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
@@ -2148,7 +2140,7 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
     pstRecCfg->vi_attr[i].stChnAttr.stSize.u32Height = pstViCfg->height;
     pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
         pstViCfg->pix_fmt, &(pstRecCfg->vi_attr[i].stChnAttr.enCompressMode));
-    pstRecCfg->vi_attr[i].stChnAttr.u32Depth = 0;
+    pstRecCfg->vi_attr[i].stChnAttr.u32Depth = pstViCfg->depth;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
@@ -2208,7 +2200,7 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
   pstDispCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstDispCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstDispCfg->vi_attr.stChnAttr.enCompressMode));
-  pstDispCfg->vi_attr.stChnAttr.u32Depth = 0;
+  pstDispCfg->vi_attr.stChnAttr.u32Depth = pstViCfg->depth;
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
@@ -2251,7 +2243,7 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   pstThumbCfg->vi_attr.stChnAttr.stSize.u32Height = pstViCfg->height;
   pstThumbCfg->vi_attr.stChnAttr.enPixelFormat = RKADK_PARAM_GetPixFmt(
       pstViCfg->pix_fmt, &(pstThumbCfg->vi_attr.stChnAttr.enCompressMode));
-  pstThumbCfg->vi_attr.stChnAttr.u32Depth = 0;
+  pstThumbCfg->vi_attr.stChnAttr.u32Depth = pstViCfg->depth;
   pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
