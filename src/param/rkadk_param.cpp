@@ -1855,8 +1855,12 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   } else if (matchViCnt == 1) {
     index = matchViIndex[0];
   } else {
-    if (width == pstSensorCfg->max_width && height == pstSensorCfg->max_height) {
+    if (width >= pstSensorCfg->max_width && height >= pstSensorCfg->max_height) {
       index = matchViIndex[0];
+#ifdef RV1126_1109
+      //1126/1109 nonsupport isp enlarge
+      bSaveViCfg = false;
+#endif
     } else {
       index = matchViIndex[1];
     }
