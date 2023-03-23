@@ -613,6 +613,8 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
   RKADK_U32 u32DefWidth, u32DefHeight;
   RKADK_PARAM_VI_CFG_S *pstViCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stViCfg[index];
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
+      &g_stPARAMCtx.stCfg.stSensorCfg[u32CamId];
 
   u32ChnId = index + (u32CamId * RKADK_ISPP_VI_NODE_CNT);
   if (u32ChnId >= VI_MAX_CHN_NUM)
@@ -664,6 +666,18 @@ static void RKADK_PARAM_CheckViCfg(char *path, RKADK_U32 u32CamId,
                 u32CamId, index, pstViCfg->depth, pstViCfg->buf_cnt);
     pstViCfg->depth = pstViCfg->buf_cnt - 2;
     change = true;
+  }
+
+  if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
+    if ((pstViCfg->width != pstSensorCfg->max_width) &&
+        (pstViCfg->width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
+      if (strcmp(pstViCfg->pix_fmt, "NV16")) {
+        RKADK_LOGW("rkispp_scale0 resolution[%dx%d] > 2K, must NV16",
+                   pstViCfg->width, pstViCfg->height);
+        memcpy(pstViCfg->pix_fmt, "NV16", strlen("NV16"));
+        change = true;
+      }
+    }
   }
 
   if (change)
@@ -1869,6 +1883,18 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   pstViCfg = &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stViCfg[index];
   RKADK_LOGD("Sensor[%d] %s[%d x %d] match vi.%d[%d x %d] bSaveViCfg[%d]\n", s32CamId,
              module, width, height, index, pstViCfg->width, pstViCfg->height, bSaveViCfg);
+
+   if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
+     if ((pstViCfg->width != pstSensorCfg->max_width) &&
+         (pstViCfg->width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
+       if (strcmp(pstViCfg->pix_fmt, "NV16")) {
+         RKADK_LOGW("rkispp_scale0 resolution[%d*%d] > 2K, must NV16",
+                    pstViCfg->width, pstViCfg->height);
+         memcpy(pstViCfg->pix_fmt, "NV16", strlen("NV16"));
+         bSaveViCfg = true;
+       }
+     }
+   }
 
   if (bSaveViCfg) {
     pstViCfg->width = width;

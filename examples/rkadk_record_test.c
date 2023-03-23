@@ -221,6 +221,7 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+record:
 #ifdef RKAIQ
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(s32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
@@ -299,40 +300,114 @@ int main(int argc, char *argv[]) {
       type = RKADK_REC_TYPE_LAPSE;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
       RKADK_RECORD_Reset(&pRecorder);
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "NR")) { //Normal Record
       type = RKADK_REC_TYPE_NORMAL;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RECORD_TYPE, &type);
       RKADK_RECORD_Reset(&pRecorder);
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "720")) {
       type = RKADK_RES_720P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "1296")) {
       type = RKADK_RES_1296P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "264")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H264;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "265")) {
       stCodecType.enCodecType = RKADK_CODEC_TYPE_H265;
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
       stCodecType.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_CODEC_TYPE, &stCodecType);
-      RKADK_RECORD_Reset(&pRecorder);
+      ret = RKADK_RECORD_Reset(&pRecorder);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_RECORD_Stop(pRecorder);
+        RKADK_RECORD_Destroy(pRecorder);
+        pRecorder = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+        goto record;
+#endif
+      }
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "start")) {
       RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "stop")) {
@@ -355,6 +430,7 @@ int main(int argc, char *argv[]) {
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
 
       RKADK_RECORD_Reset(&pRecorder);
+      RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "fps-30")) {
       //set main record fps
       stFps.u32Framerate = 30;
@@ -373,6 +449,7 @@ int main(int argc, char *argv[]) {
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_GOP, &stGop);
 
       RKADK_RECORD_Reset(&pRecorder);
+      RKADK_RECORD_Start(pRecorder);
     }
 
     usleep(500000);

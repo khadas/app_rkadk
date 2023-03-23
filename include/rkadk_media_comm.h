@@ -126,7 +126,7 @@ bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstRecAttr,
                                 RKADK_U32 u32Width, RKADK_U32 u32Height);
 
 bool RKADK_MEDIA_VencAttrCmp(VENC_CHN_ATTR_S *pstRecAttr,
-                                  RK_CODEC_ID_E enType, RKADK_U32 u32DstFrameRate,
+                                  RKADK_U32 u32Gop, RKADK_U32 u32DstFrameRate,
                                   RKADK_U32 u32Bitrate);
 
 RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,

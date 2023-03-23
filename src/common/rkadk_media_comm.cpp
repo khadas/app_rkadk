@@ -1632,108 +1632,69 @@ bool RKADK_MEDIA_CompareResolution(VENC_CHN_ATTR_S *pstVencChnAttr,
 }
 
 bool RKADK_MEDIA_VencAttrCmp(VENC_CHN_ATTR_S *pstVencChnAttr,
-                                  RK_CODEC_ID_E enType, RKADK_U32 u32DstFrameRate,
+                                  RKADK_U32 u32Gop, RKADK_U32 u32DstFrameRate,
                                   RKADK_U32 u32Bitrate) {
   bool reset = false;
-  RKADK_U32 u32OldFrameRate = 0, u32OldBitrate = 0;
+  RKADK_U32 u32OldFrameRate = 0, u32OldBitrate = 0, u32OldGop = 0;
   VENC_RC_ATTR_S *pstRcAttr = &pstVencChnAttr->stRcAttr;
-
-  if (pstVencChnAttr->stVencAttr.enType != enType) {
-    RKADK_LOGD("Old codec type [%d], new codec type [%d]",
-              pstVencChnAttr->stVencAttr.enType, enType);
-    reset = true;
-  }
 
   u32Bitrate = u32Bitrate / 1000;
   switch (pstRcAttr->enRcMode) {
   case VENC_RC_MODE_H265CBR:
     u32OldFrameRate = pstRcAttr->stH265Cbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH265Cbr.u32BitRate;
-
-    if (pstRcAttr->stH265Cbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH265Cbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH265Cbr.u32Gop;
     break;
   case VENC_RC_MODE_H265VBR:
     u32OldFrameRate = pstRcAttr->stH265Vbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH265Vbr.u32BitRate;
-
-    if (pstRcAttr->stH265Vbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH265Vbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH265Vbr.u32Gop;
     break;
   case VENC_RC_MODE_H265AVBR:
     u32OldFrameRate = pstRcAttr->stH265Avbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH265Avbr.u32BitRate;
-
-    if (pstRcAttr->stH265Avbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH265Avbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH265Avbr.u32Gop;
     break;
   case VENC_RC_MODE_MJPEGCBR:
     u32OldFrameRate = pstRcAttr->stMjpegCbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stMjpegCbr.u32BitRate;
-
-    if (pstRcAttr->stMjpegCbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stMjpegCbr.u32BitRate != u32Bitrate)
-      reset |= true;
     break;
   case VENC_RC_MODE_MJPEGVBR:
     u32OldFrameRate = pstRcAttr->stMjpegVbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stMjpegVbr.u32BitRate;
-
-    if (pstRcAttr->stMjpegVbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stMjpegVbr.u32BitRate != u32Bitrate)
-      reset |= true;
     break;
   case VENC_RC_MODE_H264CBR:
     u32OldFrameRate = pstRcAttr->stH264Cbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH264Cbr.u32BitRate;
-
-    if (pstRcAttr->stH264Cbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH264Cbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH264Cbr.u32Gop;
     break;
   case VENC_RC_MODE_H264VBR:
     u32OldFrameRate = pstRcAttr->stH264Vbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH264Vbr.u32BitRate;
-
-    if (pstRcAttr->stH264Vbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH264Vbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH264Vbr.u32Gop;
     break;
   case VENC_RC_MODE_H264AVBR:
     u32OldFrameRate = pstRcAttr->stH264Avbr.fr32DstFrameRateNum;
     u32OldBitrate = pstRcAttr->stH264Avbr.u32BitRate;
-
-    if (pstRcAttr->stH264Avbr.fr32DstFrameRateNum != u32DstFrameRate)
-      reset |= true;
-
-    if (pstRcAttr->stH264Avbr.u32BitRate != u32Bitrate)
-      reset |= true;
+    u32OldGop = pstRcAttr->stH264Avbr.u32Gop;
     break;
   default:
     RKADK_LOGE("Invalid rc mode: %d", pstRcAttr->enRcMode);
-    break;
+    return false;
   }
 
-  RKADK_LOGD("Old fps [%d], new fps [%d]", u32OldFrameRate, u32DstFrameRate);
+  if (u32OldFrameRate != u32DstFrameRate)
+    reset = true;
 
+  if (u32OldBitrate != u32Bitrate)
+    reset |= true;
+
+  if ((u32OldGop != 0) && (u32OldGop != u32Gop))
+    reset |= true;
+
+  RKADK_LOGD("Old fps [%d], new fps [%d]", u32OldFrameRate, u32DstFrameRate);
   RKADK_LOGD("Old bitrate [%d], new bitrate [%d]", u32OldBitrate, u32Bitrate);
+  RKADK_LOGD("Old gop [%d], new gop [%d]", u32OldGop, u32Gop);
 
   return reset;
 }

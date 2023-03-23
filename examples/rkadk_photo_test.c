@@ -165,6 +165,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_MPI_SYS_Init();
 
+photo:
 #ifdef RKAIQ
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
@@ -259,19 +260,51 @@ int main(int argc, char *argv[]) {
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(&pHandle);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_PHOTO_DeInit(pHandle);
+        SAMPLE_ISP_Stop(u32CamId);
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
     } else if (strstr(cmd, "720")) {
       type = RKADK_RES_720P;
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(&pHandle);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_PHOTO_DeInit(pHandle);
+        SAMPLE_ISP_Stop(u32CamId);
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
     } else if (strstr(cmd, "1620")) {
       type = RKADK_RES_1620P;
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(&pHandle);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_PHOTO_DeInit(pHandle);
+        SAMPLE_ISP_Stop(u32CamId);
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
     } else if (strstr(cmd, "1296")) {
       type = RKADK_RES_1296P;
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
-      RKADK_PHOTO_Reset(&pHandle);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifdef RV1126_1109
+        RKADK_PHOTO_DeInit(pHandle);
+        SAMPLE_ISP_Stop(u32CamId);
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {

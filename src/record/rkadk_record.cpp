@@ -960,11 +960,14 @@ static RKADK_S32 RKADK_RECORD_ResetVideoAttr(RKADK_U32 u32CamId, RKADK_U32 index
   }
 
   enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
+  if (pstVencAttr->stVencAttr.enType != enType) {
+    RKADK_LOGD("Old codec type [%d], new codec type [%d]",
+              pstVencAttr->stVencAttr.enType, enType);
+    bReset = true;
+  }
 
-  bReset = RKADK_MEDIA_CompareResolution(pstVencAttr, u32Width, u32Height);
-
-  bReset |= RKADK_MEDIA_VencAttrCmp(pstVencAttr, enType, u32DstFrameRateNum, bitrate);
-
+  bReset |= RKADK_MEDIA_CompareResolution(pstVencAttr, u32Width, u32Height);
+  bReset |= RKADK_MEDIA_VencAttrCmp(pstVencAttr, u32Gop, u32DstFrameRateNum, bitrate);
   if (!bReset)
     return -1;
 
@@ -1062,8 +1065,7 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
   }
 
   for (RKADK_U32 index = 0; index < pstRecCfg->file_num; index++) {
-    ret = RKADK_MUXER_Reset(pRecorder,
-                            pstRecCfg->attribute[index].venc_chn);
+    ret = RKADK_MUXER_Reset(pRecorder, pstRecCfg->attribute[index].venc_chn);
     if (ret) {
       RKADK_LOGE("RKADK_MUXER_Reset [%d] failed[%d]",
                   pstRecCfg->attribute[index].venc_chn, ret);
@@ -1378,6 +1380,85 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
   return RKADK_MUXER_Stop(pRecorder);
 }
 
+int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
+                                         RKADK_PARAM_REC_CFG_S *pstRecCfg,
+                                         RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
+                                         RKADK_MUXER_HANDLE_S *pstRecorder) {
+  int ret;
+  RKADK_U32 u32DstFrameRateNum;
+  RKADK_U32 bitrate;
+  RKADK_U32 u32Gop;
+  RKADK_U32 u32Width;
+  RKADK_U32 u32Height;
+  RK_CODEC_ID_E enType;
+  RKADK_REC_TYPE_E enRecType = RKADK_REC_TYPE_NORMAL;
+  bool bReset = false;
+  VENC_CHN_ATTR_S stVencAttr;
+
+  for (RKADK_U32 index = 0; index < pstRecCfg->file_num; index++) {
+    bitrate = pstRecCfg->attribute[index].bitrate;
+    u32Gop = pstRecCfg->attribute[index].gop;
+    u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
+    u32Width = pstRecCfg->attribute[index].width;
+    u32Height = pstRecCfg->attribute[index].height;
+
+    memset(&stVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
+    ret = RK_MPI_VENC_GetChnAttr(pstRecCfg->attribute[index].venc_chn, &stVencAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("RK_MPI_VENC_GetChnAttr[%d] failed [%x]", pstRecCfg->attribute[index].venc_chn, ret);
+      return -1;
+    }
+
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE) {
+      bitrate = pstRecCfg->attribute[index].bitrate / pstRecCfg->lapse_multiple;
+      u32DstFrameRateNum = pstRecCfg->attribute[index].framerate / pstRecCfg->lapse_multiple;
+      if (u32DstFrameRateNum < 1)
+        u32DstFrameRateNum = 1;
+      else if (u32DstFrameRateNum > pstRecCfg->attribute[index].framerate)
+        u32DstFrameRateNum = pstRecCfg->attribute[index].framerate;
+    }
+
+    if (u32DstFrameRateNum > pstSensorCfg->framerate)
+      u32DstFrameRateNum = pstSensorCfg->framerate;
+
+    bReset = RKADK_MEDIA_CompareResolution(&stVencAttr, u32Width, u32Height);
+    if (bReset) {
+#ifdef RV1126_1109
+      RKADK_LOGD("rv1126/1109 nonsupport dynamic setting resolution");
+      return -1;
+#endif
+    }
+
+    enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
+    if (stVencAttr.stVencAttr.enType != enType) {
+#ifdef RV1126_1109
+      RKADK_LOGD("rv1126/1109 nonsupport dynamic setting code type, Old type [%d], new type [%d]",
+                stVencAttr.stVencAttr.enType, enType);
+      return -1;
+#else
+      RKADK_LOGD("Old codec type [%d], new codec type [%d]",
+                stVencAttr.stVencAttr.enType, enType);
+      bReset = true;
+#endif
+    }
+
+    if (pstRecorder->bLapseRecord)
+      enRecType = RKADK_REC_TYPE_LAPSE;
+
+    if (pstRecCfg->record_type != enRecType) {
+      RKADK_LOGD("Old record type[%d], new record type[%d]", enRecType, pstRecCfg->record_type);
+      bReset = true;
+    }
+
+    bReset |= RKADK_MEDIA_VencAttrCmp(&stVencAttr, u32Gop, u32DstFrameRateNum, bitrate);
+
+    if (bReset)
+      return 1;
+  }
+
+  return 0;
+}
+
 RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   int ret;
   RKADK_U32 u32CamId;
@@ -1392,7 +1473,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
     return -1;
   }
 
-  RKADK_LOGI("Change [%d] start...", pstRecorder->u32CamId);
+  RKADK_LOGI("Record[%d] reset start...", pstRecorder->u32CamId);
 
   u32CamId = pstRecorder->u32CamId;
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -1409,6 +1490,14 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
     return -1;
   }
 
+  ret = RKADK_RECORD_ResetCheck(u32CamId, pstRecCfg, pstSensorCfg, pstRecorder);
+  if (ret == 0) {
+    RKADK_LOGI("Record param is not changed");
+    return 0;
+  } else if (ret < 0) {
+    return -1;
+  }
+
   ret = RKADK_MUXER_Stop(*pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_MUXER_Stop failed[%d]", ret);
@@ -1416,6 +1505,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   }
 
   RKADK_MUXER_SetResetState(*pRecorder, true);
+
   ret = RKADK_RECORD_ResetVideo(u32CamId, pstRecCfg, pstSensorCfg, *pRecorder);
   if (ret) {
     RKADK_LOGE("RKADK_RECORD_ResetVideo failed");
@@ -1429,11 +1519,11 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   }
 
   RKADK_MUXER_SetResetState(*pRecorder, false);
-  RKADK_LOGI("Change [%d] end...", u32CamId);
+  RKADK_LOGI("Record[%d] reset end...", u32CamId);
   return 0;
 
 failed:
-  RKADK_LOGI("Change [%d] failed...", u32CamId);
+  RKADK_LOGI("Record[%d] reset failed...", u32CamId);
   return -1;
 }
 
