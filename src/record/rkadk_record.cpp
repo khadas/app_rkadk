@@ -1429,15 +1429,11 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   }
 
   RKADK_MUXER_SetResetState(*pRecorder, false);
-  RKADK_MUXER_Start(*pRecorder);
-
   RKADK_LOGI("Change [%d] end...", u32CamId);
   return 0;
 
 failed:
   RKADK_LOGI("Change [%d] failed...", u32CamId);
-  RKADK_MUXER_Start(*pRecorder);
-
   return -1;
 }
 
