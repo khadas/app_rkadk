@@ -45,7 +45,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
-  printf("\t-p: osd file , Default:/userdata/rkadk_ARGB8888\n");
+  printf("\t-o: osd file , Default:/userdata/rkadk_ARGB8888\n");
 }
 
 static void sigterm_handler(int sig) {

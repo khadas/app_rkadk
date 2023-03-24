@@ -19,6 +19,7 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_photo.h"
+#include "rkadk_osd.h"
 #include "isp/sample_isp.h"
 #include <getopt.h>
 #include <signal.h>
@@ -32,7 +33,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:m:h";
+static RKADK_CHAR optstr[] = "a:I:p:m:o:W:H:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -44,6 +45,9 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
+  printf("\t-o: osd file, ARGB8888 fmt, Default:NULL\n");
+  printf("\t-W: osd width, Default:0\n");
+  printf("\t-H: osd height, Default:0\n");
   printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
 }
 
@@ -122,6 +126,11 @@ int main(int argc, char *argv[]) {
   RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
   RKADK_BOOL bMultiCam = RKADK_FALSE;
   RKADK_BOOL bMultiSensor = RK_FALSE;
+  char *osdfile = NULL;
+  RKADK_U32 u32OsdWidth = 0, u32OsdHeight = 0;
+  RKADK_OSD_ATTR_S OsdAttr;
+  RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
+  RKADK_U32 u32OsdId = 0;
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
     const char *tmp_optarg = optarg;
@@ -149,6 +158,15 @@ int main(int argc, char *argv[]) {
       } else if (inCmd == 2)
         bMultiSensor = RKADK_TRUE;
       break;
+    case 'o':
+      osdfile = optarg;
+      break;
+    case 'W':
+      u32OsdWidth = atoi(optarg);
+      break;
+    case 'H':
+      u32OsdHeight = atoi(optarg);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -162,6 +180,7 @@ int main(int argc, char *argv[]) {
     u32CamId = 0;
 
   RKADK_LOGD("#camera id: %d, bMultiCam: %d, bMultiSensor: %d", u32CamId, bMultiCam, bMultiSensor);
+  RKADK_LOGD("osdfile: %s, width: %d, height: %d", osdfile, u32OsdWidth, u32OsdHeight);
 
   RKADK_MPI_SYS_Init();
 
@@ -245,6 +264,39 @@ photo:
     }
   }
 
+  if (osdfile && u32OsdWidth && u32OsdHeight) {
+    memset(&OsdAttr, 0, sizeof(RKADK_OSD_ATTR_S));
+    memset(&OsdStreamAttr, 0, sizeof(RKADK_OSD_STREAM_ATTR_S));
+    OsdAttr.Format = RKADK_FMT_ARGB8888;
+    OsdAttr.Width = u32OsdWidth;
+    OsdAttr.Height = u32OsdHeight;
+    OsdAttr.pData = malloc(OsdAttr.Height * OsdAttr.Width * 4);
+
+#ifdef RV1126_1109
+    OsdAttr.enOsdType = RKADK_OSD_TYPE_EXTRA;
+#else
+    OsdAttr.enOsdType = RKADK_OSD_TYPE_NORMAL;
+#endif
+
+    OsdStreamAttr.Origin_X = 0;
+    OsdStreamAttr.Origin_Y = 0;
+    OsdStreamAttr.bEnableShow = RKADK_TRUE;
+    OsdStreamAttr.enOsdType = OsdAttr.enOsdType;
+
+    RKADK_OSD_Init(u32OsdId, &OsdAttr);
+    RKADK_OSD_AttachToStream(u32OsdId, u32CamId, RKADK_STREAM_TYPE_SNAP, &OsdStreamAttr);
+
+    FILE *fp = fopen(osdfile, "rw");
+    if (!fp) {
+      RKADK_LOGD("open osd file fail");
+    } else {
+      RKADK_LOGD("open osd file success");
+      fread((RKADK_U8 *)OsdAttr.pData, OsdAttr.Width * OsdAttr.Height * 4, 1, fp);
+      fclose(fp);
+      RKADK_OSD_UpdateBitMap(u32OsdId, &OsdAttr);
+    }
+  }
+
   signal(SIGINT, sigterm_handler);
 
   char cmd[64];
@@ -320,6 +372,12 @@ photo:
     }
 
     usleep(500000);
+  }
+
+  if (osdfile) {
+    RKADK_OSD_DettachFromStream(u32OsdId, u32CamId, RKADK_STREAM_TYPE_SNAP);
+    RKADK_OSD_Deinit(u32OsdId);
+    free(OsdAttr.pData);
   }
 
   RKADK_PHOTO_DeInit(pHandle);
