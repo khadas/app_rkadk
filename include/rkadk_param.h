@@ -371,6 +371,8 @@ typedef struct {
   bool bInit;                /* module init status */
   pthread_mutex_t mutexLock; /* param lock, protect pstCfg */
   RKADK_PARAM_CFG_S stCfg;   /* param config */
+  char defPath[RKADK_PATH_LEN];
+  char defSensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 } RKADK_PARAM_CONTEXT_S;

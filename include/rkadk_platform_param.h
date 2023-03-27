@@ -69,8 +69,8 @@ extern "C" {
 #define DEF_MODULE_VI_3 "NONE"
 
 //default vi resolution
-#define DEF_WIDTH_VI_1 320
-#define DEF_HEIGHT_VI_1 180
+#define DEF_WIDTH_VI_1 480
+#define DEF_HEIGHT_VI_1 272
 
 #define DEF_WIDTH_VI_2 1280
 #define DEF_HEIGHT_VI_2 720

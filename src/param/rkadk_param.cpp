@@ -25,7 +25,8 @@
 
 /** parameter context */
 static RKADK_PARAM_CONTEXT_S g_stPARAMCtx = {
-    .bInit = false, .mutexLock = PTHREAD_MUTEX_INITIALIZER, .stCfg = {0}};
+    .bInit = false, .mutexLock = PTHREAD_MUTEX_INITIALIZER, .stCfg = {0},
+    .defPath = {0}, .defSensorPath = {0}, .path = {0}, .sensorPath = {0}};
 
 static RKADK_S32 RKADK_PARAM_SaveViCfg(char *path, RKADK_U32 viIndex,
                                        RKADK_U32 u32CamId) {
@@ -722,7 +723,7 @@ static bool RKADK_PARAM_CheckVersion(char *path) {
   memset(&pstCfg->stVersion, 0, sizeof(RKADK_PARAM_VERSION_S));
 
   ret = RKADK_Ini2Struct(
-      (char *)RKADK_DEFPARAM_PATH, &pstCfg->stVersion, g_stVersionMapTable,
+      g_stPARAMCtx.defPath, &pstCfg->stVersion, g_stVersionMapTable,
       sizeof(g_stVersionMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));
   if (ret) {
     RKADK_LOGE("load default ini version failed");
@@ -1751,17 +1752,9 @@ static RKADK_S32 RKADK_PARAM_LoadDefault() {
   int ret;
   int bufLen = RKADK_PATH_LEN * 2 + 4;
   char buffer[bufLen];
-  char defSensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = &g_stPARAMCtx.stCfg.stCommCfg;
 
-  for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
-    memset(defSensorPath[i], 0, RKADK_PATH_LEN);
-    sprintf(defSensorPath[i], "%s_%d.ini", RKADK_DEFPARAM_PATH_SENSOR_PREFIX,
-            i);
-    RKADK_LOGD("defSensorPath[%d]: %s", i, defSensorPath[i]);
-  }
-
-  ret = RKADK_PARAM_LoadParam((char *)RKADK_DEFPARAM_PATH, defSensorPath);
+  ret = RKADK_PARAM_LoadParam(g_stPARAMCtx.defPath, g_stPARAMCtx.defSensorPath);
   if (ret) {
     RKADK_LOGE("load default ini failed");
     return ret;
@@ -1776,13 +1769,13 @@ static RKADK_S32 RKADK_PARAM_LoadDefault() {
   }
 
   memset(buffer, 0, bufLen);
-  sprintf(buffer, "cp %s %s", RKADK_DEFPARAM_PATH, g_stPARAMCtx.path);
+  sprintf(buffer, "cp %s %s", g_stPARAMCtx.defPath, g_stPARAMCtx.path);
   RKADK_LOGD("%s", buffer);
   system(buffer);
 
   for (int i = 0; i < (int)pstCommCfg->sensor_count; i++) {
     memset(buffer, 0, bufLen);
-    sprintf(buffer, "cp %s %s", defSensorPath[i], g_stPARAMCtx.sensorPath[i]);
+    sprintf(buffer, "cp %s %s", g_stPARAMCtx.defSensorPath[i], g_stPARAMCtx.sensorPath[i]);
     RKADK_LOGD("%s", buffer);
     system(buffer);
   }
@@ -3618,6 +3611,45 @@ RKADK_S32 RKADK_PARAM_SetDefault() {
   return ret;
 }
 
+RKADK_VOID RKADK_PARAM_SetDefPath() {
+  int i;
+  RKADK_U32 u32PathLen;
+  RKADK_U32 sPathCount = 0;
+  const char *pDefPath = NULL;
+
+  pDefPath = getenv("rkadk_default_ini_path");
+
+  memset(g_stPARAMCtx.defPath, 0, RKADK_PATH_LEN);
+  if (pDefPath) {
+    u32PathLen = strlen(pDefPath) + strlen("rkadk_defsetting_sensor_0.ini");
+    if (u32PathLen < RKADK_PATH_LEN) {
+      sprintf(g_stPARAMCtx.defPath, "%s/%s", pDefPath, "rkadk_defsetting.ini");
+      RKADK_LOGI("defPath: %s", g_stPARAMCtx.defPath);
+
+      for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+        memset(g_stPARAMCtx.defSensorPath[i], 0, RKADK_PATH_LEN);
+        sprintf(g_stPARAMCtx.defSensorPath[i], "%s/%s_%d.ini",
+                pDefPath, "rkadk_defsetting_sensor", i);
+
+        RKADK_LOGI("defSensorPath[%d]: %s", i, g_stPARAMCtx.defSensorPath[i]);
+      }
+
+      return;
+    }
+  }
+
+  memcpy(g_stPARAMCtx.defPath, RKADK_DEFPARAM_PATH, strlen(RKADK_DEFPARAM_PATH));
+  RKADK_LOGI("defPath: %s", g_stPARAMCtx.defPath);
+
+  for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+    memset(g_stPARAMCtx.defSensorPath[i], 0, RKADK_PATH_LEN);
+    sprintf(g_stPARAMCtx.defSensorPath[i], "%s_%d.ini",
+            RKADK_DEFPARAM_PATH_SENSOR_PREFIX, i);
+
+    RKADK_LOGI("defSensorPath[%d]: %s", i, g_stPARAMCtx.defSensorPath[i]);
+  }
+}
+
 RKADK_VOID RKADK_PARAM_SetPath(char *path, char **sensorPath) {
   RKADK_U32 u32PathLen;
   RKADK_U32 sPathCount = 0;
@@ -3675,6 +3707,7 @@ RKADK_S32 RKADK_PARAM_Init(char *globalSetting, char **sesnorSettingArrary) {
 
   RKADK_MUTEX_LOCK(g_stPARAMCtx.mutexLock);
 
+  RKADK_PARAM_SetDefPath();
   RKADK_PARAM_SetPath(globalSetting, sesnorSettingArrary);
 
   memset(&g_stPARAMCtx.stCfg, 0, sizeof(RKADK_PARAM_CFG_S));
