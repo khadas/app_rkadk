@@ -120,7 +120,6 @@ typedef struct {
 } RKADK_TRACK_AUDIO_SOURCE_INFO_S;
 
 typedef struct {
-  RKADK_U32 u32ChnId;
   RKADK_TRACK_SOURCE_TYPE_E enTrackType;
   union {
     RKADK_TRACK_VIDEO_SOURCE_INFO_S stVideoInfo; /* <video track info */
@@ -130,6 +129,9 @@ typedef struct {
 
 /* muxer stream attribute */
 typedef struct {
+  RKADK_U32 u32ViChn;
+  RKADK_U32 u32VencChn;
+  bool bUseVpss;
   RKADK_U32 u32TimeLenSec; /* record time */
   RKADK_U32 u32TrackCnt;   /* track cnt*/
   RKADK_MUXER_TRACK_SOURCE_S
@@ -254,6 +256,10 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
 RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId);
 
 void RKADK_MUXER_SetResetState(RKADK_MW_PTR pHandle, bool state);
+
+int RKADK_MUXER_GetViChn(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn);
+
+bool RKADK_MUXER_IsUseVpss(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn);
 
 #ifdef __cplusplus
 }

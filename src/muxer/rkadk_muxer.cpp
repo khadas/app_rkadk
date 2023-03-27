@@ -70,8 +70,10 @@ typedef struct {
 typedef struct {
   RKADK_MW_PTR ptr;
   RKADK_U32 u32CamId;
+  RKADK_U32 u32ViChn; // vi channel id
   RKADK_U32 u32VencChn; // venc channel id
   RKADK_U32 u32ThumbVencChn; // thumb venc channel id
+  bool bUseVpss;
   int muxerId;
   char cFileName[RKADK_MAX_FILE_PATH_LEN];
   const char *cOutputFmt;
@@ -911,13 +913,11 @@ static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
 
   for (i = 0; i < (int)pstSrcStreamAttr->u32TrackCnt; i++) {
     pstTrackSource = &(pstSrcStreamAttr->aHTrackSrcHandle[i]);
-
     if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_VIDEO) {
       RKADK_TRACK_VIDEO_SOURCE_INFO_S *pstVideoInfo =
           &(pstTrackSource->unTrackSourceAttr.stVideoInfo);
 
       pMuxerHandle->gop = pstVideoInfo->u32Gop;
-      pMuxerHandle->u32VencChn = pstTrackSource->u32ChnId;
       pMuxerHandle->stVideo.width = pstVideoInfo->u32Width;
       pMuxerHandle->stVideo.height = pstVideoInfo->u32Height;
       pMuxerHandle->stVideo.bit_rate = pstVideoInfo->u32BitRate;
@@ -1047,6 +1047,9 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       return -1;
     }
 
+    pMuxerHandle->u32ViChn = pstSrcStreamAttr->u32ViChn;
+    pMuxerHandle->u32VencChn = pstSrcStreamAttr->u32VencChn;
+    pMuxerHandle->bUseVpss = pstSrcStreamAttr->bUseVpss;
     if (RKADK_MUXER_SetAVParam(pMuxerHandle, pstSrcStreamAttr)) {
       RKADK_LOGE("RKADK_MUXER_SetAVParam failed");
       return -1;
@@ -1411,4 +1414,41 @@ void RKADK_MUXER_SetResetState(RKADK_MW_PTR pHandle, bool state) {
 
     pstMuxerHandle->bReseting = state;
   }
+}
+
+int RKADK_MUXER_GetViChn(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstRecorder->u32StreamCnt);
+
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstRecorder, u32VencChn);
+  if (!pstMuxerHandle) {
+    RKADK_LOGD("Muxer Handle is NULL");
+    return -1;
+  }
+
+  return pstMuxerHandle->u32ViChn;
+}
+
+bool RKADK_MUXER_IsUseVpss(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  if (!pHandle) {
+    RKADK_LOGD("Recorder Handle is NULL");
+    return false;
+  }
+
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pHandle;
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstRecorder, u32VencChn);
+  if (!pstMuxerHandle) {
+    RKADK_LOGD("Muxer Handle is NULL");
+    return false;
+  }
+
+  return pstMuxerHandle->bUseVpss;
 }
