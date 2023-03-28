@@ -200,6 +200,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
   stChnAttr.u32Width = pstDispCfg->vi_attr.stChnAttr.stSize.u32Width;
   stChnAttr.u32Height = pstDispCfg->vi_attr.stChnAttr.stSize.u32Height;
   stChnAttr.u32Depth = 0;
+  stChnAttr.u32FrameBufCnt = pstDispCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
   if (!pstSensorCfg->used_isp) {
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;

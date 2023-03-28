@@ -384,6 +384,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
+      stChnAttr.u32FrameBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
 
     ret = RKADK_MPI_VPSS_Init(stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId,
                               &stGrpAttr, &stChnAttr);

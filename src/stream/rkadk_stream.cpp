@@ -397,6 +397,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
+    stChnAttr.u32FrameBufCnt = pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
 
     ret = RKADK_MPI_VPSS_Init(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn,
                               &stGrpAttr, &stChnAttr);

@@ -40,7 +40,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-a /etc/iqfiles] [-I 0] [-t 0]\n", name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
-         "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
+         "/oem/etc/iqfiles/, Default /etc/iqfiles,"
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");

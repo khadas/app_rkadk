@@ -334,6 +334,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
       stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
       stChnAttr.u32Depth = 0;
+      stChnAttr.u32FrameBufCnt = pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount + 2;
 
       if (i == 0) {
         stChnAttr.u32Width = pstSensorCfg->max_width;

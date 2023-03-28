@@ -313,6 +313,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
+    stChnAttr.u32FrameBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
 
     ret = RKADK_MPI_VPSS_Init(pstLiveCfg->attribute.vpss_grp, pstLiveCfg->attribute.vpss_chn,
                               &stGrpAttr, &stChnAttr);

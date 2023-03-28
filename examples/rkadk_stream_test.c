@@ -49,7 +49,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "/tmp/aenc.g711a]\n",
          name);
   printf("\t-a: enable aiq with dirpath provided, eg:-a "
-         "/oem/etc/iqfiles/, Default /oem/etc/iqfiles,"
+         "/oem/etc/iqfiles/, Default /etc/iqfiles,"
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-M: Test mode, Value: audio, video, Default:\"audio\"\n");

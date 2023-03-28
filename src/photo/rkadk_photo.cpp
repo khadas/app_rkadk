@@ -446,6 +446,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
+    stChnAttr.u32FrameBufCnt = pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
 
     ret = RKADK_MPI_VPSS_Init(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn,
                               &stGrpAttr, &stChnAttr);
