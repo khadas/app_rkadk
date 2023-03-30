@@ -400,6 +400,8 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->vqe_mode,
                                     RKADK_VQE_MODE_AI_TALK, RKADK_VQE_MODE_BUTT,
                                     RKADK_VQE_MODE_AI_RECORD, "vqe_mode");
+  change |= RKADK_PARAM_CheckCfgStr(pstAudioCfg->vqe_config_path, AI_VQE_CONFIG_PATH,
+                                   RKADK_PATH_LEN, "vqe_config_path");
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->codec_type,
                                     RKADK_CODEC_TYPE_G711A, RKADK_CODEC_TYPE_PCM,
                                     RKADK_CODEC_TYPE_MP3, "codec_type");
@@ -774,6 +776,7 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   pstAudioCfg->samples_per_frame = AUDIO_FRAME_COUNT;
   pstAudioCfg->bitrate = AUDIO_BIT_REAT;
   pstAudioCfg->vqe_mode = RKADK_VQE_MODE_AI_RECORD;
+  memcpy(pstAudioCfg->vqe_config_path, AI_VQE_CONFIG_PATH, strlen(AI_VQE_CONFIG_PATH));
   pstAudioCfg->codec_type = RKADK_CODEC_TYPE_MP3;
   RKADK_PARAM_SaveAudioCfg(path);
 }
@@ -1048,6 +1051,7 @@ static void RKADK_PARAM_Dump() {
   printf("\tsamples_per_frame: %d\n", pstCfg->stAudioCfg.samples_per_frame);
   printf("\tbitrate: %d\n", pstCfg->stAudioCfg.bitrate);
   printf("\tvqe_mode: %d\n", pstCfg->stAudioCfg.vqe_mode);
+  printf("\tvqe_mode: %s\n", pstCfg->stAudioCfg.vqe_config_path);
   printf("\tcodec_type: %d\n", pstCfg->stAudioCfg.codec_type);
 
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
@@ -3614,7 +3618,6 @@ RKADK_S32 RKADK_PARAM_SetDefault() {
 RKADK_VOID RKADK_PARAM_SetDefPath() {
   int i;
   RKADK_U32 u32PathLen;
-  RKADK_U32 sPathCount = 0;
   const char *pDefPath = NULL;
 
   pDefPath = getenv("rkadk_default_ini_path");

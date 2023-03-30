@@ -525,7 +525,7 @@ static int RKADK_RECORD_CreateAudioChn(RKADK_U32 u32CamId) {
   stAiAttr.u32EXFlag = 0;
   stAiAttr.u32ChnCnt = pstAudioParam->channels;
   ret = RKADK_MPI_AI_Init(0, RECORD_AI_CHN, &stAiAttr, pstAudioParam->vqe_mode,
-                          pstAudioParam->mic_type);
+                          pstAudioParam->vqe_config_path, pstAudioParam->mic_type);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init failed(%d)", ret);
     return ret;

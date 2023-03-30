@@ -47,6 +47,7 @@ extern "C" {
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
 #define AI_DEVICE_NAME "hw:0,0"
+#define AI_VQE_CONFIG_PATH "/oem/usr/share/vqefiles/config_aivqe.json"
 
 /* video default parameters */
 #define VIDEO_GOP 25
@@ -243,6 +244,7 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_U32 samples_per_frame;
   RKADK_U32 bitrate;
   RKADK_VQE_MODE_E vqe_mode;
+  char vqe_config_path[RKADK_PATH_LEN];
   RKADK_CODEC_TYPE_E codec_type;
 } RKADK_PARAM_AUDIO_CFG_S;
 

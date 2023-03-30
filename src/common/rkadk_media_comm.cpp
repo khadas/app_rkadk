@@ -25,9 +25,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define RKADK_VQE_FRAME_SAMPLE 320; // 20ms;
-#define RKADK_DEFAULT_VQE_FILE "/usr/share/rkap_3a/para/16k/RKAP_3A_Para.bin"
-
 typedef struct {
   bool bUsed;
   RKADK_S32 s32BindCnt;
@@ -246,68 +243,45 @@ bool RKADK_MPI_SYS_CHECK() {
   return g_bSysInit;
 }
 
-#if 0
-static RKADK_S32 RKADK_MPI_AI_EnableVqe(RKADK_S32 s32AiChnId,
-                                        RK_U32 u32SampleRate,
-                                        RKADK_VQE_MODE_E enMode) {
+static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId,
+                                        RK_U32 u32SampleRate, RKADK_VQE_MODE_E enMode,
+                                        const char *pVqeCfgPath) {
   int ret;
-  AI_TALKVQE_CONFIG_S stAiVqeTalkAttr;
-  AI_RECORDVQE_CONFIG_S stAiVqeRecordAttr;
+  RK_S32 s32VqeGapMs = 16; //just supports 16ms or 10ms for AI VQE
+  AI_VQE_CONFIG_S stAiVqeConfig;
 
-  switch (enMode) {
-  case RKADK_VQE_MODE_AI_TALK:
-    memset(&stAiVqeTalkAttr, 0, sizeof(AI_TALKVQE_CONFIG_S));
-    stAiVqeTalkAttr.s32WorkSampleRate = u32SampleRate;
-    stAiVqeTalkAttr.s32FrameSample = RKADK_VQE_FRAME_SAMPLE;
-    strcpy(stAiVqeTalkAttr.aParamFilePath, RKADK_DEFAULT_VQE_FILE);
-    stAiVqeTalkAttr.u32OpenMask =
-        AI_TALKVQE_MASK_AEC | AI_TALKVQE_MASK_ANR | AI_TALKVQE_MASK_AGC;
+#ifndef RV1126_1109
+  ret = RK_MPI_AMIX_SetControl(s32DevId, "I2STDM Digital Loopback Mode", (char *)"Mode2");
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("AI[%d,%d] set I2STDM Digital Loopback Mode failed: %x", s32DevId, s32AiChnId, ret);
+    return -1;
+  }
+#endif
 
-    ret = RK_MPI_AI_SetTalkVqeAttr(s32AiChnId, &stAiVqeTalkAttr);
-    if (ret) {
-      RKADK_LOGE("AI[%d] SetTalkVqeAttr failed: %d", s32AiChnId, ret);
-      return -1;
-    }
-    break;
+  memset(&stAiVqeConfig, 0, sizeof(AI_VQE_CONFIG_S));
+  stAiVqeConfig.enCfgMode = AIO_VQE_CONFIG_LOAD_FILE;
+  memcpy(stAiVqeConfig.aCfgFile, pVqeCfgPath, strlen(pVqeCfgPath));
+  stAiVqeConfig.s32WorkSampleRate = u32SampleRate;
+  stAiVqeConfig.s32FrameSample = u32SampleRate * s32VqeGapMs / 1000;
 
-  case RKADK_VQE_MODE_AI_RECORD:
-    memset(&stAiVqeRecordAttr, 0, sizeof(AI_RECORDVQE_CONFIG_S));
-    stAiVqeRecordAttr.s32WorkSampleRate = u32SampleRate;
-    stAiVqeRecordAttr.s32FrameSample = RKADK_VQE_FRAME_SAMPLE;
-    stAiVqeRecordAttr.stAnrConfig.fPostAddGain = 0;
-    stAiVqeRecordAttr.stAnrConfig.fGmin = -20;
-    stAiVqeRecordAttr.stAnrConfig.fNoiseFactor = 0.98;
-    stAiVqeRecordAttr.stAnrConfig.enHpfSwitch = 0;
-    stAiVqeRecordAttr.stAnrConfig.fHpfFc = 100.0f;
-    stAiVqeRecordAttr.stAnrConfig.enLpfSwitch = 0;
-    stAiVqeRecordAttr.stAnrConfig.fLpfFc = 10000.0f;
-    stAiVqeRecordAttr.u32OpenMask = AI_RECORDVQE_MASK_ANR;
-
-    ret = RK_MPI_AI_SetRecordVqeAttr(s32AiChnId, &stAiVqeRecordAttr);
-    if (ret) {
-      RKADK_LOGE("AI[%d] SetRecordVqeAttr failed: %d", s32AiChnId, ret);
-      return -1;
-    }
-    break;
-
-  default:
-    RKADK_LOGW("NonSupport enMode: %d", enMode);
+  ret = RK_MPI_AI_SetVqeAttr(s32DevId, s32AiChnId, 0, 0, &stAiVqeConfig);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Ai[%d,%d] SetVqeAttr failed: %#x", s32DevId, s32AiChnId, ret);
     return -1;
   }
 
-  ret = RK_MPI_AI_EnableVqe(s32AiChnId);
+  ret = RK_MPI_AI_EnableVqe(s32DevId, s32AiChnId);
   if (ret) {
-    RKADK_LOGE("AI[%d] EnableVqe failed: %d", s32AiChnId, ret);
+    RKADK_LOGE("AI[%d,%d] EnableVqe failed: %#x", s32DevId, s32AiChnId, ret);
     return -1;
   }
 
   return 0;
 }
-#endif
 
 RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
                             AIO_ATTR_S *pstAiAttr, RKADK_VQE_MODE_E enMode,
-                            RKADK_U32 micType) {
+                            const char *pVqeCfgPath, RKADK_U32 micType) {
   int ret = -1;
   RKADK_S32 i;
   RKADK_U32 s32SetTrackMode = 0;
@@ -337,6 +311,9 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
       RKADK_LOGE("AI[%d] set attr failed[%x]", aiDevId, ret);
       goto exit;
     }
+
+    if (enMode != RKADK_VQE_MODE_BUTT)
+      RKADK_MPI_AI_EnableVqe(aiDevId, s32AiChnId, pstAiAttr->enSamplerate, enMode, pVqeCfgPath);
 
     ret = RK_MPI_AI_Enable(aiDevId);
     if (ret != 0) {
@@ -382,11 +359,6 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     if (ret) {
       RKADK_LOGE("AI[%d, %d] mic type[%d] enable failed[%x]", aiDevId, s32AiChnId, micType, ret);
     }
-
-#if 0
-    if (enMode != RKADK_VQE_MODE_BUTT)
-      RKADK_MPI_AI_EnableVqe(s32AiChnId, pstAiChnAttr->u32SampleRate, enMode);
-#endif
 
     g_stMediaCtx.stAiInfo[i].bUsed = true;
     g_stMediaCtx.stAiInfo[i].s32ChnId = s32AiChnId;
@@ -441,13 +413,16 @@ RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     RKADK_MUTEX_UNLOCK(g_stMediaCtx.aiMutex);
     return 0;
   } else if (1 == s32InitCnt) {
-#if 0
     if (enMode != RKADK_VQE_MODE_BUTT) {
-      ret = RK_MPI_AI_DisableVqe(s32AiChnId);
-      if (ret)
-        RKADK_LOGE("AI[%d] DisableVqe failed: %d", s32AiChnId, ret);
-    }
+#ifndef RV1126_1109
+      ret = RK_MPI_AMIX_SetControl(aiDevId, "I2STDM Digital Loopback Mode", (char *)"Disabled");
+      if (ret != RK_SUCCESS)
+        RK_LOGE("AI[%d, %d] set I2STDM Digital Loopback Mode failed: %x", aiDevId, s32AiChnId, ret);
 #endif
+      ret = RK_MPI_AI_DisableVqe(aiDevId, s32AiChnId);
+      if (ret)
+        RKADK_LOGE("AI[%d, %d] DisableVqe failed: %d", aiDevId, s32AiChnId, ret);
+    }
 
     ret = RK_MPI_AI_DisableChn(aiDevId, s32AiChnId);
     if (ret) {

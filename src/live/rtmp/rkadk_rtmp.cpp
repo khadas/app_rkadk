@@ -402,7 +402,7 @@ static RKADK_S32 RKADK_RTMP_EnableAudio(RKADK_U32 u32CamId, MPP_CHN_S stAiChn,
   }
 
   ret = RKADK_MPI_AI_Init(0, stAiChn.s32ChnId, &stAiAttr, pstAudioParam->vqe_mode,
-                          pstAudioParam->mic_type);
+                          pstAudioParam->vqe_config_path, pstAudioParam->mic_type);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
     goto unregist;

@@ -900,7 +900,8 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
   }
 
   ret = RKADK_MPI_AI_Init(pAudioHandle->stAiChn.s32DevId, pAudioHandle->stAiChn.s32ChnId,
-                          &aiAttr, pstAudioParam->vqe_mode, pstAudioParam->mic_type);
+                          &aiAttr, pstAudioParam->vqe_mode, pstAudioParam->vqe_config_path,
+                          pstAudioParam->mic_type);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_AI_Init faile[%x]", ret);
     return ret;
