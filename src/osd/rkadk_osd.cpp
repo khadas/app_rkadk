@@ -66,7 +66,9 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
       break;
     case RKADK_OSD_TYPE_EXTRA:
       stRgnAttr.enType = OVERLAY_EX_RGN;
+#ifdef RV1126_1109
       stRgnAttr.unAttr.stOverlay.enVProcDev = VIDEO_PROC_DEV_RGA;
+#endif
       break;
     default:
       RKADK_LOGE("Unsupport other type: %d", pstOsdAttr->enOsdType);
