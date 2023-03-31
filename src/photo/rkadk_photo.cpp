@@ -331,6 +331,11 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
       bUseVpss = true;
   }
 
+#ifdef RV1126_1109
+  if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP)
+    bUseVpss = true;
+#endif
+
   return bUseVpss;
 }
 
@@ -440,7 +445,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
     stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
     stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
-    stChnAttr.enPixelFormat = pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat;
+    stChnAttr.enPixelFormat = RK_FMT_YUV420SP;
     stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
     stChnAttr.u32Width = pstSensorCfg->max_width;
@@ -448,7 +453,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
-    stChnAttr.u32FrameBufCnt = pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
+    stChnAttr.u32FrameBufCnt = 1;
 
     ret = RKADK_MPI_VPSS_Init(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn,
                               &stGrpAttr, &stChnAttr);
