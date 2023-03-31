@@ -1744,7 +1744,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
           if (pstPlayer->pstDemuxerParam->pVideoCodec != NULL) {
             pstPlayer->bVideoExist = RKADK_TRUE;
 
-            if (strcmp(pstPlayer->pstDemuxerParam->pVideoCodec, "h264")) {
+            if (strcmp(pstPlayer->pstDemuxerParam->pVideoCodec, "h264") && strcmp(pstPlayer->pstDemuxerParam->pVideoCodec, "h265")) {
               RKADK_LOGE("Unsupported video format(%s)", pstPlayer->pstDemuxerParam->pVideoCodec);
               goto __FAILED;
             }
@@ -1754,6 +1754,12 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                           pstPlayer->pstDemuxerParam->videoHeigh);
               goto __FAILED;
             }
+
+            if (!strcmp(pstPlayer->pstDemuxerParam->pVideoCodec, "h264"))
+              pstPlayer->pstVdecCtx->eCodecType = RKADK_CODEC_TYPE_H264;
+
+            if (!strcmp(pstPlayer->pstDemuxerParam->pVideoCodec, "h265"))
+              pstPlayer->pstVdecCtx->eCodecType = RKADK_CODEC_TYPE_H265;
 
             pstPlayer->pstVdecCtx->srcWidth = pstPlayer->pstDemuxerParam->videoWidth;
             pstPlayer->pstVdecCtx->srcHeight = pstPlayer->pstDemuxerParam->videoHeigh;
@@ -1814,7 +1820,10 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 
         pstPlayer->demuxerFlag = VIDEO_FLAG;
         if (!strcmp(pszfilePath + i + 1, "h264"))
-          eAudioCodecType = RKADK_CODEC_TYPE_H264;
+          pstPlayer->pstVdecCtx->eCodecType = RKADK_CODEC_TYPE_H264;
+
+        if (!strcmp(pszfilePath + i + 1, "h265"))
+          pstPlayer->pstVdecCtx->eCodecType = RKADK_CODEC_TYPE_H265;
 
         pstPlayer->pstDemuxerParam->pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
         pstPlayer->pstDemuxerParam->pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
