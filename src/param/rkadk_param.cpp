@@ -2061,8 +2061,15 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   memcpy(pstStreamCfg->vi_attr.stChnAttr.stIspOpt.aEntityName,
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
-  pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
-      VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
+#ifdef RV1126_1109
+  if (!pstSensorCfg->used_isp) {
+    //only support MPLANE&&MMAP if not use libv4l2
+    pstStreamCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
+    pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_MMAP;
+    pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE_MPLANE;
+  }
+#endif
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstStreamCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
@@ -2105,8 +2112,15 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
   memcpy(pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.aEntityName,
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
-  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
-      VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
+#ifdef RV1126_1109
+  if (!pstSensorCfg->used_isp) {
+    //only support MPLANE&&MMAP if not use libv4l2
+    pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
+    pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_MMAP;
+    pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE_MPLANE;
+  }
+#endif
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
   pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
@@ -2156,8 +2170,15 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
     memcpy(pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.aEntityName,
            pstViCfg->device_name, sizeof(pstViCfg->device_name));
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
-    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType =
-        VI_V4L2_MEMORY_TYPE_DMABUF;
+    pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
+#ifdef RV1126_1109
+    if (!pstSensorCfg->used_isp) {
+      //only support MPLANE&&MMAP if not use libv4l2
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_MMAP;
+      pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE_MPLANE;
+    }
+#endif
     if (i == 0) {
       //main stream;
       pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
@@ -2223,8 +2244,15 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
   memcpy(pstDispCfg->vi_attr.stChnAttr.stIspOpt.aEntityName,
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
-  pstDispCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
-      VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstDispCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
+#ifdef RV1126_1109
+  if (!pstSensorCfg->used_isp) {
+    //only support MPLANE&&MMAP if not use libv4l2
+    pstDispCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
+    pstDispCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_MMAP;
+    pstDispCfg->vi_attr.stChnAttr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE_MPLANE;
+  }
+#endif
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstDispCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
@@ -2266,8 +2294,15 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   memcpy(pstThumbCfg->vi_attr.stChnAttr.stIspOpt.aEntityName,
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
-  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType =
-      VI_V4L2_MEMORY_TYPE_DMABUF;
+  pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
+#ifdef RV1126_1109
+  if (!pstSensorCfg->used_isp) {
+    //only support MPLANE&&MMAP if not use libv4l2
+    pstThumbCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
+    pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_MMAP;
+    pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE_MPLANE;
+  }
+#endif
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Width = pstViCfg->width;
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.stMaxSize.u32Height = pstViCfg->height;
   pstThumbCfg->vi_attr.stChnAttr.stSize.u32Width = pstViCfg->width;
