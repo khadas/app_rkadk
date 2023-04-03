@@ -858,7 +858,7 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
       }
 
       ret = RK_MPI_VDEC_GetFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame, MAX_TIME_OUT_MS);
-      if (ret >= 0) {
+      if (ret == 0) {
         if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
           RK_MPI_VDEC_ReleaseFrame(pstPlayer->pstVdecCtx->chnIndex, &sFrame);
           RKADK_LOGI("chn %d reach eos frame.", pstPlayer->pstVdecCtx->chnIndex);
@@ -872,7 +872,7 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
 
             clock_gettime(CLOCK_MONOTONIC, &t_end);
 
-            if (sFrame.stVFrame.u64PTS) {
+            if (pstPlayer->videoTimeStamp >= 0) {
               costtime = (t_end.tv_sec - t_begin.tv_sec) * 1000000 + (t_end.tv_nsec - t_begin.tv_nsec) / 1000;
               if ((RKADK_S64)sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp > (RKADK_S64)costtime) {
                 voSendTime = sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp - costtime;
@@ -1725,6 +1725,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   pstPlayer->bStopFlag = RKADK_FALSE;
   pstPlayer->bAudioStopFlag = RKADK_FALSE;
   pstPlayer->bAudioExist = RKADK_FALSE;
+  pstPlayer->videoTimeStamp = -1;
   if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
     memset(pstPlayer->pFilePath, 0, sizeof(pstPlayer->pFilePath));
   memcpy(pstPlayer->pFilePath, pszfilePath, strlen(pszfilePath));
@@ -2066,7 +2067,9 @@ RKADK_VOID *EventEOF(RKADK_VOID *arg) {
   }
   pthread_mutex_unlock(&pstPlayer->WavMutex);
 
-  pstPlayer->positionTimeStamp = (RKADK_S64)(pstPlayer->duration * 1000);
+  if (pstPlayer->duration != 0 && !pstPlayer->bStopFlag)
+    pstPlayer->positionTimeStamp = (RKADK_S64)(pstPlayer->duration * 1000);
+
   if (pstPlayer->pfnPlayerCallback != NULL && !pstPlayer->bStopFlag)
     pstPlayer->pfnPlayerCallback(arg, RKADK_PLAYER_EVENT_EOF, NULL);
 
@@ -2247,7 +2250,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     }
 
     pstPlayer->bGetPtsFlag = RKADK_FALSE;
-    pstPlayer->positionTimeStamp = 0;
+    if (seekFlag != RKADK_PLAYER_SEEK_WAIT)
+      pstPlayer->positionTimeStamp = 0;
     pstPlayer->pauseFlag = RKADK_PLAYER_PAUSE_FALSE;
     RKADK_DEMUXER_ReadPacketStop(pstPlayer->pDemuxerCfg);
     if (pstPlayer->bAudioExist == RKADK_TRUE && pstPlayer->pstAdecCtx->eCodecType != RKADK_CODEC_TYPE_PCM
