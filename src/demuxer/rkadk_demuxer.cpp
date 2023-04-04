@@ -76,9 +76,9 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
   return RKADK_SUCCESS;
 }
 
-RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg) {
+RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg, RKADK_S64 startPts) {
   RKADK_CHECK_POINTER(demuxerCfg, RKADK_FAILURE);
-  RKADK_S32 ret = rkdemuxer_read_packet_start(demuxerCfg);
+  RKADK_S32 ret = rkdemuxer_read_packet_start(demuxerCfg, startPts);
   if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
     return RKADK_FAILURE;

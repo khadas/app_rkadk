@@ -95,10 +95,11 @@ RKADK_S32 RKADK_DEMUXER_GetParam(RKADK_MW_PTR demuxerCfg, const RKADK_CHAR *inpu
 /**
  * @brief start demuxer
  * @param[in]demuxerCfg : pointer of demuxerCfg
+ * @param[in]startPts : start pts of demuxer
  * @return 0 success
  * @return others failure
  */
-RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg);
+RKADK_S32 RKADK_DEMUXER_ReadPacketStart(RKADK_MW_PTR demuxerCfg, RKADK_S64 startPts);
 
 /**
  * @brief stop demuxer

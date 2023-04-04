@@ -614,7 +614,7 @@ static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
   pstAoCtx->bitWidth        = AUDIO_BIT_WIDTH;
   pstAoCtx->periodCount     = 2;
   pstAoCtx->periodSize      = AUDIO_FRAME_COUNT;
-  pstAoCtx->cardName         = AI_DEVICE_NAME;
+  pstAoCtx->cardName        = AI_DEVICE_NAME;
   pstAoCtx->devId           = 0;
   pstAoCtx->setVolume       = 100;
   pstAoCtx->setMute         = 0;
@@ -2121,7 +2121,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
       }
 
       if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
         if (ret != 0) {
           RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
           goto __FAILED;
@@ -2136,7 +2136,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         }
 
         if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
           if (ret != 0) {
             RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
             goto __FAILED;
@@ -2159,7 +2159,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         }
 
         if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
           if (ret != 0) {
             RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
             goto __FAILED;
@@ -2184,7 +2184,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         }
 
         if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
+          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
           if (ret != 0) {
             RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
             goto __FAILED;
@@ -2360,13 +2360,13 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
   RKADK_PLAYER_Play(pstPlayer);
 
   pstPlayer->bStopFlag = RKADK_FALSE;
-  ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg);
-  pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
+  ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, pstPlayer->seekTimeStamp);
   if (ret != 0) {
     RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
     goto __FAILED;
   }
 
+  pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
   if (tmpPauseFlag == RKADK_PLAYER_PAUSE_START) {
     RKADK_PLAYER_Pause(pstPlayer);
   }
