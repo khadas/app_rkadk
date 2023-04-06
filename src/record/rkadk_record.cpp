@@ -1047,6 +1047,7 @@ static RKADK_U32 RKADK_RECORD_ResetThumb(RKADK_U32 u32CamId, RKADK_U32 index,
       break;
     }
   } while(1);
+  RK_MPI_VENC_ResetChn(u32ThumbChn);
 
   //make sure thumbnail
   RKADK_LOGI("Record stream [%d] request thumbnail", pstRecCfg->attribute[index].venc_chn);

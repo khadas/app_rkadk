@@ -161,6 +161,9 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   else
     RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", ptsThumbCfg->photo_venc_chn, ret);
 
+  RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
+  RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
+
   while (pHandle->bGetJpeg) {
     ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
     if (ret == RK_SUCCESS) {
@@ -179,6 +182,8 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
         ret = RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
         if (ret != RK_SUCCESS)
           RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
+
+        RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
       } else {
         stData.pu8DataBuf = pu8JpgData;
         stData.u32DataLen = stFrame.pstPack->u32Len;
@@ -190,6 +195,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
 
+      RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
       pHandle->u32PhotoCnt -= 1;
     }
   }

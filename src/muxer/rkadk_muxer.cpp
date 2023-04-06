@@ -579,6 +579,8 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       if (ret != RK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
       }
+
+      RK_MPI_VENC_ResetChn(pstMuxerHandle->u32ThumbVencChn);
       return bBuildInOk;
     } else {
       return true;
