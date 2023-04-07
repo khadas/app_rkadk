@@ -619,7 +619,7 @@ static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
   pstAoCtx->channel         = 2;
   pstAoCtx->bitWidth        = AUDIO_BIT_WIDTH;
   pstAoCtx->periodCount     = 4;
-  pstAoCtx->periodSize      = 4096;
+  pstAoCtx->periodSize      = 1024;
   memcpy(pstAoCtx->cardName, pstAudioParam->ao_audio_node,
          strlen(pstAudioParam->ao_audio_node));
   pstAoCtx->devId           = 0;
@@ -725,7 +725,7 @@ static RKADK_S32 OpenDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
 
   aoAttr.enSoundmode = soundMode;
   aoAttr.u32FrmNum = ctx->periodCount;
-  aoAttr.u32PtNumPerFrm = bytes * ctx->periodSize;
+  aoAttr.u32PtNumPerFrm = bytes * ctx->periodSize * ctx->channel;
 
   aoAttr.u32EXFlag = 0;
   aoAttr.u32ChnCnt = 2;
