@@ -46,7 +46,11 @@ extern "C" {
 #define AUDIO_BIT_REAT 160000
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
-#define AI_DEVICE_NAME "hw:0,0"
+#ifdef RV1126_1109
+#define AUDIO_DEVICE_NAME "default"
+#else
+#define AUDIO_DEVICE_NAME "hw:0,0"
+#endif
 #define AI_VQE_CONFIG_PATH "/oem/usr/share/vqefiles/config_aivqe.json"
 
 /* video default parameters */
@@ -236,7 +240,8 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
 } RKADK_PARAM_SENSOR_CFG_S;
 
 typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
-  char audio_node[RKADK_BUFFER_LEN];
+  char ai_audio_node[RKADK_BUFFER_LEN];
+  char ao_audio_node[RKADK_BUFFER_LEN];
   AUDIO_BIT_WIDTH_E bit_width;
   RKADK_U32 channels;
   RKADK_U32 mic_type;

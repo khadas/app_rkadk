@@ -150,7 +150,7 @@ typedef struct {
   RKADK_S32 devId;
   RKADK_S32 periodCount;
   RKADK_S32 periodSize;
-  const RKADK_CHAR *cardName;
+  RKADK_CHAR cardName[RKADK_BUFFER_LEN];
   RKADK_S32 chnIndex;
   RKADK_S32 setVolume;
   RKADK_S32 setMute;
@@ -603,6 +603,12 @@ static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
     return RKADK_FAILURE;
   }
 
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return RKADK_FAILURE;
+  }
+
   memset(pstAoCtx, 0, sizeof(RKADK_PLAYER_AO_CTX_S));
 
   pstAoCtx->dstFilePath     = RKADK_NULL;
@@ -612,9 +618,10 @@ static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
   pstAoCtx->deviceChannel   = AUDIO_DEVICE_CHANNEL;
   pstAoCtx->channel         = 2;
   pstAoCtx->bitWidth        = AUDIO_BIT_WIDTH;
-  pstAoCtx->periodCount     = 2;
-  pstAoCtx->periodSize      = AUDIO_FRAME_COUNT;
-  pstAoCtx->cardName        = AI_DEVICE_NAME;
+  pstAoCtx->periodCount     = 4;
+  pstAoCtx->periodSize      = 4096;
+  memcpy(pstAoCtx->cardName, pstAudioParam->ao_audio_node,
+         strlen(pstAudioParam->ao_audio_node));
   pstAoCtx->devId           = 0;
   pstAoCtx->setVolume       = 100;
   pstAoCtx->setMute         = 0;
@@ -692,7 +699,7 @@ static RKADK_S32 OpenDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
   AIO_ATTR_S aoAttr;
   memset(&aoAttr, 0, sizeof(AIO_ATTR_S));
 
-  if (ctx->cardName) {
+  if (strlen(ctx->cardName)) {
     snprintf((RKADK_CHAR *)(aoAttr.u8CardName),
               sizeof(aoAttr.u8CardName), "%s", ctx->cardName);
   }

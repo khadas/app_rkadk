@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:mfvh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -49,6 +49,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-W: display width, Default: Physical screen width\n");
   printf("\t-H: display height, Default: Physical screen height\n");
   printf("\t-r: rotation, option: 0, 90, 180, 270, Default: 0\n");
+  printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-m: mirror enable, Default: disable\n");
   printf("\t-f: flip enable, Default: disable\n");
   printf("\t-v: video enable, Default: disable\n");
@@ -156,6 +157,9 @@ int main(int argc, char *argv[]) {
   int pauseFlag = 0;
   pthread_t getPosition;
   RKADK_U32 duration = 0;
+  const char *iniPath = NULL;
+  char path[RKADK_PATH_LEN];
+  char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PLAYER_CFG_S stPlayCfg;
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
@@ -188,6 +192,10 @@ int main(int argc, char *argv[]) {
     case 'v':
       bVideoEnable = true;
       break;
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -206,6 +214,25 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigterm_handler);
 
   RKADK_MPI_SYS_Init();
+
+  if (iniPath) {
+    memset(path, 0, RKADK_PATH_LEN);
+    memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
+    sprintf(path, "%s/rkadk_setting.ini", iniPath);
+    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++)
+      sprintf(sensorPath[i], "%s/rkadk_setting_sensor_%d.ini", iniPath, i);
+
+    /*
+    lg:
+      char *sPath[] = {"/data/rkadk/rkadk_setting_sensor_0.ini",
+      "/data/rkadk/rkadk_setting_sensor_1.ini", NULL};
+    */
+    char *sPath[] = {sensorPath[0], sensorPath[1], NULL};
+
+    RKADK_PARAM_Init(path, sPath);
+  } else {
+    RKADK_PARAM_Init(NULL, NULL);
+  }
 
   stPlayCfg.bEnableAudio = true;
   if (bVideoEnable)

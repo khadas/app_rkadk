@@ -506,8 +506,8 @@ static int RKADK_RECORD_CreateAudioChn(RKADK_U32 u32CamId) {
 
   // Create AI
   memset(&stAiAttr, 0, sizeof(AIO_ATTR_S));
-  memcpy(stAiAttr.u8CardName, pstAudioParam->audio_node,
-         strlen(pstAudioParam->audio_node));
+  memcpy(stAiAttr.u8CardName, pstAudioParam->ai_audio_node,
+         strlen(pstAudioParam->ai_audio_node));
   stAiAttr.soundCard.channels = AUDIO_DEVICE_CHANNEL;
   stAiAttr.soundCard.sampleRate = pstAudioParam->samplerate;
   bytes = RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width) / 8;

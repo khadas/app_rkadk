@@ -772,8 +772,8 @@ RKADK_STREAM_SetAiConfig(MPP_CHN_S *pstAiChn, AIO_ATTR_S *pstAiAttr,
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
 
   memset(pstAiAttr, 0, sizeof(AIO_ATTR_S));
-  memcpy(pstAiAttr->u8CardName, pstAudioParam->audio_node,
-         strlen(pstAudioParam->audio_node));
+  memcpy(pstAiAttr->u8CardName, pstAudioParam->ai_audio_node,
+         strlen(pstAudioParam->ai_audio_node));
   pstAiAttr->soundCard.channels = AUDIO_DEVICE_CHANNEL;
   pstAiAttr->soundCard.sampleRate = pstAudioParam->samplerate;
   bytes = RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width) / 8;

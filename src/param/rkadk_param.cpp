@@ -381,8 +381,10 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
   bool change = false;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
 
-  change = RKADK_PARAM_CheckCfgStr(pstAudioCfg->audio_node, AI_DEVICE_NAME,
-                                   RKADK_BUFFER_LEN, "audio_node");
+  change = RKADK_PARAM_CheckCfgStr(pstAudioCfg->ai_audio_node, AUDIO_DEVICE_NAME,
+                                   RKADK_BUFFER_LEN, "ai_audio_node");
+  change |= RKADK_PARAM_CheckCfgStr(pstAudioCfg->ao_audio_node, AUDIO_DEVICE_NAME,
+                                   RKADK_BUFFER_LEN, "ao_audio_node");
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->bit_width,
                                     AUDIO_BIT_WIDTH_8, AUDIO_BIT_WIDTH_32,
                                     AUDIO_BIT_WIDTH, "bit_width");
@@ -768,7 +770,8 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = &g_stPARAMCtx.stCfg.stAudioCfg;
 
   memset(pstAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
-  memcpy(pstAudioCfg->audio_node, AI_DEVICE_NAME, strlen(AI_DEVICE_NAME));
+  memcpy(pstAudioCfg->ai_audio_node, AUDIO_DEVICE_NAME, strlen(AUDIO_DEVICE_NAME));
+  memcpy(pstAudioCfg->ao_audio_node, AUDIO_DEVICE_NAME, strlen(AUDIO_DEVICE_NAME));
   pstAudioCfg->bit_width = AUDIO_BIT_WIDTH;
   pstAudioCfg->channels = AUDIO_CHANNEL;
   pstAudioCfg->mic_type = AUDIO_MIC_TYPE;
@@ -1043,7 +1046,8 @@ static void RKADK_PARAM_Dump() {
   printf("\tvpss_devcie: %d\n", pstCfg->stCommCfg.vpss_devcie);
 
   printf("Audio Config\n");
-  printf("\taudio_node: %s\n", pstCfg->stAudioCfg.audio_node);
+  printf("\tai_audio_node: %s\n", pstCfg->stAudioCfg.ai_audio_node);
+  printf("\tao_audio_node: %s\n", pstCfg->stAudioCfg.ao_audio_node);
   printf("\tbit_width: %d\n", pstCfg->stAudioCfg.bit_width);
   printf("\tchannels: %d\n", pstCfg->stAudioCfg.channels);
   printf("\tmic_type: %d\n", pstCfg->stAudioCfg.mic_type);

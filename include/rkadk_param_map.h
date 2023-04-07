@@ -67,7 +67,8 @@ static RKADK_SI_CONFIG_MAP_S g_stCommCfgMapTable[] = {
 
 /* audio map table */
 static RKADK_SI_CONFIG_MAP_S g_stAudioCfgMapTable[] = {
-    DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, string_e, audio_node),
+    DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, string_e, ai_audio_node),
+    DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, string_e, ao_audio_node),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, bit_width),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, channels),
     DEFINE_MAP(audio, tagRKADK_PARAM_AUDIO_CFG_S, int_e, mic_type),
