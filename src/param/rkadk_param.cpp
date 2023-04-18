@@ -1886,8 +1886,8 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
              module, width, height, index, pstViCfg->width, pstViCfg->height, bSaveViCfg);
 
    if (!strcmp(pstViCfg->device_name, "rkispp_scale0")) {
-     if ((pstViCfg->width != pstSensorCfg->max_width) &&
-         (pstViCfg->width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
+     if ((width != pstSensorCfg->max_width) &&
+         (width > RKISPP_SCALE0_NV12_WIDTH_MAX)) {
        if (strcmp(pstViCfg->pix_fmt, "NV16")) {
          RKADK_LOGW("rkispp_scale0 resolution[%d*%d] > 2K, must NV16",
                     pstViCfg->width, pstViCfg->height);
