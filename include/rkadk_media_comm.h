@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+#include "rk_comm_video.h"
 #include "rk_mpi_aenc.h"
 #include "rk_mpi_adec.h"
 #include "rk_mpi_ai.h"
@@ -161,6 +162,9 @@ RKADK_U16 RKADK_MEDIA_GetAudioBitWidth(AUDIO_BIT_WIDTH_E enBitWidth);
 int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat, RKADK_CHAR *cPixFmt);
 
 bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType);
+
+RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
+                              ROTATION_E enRotation, RKADK_STREAM_TYPE_E enStreamType);
 
 #ifdef __cplusplus
 }

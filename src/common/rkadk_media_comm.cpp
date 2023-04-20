@@ -1834,3 +1834,26 @@ bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType) {
 
   return false;
 }
+
+
+RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
+                              ROTATION_E enRotation, RKADK_STREAM_TYPE_E enStreamType) {
+  int ret = 0;
+  RKADK_S32 s32VencChnId;
+
+  s32VencChnId = RKADK_PARAM_GetVencChnId(u32CamId, enStreamType);
+  if (s32VencChnId < 0) {
+    RKADK_LOGE("Stream[%d] get venc chn id failed", enStreamType);
+    return -1;
+  }
+
+  ret = RK_MPI_VENC_SetChnRotation(s32VencChnId, enRotation);
+  if (ret) {
+    RKADK_LOGE("Stream[%d] set venc rotation failed[%x]", ret);
+
+    if (enStreamType == RKADK_STREAM_TYPE_SNAP && (enRotation == ROTATION_90 || enRotation == ROTATION_270))
+      RKADK_LOGW("jpeg input resolution must be 16 aligned, please check");
+  }
+
+  return ret;
+}
