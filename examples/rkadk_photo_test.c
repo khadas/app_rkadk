@@ -272,10 +272,10 @@ photo:
     OsdAttr.Height = u32OsdHeight;
     OsdAttr.pData = malloc(OsdAttr.Height * OsdAttr.Width * 4);
 
-#ifdef RV1126_1109
-    OsdAttr.enOsdType = RKADK_OSD_TYPE_EXTRA;
-#else
+#ifdef RV1106_1103
     OsdAttr.enOsdType = RKADK_OSD_TYPE_NORMAL;
+#else
+    OsdAttr.enOsdType = RKADK_OSD_TYPE_EXTRA;
 #endif
 
     OsdStreamAttr.Origin_X = 0;
@@ -314,7 +314,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
         SAMPLE_ISP_Stop(u32CamId);
         pHandle = NULL;
@@ -326,7 +326,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
         SAMPLE_ISP_Stop(u32CamId);
         pHandle = NULL;
@@ -338,7 +338,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
         SAMPLE_ISP_Stop(u32CamId);
         pHandle = NULL;
@@ -350,7 +350,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
         SAMPLE_ISP_Stop(u32CamId);
         pHandle = NULL;

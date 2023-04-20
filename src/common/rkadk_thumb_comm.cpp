@@ -547,7 +547,7 @@ RKADK_S32 ThumbnailRequest(RKADK_U32 u32VencChnTb) {
   return 0;
 }
 
-#ifdef RV1126_1109
+#ifndef RV1106_1103
 static RKADK_S32 VdecThmFree(void *opaque) {
   RKADK_LOGD("vdec free: %p", opaque);
   if (opaque) {
@@ -561,7 +561,7 @@ static RKADK_S32 VdecThmFree(void *opaque) {
 static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
                                        RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree,
                                        RKADK_S32 s32VdecChnID) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
   int ret = 0, deinitRet = 0;
   VDEC_CHN_ATTR_S stAttr;
   VDEC_CHN_PARAM_S stVdecParam;

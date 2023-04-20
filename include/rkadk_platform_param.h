@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#ifdef RV1126_1109
+#ifndef RV1106_1103
 // rkispp_m_bypass rkispp_scale0 rkispp_scale1 rkispp_scale2
 #define RKADK_ISPP_VI_NODE_CNT 4
 
@@ -45,8 +45,8 @@ extern "C" {
 #define DEF_WIDTH_VI_1 1920
 #define DEF_HEIGHT_VI_1 1080
 
-#define DEF_WIDTH_VI_2 320
-#define DEF_HEIGHT_VI_2 180
+#define DEF_WIDTH_VI_2 480
+#define DEF_HEIGHT_VI_2 272
 
 #else
 // rkisp_mainpath rkisp_selfpath rkisp_bypasspath rkisp_mainpath_4x4sampling
@@ -69,8 +69,8 @@ extern "C" {
 #define DEF_MODULE_VI_3 "NONE"
 
 //default vi resolution
-#define DEF_WIDTH_VI_1 480
-#define DEF_HEIGHT_VI_1 272
+#define DEF_WIDTH_VI_1 320
+#define DEF_HEIGHT_VI_1 180
 
 #define DEF_WIDTH_VI_2 1280
 #define DEF_HEIGHT_VI_2 720

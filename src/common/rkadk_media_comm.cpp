@@ -220,8 +220,7 @@ RKADK_S32 RKADK_MPI_SYS_Exit() {
   int ret;
 
   if (g_bSysInit) {
-
-#ifdef RV1126_1109
+#ifndef RV1106_1103
     RK_MPI_VO_CloseFd();
 #endif
 
@@ -250,7 +249,7 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId
   RK_S32 s32VqeGapMs = 16; //just supports 16ms or 10ms for AI VQE
   AI_VQE_CONFIG_S stAiVqeConfig;
 
-#ifndef RV1126_1109
+#ifdef RV1106_1103
   ret = RK_MPI_AMIX_SetControl(s32DevId, "I2STDM Digital Loopback Mode", (char *)"Mode2");
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("AI[%d,%d] set I2STDM Digital Loopback Mode failed: %x", s32DevId, s32AiChnId, ret);
@@ -414,7 +413,7 @@ RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     return 0;
   } else if (1 == s32InitCnt) {
     if (enMode != RKADK_VQE_MODE_BUTT) {
-#ifndef RV1126_1109
+#ifdef RV1106_1103
       ret = RK_MPI_AMIX_SetControl(aiDevId, "I2STDM Digital Loopback Mode", (char *)"Disabled");
       if (ret != RK_SUCCESS)
         RK_LOGE("AI[%d, %d] set I2STDM Digital Loopback Mode failed: %x", aiDevId, s32AiChnId, ret);
@@ -1120,14 +1119,14 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
 
       //dump video info
-#ifdef RV1126_1109
+#ifdef RV1106_1103
+      system("cat /dev/mpi/vsys");
+      system("cat /proc/vcodec/enc/venc_info");
+#else
       system("dumpsys sys");
       system("dumpsys vi");
       system("dumpsys vpss");
       system("dumpsys venc");
-#else
-      system("cat /dev/mpi/vsys");
-      system("cat /proc/vcodec/enc/venc_info");
 #endif
     }
   }

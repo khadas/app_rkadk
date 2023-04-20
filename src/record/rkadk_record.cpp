@@ -248,7 +248,7 @@ static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
   }
 
   if (!pstSensorCfg->used_isp) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
     if (pstSensorCfg->flip || pstSensorCfg->mirror)
 #endif
       bUseVpss = true;
@@ -1438,7 +1438,7 @@ int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
 
     bReset = RKADK_MEDIA_CompareResolution(&stVencAttr, u32Width, u32Height);
     if (bReset) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
       RKADK_LOGD("rv1126/1109 nonsupport dynamic setting resolution");
       return -1;
 #endif
@@ -1446,7 +1446,7 @@ int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
 
     enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
     if (stVencAttr.stVencAttr.enType != enType) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
       RKADK_LOGD("rv1126/1109 nonsupport dynamic setting code type, Old type [%d], new type [%d]",
                 stVencAttr.stVencAttr.enType, enType);
       return -1;

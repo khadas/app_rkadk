@@ -10,13 +10,19 @@ include(version/Version.cmake)
 install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
+if(${RKADK_CHIP} STREQUAL "rv1106")
+        add_definitions(-DRV1106_1103)
+else()
+        add_definitions(-DTHUMB_NORMAL)
+endif()
+
 if(USE_RKAIQ)
     find_package(RkAiq REQUIRED)
     include_directories(${RKAIQ_INCLUDE_DIRS})
     add_definitions(-DRKAIQ)
 
-    if(${RKADK_CHIP} STREQUAL "rv1126")
-	add_definitions(-DRKAIQ_UAPI1 -DRV1126_1109 -DTHUMB_NORMAL)
+    if(${RKADK_CHIP} STREQUAL "rv1106")
+	add_definitions(-DRKAIQ_UAPI2)
     endif()
 endif()
 

@@ -259,7 +259,7 @@ static bool RKADK_RTMP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *p
   }
 
   if (!pstSensorCfg->used_isp) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
     if (pstSensorCfg->flip || pstSensorCfg->mirror)
 #endif
       bUseVpss = true;

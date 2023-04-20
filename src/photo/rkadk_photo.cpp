@@ -331,13 +331,13 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
   }
 
   if (!pstSensorCfg->used_isp) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
     if (pstSensorCfg->flip || pstSensorCfg->mirror)
 #endif
       bUseVpss = true;
   }
 
-#ifdef RV1126_1109
+#ifndef RV1106_1103
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP)
     bUseVpss = true;
 #endif
@@ -785,7 +785,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   pstHandle = (RKADK_PHOTO_HANDLE_S *)*pHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
-#ifdef RV1126_1109
+#ifndef RV1106_1103
   RKADK_LOGE("rv1126/1109 nonsupport dynamic setting resolution, please recreate!");
   return -1;
 #endif
@@ -939,7 +939,7 @@ RKADK_S32 RKADK_PHOTO_GetJpgResolution(RKADK_CHAR *pcFileName, RKADK_PHOTO_DATA_
   return -1;
 }
 
-#ifdef RV1126_1109
+#ifndef RV1106_1103
 static RKADK_S32 RKADK_PHOTO_VdecFree(void *opaque) {
   RKADK_LOGD("vdec free: %p", opaque);
   if (opaque) {
@@ -954,7 +954,7 @@ static RKADK_S32 RKADK_PHOTO_JpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
                                        RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree,
                                        RKADK_S32 s32VdecChnID, RKADK_S32 s32VpssGrp,
                                        RKADK_S32 s32VpssChn) {
-#ifdef RV1126_1109
+#ifndef RV1106_1103
   int ret = 0, deinitRet = 0;
   VDEC_CHN_ATTR_S stAttr;
   VDEC_CHN_PARAM_S stVdecParam;

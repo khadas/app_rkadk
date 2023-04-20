@@ -46,10 +46,10 @@ extern "C" {
 #define AUDIO_BIT_REAT 160000
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
-#ifdef RV1126_1109
-#define AUDIO_DEVICE_NAME "default"
-#else
+#ifdef RV1106_1103
 #define AUDIO_DEVICE_NAME "hw:0,0"
+#else
+#define AUDIO_DEVICE_NAME "default"
 #endif
 #define AI_VQE_CONFIG_PATH "/oem/usr/share/vqefiles/config_aivqe.json"
 
