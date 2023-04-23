@@ -1007,11 +1007,6 @@ static RKADK_VOID* CommandThread(RKADK_VOID * ptr) {
     RK_MPI_AO_SetVolume(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->setVolume);
   }
 
-  if (pstPlayer->pstAoCtx->setTrackMode) {
-    RKADK_LOGI("info : set track mode = %d", pstPlayer->pstAoCtx->setTrackMode);
-    RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, (AUDIO_TRACK_MODE_E)pstPlayer->pstAoCtx->setTrackMode);
-  }
-
   if (pstPlayer->pstAoCtx->getVolume) {
     RKADK_S32 volume = 0;
     RK_MPI_AO_GetVolume(pstPlayer->pstAoCtx->devId, &volume);
@@ -2103,103 +2098,50 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     }
   } else {
 #ifndef RV1106_1103
-    if (pstPlayer->demuxerFlag == MIX_VIDEO_FLAG) {
-      if (pstPlayer->bVideoExist == RKADK_TRUE) {
-        ret = RK_MPI_VDEC_StartRecvStream(pstPlayer->pstVdecCtx->chnIndex);
-        if (ret != RKADK_SUCCESS) {
-          RKADK_LOGE("start recv chn %d failed %X! ", pstPlayer->pstVdecCtx->chnIndex, ret);
-          goto __FAILED;
-        }
-      }
-
-      if (pstPlayer->bAudioExist == RKADK_TRUE) {
-        if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          goto __FAILED;
-        }
-
-        pstPlayer->pstAoCtx->chnIndex = 0;
-        if (USE_AO_MIXER)
-          SetAoChannelMode(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
-
-        if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          RKADK_LOGE("InitMpiAO failed");
-          goto __FAILED;
-        }
-      }
-
-      if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-        ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
-        if (ret != 0) {
-          RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-          goto __FAILED;
-        }
-      }
-    } else if (pstPlayer->demuxerFlag == VIDEO_FLAG) {
+    if (pstPlayer->demuxerFlag == MIX_VIDEO_FLAG || pstPlayer->demuxerFlag == VIDEO_FLAG) {
       if (pstPlayer->bVideoExist == RKADK_TRUE) {
         ret = RK_MPI_VDEC_StartRecvStream(pstPlayer->pstVdecCtx->chnIndex);
         if (ret != RK_SUCCESS) {
           RKADK_LOGE("start recv chn %d failed %X! ", pstPlayer->pstVdecCtx->chnIndex, ret);
           goto __FAILED;
         }
-
-        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
-          if (ret != 0) {
-            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-            goto __FAILED;
-          }
-        }
-      }
-    } else if (pstPlayer->demuxerFlag == AUDIO_FLAG) {
-      if (pstPlayer->bAudioExist == RKADK_TRUE) {
-        if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          goto __FAILED;
-        }
-
-        pstPlayer->pstAoCtx->chnIndex = 0;
-        if (USE_AO_MIXER)
-          SetAoChannelMode(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
-
-        if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          RKADK_LOGE("InitMpiAO failed");
-          goto __FAILED;
-        }
-
-        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
-          if (ret != 0) {
-            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-            goto __FAILED;
-          }
-        }
-      }
-    }
-#else
-    if (pstPlayer->demuxerFlag == AUDIO_FLAG) {
-      if (pstPlayer->bAudioExist == RKADK_TRUE) {
-        if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          goto __FAILED;
-        }
-
-        pstPlayer->pstAoCtx->chnIndex = 0;
-        if (USE_AO_MIXER)
-          SetAoChannelMode(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
-
-        if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
-          RKADK_LOGE("InitMpiAO failed");
-          goto __FAILED;
-        }
-
-        if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
-          ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
-          if (ret != 0) {
-            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
-            goto __FAILED;
-          }
-        }
       }
     }
 #endif
+    if (pstPlayer->demuxerFlag == MIX_VIDEO_FLAG || pstPlayer->demuxerFlag == AUDIO_FLAG) {
+      if (pstPlayer->bAudioExist == RKADK_TRUE) {
+        pstPlayer->pstAoCtx->channel = pstPlayer->pstAdecCtx->channel;
+        if (OpenDeviceAo(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
+          goto __FAILED;
+        }
+
+        pstPlayer->pstAoCtx->chnIndex = 0;
+        if (USE_AO_MIXER)
+          SetAoChannelMode(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
+
+        if (pstPlayer->pstAdecCtx->channel >= 2) {
+          ret = RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, AUDIO_TRACK_NORMAL);
+        } else if (pstPlayer->pstAdecCtx->channel == 1) {
+          ret = RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, AUDIO_TRACK_OUT_STEREO);
+        } else {
+          RKADK_LOGE("illegal input channel count, channel = %d! ", pstPlayer->pstAdecCtx->channel);
+          goto __FAILED;
+        }
+
+        if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
+          RKADK_LOGE("InitMpiAO failed");
+          goto __FAILED;
+        }
+      }
+    }
+
+    if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
+      ret = RKADK_DEMUXER_ReadPacketStart(pstPlayer->pDemuxerCfg, 0);
+      if (ret != 0) {
+        RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+        goto __FAILED;
+      }
+    }
 
     if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
       pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
