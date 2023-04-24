@@ -167,6 +167,8 @@ bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType);
 RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
                               ROTATION_E enRotation, RKADK_STREAM_TYPE_E enStreamType);
 
+RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStreamType);
+
 #ifdef __cplusplus
 }
 #endif

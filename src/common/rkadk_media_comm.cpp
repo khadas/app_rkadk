@@ -19,10 +19,12 @@
 #include "rkadk_param.h"
 #include "rkadk_log.h"
 #include "rkadk_version.h"
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/sysinfo.h>
 #include <unistd.h>
 
 typedef struct {
@@ -46,6 +48,8 @@ typedef struct {
   pthread_t tid;
   RKADK_VOID *pHandle[RKADK_MEDIA_VENC_MAX_CNT];
   RKADK_MEDIA_VENC_DATA_PROC_FUNC cbList[RKADK_MEDIA_VENC_MAX_CNT];
+  RKADK_S64 s64RecentPts;
+  RKADK_U64 u64TimeoutCnt; //Continuous timeout count
 } RKADK_GET_VENC_MB_ATTR_S;
 
 typedef struct {
@@ -1112,12 +1116,14 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
           pstMediaInfo->stGetVencMBAttr.cbList[i](
               stData, pstMediaInfo->stGetVencMBAttr.pHandle[i]);
 
+      pstMediaInfo->stGetVencMBAttr.s64RecentPts = stData.stFrame.pstPack->u64PTS;
+      pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt = 0;
       ret = RK_MPI_VENC_ReleaseStream(pstMediaInfo->s32ChnId, &stData.stFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     } else {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
-
+      pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt++;
       //dump video info
 #ifdef RV1106_1103
       system("cat /dev/mpi/vsys");
@@ -1854,5 +1860,57 @@ RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
       RKADK_LOGW("jpeg input resolution must be 16 aligned, please check");
   }
 
+  return ret;
+}
+
+RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStreamType) {
+  RKADK_S32 s32ChnId;
+  int i, ret = 0;
+  struct sysinfo info;
+  RKADK_U64 u64TimeoutCnt = 0;
+  RKADK_S64 s64currentTime = 0, s64RecentPts = 0;
+
+  s32ChnId = RKADK_PARAM_GetVencChnId(u32CamId, enStreamType);
+  if (s32ChnId < 0) {
+    RKADK_LOGE("Stream[%d] get venc chn id failed", enStreamType);
+    return 0;
+  }
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
+
+  for (i = 0; i < RKADK_MEDIA_VENC_MAX_CNT; i++) {
+    if (!g_stMediaCtx.stVencInfo[i].bUsed)
+      continue;
+
+    if (g_stMediaCtx.stVencInfo[i].s32ChnId == s32ChnId)
+      break;
+  }
+
+  if (i == RKADK_MEDIA_VENC_MAX_CNT) {
+    RKADK_LOGE("not find matched u32CamId[%d] s32ChnId[%d]", u32CamId, s32ChnId);
+    ret = 0;
+    goto exit;
+  }
+
+  sysinfo(&info);
+  s64currentTime = info.uptime * 1000000LL;
+  s64RecentPts = g_stMediaCtx.stVencInfo[i].stGetVencMBAttr.s64RecentPts;
+  assert(s64currentTime - s64RecentPts > 0);
+
+  if (s64RecentPts != 0 && s64currentTime - s64RecentPts > 3000000) {
+    RKADK_LOGW("CamId[%d] VENC[%d] timeout more than 3 seconds!", u32CamId, s32ChnId);
+    ret = -1;
+    goto exit;
+  }
+
+  u64TimeoutCnt = g_stMediaCtx.stVencInfo[i].stGetVencMBAttr.u64TimeoutCnt;
+  if (u64TimeoutCnt >= 5) {
+    RKADK_LOGW("CamId[%d] VENC[%d] timeout more than %lld times!", u32CamId, s32ChnId, u64TimeoutCnt);
+    ret = -1;
+    goto exit;
+  }
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
   return ret;
 }
