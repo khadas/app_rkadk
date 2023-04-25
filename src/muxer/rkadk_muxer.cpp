@@ -499,7 +499,7 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
   stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
   memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
          pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
-  pstMuxerHandle->pfnEventCallback(pstMuxerHandle, &stEventInfo);
+  pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
 }
 
 static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
