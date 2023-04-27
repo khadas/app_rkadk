@@ -725,7 +725,7 @@ static RKADK_S32 OpenDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
 
   aoAttr.enSoundmode = soundMode;
   aoAttr.u32FrmNum = ctx->periodCount;
-  aoAttr.u32PtNumPerFrm = bytes * ctx->periodSize * ctx->channel;
+  aoAttr.u32PtNumPerFrm = ctx->periodSize;
 
   aoAttr.u32EXFlag = 0;
   aoAttr.u32ChnCnt = 2;
