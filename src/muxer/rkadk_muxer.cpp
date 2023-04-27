@@ -351,6 +351,23 @@ static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
   return pstMuxerHandle;
 }
 
+void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
+                              RKADK_MUXER_EVENT_E enEventType, int64_t value) {
+  RKADK_MUXER_EVENT_INFO_S stEventInfo;
+  memset(&stEventInfo, 0, sizeof(RKADK_MUXER_EVENT_INFO_S));
+
+  if (!pstMuxerHandle->pfnEventCallback) {
+    RKADK_LOGD("Unregistered event callback");
+    return;
+  }
+
+  stEventInfo.enEvent = enEventType;
+  stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
+  memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
+         pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+  pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
+}
+
 int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   int cnt = 0, isKeyFrame = 0;
   MUXER_BUF_CELL_S cell;
@@ -403,8 +420,11 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
     return 0;
 
   while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
-      if (cnt % 100 == 0)
+      if (cnt % 100 == 0) {
         RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
+        if (cnt != 0)
+          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
+      }
       cnt++;
       usleep(10000);
   }
@@ -464,8 +484,11 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
       continue;
 
     while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
-      if (cnt % 100 == 0)
+      if (cnt % 100 == 0) {
         RKADK_LOGI("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->u32VencChn, cnt);
+        if (cnt != 0)
+          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
+      }
       cnt++;
       usleep(10000);
     }
@@ -483,23 +506,6 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
   }
 
   return 0;
-}
-
-void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
-                              RKADK_MUXER_EVENT_E enEventType, int64_t value) {
-  RKADK_MUXER_EVENT_INFO_S stEventInfo;
-  memset(&stEventInfo, 0, sizeof(RKADK_MUXER_EVENT_INFO_S));
-
-  if (!pstMuxerHandle->pfnEventCallback) {
-    RKADK_LOGD("Unregistered event callback");
-    return;
-  }
-
-  stEventInfo.enEvent = enEventType;
-  stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
-  memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
-         pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
-  pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
 }
 
 static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
