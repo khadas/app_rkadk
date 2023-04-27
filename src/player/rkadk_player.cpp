@@ -1231,11 +1231,10 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
       frame.u64TimeStamp = pstDemuxerPacket->s64Pts;
       frame.enBitWidth = FindBitWidth(pstPlayer->pstAoCtx->bitWidth);
       frame.enSoundMode = FindSoundMode(pstPlayer->pstDemuxerParam->audioChannels);
-      frame.bBypassMbBlk = RK_TRUE;
+      frame.bBypassMbBlk = RK_FALSE;
 
       MB_EXT_CONFIG_S extConfig;
       memset(&extConfig, 0, sizeof(extConfig));
-      extConfig.pFreeCB = BufferFree;
       extConfig.pOpaque = (RKADK_VOID *)pstDemuxerPacket->s8PacketData;
       extConfig.pu8VirAddr = (RK_U8*)pstDemuxerPacket->s8PacketData;
       extConfig.u64Size = pstDemuxerPacket->s32PacketSize;
@@ -1250,6 +1249,9 @@ __RETRY:
       }
 
       RK_MPI_MB_ReleaseMB(frame.pMbBlk);
+      if (pstDemuxerPacket->s8PacketData)
+        free(pstDemuxerPacket->s8PacketData);
+
       if (pstDemuxerPacket->s32PacketSize <= 0) {
         if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT) {
           pstPlayer->bWavEofFlag = RKADK_TRUE;
@@ -2119,13 +2121,19 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         if (USE_AO_MIXER)
           SetAoChannelMode(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->chnIndex);
 
-        if (pstPlayer->pstAdecCtx->channel >= 2) {
-          ret = RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, AUDIO_TRACK_NORMAL);
-        } else if (pstPlayer->pstAdecCtx->channel == 1) {
-          ret = RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, AUDIO_TRACK_OUT_STEREO);
-        } else {
+        if (pstPlayer->pstAdecCtx->channel >= 2)
+          pstPlayer->pstAoCtx->setTrackMode = AUDIO_TRACK_NORMAL;
+        else if (pstPlayer->pstAdecCtx->channel == 1)
+          pstPlayer->pstAoCtx->setTrackMode = AUDIO_TRACK_OUT_STEREO;
+        else {
           RKADK_LOGE("illegal input channel count, channel = %d! ", pstPlayer->pstAdecCtx->channel);
           goto __FAILED;
+        }
+
+        ret = RK_MPI_AO_SetTrackMode(pstPlayer->pstAoCtx->devId, (AUDIO_TRACK_MODE_E)pstPlayer->pstAoCtx->setTrackMode);
+        if (ret != 0) {
+            RK_LOGE("ao set track mode fail, aoChn = %d, reason = %x", pstPlayer->pstAoCtx->devId, ret);
+            goto __FAILED;
         }
 
         if (InitMpiAO(pstPlayer->pstAoCtx) != RKADK_SUCCESS) {
@@ -2141,10 +2149,9 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
         RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
         goto __FAILED;
       }
-    }
 
-    if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
       pthread_create(&pstPlayer->stThreadParam.tidEof, 0, EventEOF, pPlayer);
+    }
   }
 
   if (pstPlayer->seekFlag != RKADK_PLAYER_SEEK_WAIT)
