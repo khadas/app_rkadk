@@ -94,6 +94,7 @@ static void SetAudioCfg() {
   memset(&stAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
   strcpy(stAudioCfg.ai_audio_node, AUDIO_DEVICE_NAME);
   strcpy(stAudioCfg.ao_audio_node, AUDIO_DEVICE_NAME);
+  stAudioCfg.ai_depth = AI_DEPTH;
   stAudioCfg.bit_width = AUDIO_BIT_WIDTH;
   stAudioCfg.channels = AUDIO_CHANNEL;
   stAudioCfg.mic_type = AUDIO_MIC_TYPE;

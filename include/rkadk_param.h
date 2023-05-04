@@ -46,6 +46,7 @@ extern "C" {
 #define AUDIO_BIT_REAT 160000
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
+#define AI_DEPTH 1
 #ifdef RV1106_1103
 #define AUDIO_DEVICE_NAME "hw:0,0"
 #else
@@ -242,6 +243,7 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
 typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   char ai_audio_node[RKADK_BUFFER_LEN];
   char ao_audio_node[RKADK_BUFFER_LEN];
+  RKADK_U32 ai_depth;
   AUDIO_BIT_WIDTH_E bit_width;
   RKADK_U32 channels;
   RKADK_U32 mic_type;

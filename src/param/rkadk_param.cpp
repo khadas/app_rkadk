@@ -397,6 +397,7 @@ static void RKADK_PARAM_CheckAudioCfg(char *path) {
                                  "samplerate");
   change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->samples_per_frame,
                                  AUDIO_FRAME_COUNT, "samples_per_frame");
+  change |= RKADK_PARAM_CheckCfg(&pstAudioCfg->ai_depth, AI_DEPTH, "ai_depth");
   change |=
       RKADK_PARAM_CheckCfg(&pstAudioCfg->bitrate, AUDIO_BIT_REAT, "bitrate");
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstAudioCfg->vqe_mode,
@@ -772,6 +773,7 @@ static void RKADK_PARAM_DefAudioCfg(char *path) {
   memset(pstAudioCfg, 0, sizeof(RKADK_PARAM_AUDIO_CFG_S));
   memcpy(pstAudioCfg->ai_audio_node, AUDIO_DEVICE_NAME, strlen(AUDIO_DEVICE_NAME));
   memcpy(pstAudioCfg->ao_audio_node, AUDIO_DEVICE_NAME, strlen(AUDIO_DEVICE_NAME));
+  pstAudioCfg->ai_depth = AI_DEPTH;
   pstAudioCfg->bit_width = AUDIO_BIT_WIDTH;
   pstAudioCfg->channels = AUDIO_CHANNEL;
   pstAudioCfg->mic_type = AUDIO_MIC_TYPE;
@@ -1048,6 +1050,7 @@ static void RKADK_PARAM_Dump() {
   printf("Audio Config\n");
   printf("\tai_audio_node: %s\n", pstCfg->stAudioCfg.ai_audio_node);
   printf("\tao_audio_node: %s\n", pstCfg->stAudioCfg.ao_audio_node);
+  printf("\tai_depth: %d\n", pstCfg->stAudioCfg.ai_depth);
   printf("\tbit_width: %d\n", pstCfg->stAudioCfg.bit_width);
   printf("\tchannels: %d\n", pstCfg->stAudioCfg.channels);
   printf("\tmic_type: %d\n", pstCfg->stAudioCfg.mic_type);

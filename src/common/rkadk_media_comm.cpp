@@ -289,11 +289,19 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
   RKADK_S32 i;
   RKADK_U32 s32SetTrackMode = 0;
   AI_CHN_PARAM_S pstParams;
-  memset(&pstParams, 0, sizeof(AI_CHN_PARAM_S));
-  pstParams.enLoopbackMode = AUDIO_LOOPBACK_NONE;
-  pstParams.s32UsrFrmDepth = 1;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioParam;
 
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
+
+  pstAudioParam = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioParam) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
+
+  memset(&pstParams, 0, sizeof(AI_CHN_PARAM_S));
+  pstParams.enLoopbackMode = AUDIO_LOOPBACK_NONE;
+  pstParams.s32UsrFrmDepth = pstAudioParam->ai_depth;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.aiMutex);
 
