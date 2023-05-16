@@ -877,6 +877,9 @@ static bool RKADK_MUXER_Proc(void *params) {
           pstMuxerHandle->realDuration = (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
+
+          if (pstMuxerHandle->stThumbParam.bGetThumb && pstMuxerHandle->realDuration >= 5000)
+            pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           ret = rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
@@ -890,9 +893,6 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_LOGE("unknow pool");
         }
       }
-
-      if (pstMuxerHandle->stThumbParam.bGetThumb)
-        pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
     }
 
     // free and next
