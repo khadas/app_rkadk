@@ -68,12 +68,14 @@ typedef struct {
   pthread_mutex_t viMutex;
   pthread_mutex_t vencMutex;
   pthread_mutex_t vpssMutex;
+  pthread_mutex_t voMutex;
   pthread_mutex_t bindMutex;
   RKADK_MEDIA_INFO_S stAiInfo[RKADK_MEDIA_AI_MAX_CNT];
   RKADK_MEDIA_INFO_S stAencInfo[RKADK_MEDIA_AENC_MAX_CNT];
   RKADK_MEDIA_INFO_S stViInfo[RKADK_MEDIA_VI_MAX_CNT];
   RKADK_MEDIA_INFO_S stVencInfo[RKADK_MEDIA_VENC_MAX_CNT];
   RKADK_MEDIA_INFO_S stVpssInfo[RKADK_MEDIA_VPSS_MAX_CNT];
+  RKADK_MEDIA_INFO_S stVoInfo[RKADK_MEDIA_VO_MAX_CNT];
   RKADK_BIND_INFO_S stAiAencInfo[RKADK_AI_AENC_MAX_BIND_CNT];
   RKADK_BIND_INFO_S stViVencInfo[RKADK_VI_VENC_MAX_BIND_CNT];
   RKADK_BIND_INFO_S stViVpssInfo[RKADK_VI_VPSS_MAX_BIND_CNT];
@@ -83,16 +85,103 @@ typedef struct {
 static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
 static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
+static int g_bVoLayerDevInitCnt[VO_MAX_LAYER_NUM][VO_MAX_DEV_NUM] = {0};
 
 static void RKADK_MEDIA_CtxInit() {
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM * sizeof(int));
+  memset(g_bVoLayerDevInitCnt, 0, VO_MAX_LAYER_NUM * VO_MAX_DEV_NUM * sizeof(int));
   g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.vencMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.vpssMutex = PTHREAD_MUTEX_INITIALIZER;
+  g_stMediaCtx.voMutex = PTHREAD_MUTEX_INITIALIZER;
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
+}
+
+static RKADK_U32 RKADK_MPI_Vo_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev,
+                                          VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr) {
+  int ret = 0;
+
+  if (!g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]) {
+    ret = RK_MPI_VO_BindLayer(s32VoLay, s32VoDev, VO_LAYER_MODE_GRAPHIC);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_BindLayer [lay: %d, dev: %d] failed, ret = %x", s32VoLay, s32VoDev, ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VO_SetPubAttr(s32VoDev, pstVoPubAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_SetPubAttr failed, ret = %x", ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VO_Enable(s32VoDev);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_Enable failed, ret = %x", ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VO_GetPubAttr(s32VoDev, pstVoPubAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_GetPubAttr failed, ret = %x", ret);
+      return ret;
+    }
+
+    pstLayerAttr->stDispRect.s32X  = 0;
+    pstLayerAttr->stDispRect.s32Y  = 0;
+    pstLayerAttr->stDispRect.u32Width   = pstVoPubAttr->stSyncInfo.u16Hact;
+    pstLayerAttr->stDispRect.u32Height  = pstVoPubAttr->stSyncInfo.u16Vact;
+    pstLayerAttr->stImageSize.u32Width  = pstVoPubAttr->stSyncInfo.u16Hact;
+    pstLayerAttr->stImageSize.u32Height = pstVoPubAttr->stSyncInfo.u16Vact;
+
+    ret = RK_MPI_VO_SetLayerAttr(s32VoLay, pstLayerAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_SetLayerAttr failed, ret = %x", ret);
+      return ret;
+    }
+
+    RK_MPI_VO_SetLayerSpliceMode(s32VoLay, VO_SPLICE_MODE_RGA);
+
+    ret = RK_MPI_VO_EnableLayer(s32VoLay);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_EnableLayer failed, ret = %x", ret);
+      return ret;
+    }
+  }
+
+  g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]++;
+  RKADK_LOGD("Vo Layer[%d] Devices[%d] InitCnt[%d]", s32VoLay, s32VoDev, g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]);
+  return 0;
+}
+
+static RKADK_U32 RKADK_MPI_Vo_DestroyLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev) {
+  int ret;
+
+  if (g_bVoLayerDevInitCnt[s32VoLay][s32VoDev] == 1) {
+    ret = RK_MPI_VO_DisableLayer(s32VoLay);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_DisableLayer failed, ret = %x", ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VO_Disable(s32VoDev);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_Disable failed, ret = %x", ret);
+      return ret;
+    }
+
+    ret = RK_MPI_VO_UnBindLayer(s32VoLay, s32VoDev);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_UnBindLayer failed, ret = %x", ret);
+      return ret;
+    }
+  }
+
+  g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]--;
+  RKADK_LOGD("Vo Layer[%d] Devices[%d] DeInitCnt[%d]", s32VoLay, s32VoDev, g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]);
+  return 0;
 }
 
 static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp, VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
@@ -255,7 +344,7 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId
 
 #ifdef RV1106_1103
   ret = RK_MPI_AMIX_SetControl(s32DevId, "I2STDM Digital Loopback Mode", (char *)"Mode2");
-  if (ret != RK_SUCCESS) {
+  if (ret) {
     RKADK_LOGE("AI[%d,%d] set I2STDM Digital Loopback Mode failed: %x", s32DevId, s32AiChnId, ret);
     return -1;
   }
@@ -268,7 +357,7 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId
   stAiVqeConfig.s32FrameSample = u32SampleRate * s32VqeGapMs / 1000;
 
   ret = RK_MPI_AI_SetVqeAttr(s32DevId, s32AiChnId, 0, 0, &stAiVqeConfig);
-  if (ret != RK_SUCCESS) {
+  if (ret) {
     RKADK_LOGE("Ai[%d,%d] SetVqeAttr failed: %#x", s32DevId, s32AiChnId, ret);
     return -1;
   }
@@ -427,8 +516,8 @@ RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     if (enMode != RKADK_VQE_MODE_BUTT) {
 #ifdef RV1106_1103
       ret = RK_MPI_AMIX_SetControl(aiDevId, "I2STDM Digital Loopback Mode", (char *)"Disabled");
-      if (ret != RK_SUCCESS)
-        RK_LOGE("AI[%d, %d] set I2STDM Digital Loopback Mode failed: %x", aiDevId, s32AiChnId, ret);
+      if (ret)
+        RKADK_LOGE("AI[%d, %d] set I2STDM Digital Loopback Mode failed: %x", aiDevId, s32AiChnId, ret);
 #endif
       ret = RK_MPI_AI_DisableVqe(aiDevId, s32AiChnId);
       if (ret)
@@ -443,7 +532,7 @@ RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
 
     ret = RK_MPI_AI_Disable(aiDevId);
     if (ret != 0) {
-      RK_LOGE("Ai[%d] disable failed[%x]", aiDevId, ret);
+      RKADK_LOGE("Ai[%d] disable failed[%x]", aiDevId, ret);
       return RK_FAILURE;
     }
     g_stMediaCtx.stAiInfo[i].bUsed = false;
@@ -589,7 +678,7 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
     if (ret == RK_ERR_VI_NOT_CONFIG) {
       // 0-1.config dev
       ret = RK_MPI_VI_SetDevAttr(u32CamId, &stDevAttr);
-      if (ret != RK_SUCCESS) {
+      if (ret) {
         RKADK_LOGE("RK_MPI_VI_SetDevAttr failed[%x]", ret);
         goto exit;
       }
@@ -599,10 +688,10 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
 
     // 1.get dev enable status
     ret = RK_MPI_VI_GetDevIsEnable(u32CamId);
-    if (ret != RK_SUCCESS) {
+    if (ret) {
       // 1-2.enable dev
       ret = RK_MPI_VI_EnableDev(u32CamId);
-      if (ret != RK_SUCCESS) {
+      if (ret) {
         RKADK_LOGE("RK_MPI_VI_EnableDev failed[%x]", ret);
         goto exit;
       }
@@ -611,7 +700,7 @@ RKADK_S32 RKADK_MPI_VI_Init(RKADK_U32 u32CamId, RKADK_S32 s32ViChnId,
       stBindPipe.u32Num = 1;
       stBindPipe.PipeId[0] = u32CamId;
       ret = RK_MPI_VI_SetDevBindPipe(u32CamId, &stBindPipe);
-      if (ret != RK_SUCCESS) {
+      if (ret) {
         RKADK_LOGE("RK_MPI_VI_SetDevBindPipe failed[%x]", ret);
         RK_MPI_VI_DisableDev(u32CamId);
         goto exit;
@@ -967,6 +1056,110 @@ exit:
   return ret;
 }
 
+RKADK_S32 RKADK_MPI_Vo_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
+                        VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
+                        VO_CHN_ATTR_S *pstChnAttr) {
+  int ret = -1;
+  RKADK_S32 i;
+
+  RKADK_CHECK_POINTER(pstVoPubAttr, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstLayerAttr, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstChnAttr, RKADK_FAILURE);
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.voMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVoInfo, RKADK_MEDIA_VO_MAX_CNT,
+                         s32VoDev, s32VoChn, "VO_INIT");
+  if (i < 0) {
+    i = RKADK_MEDIA_FindUsableIdx(g_stMediaCtx.stVoInfo, RKADK_MEDIA_VO_MAX_CNT,
+                                  "VO_INIT");
+    if (i < 0) {
+      RKADK_LOGE("not find usable index");
+      goto exit;
+    }
+  }
+
+  if (0 == g_stMediaCtx.stVoInfo[i].s32InitCnt) {
+    ret = RKADK_MPI_Vo_CreateLayDev(s32VoLay, s32VoDev, pstVoPubAttr, pstLayerAttr);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_Vo_CreateLayDev failed [%d]", ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_VO_SetChnAttr(s32VoLay, s32VoChn, pstChnAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_SetChnAttr failed, ret = %x", ret);
+      goto exit;
+    }
+
+    ret = RK_MPI_VO_EnableChn(s32VoLay, s32VoChn);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_EnableChn failed, ret = %x", ret);
+      goto exit;
+    }
+
+    g_stMediaCtx.stVoInfo[i].bUsed = true;
+    g_stMediaCtx.stVoInfo[i].s32ChnId = s32VoChn;
+  }
+
+  g_stMediaCtx.stVoInfo[i].s32InitCnt++;
+  RKADK_LOGD("Vo Layer[%d] Devices[%d] Chn[%d] InitCnt[%d]", s32VoLay, s32VoDev, s32VoChn,
+             g_stMediaCtx.stVoInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.voMutex);
+  return 0;
+}
+
+RKADK_S32 RKADK_MPI_Vo_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn) {
+  int ret = -1;
+  RKADK_S32 i;
+  RKADK_S32 s32InitCnt;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.voMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVoInfo, RKADK_MEDIA_VO_MAX_CNT,
+                         s32VoDev, s32VoChn, "VO_DEINIT");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32VoChn);
+    goto exit;
+  }
+
+  s32InitCnt = g_stMediaCtx.stVoInfo[i].s32InitCnt;
+  if (0 == s32InitCnt) {
+    RKADK_LOGD("Vo Layer[%d] Devices[%d] Chn[%d] has already deinit",
+                s32VoLay, s32VoDev, s32VoChn);
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.voMutex);
+    return 0;
+  } else if (1 == s32InitCnt) {
+    ret = RK_MPI_VO_DisableChn(s32VoLay, s32VoChn);
+    if (ret) {
+      RKADK_LOGE("Destory Vo Chn[%d] failed[%x]", s32VoChn, ret);
+      goto exit;
+    }
+
+    ret = RKADK_MPI_Vo_DestroyLayDev(s32VoLay, s32VoDev);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_Vo_DestroyLayDev[%d, %d] failed[%x]", s32VoLay, s32VoDev, ret);
+      goto exit;
+    }
+
+    g_stMediaCtx.stVoInfo[i].bUsed = false;
+    g_stMediaCtx.stVoInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stVoInfo[i].s32DevId = -1;
+  }
+
+  g_stMediaCtx.stVoInfo[i].s32InitCnt--;
+  RKADK_LOGD("Vo Layer[%d] Devices[%d] Chn[%d], DeInitCnt[%d]", s32VoLay, s32VoDev, s32VoChn,
+             g_stMediaCtx.stVoInfo[i].s32InitCnt);
+  ret = 0;
+
+exit:
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.voMutex);
+  return ret;
+}
+
 static void *RKADK_MEDIA_GetAencMb(void *params) {
   int ret;
   AUDIO_STREAM_S stFrame;
@@ -986,7 +1179,7 @@ static void *RKADK_MEDIA_GetAencMb(void *params) {
               stFrame, pstMediaInfo->stGetAencMBAttr.pHandle[i]);
 
       ret = RK_MPI_AENC_ReleaseStream(pstMediaInfo->s32ChnId, &stFrame);
-      if (ret != RK_SUCCESS)
+      if (ret)
         RKADK_LOGE("RK_MPI_AENC_ReleaseStream failed[%x]", ret);
     }
   }
@@ -1127,7 +1320,7 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
       pstMediaInfo->stGetVencMBAttr.s64RecentPts = stData.stFrame.pstPack->u64PTS;
       pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt = 0;
       ret = RK_MPI_VENC_ReleaseStream(pstMediaInfo->s32ChnId, &stData.stFrame);
-      if (ret != RK_SUCCESS)
+      if (ret)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     } else {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);

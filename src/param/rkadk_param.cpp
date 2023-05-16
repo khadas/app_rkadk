@@ -1009,6 +1009,7 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
   if (u32CamId == 0) {
     pstDispCfg->width = DISP_WIDTH;
     pstDispCfg->height = DISP_HEIGHT;
+    pstDispCfg->frame_rate = 30;
     pstDispCfg->rotation = 1; //0: 0, 1: 90, 2: 180, 3: 270
     pstDispCfg->vpss_grp = 3;
     pstDispCfg->vpss_chn = 0;

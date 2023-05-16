@@ -122,7 +122,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   pstFrmInfo->stSyncInfo.bIvs = RKADK_TRUE;
   pstFrmInfo->stSyncInfo.bSynm = RKADK_TRUE;
   pstFrmInfo->stSyncInfo.bIop = RKADK_TRUE;
-  pstFrmInfo->stSyncInfo.u16FrameRate = 60;
+  pstFrmInfo->stSyncInfo.u16FrameRate = 30;
   pstFrmInfo->stSyncInfo.u16PixClock = 65000;
   pstFrmInfo->stSyncInfo.u16Hact = 1200;
   pstFrmInfo->stSyncInfo.u16Hbb = 24;

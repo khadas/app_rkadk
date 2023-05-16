@@ -30,12 +30,6 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   VO_CHN_ATTR_S            stChnAttr;
   COMPRESS_MODE_E enCompressMode = COMPRESS_MODE_NONE;
 
-  ret = RK_MPI_VO_BindLayer(VoLayer, VoDev, VO_LAYER_MODE_VIDEO);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_BindLayer failed, ret = %x", ret);
-    return ret;
-  }
-
   memset(&stVoPubAttr, 0, sizeof(VO_PUB_ATTR_S));
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
   memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
@@ -43,49 +37,10 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stVoPubAttr.enIntfType = VO_INTF_MIPI;
   stVoPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
-  ret = RK_MPI_VO_SetPubAttr(VoDev, &stVoPubAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_SetPubAttr failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_Enable(VoDev);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_Enable failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_GetPubAttr(VoDev, &stVoPubAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_GetPubAttr failed, ret = %x", ret);
-    return ret;
-  }
-
   /* Enable Layer */
   stLayerAttr.enPixFormat      = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type, &enCompressMode);
-  stLayerAttr.enCompressMode   = COMPRESS_AFBC_16x16;
-  stLayerAttr.stDispRect.s32X  = 0;
-  stLayerAttr.stDispRect.s32Y  = 0;
-  stLayerAttr.stDispRect.u32Width   = stVoPubAttr.stSyncInfo.u16Hact;
-  stLayerAttr.stDispRect.u32Height  = stVoPubAttr.stSyncInfo.u16Vact;
-  stLayerAttr.stImageSize.u32Width  = stVoPubAttr.stSyncInfo.u16Hact;
-  stLayerAttr.stImageSize.u32Height = stVoPubAttr.stSyncInfo.u16Vact;
-  stLayerAttr.u32DispFrmRt          = 60;
-  stLayerAttr.bBypassFrame          = RK_FALSE;
-
-  ret = RK_MPI_VO_SetLayerAttr(VoLayer, &stLayerAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_SetLayerAttr failed, ret = %x", ret);
-    return ret;
-  }
-
-  RK_MPI_VO_SetLayerSpliceMode(VoLayer, VO_SPLICE_MODE_RGA);
-
-  ret = RK_MPI_VO_EnableLayer(VoLayer);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_EnableLayer failed, ret = %x", ret);
-    return ret;
-  }
+  stLayerAttr.enCompressMode   = enCompressMode;
+  stLayerAttr.u32DispFrmRt     = pstDispCfg->frame_rate;
 
   stChnAttr.stRect.s32X = pstDispCfg->x;
   stChnAttr.stRect.s32Y = pstDispCfg->y;
@@ -97,15 +52,10 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stChnAttr.enRotation = (ROTATION_E)pstDispCfg->rotation;
   stChnAttr.u32Priority = 1;
 
-  ret = RK_MPI_VO_SetChnAttr(VoLayer, pstDispCfg->vo_chn, &stChnAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_SetChnAttr failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_EnableChn(VoLayer, pstDispCfg->vo_chn);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_EnableChn failed, ret = %x", ret);
+  ret = RKADK_MPI_Vo_Init(VoLayer, VoDev, pstDispCfg->vo_chn,
+                          &stVoPubAttr, &stLayerAttr, &stChnAttr);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
     return ret;
   }
 
@@ -117,27 +67,9 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
 static int RKADK_DISP_DestroyVo(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
   int ret = 0;
 
-  ret = RK_MPI_VO_DisableChn(pstDispCfg->vo_layer, pstDispCfg->vo_chn);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_DisableChn failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_DisableLayer(pstDispCfg->vo_layer);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_DisableLayer failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_Disable(pstDispCfg->vo_device);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_Disable failed, ret = %x", ret);
-    return ret;
-  }
-
-  ret = RK_MPI_VO_UnBindLayer(pstDispCfg->vo_layer, pstDispCfg->vo_device);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_UnBindLayer failed, ret = %x", ret);
+  ret = RKADK_MPI_Vo_DeInit(pstDispCfg->vo_layer, pstDispCfg->vo_device, pstDispCfg->vo_chn);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_Vo_DeInit failed, ret = %x", ret);
     return ret;
   }
 

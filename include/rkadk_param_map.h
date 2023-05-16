@@ -287,6 +287,7 @@ static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable[] = {
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, y),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, width),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, height),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, frame_rate),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, rotation),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_chn),

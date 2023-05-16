@@ -334,6 +334,7 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   RKADK_U32 y;
   RKADK_U32 width;
   RKADK_U32 height;
+  RKADK_U32 frame_rate;
   RKADK_U32 rotation;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;

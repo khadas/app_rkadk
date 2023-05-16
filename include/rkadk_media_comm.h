@@ -32,12 +32,13 @@ extern "C" {
 #include "rk_mpi_vpss.h"
 #include "rk_mpi_rgn.h"
 #include "rk_mpi_cal.h"
+#include "rk_mpi_mmz.h"
+#include "rk_mpi_vo.h"
 
 #ifdef RV1106_1103
 #include "rk_mpi_amix.h"
 #else
 #include "rk_mpi_vdec.h"
-#include "rk_mpi_vo.h"
 #endif
 
 #include "rkadk_common.h"
@@ -59,6 +60,9 @@ extern "C" {
 
 /* vpss maximum count */
 #define RKADK_MEDIA_VPSS_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
+
+/* vo maximum count */
+#define RKADK_MEDIA_VO_MAX_CNT (6 * RKADK_MAX_SENSOR_CNT)
 
 /* ai aenc maximum bind count */
 #define RKADK_AI_AENC_MAX_BIND_CNT RKADK_MEDIA_AENC_MAX_CNT
@@ -111,6 +115,12 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
                               VPSS_GRP_ATTR_S *pstVpssGrpAttr, VPSS_CHN_ATTR_S *pstVpssChnAttr);
 
 RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn);
+
+RKADK_S32 RKADK_MPI_Vo_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
+                        VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
+                        VO_CHN_ATTR_S *pstChnAttr);
+
+RKADK_S32 RKADK_MPI_Vo_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn);
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);

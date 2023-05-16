@@ -11,9 +11,8 @@ file(GLOB_RECURSE PARAM_SRC "${CMAKE_SOURCE_DIR}/src/param/*.cpp")
 file(GLOB_RECURSE RTSP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtsp/*.cpp")
 file(GLOB_RECURSE OSD_SRC "${CMAKE_SOURCE_DIR}/src/osd/*.cpp")
 file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.cpp")
-if(${RKADK_CHIP} STREQUAL "rv1126")
 file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.cpp")
-endif()
+file(GLOB_RECURSE UI_SRC "${CMAKE_SOURCE_DIR}/src/ui/*.cpp")
 file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.cpp")
 file(GLOB_RECURSE INIPARSER_SRC "${CMAKE_SOURCE_DIR}/src/third-party/iniparser/*.c")
 file(GLOB_RECURSE CJSON_SRC "${CMAKE_SOURCE_DIR}/src/third-party/cjson/*.c")
@@ -30,10 +29,11 @@ add_library(rkadk SHARED
 		${STREAM_SRC}
 		${PLAYER_SRC}
 		${PARAM_SRC}
-        ${RTMP_SRC}
+		${RTMP_SRC}
 		${RTSP_SRC}
 		${OSD_SRC}
-        ${DISP_SRC}
+		${DISP_SRC}
+		${UI_SRC}
 		${STORAGE_SRC}
 		${INIPARSER_SRC}
 		${CJSON_SRC})
@@ -45,7 +45,13 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
-target_link_libraries(rkadk rockit rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
+target_link_libraries(rkadk rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
+
+if(${RKADK_CHIP} STREQUAL "rv1106")
+	target_link_libraries(rkadk rockit_full)
+else()
+	target_link_libraries(rkadk rockit)
+endif()
 
 if(USE_RKAIQ)
     target_link_libraries(rkadk rkaiq)

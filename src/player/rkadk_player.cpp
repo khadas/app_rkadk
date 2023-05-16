@@ -1302,12 +1302,6 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_MW_PTR pPlayer) {
       Vo_layer_mode = VO_LAYER_MODE_VIDEO;
   }
 
-  ret = RK_MPI_VO_BindLayer(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->VoDev, Vo_layer_mode);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_BindLayer failed, ret = %x", ret);
-    return ret;
-  }
-
   memset(&stPubAttr, 0, sizeof(VO_PUB_ATTR_S));
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
@@ -1337,43 +1331,12 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_MW_PTR pPlayer) {
 
   stPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
-  ret = VoStartDev(pstPlayer->pstVoCtx->VoDev, &stPubAttr);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("Vo start dev fail = %X", ret);
-    return RKADK_FAILURE;
-  }
-
-  RKADK_PLAYER_CheckParameter(pstPlayer->pstVoCtx, stPubAttr.stSyncInfo.u16Hact,
-                              stPubAttr.stSyncInfo.u16Vact);
+/*   RKADK_PLAYER_CheckParameter(pstPlayer->pstVoCtx, stPubAttr.stSyncInfo.u16Hact,
+                              stPubAttr.stSyncInfo.u16Vact); */
 
   /* Enable Layer */ //RK_FMT_RGBA8888
   stLayerAttr.enPixFormat           = (PIXEL_FORMAT_E)pstPlayer->pstVoCtx->pixFormat;
-  stLayerAttr.stDispRect.s32X       = 0;
-  stLayerAttr.stDispRect.s32Y       = 0;
-  stLayerAttr.stDispRect.u32Width   = stPubAttr.stSyncInfo.u16Hact;
-  stLayerAttr.stDispRect.u32Height  = stPubAttr.stSyncInfo.u16Vact;
-  stLayerAttr.stImageSize.u32Width  = stPubAttr.stSyncInfo.u16Hact;
-  stLayerAttr.stImageSize.u32Height = stPubAttr.stSyncInfo.u16Vact;
   stLayerAttr.u32DispFrmRt          = pstPlayer->pstVoCtx->dispFrmRt;
-  stLayerAttr.bBypassFrame          = RK_FALSE;
-
-  ret = RK_MPI_VO_SetLayerAttr(pstPlayer->pstVoCtx->VoLayer, &stLayerAttr);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_SetLayerAttr fail = %X", ret);
-    return RKADK_FAILURE;
-  }
-
-  if (pstPlayer->pstVoCtx->bUseRga)
-    RK_MPI_VO_SetLayerSpliceMode(pstPlayer->pstVoCtx->VoLayer, VO_SPLICE_MODE_RGA);
-
-  RKADK_LOGI("Vo [dev: %d, layer: %d] start success",
-              pstPlayer->pstVoCtx->VoDev, pstPlayer->pstVoCtx->VoLayer);
-
-  ret = RK_MPI_VO_EnableLayer(pstPlayer->pstVoCtx->VoLayer);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_EnableLayer fail = %X", ret);
-    return RKADK_FAILURE;
-  }
 
   if (pstPlayer->pstVoCtx->windows <= 2)
     u32Row = 1;
@@ -1411,33 +1374,11 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_MW_PTR pPlayer) {
               stChnAttr.stRect.s32X, stChnAttr.stRect.s32Y = pstPlayer->pstVoCtx->y,
               stChnAttr.stRect.u32Width, stChnAttr.stRect.u32Height);
 
-    ret = RK_MPI_VO_SetChnAttr(pstPlayer->pstVoCtx->VoLayer, i, &stChnAttr);
-    if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("RK_MPI_VO_SetChnAttr failed, ret = %X\n", ret);
-      return RKADK_FAILURE;
-    }
-
-    // set video aspect ratio
-    if (pstPlayer->pstVoCtx->uEnMode == 2) {
-      stChnParam.stAspectRatio.enMode = ASPECT_RATIO_MANUAL;
-      stChnParam.stAspectRatio.stVideoRect.s32X = pstPlayer->pstVoCtx->x + u32X * u32WinWidth;
-      stChnParam.stAspectRatio.stVideoRect.s32Y = pstPlayer->pstVoCtx->y + u32Y * u32WinHeight;
-      stChnParam.stAspectRatio.stVideoRect.u32Width = u32WinWidth/2;
-      stChnParam.stAspectRatio.stVideoRect.u32Height = u32WinHeight/2;
-      RK_MPI_VO_SetChnParam(pstPlayer->pstVoCtx->VoLayer, i, &stChnParam);
-    } else if (pstPlayer->pstVoCtx->uEnMode == 1) {
-      stChnParam.stAspectRatio.enMode = ASPECT_RATIO_AUTO;
-      stChnParam.stAspectRatio.stVideoRect.s32X = pstPlayer->pstVoCtx->x + u32X * u32WinWidth;
-      stChnParam.stAspectRatio.stVideoRect.s32Y = pstPlayer->pstVoCtx->y + u32Y * u32WinHeight;
-      stChnParam.stAspectRatio.stVideoRect.u32Width = u32WinWidth;
-      stChnParam.stAspectRatio.stVideoRect.u32Height = u32WinHeight;
-      RK_MPI_VO_SetChnParam(pstPlayer->pstVoCtx->VoLayer, i, &stChnParam);
-    }
-
-    ret = RK_MPI_VO_EnableChn(pstPlayer->pstVoCtx->VoLayer, i);
-    if (ret != RKADK_SUCCESS) {
-      RKADK_LOGE("RK_MPI_VO_EnableChn failed, ret = %X\n", ret);
-      return RKADK_FAILURE;
+    ret = RKADK_MPI_Vo_Init(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->VoDev,
+                          i, &stPubAttr, &stLayerAttr, &stChnAttr);
+    if (ret) {
+      RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
+      return ret;
     }
   }
 
@@ -1449,29 +1390,12 @@ static RKADK_S32 RKADK_PLAYER_DestroyVO (RKADK_MW_PTR pPlayer) {
   RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
-    ret = RK_MPI_VO_DisableChn(pstPlayer->pstVoCtx->VoLayer, i);
+    ret = RKADK_MPI_Vo_DeInit(pstPlayer->pstVoCtx->VoLayer,
+                              pstPlayer->pstVoCtx->VoDev, i);
     if (ret != RKADK_SUCCESS) {
       RKADK_LOGE("RK_MPI_VO_DisableChn failed, ret = %X\n", ret);
       return RKADK_FAILURE;
     }
-  }
-
-  ret = RK_MPI_VO_DisableLayer(pstPlayer->pstVoCtx->VoLayer);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_DisableLayer fail = %X", ret);
-    return RKADK_FAILURE;
-  }
-
-  ret = RK_MPI_VO_Disable(pstPlayer->pstVoCtx->VoDev);
-  if (ret != RKADK_SUCCESS) {
-    RKADK_LOGE("RK_MPI_VO_Disable failed, ret = %X\n", ret);
-    return RKADK_FAILURE;
-  }
-
-  ret = RK_MPI_VO_UnBindLayer(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->VoDev);
-  if (ret) {
-    RKADK_LOGE("unbind VO layer failed = %X", ret);
-    return RKADK_FAILURE;
   }
 
   return RKADK_SUCCESS;
