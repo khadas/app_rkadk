@@ -330,12 +330,13 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
     bUseVpss = true;
   }
 
+#ifdef RV1106_1103
+  //usp vpss switch resolution
   if (!pstSensorCfg->used_isp) {
-#ifndef RV1106_1103
-    if (pstSensorCfg->flip || pstSensorCfg->mirror)
-#endif
+    if (pstPhotoCfg->switch_res)
       bUseVpss = true;
   }
+#endif
 
 #ifndef RV1106_1103
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP)
@@ -456,8 +457,6 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
     stChnAttr.u32Width = pstSensorCfg->max_width;
     stChnAttr.u32Height = pstSensorCfg->max_height;
-    stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
-    stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
     stChnAttr.u32FrameBufCnt = 1;
 
@@ -533,6 +532,15 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
 #ifndef THUMB_NORMAL
   ThumbnailChnBind(stVencChn.s32ChnId, ptsThumbCfg->photo_venc_chn);
 #endif
+
+  //if use isp, set mirror/flip using aiq
+  if (!pstSensorCfg->used_isp) {
+    RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_SNAP;
+    if (pstSensorCfg->mirror)
+      RKADK_MEDIA_ToggleVencMirror(pstPhotoAttr->u32CamId, enStrmType, pstSensorCfg->mirror);
+    else if (pstSensorCfg->flip)
+      RKADK_MEDIA_ToggleVencFlip(pstPhotoAttr->u32CamId, enStrmType, pstSensorCfg->flip);
+  }
 
   if (pHandle->bUseVpss) {
     // VPSS Bind VENC

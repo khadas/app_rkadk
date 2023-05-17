@@ -114,7 +114,7 @@ RKADK_S32 RKADK_RECORD_GetAencChn();
  * @return 0 success
  * @return -1 failure
  */
-RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
+RKADK_S32 RKADK_RECORD_ToggleMirror(RKADK_MW_PTR pRecorder,
                                     RKADK_STREAM_TYPE_E enStrmType,
                                     int mirror);
 
@@ -123,7 +123,7 @@ RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
  * @return 0 success
  * @return -1 failure
  */
-RKADK_S32 RKADK_RECORD_ToogleFlip(RKADK_MW_PTR pRecorder,
+RKADK_S32 RKADK_RECORD_ToggleFlip(RKADK_MW_PTR pRecorder,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   int flip);
 

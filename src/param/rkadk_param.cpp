@@ -942,6 +942,7 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
   pstRecCfg->pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   pstRecCfg->lapse_multiple = VIDEO_FRAME_RATE;
   pstRecCfg->file_num = 1;
+  pstRecCfg->switch_res = false;
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
 }
 
@@ -959,6 +960,7 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
   pstPhotoCfg->enable_combo = false;
   pstPhotoCfg->combo_venc_chn = 0;
   pstPhotoCfg->qfactor = 70;
+  pstPhotoCfg->switch_res = false;
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -1106,6 +1108,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stRecCfg.lapse_multiple);
     printf("\t\tsensor[%d] stRecCfg file_num: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.file_num);
+    printf("\t\tsensor[%d] stRecCfg switch_res: %d\n", i,
+           pstCfg->stMediaCfg[i].stRecCfg.switch_res);
 
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
       printf("\t\tsensor[%d] stRecCfg record_time: %d\n", i,
@@ -1177,6 +1181,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.combo_venc_chn);
     printf("\t\tsensor[%d] stPhotoCfg qfactor: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.qfactor);
+    printf("\t\tsensor[%d] stPhotoCfg switch_res: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.switch_res);
 
     printf("\tPreview Config\n");
     printf("\t\tsensor[%d] stStreamCfg width: %d\n", i,
@@ -2083,13 +2089,6 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstStreamCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
-#if 0
-  //only 1106/1103
-  if (pstSensorCfg->used_isp && pstSensorCfg->mirror)
-    pstStreamCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
-  if (pstSensorCfg->used_isp && pstSensorCfg->flip)
-    pstStreamCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-#endif
   return 0;
 }
 
@@ -2135,13 +2134,6 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstPhotoCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
-#if 0
-  //only 1106/1103
-  if (pstSensorCfg->used_isp && pstSensorCfg->mirror)
-    pstPhotoCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
-  if (pstSensorCfg->used_isp && pstSensorCfg->flip)
-    pstPhotoCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-#endif
   return 0;
 }
 
@@ -2200,14 +2192,6 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
     pstRecCfg->vi_attr[i].stChnAttr.u32Depth = pstViCfg->depth;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     pstRecCfg->vi_attr[i].stChnAttr.stFrameRate.s32DstFrameRate = -1;
-
-#if 0
-    //only 1106/1103
-    if (pstSensorCfg->used_isp && pstSensorCfg->mirror)
-      pstRecCfg->vi_attr[i].stChnAttr.bMirror = RK_TRUE;
-    if (pstSensorCfg->used_isp && pstSensorCfg->flip)
-      pstRecCfg->vi_attr[i].stChnAttr.bFlip = RK_TRUE;
-#endif
   }
   return 0;
 }
@@ -2269,13 +2253,6 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstDispCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
-#if 0
-  //only 1106/1103
-  if (pstSensorCfg->used_isp && pstSensorCfg->mirror)
-    pstDispCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
-  if (pstSensorCfg->used_isp && pstSensorCfg->flip)
-    pstDispCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
-#endif
   return 0;
 }
 
@@ -2321,11 +2298,6 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32SrcFrameRate = -1;
   pstThumbCfg->vi_attr.stChnAttr.stFrameRate.s32DstFrameRate = -1;
 
-  //only 1106/1103
-  if (pstSensorCfg->used_isp && pstSensorCfg->mirror)
-    pstThumbCfg->vi_attr.stChnAttr.bMirror = RK_TRUE;
-  if (pstSensorCfg->used_isp && pstSensorCfg->flip)
-    pstThumbCfg->vi_attr.stChnAttr.bFlip = RK_TRUE;
   return 0;
 }
 
@@ -2801,6 +2773,39 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
   }
   default:
     RKADK_LOGE("Unsupport stream type: %d", enStrmType);
+    break;
+  }
+
+  return s32VencChnId;
+}
+
+RKADK_S32 RKADK_PARAM_GetThumbChnId(RKADK_U32 u32CamId,
+                                   RKADK_STREAM_TYPE_E enStrmType) {
+  RKADK_S32 s32VencChnId = -1;
+  RKADK_PARAM_THUMB_CFG_S *pstThumbCfg;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  pstThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
+  if (!pstThumbCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
+    return -1;
+  }
+
+  switch (enStrmType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN:
+    s32VencChnId = pstThumbCfg->record_main_venc_chn;
+    break;
+
+  case RKADK_STREAM_TYPE_VIDEO_SUB:
+    s32VencChnId = pstThumbCfg->record_sub_venc_chn;
+    break;
+
+  case RKADK_STREAM_TYPE_SNAP:
+    s32VencChnId = pstThumbCfg->photo_venc_chn;
+    break;
+  default:
+    RKADK_LOGE("enStrmType[%d] don't thumbanail", enStrmType);
     break;
   }
 

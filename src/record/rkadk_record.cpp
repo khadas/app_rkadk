@@ -247,12 +247,13 @@ static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
     bUseVpss = true;
   }
 
+#ifdef RV1106_1103
+  //main record usp vpss switch resolution
   if (!pstSensorCfg->used_isp) {
-#ifndef RV1106_1103
-    if (pstSensorCfg->flip || pstSensorCfg->mirror)
-#endif
+    if (pstRecCfg->switch_res && index == 0)
       bUseVpss = true;
   }
+#endif
 
   return bUseVpss;
 }
@@ -331,8 +332,6 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       stChnAttr.enPixelFormat = pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat;
       stChnAttr.stFrameRate.s32SrcFrameRate = -1;
       stChnAttr.stFrameRate.s32DstFrameRate = -1;
-      stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
-      stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
       stChnAttr.u32Depth = 0;
       stChnAttr.u32FrameBufCnt = pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount + 2;
 
@@ -403,6 +402,18 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 #ifndef THUMB_NORMAL
     ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn, u32ThumbVencChn);
 #endif
+
+    //if use isp, set mirror/flip using aiq
+    if (!pstSensorCfg->used_isp) {
+      RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      if (i != 0)
+        enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+
+      if (pstSensorCfg->mirror)
+        RKADK_MEDIA_ToggleVencMirror(u32CamId, enStrmType, pstSensorCfg->mirror);
+      else if (pstSensorCfg->flip)
+        RKADK_MEDIA_ToggleVencFlip(u32CamId, enStrmType, pstSensorCfg->flip);
+    }
   }
 
   return 0;
@@ -1550,16 +1561,32 @@ RKADK_RECORD_ManualSplit(RKADK_MW_PTR pRecorder,
 
 RKADK_S32 RKADK_RECORD_GetAencChn() { return RECORD_AENC_CHN; }
 
-RKADK_S32 RKADK_RECORD_ToogleMirror(RKADK_MW_PTR pRecorder,
+RKADK_S32 RKADK_RECORD_ToggleMirror(RKADK_MW_PTR pRecorder,
                                     RKADK_STREAM_TYPE_E enStrmType,
                                     int mirror) {
-  RKADK_LOGE("unsupport toogle mirror");
-  return -1;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
+  if (!pstRecorder) {
+    RKADK_LOGE("pstRecorder is null");
+    return -1;
+  }
+
+  return RKADK_MEDIA_ToggleVencMirror(pstRecorder->u32CamId, enStrmType, (bool)mirror);
 }
 
-RKADK_S32 RKADK_RECORD_ToogleFlip(RKADK_MW_PTR pRecorder,
+RKADK_S32 RKADK_RECORD_ToggleFlip(RKADK_MW_PTR pRecorder,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   int flip) {
-  RKADK_LOGE("unsupport toogle flip");
-  return -1;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
+  if (!pstRecorder) {
+    RKADK_LOGE("pstRecorder is null");
+    return -1;
+  }
+
+  return RKADK_MEDIA_ToggleVencFlip(pstRecorder->u32CamId, enStrmType, (bool)flip);
 }

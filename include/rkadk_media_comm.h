@@ -169,6 +169,14 @@ RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStreamType);
 
+RKADK_S32 RKADK_MEDIA_ToggleVencMirror(RKADK_U32 u32CamId,
+                                    RKADK_STREAM_TYPE_E enStrmType,
+                                    bool mirror);
+
+RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
+                                  RKADK_STREAM_TYPE_E enStrmType,
+                                  bool flip);
+
 #ifdef __cplusplus
 }
 #endif

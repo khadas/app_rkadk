@@ -1851,8 +1851,9 @@ bool RKADK_MEDIA_EnableAencRegister(RKADK_CODEC_TYPE_E eCodecType) {
 
 RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
                               ROTATION_E enRotation, RKADK_STREAM_TYPE_E enStreamType) {
-  int ret = 0;
-  RKADK_S32 s32VencChnId;
+  int ret = 0, ret1 = 0;
+  RKADK_S32 s32VencChnId, s32ThumbChId;
+  ROTATION_E rotation;
 
   s32VencChnId = RKADK_PARAM_GetVencChnId(u32CamId, enStreamType);
   if (s32VencChnId < 0) {
@@ -1860,12 +1861,33 @@ RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
     return -1;
   }
 
+  ret = RK_MPI_VENC_GetChnRotation(s32VencChnId, &rotation);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Get venc[%d] rotation failed[%x]", s32VencChnId, ret);
+    return -1;
+  }
+
+  if (rotation == enRotation)
+    return 0;
+
   ret = RK_MPI_VENC_SetChnRotation(s32VencChnId, enRotation);
-  if (ret) {
-    RKADK_LOGE("Stream[%d] set venc rotation failed[%x]", ret);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Set venc[%d] rotation failed[%x]", s32VencChnId, ret);
 
     if (enStreamType == RKADK_STREAM_TYPE_SNAP && (enRotation == ROTATION_90 || enRotation == ROTATION_270))
       RKADK_LOGW("jpeg input resolution must be 16 aligned, please check");
+  } else {
+    s32ThumbChId = RKADK_PARAM_GetThumbChnId(u32CamId, enStreamType);
+    if (s32ThumbChId != -1) {
+      //set thumb rotation
+      ret1 = RK_MPI_VENC_SetChnRotation(s32ThumbChId, enRotation);
+      if (ret1) {
+        RKADK_LOGE("Set thumb[%d] rotation failed[%x]", s32ThumbChId, ret1);
+
+        if (enRotation == ROTATION_90 || enRotation == ROTATION_270)
+          RKADK_LOGW("jpeg input resolution must be 16 aligned, please check");
+      }
+    }
   }
 
   return ret;
@@ -1921,4 +1943,139 @@ RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E en
 exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
   return ret;
+}
+
+//flip: mirror + 180, both: 180
+static MIRROR_E RKADK_MEDIA_GetVencMirror(RKADK_S32 s32VencChn, VENC_CHN_ATTR_S *pstVencChnAttr) {
+  int ret;
+  MIRROR_E enMirror = MIRROR_NONE;
+  ROTATION_E rotation;
+
+  ret = RK_MPI_VENC_GetChnAttr(s32VencChn, pstVencChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Get venc[%d] attr failed[%x]", s32VencChn, ret);
+    return MIRROR_NONE;
+  }
+
+  ret = RK_MPI_VENC_GetChnRotation(s32VencChn, &rotation);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Get venc[%d] rotation failed[%x]", s32VencChn, ret);
+    return MIRROR_NONE;
+  }
+
+  enMirror = pstVencChnAttr->stVencAttr.enMirror;
+  if (rotation == ROTATION_180) {
+    if (pstVencChnAttr->stVencAttr.enMirror == MIRROR_NONE)
+      enMirror = MIRROR_BOTH;
+    else if (pstVencChnAttr->stVencAttr.enMirror == MIRROR_HORIZONTAL)
+      enMirror = MIRROR_VERTICAL;
+  }
+
+  return enMirror;
+}
+
+static RKADK_S32 RKADK_MEDIA_SetVencMirror(RKADK_U32 u32CamId,
+                                    RKADK_STREAM_TYPE_E enStrmType,
+                                    MIRROR_E enMirror, int s32VencChn,
+                                    VENC_CHN_ATTR_S *pstVencChnAttr) {
+  int ret, ret1;
+  int s32ThumbChId;
+  MIRROR_E mirror;
+
+  if (enMirror == MIRROR_BOTH)
+    mirror = MIRROR_NONE;
+  else
+    mirror = enMirror;
+
+  if (mirror != pstVencChnAttr->stVencAttr.enMirror) {
+    pstVencChnAttr->stVencAttr.enMirror = mirror;
+    ret = RK_MPI_VENC_SetChnAttr(s32VencChn, pstVencChnAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Set venc[%d] attr failed[%x]", s32VencChn, ret);
+      return -1;
+    } else {
+      //set thumb flip/mirror
+      s32ThumbChId = RKADK_PARAM_GetThumbChnId(u32CamId, enStrmType);
+      if (s32ThumbChId != -1) {
+        memset(pstVencChnAttr, 0, sizeof(VENC_CHN_ATTR_S));
+        ret1 = RK_MPI_VENC_GetChnAttr(s32ThumbChId, pstVencChnAttr);
+        if (ret1 != RK_SUCCESS) {
+          RKADK_LOGE("Get thumb[%d] venc attr failed [%x]", s32ThumbChId, ret1);
+        } else {
+          pstVencChnAttr->stVencAttr.enMirror = mirror;
+          ret1 = RK_MPI_VENC_SetChnAttr(s32ThumbChId, pstVencChnAttr);
+          if (ret1 != RK_SUCCESS)
+            RKADK_LOGE("Set thumb[%d] venc attr failed[%x]", s32ThumbChId, ret1);
+        }
+      }
+    }
+  }
+
+  if (enMirror == MIRROR_VERTICAL || enMirror == MIRROR_BOTH)
+    ret = RKADK_MEDIA_SetVencRotation(u32CamId, ROTATION_180, enStrmType);
+  else
+    ret = RKADK_MEDIA_SetVencRotation(u32CamId, ROTATION_0, enStrmType);
+
+  return ret;
+}
+
+RKADK_S32 RKADK_MEDIA_ToggleVencMirror(RKADK_U32 u32CamId,
+                                    RKADK_STREAM_TYPE_E enStrmType,
+                                    bool mirror) {
+  int ret = 0;
+  int s32VencChn;
+  VENC_CHN_ATTR_S stVencChnAttr;
+  MIRROR_E enMirror = MIRROR_NONE;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  s32VencChn = RKADK_PARAM_GetVencChnId(u32CamId, enStrmType);
+  if (s32VencChn == -1)
+    return -1;
+
+  memset(&stVencChnAttr, 0, sizeof(VENC_CHN_ATTR_S));
+  ret = RK_MPI_VENC_GetChnAttr(s32VencChn, &stVencChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VENC_GetChnAttr[%d] failed [%x]", s32VencChn, ret);
+    return -1;
+  }
+
+  enMirror = RKADK_MEDIA_GetVencMirror(s32VencChn, &stVencChnAttr);
+  if (mirror)
+    enMirror = (MIRROR_E)(enMirror | MIRROR_HORIZONTAL);
+  else
+    enMirror = (MIRROR_E)(enMirror & (~MIRROR_HORIZONTAL));
+
+  return RKADK_MEDIA_SetVencMirror(u32CamId, enStrmType, enMirror, s32VencChn, &stVencChnAttr);
+}
+
+RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
+                                  RKADK_STREAM_TYPE_E enStrmType,
+                                  bool flip) {
+  int ret = 0;
+  int s32VencChn;
+  VENC_CHN_ATTR_S stVencChnAttr;
+  MIRROR_E enMirror = MIRROR_NONE;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  s32VencChn = RKADK_PARAM_GetVencChnId(u32CamId, enStrmType);
+  if (s32VencChn == -1)
+    return -1;
+
+  memset(&stVencChnAttr, 0, sizeof(VENC_CHN_ATTR_S));
+  ret = RK_MPI_VENC_GetChnAttr(s32VencChn, &stVencChnAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_VENC_GetChnAttr[%d] failed [%x]", s32VencChn, ret);
+    return -1;
+  }
+
+
+  enMirror = RKADK_MEDIA_GetVencMirror(s32VencChn, &stVencChnAttr);
+  if (flip)
+    enMirror = (MIRROR_E)(enMirror | MIRROR_VERTICAL);
+  else
+    enMirror = (MIRROR_E)(enMirror & (~MIRROR_VERTICAL));
+
+  return RKADK_MEDIA_SetVencMirror(u32CamId, enStrmType, enMirror, s32VencChn, &stVencChnAttr);
 }

@@ -456,6 +456,14 @@ record:
       RKADK_MEDIA_SetVencRotation(s32CamId, ROTATION_180, RKADK_STREAM_TYPE_VIDEO_MAIN);
     } else if (strstr(cmd, "r-270")) {
       RKADK_MEDIA_SetVencRotation(s32CamId, ROTATION_270, RKADK_STREAM_TYPE_VIDEO_MAIN);
+    } else if (strstr(cmd, "m-1")) {
+      RKADK_RECORD_ToggleMirror(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 1);
+    } else if (strstr(cmd, "m-0")) {
+      RKADK_RECORD_ToggleMirror(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 0);
+    } else if (strstr(cmd, "f-1")) {
+       RKADK_RECORD_ToggleFlip(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 1);
+    } else if (strstr(cmd, "f-0")) {
+      RKADK_RECORD_ToggleFlip(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 0);
     }
 
     usleep(500000);

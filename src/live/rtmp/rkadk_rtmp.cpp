@@ -258,13 +258,6 @@ static bool RKADK_RTMP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *p
     bUseVpss = true;
   }
 
-  if (!pstSensorCfg->used_isp) {
-#ifndef RV1106_1103
-    if (pstSensorCfg->flip || pstSensorCfg->mirror)
-#endif
-      bUseVpss = true;
-  }
-
   return bUseVpss;
 }
 
@@ -310,8 +303,6 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
     stChnAttr.u32Width = pstLiveCfg->attribute.width;
     stChnAttr.u32Height = pstLiveCfg->attribute.height;
-    stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
-    stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
     stChnAttr.u32Depth = 0;
     stChnAttr.u32FrameBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
 
@@ -339,6 +330,16 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
   }
 
   RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
+
+  //if use isp, set mirror/flip using aiq
+  if (!pstSensorCfg->used_isp) {
+    RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_LIVE;
+    if (pstSensorCfg->mirror)
+      RKADK_MEDIA_ToggleVencMirror(u32CamId, enStrmType, pstSensorCfg->mirror);
+    else if (pstSensorCfg->flip)
+      RKADK_MEDIA_ToggleVencFlip(u32CamId, enStrmType, pstSensorCfg->flip);
+  }
+
   return 0;
 
 failed:

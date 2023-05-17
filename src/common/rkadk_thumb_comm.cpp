@@ -156,8 +156,8 @@ static int RKADK_Thumbnail_Vpss(RKADK_U32 u32CamId, RKADK_PARAM_THUMB_CFG_S *pts
   memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
   memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
-  stGrpAttr.u32MaxW = pstSensorCfg->max_width;
-  stGrpAttr.u32MaxH = pstSensorCfg->max_height;
+  stGrpAttr.u32MaxW = ptsThumbCfg->vi_attr.stChnAttr.stSize.u32Width;
+  stGrpAttr.u32MaxH = ptsThumbCfg->vi_attr.stChnAttr.stSize.u32Height;
   stGrpAttr.enPixelFormat = ptsThumbCfg->vi_attr.stChnAttr.enPixelFormat;
   stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
   stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
@@ -170,8 +170,6 @@ static int RKADK_Thumbnail_Vpss(RKADK_U32 u32CamId, RKADK_PARAM_THUMB_CFG_S *pts
   stChnAttr.stFrameRate.s32DstFrameRate = -1;
   stChnAttr.u32Width = ptsThumbCfg->thumb_width;
   stChnAttr.u32Height = ptsThumbCfg->thumb_height;
-  stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
-  stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
   stChnAttr.u32Depth = 0;
 
   ret = RKADK_MPI_VPSS_Init(ptsThumbCfg->vpss_grp, ptsThumbCfg->vpss_chn,
@@ -293,11 +291,6 @@ static bool RKADK_THUMB_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_THUMB_CFG_S *p
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight, u32DstWidth, u32DstHeight);
     bUseVpss = true;
-  }
-
-  if (!pstSensorCfg->used_isp) {
-    if (pstSensorCfg->flip || pstSensorCfg->mirror)
-      bUseVpss = true;
   }
 
   return bUseVpss;

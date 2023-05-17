@@ -298,6 +298,7 @@ typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
 } RKADK_PARAM_REC_TIME_CFG_S;
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
+  bool switch_res;
   RKADK_REC_TYPE_E record_type;
   RKADK_MUXER_FILE_TYPE_E file_type;
   RKADK_U32 pre_record_time;
@@ -324,6 +325,7 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   bool enable_combo;
   RKADK_U32 combo_venc_chn;
   RKADK_U32 qfactor;
+  bool switch_res;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_PHOTO_CFG_S;
 
@@ -467,6 +469,9 @@ RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height);
  * @return       venc chn id success,-1 error code.
  */
 RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
+                                   RKADK_STREAM_TYPE_E enStrmType);
+
+RKADK_S32 RKADK_PARAM_GetThumbChnId(RKADK_U32 u32CamId,
                                    RKADK_STREAM_TYPE_E enStrmType);
 
 RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx(RKADK_VOID);

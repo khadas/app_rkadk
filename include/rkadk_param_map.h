@@ -105,6 +105,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable[] = {
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, pre_record_mode),
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, lapse_multiple),
     DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, int_e, file_num),
+    DEFINE_MAP(record, tagRKADK_PARAM_REC_CFG_S, bool_e, switch_res),
 };
 
 static RKADK_SI_CONFIG_MAP_S g_stRecTimeCfgMapTable_0[] = {
@@ -232,6 +233,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPhotoCfgMapTable[] = {
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, enable_combo),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, combo_venc_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, qfactor),
+    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, switch_res),
 };
 
 /* VI[0] ~ VI[3] map table */
