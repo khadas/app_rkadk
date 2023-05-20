@@ -809,8 +809,10 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId,
 
 static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
                                            RKADK_MUXER_ATTR_S *pstMuxerAttr) {
+  int ret;
   bool bEnableAudio = false;
   RKADK_U32 bitrate;
+  ROTATION_E enRotation = ROTATION_0;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
@@ -852,6 +854,10 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
   pstMuxerAttr->pcbRequestFileNames = GetRecordFileName;
 
   for (int i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
+    ret = RK_MPI_VENC_GetChnRotation(pstRecCfg->attribute[i].venc_chn, &enRotation);
+    if (ret != RK_SUCCESS)
+      RKADK_LOGE("Get venc[%d] rotation failed[%x]", pstRecCfg->attribute[i].venc_chn, ret);
+
     pstMuxerAttr->astStreamAttr[i].u32ViChn = pstRecCfg->vi_attr[i].u32ViChn;
     pstMuxerAttr->astStreamAttr[i].u32VencChn = pstRecCfg->attribute[i].venc_chn;
     pstMuxerAttr->astStreamAttr[i].bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
@@ -888,12 +894,20 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u16Profile =
         pstRecCfg->attribute[i].profile;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32BitRate = bitrate;
-    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Width =
-        pstRecCfg->attribute[i].width;
-    aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
-        pstRecCfg->attribute[i].height;
     aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Gop =
         pstRecCfg->attribute[i].gop;
+
+    if (enRotation == ROTATION_90 || enRotation == ROTATION_270) {
+      aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Width =
+          pstRecCfg->attribute[i].height;
+      aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
+          pstRecCfg->attribute[i].width;
+    } else {
+      aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Width =
+          pstRecCfg->attribute[i].width;
+      aHTrackSrcHandle->unTrackSourceAttr.stVideoInfo.u32Height =
+          pstRecCfg->attribute[i].height;
+    }
 
     if (pstRecCfg->record_type == RKADK_REC_TYPE_LAPSE || !bEnableAudio)
       continue;
@@ -1589,4 +1603,49 @@ RKADK_S32 RKADK_RECORD_ToggleFlip(RKADK_MW_PTR pRecorder,
   }
 
   return RKADK_MEDIA_ToggleVencFlip(pstRecorder->u32CamId, enStrmType, (bool)flip);
+}
+
+RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
+                                  ROTATION_E enRotation,
+                                  RKADK_STREAM_TYPE_E enStreamType) {
+  int ret;
+  RKADK_U32 u32Width, u32Height;
+  RKADK_S32 s32VencChnId;
+  VENC_CHN_ATTR_S stVencChnAttr;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  RKADK_CHECK_POINTER(pRecorder, RKADK_FAILURE);
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pRecorder;
+  if (!pstRecorder) {
+    RKADK_LOGE("pstRecorder is null");
+    return -1;
+  }
+
+  ret = RKADK_MEDIA_SetVencRotation(pstRecorder->u32CamId, enRotation, enStreamType);
+  if (ret == 0) {
+    s32VencChnId = RKADK_PARAM_GetVencChnId(pstRecorder->u32CamId, enStreamType);
+    if (s32VencChnId < 0) {
+      RKADK_LOGE("Stream[%d] get venc chn id failed", enStreamType);
+    } else {
+      memset(&stVencChnAttr, 0, sizeof(VENC_CHN_ATTR_S));
+      ret = RK_MPI_VENC_GetChnAttr(s32VencChnId, &stVencChnAttr);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("Stream[%d] get venc attr failed [%x]", s32VencChnId, ret);
+      } else {
+        if (enRotation == ROTATION_90 || enRotation == ROTATION_270) {
+          u32Width = stVencChnAttr.stVencAttr.u32PicHeight;
+          u32Height = stVencChnAttr.stVencAttr.u32PicWidth;
+        } else {
+          u32Width = stVencChnAttr.stVencAttr.u32PicWidth;
+          u32Height = stVencChnAttr.stVencAttr.u32PicHeight;
+        }
+
+        RKADK_MUXER_UpdateRes(pRecorder, s32VencChnId, u32Width, u32Height);
+      }
+    }
+
+    return 0;
+  }
+
+  return -1;
 }

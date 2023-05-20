@@ -1951,12 +1951,6 @@ static MIRROR_E RKADK_MEDIA_GetVencMirror(RKADK_S32 s32VencChn, VENC_CHN_ATTR_S 
   MIRROR_E enMirror = MIRROR_NONE;
   ROTATION_E rotation;
 
-  ret = RK_MPI_VENC_GetChnAttr(s32VencChn, pstVencChnAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Get venc[%d] attr failed[%x]", s32VencChn, ret);
-    return MIRROR_NONE;
-  }
-
   ret = RK_MPI_VENC_GetChnRotation(s32VencChn, &rotation);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Get venc[%d] rotation failed[%x]", s32VencChn, ret);
@@ -2069,7 +2063,6 @@ RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
     RKADK_LOGE("RK_MPI_VENC_GetChnAttr[%d] failed [%x]", s32VencChn, ret);
     return -1;
   }
-
 
   enMirror = RKADK_MEDIA_GetVencMirror(s32VencChn, &stVencChnAttr);
   if (flip)

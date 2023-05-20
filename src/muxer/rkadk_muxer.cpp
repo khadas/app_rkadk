@@ -92,6 +92,7 @@ typedef struct {
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
   bool bIOError;
+  pthread_mutex_t paramMutex;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
 
@@ -818,10 +819,13 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_LOGI("Ready to recod new video file path:[%s]",
                     pstMuxerHandle->cFileName);
           RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN, u32Duration);
+
+          RKADK_MUTEX_LOCK(pstMuxerHandle->paramMutex);
           ret = rkmuxer_init(pstMuxerHandle->muxerId,
                             (char *)pstMuxerHandle->cOutputFmt,
                             pstMuxerHandle->cFileName, &pstMuxerHandle->stVideo,
                             &pstMuxerHandle->stAudio);
+          RKADK_MUTEX_UNLOCK(pstMuxerHandle->paramMutex);
           if (ret) {
             RKADK_LOGE("rkmuxer_init[%d] failed[%d]", pstMuxerHandle->muxerId, ret);
           } else {
@@ -909,7 +913,7 @@ static bool RKADK_MUXER_Proc(void *params) {
 
 static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
                                     RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr) {
-  int i;
+  int i, ret = 0;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
   RKADK_MUXER_TRACK_SOURCE_S *pstTrackSource = NULL;
 
@@ -919,6 +923,7 @@ static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
     return -1;
   }
 
+  RKADK_MUTEX_LOCK(pMuxerHandle->paramMutex);
   for (i = 0; i < (int)pstSrcStreamAttr->u32TrackCnt; i++) {
     pstTrackSource = &(pstSrcStreamAttr->aHTrackSrcHandle[i]);
     if (pstTrackSource->enTrackType == RKADK_TRACK_SOURCE_TYPE_VIDEO) {
@@ -943,7 +948,8 @@ static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
         break;
       default:
         RKADK_LOGE("not support enCodecType: %d", pstVideoInfo->enCodecType);
-        return -1;
+        ret = -1;
+        goto exit;
       }
 
       //thumbnail infomation
@@ -975,7 +981,8 @@ static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
         break;
       default:
         RKADK_LOGE("not support u32BitWidth: %d", pstAudioInfo->u32BitWidth);
-        return -1;
+        ret = -1;
+        goto exit;
       }
 
       switch (pstAudioInfo->enCodecType) {
@@ -987,12 +994,15 @@ static RKADK_S32 RKADK_MUXER_SetAVParam(MUXER_HANDLE_S *pMuxerHandle,
         break;
       default:
         RKADK_LOGE("not support enCodecType: %d", pstAudioInfo->enCodecType);
-        return -1;
+        ret = -1;
+        goto exit;
       }
     }
   }
 
-  return 0;
+exit:
+  RKADK_MUTEX_UNLOCK(pMuxerHandle->paramMutex);
+  return ret;
 }
 
 static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
@@ -1075,6 +1085,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     snprintf(name, sizeof(name), "Muxer_%d", pMuxerHandle->u32VencChn);
     pMuxerHandle->ptr = (RKADK_MW_PTR)pstMuxer;
     pMuxerHandle->mutex = PTHREAD_MUTEX_INITIALIZER;
+    pMuxerHandle->paramMutex = PTHREAD_MUTEX_INITIALIZER;
     pMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pMuxerHandle, name);
     if (!pMuxerHandle->pThread) {
       RKADK_LOGE("RKADK_THREAD_Create failed");
@@ -1459,4 +1470,28 @@ bool RKADK_MUXER_IsUseVpss(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn) {
   }
 
   return pstMuxerHandle->bUseVpss;
+}
+
+RKADK_S32 RKADK_MUXER_UpdateRes(RKADK_MW_PTR pHandle, RKADK_U32 chnId,
+                              RKADK_U32 u32Wdith, RKADK_U32 u32Hieght) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+
+  if (!pHandle) {
+    RKADK_LOGD("Recorder Handle is NULL");
+    return -1;
+  }
+
+  pstRecorder = (RKADK_MUXER_HANDLE_S *)pHandle;
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstRecorder, chnId);
+  if (!pstMuxerHandle) {
+    RKADK_LOGD("Muxer Handle is NULL");
+    return -1;
+  }
+
+  RKADK_MUTEX_LOCK(pstMuxerHandle->paramMutex);
+  pstMuxerHandle->stVideo.width = u32Wdith;
+  pstMuxerHandle->stVideo.height = u32Hieght;
+  RKADK_MUTEX_UNLOCK(pstMuxerHandle->paramMutex);
+  return 0;
 }

@@ -451,11 +451,11 @@ record:
       RKADK_RECORD_Reset(&pRecorder);
       RKADK_RECORD_Start(pRecorder);
     } else if (strstr(cmd, "r-90")) {
-      RKADK_MEDIA_SetVencRotation(s32CamId, ROTATION_90, RKADK_STREAM_TYPE_VIDEO_MAIN);
+      RKADK_RECORD_SetRotation(pRecorder, ROTATION_90, RKADK_STREAM_TYPE_VIDEO_MAIN);
     } else if (strstr(cmd, "r-180")) {
-      RKADK_MEDIA_SetVencRotation(s32CamId, ROTATION_180, RKADK_STREAM_TYPE_VIDEO_MAIN);
+      RKADK_RECORD_SetRotation(pRecorder, ROTATION_180, RKADK_STREAM_TYPE_VIDEO_MAIN);
     } else if (strstr(cmd, "r-270")) {
-      RKADK_MEDIA_SetVencRotation(s32CamId, ROTATION_270, RKADK_STREAM_TYPE_VIDEO_MAIN);
+      RKADK_RECORD_SetRotation(pRecorder, ROTATION_270, RKADK_STREAM_TYPE_VIDEO_MAIN);
     } else if (strstr(cmd, "m-1")) {
       RKADK_RECORD_ToggleMirror(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 1);
     } else if (strstr(cmd, "m-0")) {

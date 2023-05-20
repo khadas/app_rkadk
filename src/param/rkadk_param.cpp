@@ -2046,8 +2046,6 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
                                              RKADK_STREAM_TYPE_E enStrmType) {
   int index;
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
@@ -2260,8 +2258,6 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   int index;
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stThumbCfg;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);

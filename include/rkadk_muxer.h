@@ -262,6 +262,9 @@ int RKADK_MUXER_GetViChn(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn);
 
 bool RKADK_MUXER_IsUseVpss(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn);
 
+RKADK_S32 RKADK_MUXER_UpdateRes(RKADK_MW_PTR pHandle, RKADK_U32 chnId,
+                              RKADK_U32 u32Wdith, RKADK_U32 u32Hieght);
+
 #ifdef __cplusplus
 }
 #endif

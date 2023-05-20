@@ -127,6 +127,10 @@ RKADK_S32 RKADK_RECORD_ToggleFlip(RKADK_MW_PTR pRecorder,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   int flip);
 
+RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
+                                  ROTATION_E enRotation,
+                                  RKADK_STREAM_TYPE_E enStreamType);
+
 #ifdef __cplusplus
 }
 #endif
