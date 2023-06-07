@@ -33,7 +33,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:h";
+static RKADK_CHAR optstr[] = "a:I:W:H:p:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -112,8 +112,12 @@ int main(int argc, char *argv[]) {
   stUiAttr.u32DispFrmRt = 30;
   stUiAttr.u32ImgWidth = u32Width;
   stUiAttr.u32ImgHeight = u32Height;
-  stUiAttr.enUiVoFormat = UI_FORMAT_RGB888;
-  stUiAttr.enUiVoIntfTye = UI_TYPE_MIPI;
+  stUiAttr.enUiVoFormat = VO_FORMAT_RGB888;
+#ifdef RV1106_1103
+    stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_DEFAULT;
+#else
+    stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_MIPI;
+#endif
 
   stUiFrmInfo.Format = RKADK_FMT_RGBA8888;
   stUiFrmInfo.u32Width = u32Width;

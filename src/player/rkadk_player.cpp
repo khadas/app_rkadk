@@ -108,8 +108,8 @@ typedef struct {
   RKADK_S32  VoLayerMode;
 
   RKADK_S32  windows;
-  RKADK_U32  enIntfType; /* 0 HDMI 1 edp */
-  RKADK_U32  enIntfSync; /* VO_OUTPUT_1080P50 */
+  RKADK_VO_INTF_TYPE_E  enIntfType; /* 0 HDMI 1 edp */
+  RKADK_VO_INTF_SYNC_E  enIntfSync;
   RKADK_U32  x;
   RKADK_U32  y;
 
@@ -441,7 +441,7 @@ static RKADK_S32 VoSetParam(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAME_
   pstVoCtx->enIntfType = pstFrameInfo->u32EnIntfType;
   pstVoCtx->uEnMode = pstFrameInfo->u32EnMode;
   pstVoCtx->enIntfSync = pstFrameInfo->enIntfSync;
-  if (pstVoCtx->enIntfSync >= VO_OUTPUT_BUTT) {
+  if (pstVoCtx->enIntfSync >= RKADK_VO_OUTPUT_BUTT) {
     RKADK_LOGE("IntfSync(%d) if unsupport", pstVoCtx->enIntfSync);
     return RKADK_FAILURE;
   }
@@ -528,8 +528,8 @@ static RKADK_S32 CreateVoCtx(RKADK_PLAYER_VO_CTX_S **pVoCtx) {
   memset(pstVoCtx, 0, sizeof(RKADK_PLAYER_VO_CTX_S));
 
   pstVoCtx->windows = 1;
-  pstVoCtx->enIntfType = VO_INTF_MIPI;
-  pstVoCtx->enIntfSync = VO_OUTPUT_DEFAULT;
+  pstVoCtx->enIntfType = DISPLAY_TYPE_MIPI;
+  pstVoCtx->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
 
   pstVoCtx->VoDev = VO_DEVICE;
   pstVoCtx->VoLayer = VOP_LAYER;
@@ -1305,36 +1305,13 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_MW_PTR pPlayer) {
   memset(&stPubAttr, 0, sizeof(VO_PUB_ATTR_S));
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
-  switch (pstPlayer->pstVoCtx->enIntfType) {
-    case DISPLAY_TYPE_VGA:
-      stPubAttr.enIntfType = VO_INTF_VGA;
-      break;
-    case DISPLAY_TYPE_HDMI:
-      stPubAttr.enIntfType = VO_INTF_HDMI;
-      break;
-    case DISPLAY_TYPE_EDP:
-      stPubAttr.enIntfType = VO_INTF_EDP;
-      break;
-    case DISPLAY_TYPE_DP:
-      stPubAttr.enIntfType = VO_INTF_DP;
-      break;
-    case DISPLAY_TYPE_HDMI_EDP:
-      stPubAttr.enIntfType = VO_INTF_HDMI | VO_INTF_EDP;
-      break;
-    case DISPLAY_TYPE_MIPI:
-      stPubAttr.enIntfType = VO_INTF_MIPI;
-      break;
-    default:
-      stPubAttr.enIntfType = VO_INTF_DEFAULT;
-      RKADK_LOGE("IntfType not set,use INTF_HDMI default");
-  }
-
+  stPubAttr.enIntfType = RKADK_MEDIA_GetRkVoIntfTpye(pstPlayer->pstVoCtx->enIntfType);
   stPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
 /*   RKADK_PLAYER_CheckParameter(pstPlayer->pstVoCtx, stPubAttr.stSyncInfo.u16Hact,
                               stPubAttr.stSyncInfo.u16Vact); */
 
-  /* Enable Layer */ //RK_FMT_RGBA8888
+  /* Enable Layer */
   stLayerAttr.enPixFormat           = (PIXEL_FORMAT_E)pstPlayer->pstVoCtx->pixFormat;
   stLayerAttr.u32DispFrmRt          = pstPlayer->pstVoCtx->dispFrmRt;
 
@@ -1374,7 +1351,7 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_MW_PTR pPlayer) {
               stChnAttr.stRect.s32X, stChnAttr.stRect.s32Y = pstPlayer->pstVoCtx->y,
               stChnAttr.stRect.u32Width, stChnAttr.stRect.u32Height);
 
-    ret = RKADK_MPI_Vo_Init(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->VoDev,
+    ret = RKADK_MPI_VO_Init(pstPlayer->pstVoCtx->VoLayer, pstPlayer->pstVoCtx->VoDev,
                           i, &stPubAttr, &stLayerAttr, &stChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
@@ -1390,7 +1367,7 @@ static RKADK_S32 RKADK_PLAYER_DestroyVO (RKADK_MW_PTR pPlayer) {
   RKADK_S32 ret = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   for (RKADK_S32 i = 0; i < pstPlayer->pstVoCtx->windows; i++) {
-    ret = RKADK_MPI_Vo_DeInit(pstPlayer->pstVoCtx->VoLayer,
+    ret = RKADK_MPI_VO_DeInit(pstPlayer->pstVoCtx->VoLayer,
                               pstPlayer->pstVoCtx->VoDev, i);
     if (ret != RKADK_SUCCESS) {
       RKADK_LOGE("RK_MPI_VO_DisableChn failed, ret = %X\n", ret);

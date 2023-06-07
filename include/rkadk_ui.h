@@ -23,27 +23,6 @@ extern "C" {
 
 #include "rkadk_common.h"
 
-typedef enum {
-  UI_FORMAT_ARGB8888 = 0,
-  UI_FORMAT_ABGR8888,
-  UI_FORMAT_RGB888,
-  UI_FORMAT_BGR888,
-  UI_FORMAT_ARGB1555,
-  UI_FORMAT_ABGR1555,
-  UI_FORMAT_NV12,
-  UI_FORMAT_NV21
-} RKADK_UI_VO_FORMAT_E;
-
-typedef enum {
-  UI_TYPE_HDMI = 0,
-  UI_TYPE_EDP,
-  UI_TYPE_VGA,
-  UI_TYPE_DP,
-  UI_TYPE_HDMI_EDP,
-  UI_TYPE_MIPI,
-  UI_TYPE_DEFAULT,
-} RKADK_UI_VO_INTF_TYPE_E;
-
 typedef struct {
   RKADK_U32 u32DispX;
   RKADK_U32 u32DispY;
@@ -58,8 +37,8 @@ typedef struct {
   RKADK_U32 u32Rotation; //0: 0, 1: 90, 2: 180, 3: 270
   RKADK_BOOL bMirror;
   RKADK_BOOL bFlip;
-  RKADK_UI_VO_FORMAT_E enUiVoFormat;
-  RKADK_UI_VO_INTF_TYPE_E enUiVoIntfTye;
+  RKADK_VO_FORMAT_E enUiVoFormat;
+  RKADK_VO_INTF_TYPE_E enUiVoIntfTye;
 } RKADK_UI_ATTR_S;
 
 typedef struct {

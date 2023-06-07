@@ -26,37 +26,6 @@ typedef struct {
   RKADK_U32 u32VoChn;
 } RKADK_UI_HANDLE_S;
 
-struct RKADK_UI_FORMAT_MAP {
-  RKADK_FORMAT_E Format;
-  PIXEL_FORMAT_E enPixelFormat;
-};
-
-static const struct RKADK_UI_FORMAT_MAP format[] = {
-  {RKADK_FMT_ARGB1555, RK_FMT_ARGB1555},
-  {RKADK_FMT_ABGR1555, RK_FMT_ABGR1555},
-  {RKADK_FMT_RGBA5551, RK_FMT_RGBA5551},
-  {RKADK_FMT_BGRA5551, RK_FMT_BGRA5551},
-  {RKADK_FMT_ARGB4444, RK_FMT_ARGB4444},
-  {RKADK_FMT_ABGR4444, RK_FMT_ABGR4444},
-  {RKADK_FMT_RGBA4444, RK_FMT_RGBA4444},
-  {RKADK_FMT_BGRA4444, RK_FMT_BGRA4444},
-  {RKADK_FMT_ARGB8888, RK_FMT_ARGB8888},
-  {RKADK_FMT_ABGR8888, RK_FMT_ABGR8888},
-  {RKADK_FMT_RGBA8888, RK_FMT_RGBA8888},
-  {RKADK_FMT_BGRA8888, RK_FMT_BGRA8888},
-  {RKADK_FMT_2BPP, RK_FMT_2BPP}
-};
-
-static PIXEL_FORMAT_E TO_RK_FORMAT_FORMAT(RKADK_FORMAT_E Format) {
-  RKADK_U32 i;
-
-  for (i = 0; i < sizeof(format) / sizeof(format[0]); i++) {
-    if (format[i].Format == Format)
-      return format[i].enPixelFormat;
-  }
-  return RK_FMT_BUTT;
-}
-
 RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   int ret = 0;
   RKADK_UI_HANDLE_S *pstHandle = NULL;
@@ -82,35 +51,12 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
   memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
 
-  switch (pstUiAttr->enUiVoIntfTye) {
-    case UI_TYPE_VGA:
-      stVoPubAttr.enIntfType = VO_INTF_VGA;
-      break;
-    case UI_TYPE_HDMI:
-      stVoPubAttr.enIntfType = VO_INTF_HDMI;
-      break;
-    case UI_TYPE_EDP:
-      stVoPubAttr.enIntfType = VO_INTF_EDP;
-      break;
-    case UI_TYPE_DP:
-      stVoPubAttr.enIntfType = VO_INTF_DP;
-      break;
-    case UI_TYPE_HDMI_EDP:
-      stVoPubAttr.enIntfType = VO_INTF_HDMI | VO_INTF_EDP;
-      break;
-    case UI_TYPE_MIPI:
-      stVoPubAttr.enIntfType = VO_INTF_MIPI;
-      break;
-    default:
-      stVoPubAttr.enIntfType = VO_INTF_DEFAULT;
-      RKADK_LOGE("IntfType not set, use default");
-  }
-
+  stVoPubAttr.enIntfType = RKADK_MEDIA_GetRkVoIntfTpye(pstUiAttr->enUiVoIntfTye);
   stVoPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
   /* Enable Layer */
   switch (pstUiAttr->enUiVoFormat) {
-    case UI_FORMAT_RGB888:
+    case VO_FORMAT_RGB888:
         stLayerAttr.enPixFormat = RK_FMT_RGB888;
         break;
     default:
@@ -142,7 +88,7 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   pstHandle->u32VoDev = pstUiAttr->u32VoDev;
   pstHandle->u32VoChn = pstUiAttr->u32VoChn;
 
-  ret = RKADK_MPI_Vo_Init(pstUiAttr->u32VoLay, pstUiAttr->u32VoDev, pstUiAttr->u32VoChn,
+  ret = RKADK_MPI_VO_Init(pstUiAttr->u32VoLay, pstUiAttr->u32VoDev, pstUiAttr->u32VoChn,
                           &stVoPubAttr, &stLayerAttr, &stChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret[%x]", ret);
@@ -155,7 +101,7 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   return 0;
 
 failed:
-  RKADK_MPI_Vo_DeInit(pstUiAttr->u32VoLay, pstUiAttr->u32VoDev, pstUiAttr->u32VoChn);
+  RKADK_MPI_VO_DeInit(pstUiAttr->u32VoLay, pstUiAttr->u32VoDev, pstUiAttr->u32VoChn);
 
   if (pstHandle)
     free(pstHandle);
@@ -172,7 +118,7 @@ RKADK_S32 RKADK_UI_Destroy(RKADK_MW_PTR pUi) {
   RKADK_CHECK_POINTER(pUi, RKADK_FAILURE);
   pstHandle = (RKADK_UI_HANDLE_S *)pUi;
 
-  ret = RKADK_MPI_Vo_DeInit(pstHandle->u32VoLay, pstHandle->u32VoDev, pstHandle->u32VoChn);
+  ret = RKADK_MPI_VO_DeInit(pstHandle->u32VoLay, pstHandle->u32VoDev, pstHandle->u32VoChn);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_DeInit failed, ret[%x]", ret);
     goto failed;
@@ -207,7 +153,7 @@ RKADK_S32 RKADK_UI_Update(RKADK_MW_PTR pUi, RKADK_UI_FRAME_INFO *pstUiFrameInfo)
   stVoVFrame.stVFrame.u32Height = pstUiFrameInfo->u32Height;
   stVoVFrame.stVFrame.u32VirWidth = pstUiFrameInfo->u32Width;
   stVoVFrame.stVFrame.u32VirHeight = pstUiFrameInfo->u32Height;
-  stVoVFrame.stVFrame.enPixelFormat = TO_RK_FORMAT_FORMAT(pstUiFrameInfo->Format);
+  stVoVFrame.stVFrame.enPixelFormat = RKADK_MEDIA_GetRkPixelFormat(pstUiFrameInfo->Format);
   stVoVFrame.stVFrame.pMbBlk = pstUiFrameInfo->pMblk;
 
   ret = RK_MPI_VO_SendFrame(pstHandle->u32VoLay, pstHandle->u32VoChn, &stVoVFrame, 1000);

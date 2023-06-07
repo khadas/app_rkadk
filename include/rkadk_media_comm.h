@@ -116,18 +116,23 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
 
 RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn);
 
-RKADK_S32 RKADK_MPI_Vo_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
+RKADK_S32 RKADK_MPI_VO_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
                         VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                         VO_CHN_ATTR_S *pstChnAttr);
 
-RKADK_S32 RKADK_MPI_Vo_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn);
+RKADK_S32 RKADK_MPI_VO_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn);
 
 RKADK_S32 RKADK_MPI_SYS_Bind(const MPP_CHN_S *pstSrcChn,
                              const MPP_CHN_S *pstDestChn);
 RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
                                const MPP_CHN_S *pstDestChn);
 
+PIXEL_FORMAT_E RKADK_MEDIA_GetRkPixelFormat(RKADK_FORMAT_E Format);
+
+VO_INTF_TYPE_E RKADK_MEDIA_GetRkVoIntfTpye(RKADK_VO_INTF_TYPE_E enIntfType);
+
 RKADK_CODEC_TYPE_E RKADK_MEDIA_GetCodecType(RK_CODEC_ID_E enType);
+
 RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType);
 
 RKADK_S32 RKADK_MEDIA_SetRcAttr(VENC_RC_ATTR_S *pstRcAttr, RKADK_U32 u32Gop,

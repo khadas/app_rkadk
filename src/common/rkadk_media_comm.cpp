@@ -82,6 +82,27 @@ typedef struct {
   RKADK_BIND_INFO_S stVpssVencInfo[RKADK_VPSS_VENC_MAX_BIND_CNT];
 } RKADK_MEDIA_CONTEXT_S;
 
+struct RKADK_FORMAT_MAP {
+  RKADK_FORMAT_E Format;
+  PIXEL_FORMAT_E enPixelFormat;
+};
+
+static const struct RKADK_FORMAT_MAP fromat[] = {
+    {RKADK_FMT_ARGB1555, RK_FMT_ARGB1555},
+    {RKADK_FMT_ABGR1555, RK_FMT_ABGR1555},
+    {RKADK_FMT_RGBA5551, RK_FMT_RGBA5551},
+    {RKADK_FMT_BGRA5551, RK_FMT_BGRA5551},
+    {RKADK_FMT_ARGB4444, RK_FMT_ARGB4444},
+    {RKADK_FMT_ABGR4444, RK_FMT_ABGR4444},
+    {RKADK_FMT_RGBA4444, RK_FMT_RGBA4444},
+    {RKADK_FMT_BGRA4444, RK_FMT_BGRA4444},
+    {RKADK_FMT_ARGB8888, RK_FMT_ARGB8888},
+    {RKADK_FMT_ABGR8888, RK_FMT_ABGR8888},
+    {RKADK_FMT_RGBA8888, RK_FMT_RGBA8888},
+    {RKADK_FMT_BGRA8888, RK_FMT_BGRA8888},
+    {RKADK_FMT_2BPP, RK_FMT_2BPP}
+};
+
 static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
 static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
@@ -100,7 +121,7 @@ static void RKADK_MEDIA_CtxInit() {
   g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
 }
 
-static RKADK_U32 RKADK_MPI_Vo_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev,
+static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev,
                                           VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr) {
   int ret = 0;
 
@@ -144,10 +165,24 @@ static RKADK_U32 RKADK_MPI_Vo_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
 
     RK_MPI_VO_SetLayerSpliceMode(s32VoLay, VO_SPLICE_MODE_RGA);
 
+    RK_MPI_VO_SetLayerDispBufLen(s32VoLay, 3);
+
     ret = RK_MPI_VO_EnableLayer(s32VoLay);
     if (ret) {
       RKADK_LOGE("RK_MPI_VO_EnableLayer failed, ret = %x", ret);
       return ret;
+    }
+  } else {
+    ret = RK_MPI_VO_GetPubAttr(s32VoDev, pstVoPubAttr);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VO_GetPubAttr failed, ret = %x", ret);
+    } else {
+      pstLayerAttr->stDispRect.s32X  = 0;
+      pstLayerAttr->stDispRect.s32Y  = 0;
+      pstLayerAttr->stDispRect.u32Width   = pstVoPubAttr->stSyncInfo.u16Hact;
+      pstLayerAttr->stDispRect.u32Height  = pstVoPubAttr->stSyncInfo.u16Vact;
+      pstLayerAttr->stImageSize.u32Width  = pstVoPubAttr->stSyncInfo.u16Hact;
+      pstLayerAttr->stImageSize.u32Height = pstVoPubAttr->stSyncInfo.u16Vact;
     }
   }
 
@@ -156,7 +191,7 @@ static RKADK_U32 RKADK_MPI_Vo_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
   return 0;
 }
 
-static RKADK_U32 RKADK_MPI_Vo_DestroyLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev) {
+static RKADK_U32 RKADK_MPI_VO_DestroyLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev) {
   int ret;
 
   if (g_bVoLayerDevInitCnt[s32VoLay][s32VoDev] == 1) {
@@ -313,9 +348,7 @@ RKADK_S32 RKADK_MPI_SYS_Exit() {
   int ret;
 
   if (g_bSysInit) {
-#ifndef RV1106_1103
     RK_MPI_VO_CloseFd();
-#endif
 
     ret = RK_MPI_SYS_Exit();
     if (ret) {
@@ -1056,7 +1089,49 @@ exit:
   return ret;
 }
 
-RKADK_S32 RKADK_MPI_Vo_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
+static void RKADK_MEDIA_CheckVoParam(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr, VO_CHN_ATTR_S *pstChnAttr) {
+  RKADK_U32 sum = 0;
+  RECT_S *pstChnRect = &(pstChnAttr->stRect);
+  RECT_S *pstLayerRect = &(pstLayerAttr->stDispRect);
+
+  if (pstChnRect->s32X < pstLayerRect->s32X || pstChnRect->s32X > pstLayerRect->u32Width) {
+    RKADK_LOGW("Invalid vo chn x[%d], use layer x[%d]", pstChnRect->s32X, pstLayerRect->s32X);
+    pstChnRect->s32X = pstLayerRect->s32X;
+  }
+
+  if (pstChnRect->s32Y < pstLayerRect->s32Y || pstChnRect->s32Y > pstLayerRect->u32Height) {
+    RKADK_LOGW("Invalid vo chn y[%d], use layer y[%d]", pstChnRect->s32Y, pstLayerRect->s32Y);
+    pstChnRect->s32Y = pstLayerRect->s32Y;
+  }
+
+  if (pstChnRect->u32Width <= 0 || (pstChnRect->u32Width > pstLayerRect->u32Width)) {
+    RKADK_LOGW("Invalid vo chn w[%d], use layer w[%d]", pstChnRect->u32Width, pstLayerRect->u32Width);
+    pstChnRect->u32Width = pstLayerRect->u32Width;
+  }
+
+  if (pstChnRect->u32Height <= 0 || pstChnRect->u32Height > pstLayerRect->u32Height) {
+    RKADK_LOGW("Invalid vo chn h[%d], use layer h[%d]", pstChnRect->u32Height, pstLayerRect->u32Height);
+    pstChnRect->u32Height = pstLayerRect->u32Height;
+  }
+
+  sum = pstChnRect->s32X + pstChnRect->u32Width;
+  if (sum > pstLayerRect->u32Width) {
+    RKADK_LOGW("The vo chn x-coordinate[%d][%d, %d] over layer w[%d]", sum, pstChnRect->s32X,
+                pstChnRect->u32Width, pstLayerRect->u32Width);
+
+    pstChnRect->u32Width = pstLayerRect->u32Width - pstChnRect->s32X;
+  }
+
+  sum = pstChnRect->s32Y + pstChnRect->u32Height;
+  if (sum > pstLayerRect->u32Height) {
+    RKADK_LOGW("The vo chn y-coordinate[%d][%d, %d] over layer h[%d]", sum, pstChnRect->s32Y,
+                pstChnRect->u32Height, pstLayerRect->u32Height);
+
+    pstChnRect->u32Height = pstLayerRect->u32Height - pstChnRect->s32Y;
+  }
+}
+
+RKADK_S32 RKADK_MPI_VO_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
                         VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                         VO_CHN_ATTR_S *pstChnAttr) {
   int ret = -1;
@@ -1080,11 +1155,13 @@ RKADK_S32 RKADK_MPI_Vo_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s3
   }
 
   if (0 == g_stMediaCtx.stVoInfo[i].s32InitCnt) {
-    ret = RKADK_MPI_Vo_CreateLayDev(s32VoLay, s32VoDev, pstVoPubAttr, pstLayerAttr);
+    ret = RKADK_MPI_VO_CreateLayDev(s32VoLay, s32VoDev, pstVoPubAttr, pstLayerAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_Vo_CreateLayDev failed [%d]", ret);
       goto exit;
     }
+
+    RKADK_MEDIA_CheckVoParam(pstLayerAttr, pstChnAttr);
 
     ret = RK_MPI_VO_SetChnAttr(s32VoLay, s32VoChn, pstChnAttr);
     if (ret) {
@@ -1112,7 +1189,7 @@ exit:
   return 0;
 }
 
-RKADK_S32 RKADK_MPI_Vo_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn) {
+RKADK_S32 RKADK_MPI_VO_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn) {
   int ret = -1;
   RKADK_S32 i;
   RKADK_S32 s32InitCnt;
@@ -1139,7 +1216,7 @@ RKADK_S32 RKADK_MPI_Vo_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 
       goto exit;
     }
 
-    ret = RKADK_MPI_Vo_DestroyLayDev(s32VoLay, s32VoDev);
+    ret = RKADK_MPI_VO_DestroyLayDev(s32VoLay, s32VoDev);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_Vo_DestroyLayDev[%d, %d] failed[%x]", s32VoLay, s32VoDev, ret);
       goto exit;
@@ -1625,6 +1702,57 @@ RKADK_S32 RKADK_MPI_SYS_UnBind(const MPP_CHN_S *pstSrcChn,
 exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.bindMutex);
   return ret;
+}
+
+PIXEL_FORMAT_E RKADK_MEDIA_GetRkPixelFormat(RKADK_FORMAT_E Format) {
+  RKADK_U32 i;
+
+  for (i = 0; i < sizeof(fromat) / sizeof(fromat[0]); i++) {
+    if (fromat[i].Format == Format)
+    return fromat[i].enPixelFormat;
+  }
+
+  return RK_FMT_BUTT;
+}
+
+VO_INTF_TYPE_E RKADK_MEDIA_GetRkVoIntfTpye(RKADK_VO_INTF_TYPE_E enIntfType) {
+  VO_INTF_TYPE_E enVoIntfType;
+
+  switch (enIntfType) {
+  case DISPLAY_TYPE_VGA:
+    enVoIntfType = VO_INTF_VGA;
+    break;
+
+  case DISPLAY_TYPE_HDMI:
+    enVoIntfType = VO_INTF_HDMI;
+    break;
+
+  case DISPLAY_TYPE_EDP:
+    enVoIntfType = VO_INTF_EDP;
+    break;
+
+  case DISPLAY_TYPE_DP:
+    enVoIntfType = VO_INTF_DP;
+    break;
+
+  case DISPLAY_TYPE_HDMI_EDP:
+    enVoIntfType = VO_INTF_HDMI | VO_INTF_EDP;
+    break;
+
+  case DISPLAY_TYPE_MIPI:
+    enVoIntfType = VO_INTF_MIPI;
+    break;
+
+  case DISPLAY_TYPE_DEFAULT:
+    enVoIntfType = VO_INTF_DEFAULT;
+    break;
+
+  default:
+    enVoIntfType = VO_INTF_DEFAULT;
+    RKADK_LOGW("IntfType not set, use VO_INTF_DEFAULT");
+  }
+
+  return enVoIntfType;
 }
 
 RK_CODEC_ID_E RKADK_MEDIA_GetRkCodecType(RKADK_CODEC_TYPE_E enType) {

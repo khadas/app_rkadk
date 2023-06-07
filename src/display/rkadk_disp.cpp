@@ -22,6 +22,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+typedef struct {
+  bool bInit;
+  RKADK_U32 u32CamId;
+  bool bSendBuffer;
+  pthread_t tid; //send frame to vo thread
+} RKADK_DISP_HANDLE_S;
+
+static RKADK_DISP_HANDLE_S stDispHandle = {
+    .bInit = false, .u32CamId = 0, .bSendBuffer = false, .tid= 0};
+
 static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
                                RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
   int ret = RK_SUCCESS;
@@ -34,7 +45,7 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
   memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
 
-  stVoPubAttr.enIntfType = VO_INTF_MIPI;
+  stVoPubAttr.enIntfType = RKADK_MEDIA_GetRkVoIntfTpye(RKADK_PARAM_GetIntfType(pstDispCfg->intf_type));
   stVoPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
   /* Enable Layer */
@@ -52,7 +63,7 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stChnAttr.enRotation = (ROTATION_E)pstDispCfg->rotation;
   stChnAttr.u32Priority = 1;
 
-  ret = RKADK_MPI_Vo_Init(VoLayer, VoDev, pstDispCfg->vo_chn,
+  ret = RKADK_MPI_VO_Init(VoLayer, VoDev, pstDispCfg->vo_chn,
                           &stVoPubAttr, &stLayerAttr, &stChnAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
@@ -67,7 +78,7 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
 static int RKADK_DISP_DestroyVo(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
   int ret = 0;
 
-  ret = RKADK_MPI_Vo_DeInit(pstDispCfg->vo_layer, pstDispCfg->vo_device, pstDispCfg->vo_chn);
+  ret = RKADK_MPI_VO_DeInit(pstDispCfg->vo_layer, pstDispCfg->vo_device, pstDispCfg->vo_chn);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_DeInit failed, ret = %x", ret);
     return ret;
@@ -131,12 +142,18 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
   stChnAttr.stFrameRate.s32DstFrameRate = -1;
   stChnAttr.u32Width = pstDispCfg->vi_attr.stChnAttr.stSize.u32Width;
   stChnAttr.u32Height = pstDispCfg->vi_attr.stChnAttr.stSize.u32Height;
-  stChnAttr.u32Depth = 0;
   stChnAttr.u32FrameBufCnt = pstDispCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
   if (!pstSensorCfg->used_isp) {
     stChnAttr.bMirror = (RK_BOOL)pstSensorCfg->mirror;
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
   }
+
+#ifdef RV1106_1103
+  //unbind mode
+  stChnAttr.u32Depth = 2;
+#else
+  stChnAttr.u32Depth = 0;
+#endif
 
   ret = RKADK_MPI_VPSS_Init(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn,
                             &stGrpAttr, &stChnAttr);
@@ -195,12 +212,55 @@ static bool RKADK_DISP_CheckRect(RKADK_RECT_S stRect,
   return true;
 }
 
+static void *RKADK_MEDIA_GetVpssMb(void *arg) {
+  int s32Ret;
+  VIDEO_FRAME_INFO_S stVideoFrame;
+
+  RKADK_DISP_HANDLE_S *pstDispHandle = (RKADK_DISP_HANDLE_S *)arg;
+  if (!pstDispHandle) {
+    RKADK_LOGE("Get VPSS MB thread invalid param");
+    return NULL;
+  }
+
+  RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(pstDispHandle->u32CamId);
+  if (!pstDispCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetDispCfg[%d] failed", pstDispHandle->u32CamId);
+    return NULL;
+  }
+
+  while (pstDispHandle->bSendBuffer) {
+    s32Ret = RK_MPI_VPSS_GetChnFrame(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn,
+                                      &stVideoFrame, 1000);
+    if (s32Ret == RK_SUCCESS) {
+      s32Ret = RK_MPI_VO_SendFrame(pstDispCfg->vo_layer, pstDispCfg->vo_chn, &stVideoFrame, -1);
+      if (s32Ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_VO_SendFrame failed[%x]", s32Ret);
+
+      s32Ret = RK_MPI_VPSS_ReleaseChnFrame(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVideoFrame);
+      if (s32Ret != RK_SUCCESS)
+        RK_LOGE("RK_MPI_VPSS_ReleaseChnFrame failed[%x]", s32Ret);
+    } else {
+      RK_LOGE("RK_MPI_VPSS_GetChnFrame timeout[%x]", s32Ret);
+    }
+  }
+
+  RKADK_LOGD("Exit!");
+  return NULL;
+}
+
 RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   int ret = 0;
   bool bSysInit = false;
+  char name[256];
   MPP_CHN_S stViChn, stVoChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  if (stDispHandle.bInit) {
+    RKADK_LOGI("Disp u32CamId[%d] has been initialized", u32CamId);
+    return 0;
+  }
+
   RKADK_LOGI("Disp u32CamId[%d] Init Start...", u32CamId);
 
   bSysInit = RKADK_MPI_SYS_CHECK();
@@ -232,6 +292,18 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     goto failed;
   }
 
+  stDispHandle.u32CamId = u32CamId;
+#ifdef RV1106_1103
+  stDispHandle.bSendBuffer = true;
+  ret = pthread_create(&stDispHandle.tid, NULL,
+                       RKADK_MEDIA_GetVpssMb, &stDispHandle);
+  if (ret) {
+    RKADK_LOGE("Create get vpss mb(%d) thread failed %d", stSrcVpssChn.s32ChnId, ret);
+    goto failed;
+  }
+  snprintf(name, sizeof(name), "GetVpssMb_%d", stSrcVpssChn.s32ChnId);
+  pthread_setname_np(stDispHandle.tid, name);
+#else
   // Bind VPSS to VO
   ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVoChn);
   if (ret) {
@@ -239,6 +311,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
                 stVoChn.s32ChnId, ret);
     goto failed;
   }
+#endif
 
   // VI Bind VPSS
   ret = RKADK_MPI_SYS_Bind(&stViChn, &stDstVpssChn);
@@ -248,6 +321,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     goto failed;
   }
 
+  stDispHandle.bInit = true;
   RKADK_LOGI("Disp u32CamId[%d] Init End...", u32CamId);
   return 0;
 
@@ -270,6 +344,12 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   MPP_CHN_S stViChn, stVoChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  if (!stDispHandle.bInit || stDispHandle.u32CamId != u32CamId) {
+    RKADK_LOGI("Disp u32CamId[%d] not initialized", u32CamId);
+    return -1;
+  }
+
   RKADK_LOGI("Disp u32CamId[%d] DeInit Start...", u32CamId);
 
   RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(u32CamId);
@@ -281,6 +361,18 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   RKADK_DISP_SetChn(u32CamId, pstDispCfg, &stViChn,
                     &stVoChn, &stSrcVpssChn, &stDstVpssChn);
 
+#ifdef RV1106_1103
+  stDispHandle.bSendBuffer = false;
+  if (stDispHandle.tid) {
+    RKADK_LOGD("Request to cancel get mb thread...");
+    ret = pthread_join(stDispHandle.tid, NULL);
+    if (ret)
+      RKADK_LOGE("Exit get vpss[%d] mb thread failed!", stSrcVpssChn.s32ChnId);
+    else
+      RKADK_LOGI("Exit get vpss[%d] mb thread ok", stSrcVpssChn.s32ChnId);
+    stDispHandle.tid = 0;
+  }
+#else
   // VPSS UnBind VO
   ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVoChn);
   if (ret) {
@@ -288,6 +380,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
                  stVoChn.s32ChnId, ret);
     return ret;
   }
+#endif
 
   // VI UnBind VPSS
   ret = RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
@@ -315,6 +408,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
     return ret;
   }
 
+  stDispHandle.bInit = false;
   RKADK_LOGI("Disp u32CamId[%d] DeInit End...", u32CamId);
   return 0;
 }

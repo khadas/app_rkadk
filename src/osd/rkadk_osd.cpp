@@ -20,37 +20,6 @@
 #include "rkadk_param.h"
 #include <string.h>
 
-struct RKADK_FORMAT_MAP {
-    RKADK_FORMAT_E Format;
-    PIXEL_FORMAT_E enPixelFormat;
-};
-
-static const struct RKADK_FORMAT_MAP fmt[] = {
-    {RKADK_FMT_ARGB1555, RK_FMT_ARGB1555},
-    {RKADK_FMT_ABGR1555, RK_FMT_ABGR1555},
-    {RKADK_FMT_RGBA5551, RK_FMT_RGBA5551},
-    {RKADK_FMT_BGRA5551, RK_FMT_BGRA5551},
-    {RKADK_FMT_ARGB4444, RK_FMT_ARGB4444},
-    {RKADK_FMT_ABGR4444, RK_FMT_ABGR4444},
-    {RKADK_FMT_RGBA4444, RK_FMT_RGBA4444},
-    {RKADK_FMT_BGRA4444, RK_FMT_BGRA4444},
-    {RKADK_FMT_ARGB8888, RK_FMT_ARGB8888},
-    {RKADK_FMT_ABGR8888, RK_FMT_ABGR8888},
-    {RKADK_FMT_RGBA8888, RK_FMT_RGBA8888},
-    {RKADK_FMT_BGRA8888, RK_FMT_BGRA8888},
-    {RKADK_FMT_2BPP, RK_FMT_2BPP}
-};
-
-static PIXEL_FORMAT_E TO_RK_FORMAT_FMT(RKADK_FORMAT_E Format) {
-  RKADK_U32 i;
-
-  for (i = 0; i < sizeof(fmt) / sizeof(fmt[0]); i++) {
-    if (fmt[i].Format == Format)
-    return fmt[i].enPixelFormat;
-  }
-  return RK_FMT_BUTT;
-}
-
 RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
   int ret;
   RGN_ATTR_S stRgnAttr;
@@ -75,7 +44,7 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
       return -1;
   }
 
-  stRgnAttr.unAttr.stOverlay.enPixelFmt = TO_RK_FORMAT_FMT(pstOsdAttr->Format);
+  stRgnAttr.unAttr.stOverlay.enPixelFmt = RKADK_MEDIA_GetRkPixelFormat(pstOsdAttr->Format);
   stRgnAttr.unAttr.stOverlay.stSize.u32Width  = UPALIGNTO(pstOsdAttr->Width, 16);
   stRgnAttr.unAttr.stOverlay.stSize.u32Height = UPALIGNTO(pstOsdAttr->Height, 16);
   RgnHandle = u32OsdId;
@@ -277,7 +246,7 @@ RKADK_S32 RKADK_OSD_UpdateBitMap(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAtt
   RKADK_CHECK_POINTER(pstOsdAttr, RKADK_FAILURE);
 
   memset(&stBitmap, 0, sizeof(BITMAP_S));
-  stBitmap.enPixelFormat = TO_RK_FORMAT_FMT(pstOsdAttr->Format);
+  stBitmap.enPixelFormat = RKADK_MEDIA_GetRkPixelFormat(pstOsdAttr->Format);
   stBitmap.u32Width = pstOsdAttr->Width;
   stBitmap.u32Height = pstOsdAttr->Height;
   stBitmap.pData = pstOsdAttr->pData;

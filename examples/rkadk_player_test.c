@@ -109,7 +109,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
   pstFrmInfo->u32VoDev = 0;
-  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;//DISPLAY_TYPE_MIPI;
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
   pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderColor = 0x0000FA;

@@ -38,6 +38,7 @@ extern "C" {
 
 #define RKADK_MAX_FILE_PATH_LEN 256
 #define RKADK_PIX_FMT_LEN 32
+#define RKADK_INTF_FMT_LEN 32
 
 typedef unsigned char RKADK_U8;
 typedef unsigned short RKADK_U16;
@@ -147,21 +148,42 @@ typedef enum {
 } RKADK_STREAM_TYPE_E;
 
 typedef enum {
-    RKADK_FMT_ARGB1555,                                   /* 16-bit RGB               */
-    RKADK_FMT_ABGR1555,                                   /* 16-bit RGB               */
-    RKADK_FMT_RGBA5551,                                   /* 16-bit RGB               */
-    RKADK_FMT_BGRA5551,                                   /* 16-bit RGB               */
-    RKADK_FMT_ARGB4444,                                   /* 16-bit RGB               */
-    RKADK_FMT_ABGR4444,                                   /* 16-bit RGB               */
-    RKADK_FMT_RGBA4444,                                   /* 16-bit RGB               */
-    RKADK_FMT_BGRA4444,                                   /* 16-bit RGB               */
-    RKADK_FMT_ARGB8888,                                   /* 32-bit RGB               */
-    RKADK_FMT_ABGR8888,                                   /* 32-bit RGB               */
-    RKADK_FMT_RGBA8888,                                   /* 32-bit RGB               */
-    RKADK_FMT_BGRA8888,                                   /* 32-bit RGB               */
-    RKADK_FMT_2BPP,
-    RKADK_FMT_BUTT,
+  RKADK_FMT_ARGB1555,                                   /* 16-bit RGB               */
+  RKADK_FMT_ABGR1555,                                   /* 16-bit RGB               */
+  RKADK_FMT_RGBA5551,                                   /* 16-bit RGB               */
+  RKADK_FMT_BGRA5551,                                   /* 16-bit RGB               */
+  RKADK_FMT_ARGB4444,                                   /* 16-bit RGB               */
+  RKADK_FMT_ABGR4444,                                   /* 16-bit RGB               */
+  RKADK_FMT_RGBA4444,                                   /* 16-bit RGB               */
+  RKADK_FMT_BGRA4444,                                   /* 16-bit RGB               */
+  RKADK_FMT_ARGB8888,                                   /* 32-bit RGB               */
+  RKADK_FMT_ABGR8888,                                   /* 32-bit RGB               */
+  RKADK_FMT_RGBA8888,                                   /* 32-bit RGB               */
+  RKADK_FMT_BGRA8888,                                   /* 32-bit RGB               */
+  RKADK_FMT_2BPP,
+  RKADK_FMT_BUTT,
 } RKADK_FORMAT_E;
+
+typedef enum {
+  VO_FORMAT_ARGB8888 = 0,
+  VO_FORMAT_ABGR8888,
+  VO_FORMAT_RGB888,
+  VO_FORMAT_BGR888,
+  VO_FORMAT_ARGB1555,
+  VO_FORMAT_ABGR1555,
+  VO_FORMAT_NV12,
+  VO_FORMAT_NV21
+} RKADK_VO_FORMAT_E;
+
+typedef enum {
+  DISPLAY_TYPE_HDMI = 0,
+  DISPLAY_TYPE_EDP,
+  DISPLAY_TYPE_VGA,
+  DISPLAY_TYPE_DP,
+  DISPLAY_TYPE_HDMI_EDP,
+  DISPLAY_TYPE_MIPI,
+  DISPLAY_TYPE_DEFAULT,
+} RKADK_VO_INTF_TYPE_E;
 
 #ifndef NULL
 #define NULL 0L

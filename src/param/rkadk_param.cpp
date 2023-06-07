@@ -710,6 +710,14 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->img_type, "RGB888",
                                     RKADK_PIX_FMT_LEN, "display pix_fmt");
 
+#ifdef RV1106_1103
+  change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->intf_type, "default",
+                                    RKADK_INTF_FMT_LEN, "display intf_type");
+#else
+  change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->intf_type, "MIPI",
+                                    RKADK_INTF_FMT_LEN, "display intf_type");
+#endif
+
   change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->vo_chn, 0, VO_MAX_CHN_NUM, 0,
                                     "display vo_chn");
   change |= RKADK_PARAM_CheckCfgU32(&pstDispCfg->vpss_chn, 0, VPSS_MAX_CHN_NUM, 3,
@@ -1017,6 +1025,11 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
     pstDispCfg->vo_device = VO_DEVICE;
     pstDispCfg->vo_layer = VOP_LAYER;
     pstDispCfg->vo_chn = 0;
+#ifdef RV1106_1103
+    memcpy(pstDispCfg->intf_type, "default", strlen("default"));
+#else
+    memcpy(pstDispCfg->intf_type, "MIPI", strlen("MIPI"));
+#endif
   }
 
   RKADK_PARAM_SaveDispCfg(path, u32CamId);
@@ -1291,6 +1304,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stDispCfg.vpss_chn);
     printf("\t\tsensor[%d] stDispCfg img_type: %s\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.img_type);
+    printf("\t\tsensor[%d] stDispCfg intf_type: %s\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.intf_type);
     printf("\t\tsensor[%d] stDispCfg vo_device: %d\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.vo_device);
     printf("\t\tsensor[%d] stDispCfg vo_layer: %d\n", i,
@@ -1915,6 +1930,31 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   return index;
 }
 
+RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetIntfType(char *intfType) {
+  RKADK_VO_INTF_TYPE_E enIntfType = DISPLAY_TYPE_DEFAULT;
+
+  RKADK_CHECK_POINTER(intfType, DISPLAY_TYPE_DEFAULT);
+
+  if (!strcmp(intfType, "MIPI"))
+    enIntfType = DISPLAY_TYPE_MIPI;
+  else if (!strcmp(intfType, "HDMI"))
+    enIntfType = DISPLAY_TYPE_HDMI;
+  else if (!strcmp(intfType, "EDP"))
+    enIntfType = DISPLAY_TYPE_EDP;
+  else if (!strcmp(intfType, "VGA"))
+    enIntfType = DISPLAY_TYPE_VGA;
+  else if (!strcmp(intfType, "DP"))
+    enIntfType = DISPLAY_TYPE_DP;
+  else if (!strcmp(intfType, "HDMI_EDP"))
+    enIntfType = DISPLAY_TYPE_HDMI_EDP;
+  else if (!strcmp(intfType, "default"))
+    enIntfType = DISPLAY_TYPE_DEFAULT;
+  else
+    RKADK_LOGE("Invalid intfType: %s, use default", intfType);
+
+  return enIntfType;
+}
+
 PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt,
                                      COMPRESS_MODE_E *enCompressMode) {
   PIXEL_FORMAT_E enPixelFormat = RK_FMT_YUV420SP;
@@ -2046,6 +2086,8 @@ PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt,
 static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
                                              RKADK_STREAM_TYPE_E enStrmType) {
   int index;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
+      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
@@ -2257,6 +2299,8 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
 
 static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   int index;
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
+      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stThumbCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;

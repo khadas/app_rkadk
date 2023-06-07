@@ -338,7 +338,8 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   RKADK_U32 rotation;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
-  char img_type[RKADK_PIX_FMT_LEN]; /* specify IMAGE_TYPE_E: NV12/RGB888... */
+  char img_type[RKADK_PIX_FMT_LEN]; /* specify PIXEL_FORMAT_E: NV12/RGB888... */
+  char intf_type[RKADK_INTF_FMT_LEN]; /* specify RKADK_VO_INTF_TYPE_E */
   RKADK_U32 vo_device;
   RKADK_U32 vo_layer;
   RKADK_U32 vo_chn;
@@ -503,6 +504,8 @@ RKADK_STREAM_TYPE_E RKADK_PARAM_VencChnMux(RKADK_U32 u32CamId,
                                            RKADK_U32 u32ChnId);
 
 PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt, COMPRESS_MODE_E *enCompressMode);
+
+RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetIntfType(char *intfType);
 
 RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio);
 
