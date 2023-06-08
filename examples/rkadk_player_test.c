@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:mfvh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -52,6 +52,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-m: mirror enable, Default: disable\n");
   printf("\t-f: flip enable, Default: disable\n");
+  printf("\t-a: set audio enable/disable, option: 0, 1; Default: enable\n");
   printf("\t-v: video enable, Default: disable\n");
   printf("\t-h: help\n");
 }
@@ -102,18 +103,18 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   RKADK_CHECK_POINTER_N(pstFrmInfo);
 
   memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAME_INFO_S));
-
-  pstFrmInfo->u32DispWidth = MAX_VO_DISPLAY_WIDTH;
-  pstFrmInfo->u32DispHeight = MAX_VO_DISPLAY_HEIGTHT;
+  pstFrmInfo->u32DispWidth = 720;
+  pstFrmInfo->u32DispHeight = 1280;
   pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
-  pstFrmInfo->u32VoDev = 0;
+#ifdef RV1106_1103
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_DEFAULT;
+#else
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
+#endif
   pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_DEFAULT;
-  pstFrmInfo->u32EnMode = CHNN_ASPECT_RATIO_AUTO;
   pstFrmInfo->u32BorderColor = 0x0000FA;
-  pstFrmInfo->u32ChnnNum = 1;
   pstFrmInfo->bMirror = RKADK_FALSE;
   pstFrmInfo->bFlip = RKADK_FALSE;
   pstFrmInfo->u32Rotation = 1;
@@ -151,7 +152,8 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
 int main(int argc, char *argv[]) {
   int c, ret;
   char *file = "/userdata/16000_2.mp3";
-  RKADK_BOOL bVideoEnable = true;
+  RKADK_BOOL bVideoEnable = false;
+  RKADK_BOOL bAudioEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
   int pauseFlag = 0;
@@ -192,6 +194,9 @@ int main(int argc, char *argv[]) {
     case 'v':
       bVideoEnable = true;
       break;
+    case 'a':
+      bAudioEnable = atoi(optarg);
+      break;
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
@@ -205,7 +210,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#play file: %s", file);
+  RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d", file, bVideoEnable, bAudioEnable);
   RKADK_LOGD(
       "#video display rect[%d, %d, %d, %d]", stPlayCfg.stFrmInfo.u32FrmInfoX,
       stPlayCfg.stFrmInfo.u32FrmInfoY, stPlayCfg.stFrmInfo.u32DispWidth,
@@ -234,7 +239,8 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
-  stPlayCfg.bEnableAudio = true;
+  if (bAudioEnable)
+    stPlayCfg.bEnableAudio = true;
   if (bVideoEnable)
     stPlayCfg.bEnableVideo = true;
 
@@ -354,6 +360,8 @@ int main(int argc, char *argv[]) {
 
       RKADK_PLAYER_Seek(pPlayer, seekTimeInMs);
     }
+
+    usleep(500000);
   }
 
 __FAILED:

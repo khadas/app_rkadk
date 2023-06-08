@@ -34,8 +34,6 @@ extern "C" {
 #define VDEC_ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 #define MAX_FRAME_QUEUE 3
 #define MAX_TIME_OUT_MS 20
-#define MAX_VO_DISPLAY_WIDTH 720
-#define MAX_VO_DISPLAY_HEIGTHT 1280
 
 #define RK356X_VOP_LAYER_CLUSTER_0      0
 #define RK356X_VOP_LAYER_CLUSTER_1      2
@@ -64,7 +62,6 @@ extern "C" {
 #define WBC_SOURCE_VIDEO              1
 #define WBC_SOURCE_GRAPHIC            2
 
-#define MAX_WINDOWS_NUM               64
 #define MAX_STEP_FRAME_NUM            50
 
 #define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
@@ -109,12 +106,6 @@ typedef enum {
   RKADK_PLAYER_EVENT_BUTT
 } RKADK_PLAYER_EVENT_E;
 
-typedef enum { VO_DEV_HD0 = 0, VO_DEV_HD1 } RKADK_PLAYER_VO_DEV_E;
-
-typedef enum {
-  CHNN_ASPECT_RATIO_AUTO = 1,
-  CHNN_ASPECT_RATIO_MANUAL,
-} RKADK_PLAYER_VO_CHNN_MODE_E;
 typedef RKADK_VOID (*RKADK_PLAYER_EVENT_FN)(RKADK_MW_PTR pPlayer,
                                             RKADK_PLAYER_EVENT_E enEvent,
                                             RKADK_VOID *pData);
@@ -221,7 +212,9 @@ typedef struct {
   RKADK_U32 u32DispHeight;
   RKADK_U32 u32ImgWidth;
   RKADK_U32 u32ImgHeight;
-  RKADK_U32 u32ChnnNum;
+  RKADK_U32 u32VoLay;
+  RKADK_U32 u32VoDev;
+  RKADK_U32 u32VoChn;
   RKADK_U32 u32BorderColor;
   RKADK_U32 u32BorderTopWidth;
   RKADK_U32 u32BorderBottomWidth;
@@ -230,9 +223,7 @@ typedef struct {
   RKADK_BOOL bMirror;
   RKADK_BOOL bFlip;
   RKADK_U32 u32Rotation; //0: 0, 1: 90, 2: 180, 3: 270
-  RKADK_PLAYER_VO_CHNN_MODE_E u32EnMode;
   RKADK_VO_FORMAT_E u32VoFormat;
-  RKADK_PLAYER_VO_DEV_E u32VoDev;
   RKADK_VO_INTF_TYPE_E u32EnIntfType;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;

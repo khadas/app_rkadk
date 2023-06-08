@@ -23,14 +23,14 @@
 #include "rkdemuxer.h"
 
 RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *demuxerInput) {
-  DemuxerInput tempDemuxerInput;
+  DemuxerInput stDemuxerInput;
 
-  tempDemuxerInput.ptr = demuxerInput->ptr;
-  tempDemuxerInput.s8ReadModeFlag = demuxerInput->readModeFlag;
-  tempDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
-  tempDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
+  stDemuxerInput.ptr = demuxerInput->ptr;
+  stDemuxerInput.s8ReadModeFlag = demuxerInput->readModeFlag;
+  stDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
+  stDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
 
-  RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &tempDemuxerInput);
+  RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &stDemuxerInput);
   if (ret) {
     RKADK_LOGE("RKADK_DEMUXER_Create failed");
     return RKADK_FAILURE;
