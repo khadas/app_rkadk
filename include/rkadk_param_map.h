@@ -307,6 +307,7 @@ static RKADK_SI_CONFIG_MAP_S g_stThumbCfgMapTable[] = {
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, record_sub_venc_chn),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, vpss_chn),
+    DEFINE_MAP(thumb, tagRKADK_PARAM_THUMB_CFG_S, int_e, qfactor),
 };
 
 RKADK_MAP_TABLE_CFG_S *RKADK_PARAM_GetMapTable(RKADK_U32 u32Camid, RKADK_PARAM_MAP_TYPE_E eMapTable);

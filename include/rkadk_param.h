@@ -358,6 +358,7 @@ typedef struct tagRKADK_PARAM_THUMB_CFG_S {
   RKADK_U32 record_sub_venc_chn;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
+  RKADK_U32 qfactor;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_THUMB_CFG_S;
 

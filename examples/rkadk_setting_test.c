@@ -374,6 +374,7 @@ static void SetThumbCfg() {
   stThumbCfg.record_sub_venc_chn = THUMB_RECORD_SUB_VENC_CHN;
   stThumbCfg.vpss_grp = THUMB_VPSS_GRP;
   stThumbCfg.vpss_chn = THUMB_VPSS_CHN;
+  stThumbCfg.qfactor = 50;
 
   RKADK_Struct2Ini(sensorPath, &stThumbCfg, g_stThumbCfgMapTable,
                    sizeof(g_stThumbCfgMapTable) / sizeof(RKADK_SI_CONFIG_MAP_S));

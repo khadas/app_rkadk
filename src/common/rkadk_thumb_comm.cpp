@@ -188,6 +188,7 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   VENC_RECV_PIC_PARAM_S stRecvParam;
   VENC_CHN_REF_BUF_SHARE_S stVencChnRefBufShare;
   VENC_CHN_ATTR_S stAttr;
+  VENC_JPEG_PARAM_S stJpegParam;
 
   memset(&stAttr, 0, sizeof(stAttr));
   stAttr.stVencAttr.enType = RK_VIDEO_ID_JPEG;
@@ -214,8 +215,12 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
 
   memset(&stVencChnRefBufShare, 0, sizeof(VENC_CHN_REF_BUF_SHARE_S));
   stVencChnRefBufShare.bEnable = RK_TRUE;
-
   RK_MPI_VENC_SetChnRefBufShareAttr(ChnId, &stVencChnRefBufShare);
+
+  memset(&stJpegParam, 0, sizeof(VENC_JPEG_PARAM_S));
+  stJpegParam.u32Qfactor = ptsThumbCfg->qfactor;
+  RK_MPI_VENC_SetJpegParam(ChnId, &stJpegParam);
+
 #ifndef THUMB_NORMAL
   RK_MPI_VENC_EnableThumbnail(ChnId);
   stRecvParam.s32RecvPicNum = -1;
