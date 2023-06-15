@@ -538,7 +538,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_SNAP;
     if (pstSensorCfg->mirror)
       RKADK_MEDIA_ToggleVencMirror(pstPhotoAttr->u32CamId, enStrmType, pstSensorCfg->mirror);
-    else if (pstSensorCfg->flip)
+    if (pstSensorCfg->flip)
       RKADK_MEDIA_ToggleVencFlip(pstPhotoAttr->u32CamId, enStrmType, pstSensorCfg->flip);
   }
 

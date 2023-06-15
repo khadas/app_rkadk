@@ -336,7 +336,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_LIVE;
     if (pstSensorCfg->mirror)
       RKADK_MEDIA_ToggleVencMirror(u32CamId, enStrmType, pstSensorCfg->mirror);
-    else if (pstSensorCfg->flip)
+    if (pstSensorCfg->flip)
       RKADK_MEDIA_ToggleVencFlip(u32CamId, enStrmType, pstSensorCfg->flip);
   }
 

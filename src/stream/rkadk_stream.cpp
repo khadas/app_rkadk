@@ -415,7 +415,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_PREVIEW;
     if (pstSensorCfg->mirror)
       RKADK_MEDIA_ToggleVencMirror(pstVideoAttr->u32CamId, enStrmType, pstSensorCfg->mirror);
-    else if (pstSensorCfg->flip)
+    if (pstSensorCfg->flip)
       RKADK_MEDIA_ToggleVencFlip(pstVideoAttr->u32CamId, enStrmType, pstSensorCfg->flip);
   }
 

@@ -411,7 +411,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
 
       if (pstSensorCfg->mirror)
         RKADK_MEDIA_ToggleVencMirror(u32CamId, enStrmType, pstSensorCfg->mirror);
-      else if (pstSensorCfg->flip)
+      if (pstSensorCfg->flip)
         RKADK_MEDIA_ToggleVencFlip(u32CamId, enStrmType, pstSensorCfg->flip);
     }
   }
