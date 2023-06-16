@@ -1315,6 +1315,9 @@ bool RKADK_MUXER_EnableAudio(RKADK_S32 s32CamId) {
     return false;
   }
 
+  if (!pstRecCfg->enable_audio)
+    return false;
+
   pstAudioCfg = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioCfg) {
     RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");

@@ -299,6 +299,7 @@ typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
   bool switch_res;
+  bool enable_audio;
   RKADK_REC_TYPE_E record_type;
   RKADK_MUXER_FILE_TYPE_E file_type;
   RKADK_U32 pre_record_time;

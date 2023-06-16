@@ -1247,7 +1247,6 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
     }
 
     RKADK_RECORD_DestoryAudioChn();
-    pstRecorder->bLapseRecord = true;
   } else if (pstRecCfg->record_type == RKADK_REC_TYPE_NORMAL &&
              RKADK_MUXER_EnableAudio(pstRecorder->u32CamId)){
     if (RKADK_RECORD_CreateAudioChn(pstRecorder->u32CamId)) {
@@ -1268,9 +1267,12 @@ static RKADK_S32 RKADK_RECORD_ResetAudio(RKADK_PARAM_REC_CFG_S *pstRecCfg,
       RKADK_RECORD_DestoryAudioChn();
       return ret;
     }
-
-    pstRecorder->bLapseRecord = false;
   }
+
+  if (pstRecCfg->record_type == RKADK_REC_TYPE_NORMAL)
+    pstRecorder->bLapseRecord = false;
+  else
+    pstRecorder->bLapseRecord = true;
 
   RKADK_LOGI("Record reset audio state [%d %d] end...",
               pstRecorder->u32CamId, pstRecCfg->record_type);

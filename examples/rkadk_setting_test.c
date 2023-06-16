@@ -120,6 +120,7 @@ static void SetRecCfg() {
   stParamRecCfg.pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   stParamRecCfg.lapse_multiple = 30;
   stParamRecCfg.file_num = 2;
+  stParamRecCfg.enable_audio = true;
 
   stParamRecCfg.record_time_cfg[0].record_time = 60;
   stParamRecCfg.record_time_cfg[0].splite_time = 60;

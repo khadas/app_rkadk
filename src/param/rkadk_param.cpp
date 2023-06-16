@@ -950,7 +950,8 @@ static void RKADK_PARAM_DefRecCfg(RKADK_U32 u32CamId, char *path) {
   pstRecCfg->pre_record_mode = RKADK_MUXER_PRE_RECORD_NONE;
   pstRecCfg->lapse_multiple = VIDEO_FRAME_RATE;
   pstRecCfg->file_num = 1;
-  pstRecCfg->switch_res = false;
+  pstRecCfg->switch_res = true;
+  pstRecCfg->enable_audio = true;
   RKADK_PARAM_SaveRecCfg(path, u32CamId);
 }
 
@@ -968,7 +969,7 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
   pstPhotoCfg->enable_combo = false;
   pstPhotoCfg->combo_venc_chn = 0;
   pstPhotoCfg->qfactor = 70;
-  pstPhotoCfg->switch_res = false;
+  pstPhotoCfg->switch_res = true;
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -1125,6 +1126,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stRecCfg.file_num);
     printf("\t\tsensor[%d] stRecCfg switch_res: %d\n", i,
            pstCfg->stMediaCfg[i].stRecCfg.switch_res);
+    printf("\t\tsensor[%d] stRecCfg enable_audio: %d\n", i,
+           pstCfg->stMediaCfg[i].stRecCfg.enable_audio);
 
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
       printf("\t\tsensor[%d] stRecCfg record_time: %d\n", i,
