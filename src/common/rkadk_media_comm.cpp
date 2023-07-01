@@ -1509,7 +1509,7 @@ RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
   if (!pstMediaInfo->stGetVencMBAttr.s32GetCnt) {
     pstMediaInfo->stGetVencMBAttr.bGetBuffer = false;
     if (pstMediaInfo->stGetVencMBAttr.tid) {
-      RKADK_LOGE("Request to cancel venc mb thread...");
+      RKADK_LOGD("Request to cancel venc mb thread...");
       ret = pthread_join(pstMediaInfo->stGetVencMBAttr.tid, NULL);
       if (ret)
         RKADK_LOGE("Exit get venc mb thread failed!");

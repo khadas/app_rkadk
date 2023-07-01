@@ -1005,13 +1005,21 @@ exit:
   return ret;
 }
 
-static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
-                                    RKADK_MUXER_HANDLE_S *pstMuxer) {
+RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
+                                    RKADK_MW_PTR pHandle) {
   int i;
   char name[256];
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  RKADK_LOGI("Enable Muxer[%d] Start...", pstMuxer->u32CamId);
 
   ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstMuxer->u32CamId);
   if (!ptsThumbCfg) {
@@ -1094,6 +1102,7 @@ static RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     pstMuxer->pMuxerHandle[i] = (RKADK_MW_PTR)pMuxerHandle;
   }
 
+  RKADK_LOGI("Enable Muxer[%d] Stop...", pstMuxer->u32CamId);
   return 0;
 }
 
@@ -1123,33 +1132,12 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   pstMuxer->u32StreamCnt = pstMuxerAttr->u32StreamCnt;
   pstMuxer->bLapseRecord = pstMuxerAttr->bLapseRecord;
 
-  ret = RKADK_MUXER_Enable(pstMuxerAttr, pstMuxer);
-  if (ret) {
-    RKADK_LOGE("RKADK_MUXER_Enable failed");
-    goto failed;
-  }
-
   *ppHandle = (RKADK_MW_PTR)pstMuxer;
   RKADK_LOGI("Create Record[%d] Stop...", pstMuxerAttr->u32CamId);
   return 0;
-
-failed:
-  for (i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
-    if (pstMuxer->pMuxerHandle[i]) {
-      free(pstMuxer->pMuxerHandle[i]);
-      pstMuxer->pMuxerHandle[i] = NULL;
-    }
-  }
-
-  if (pstMuxer) {
-    free(pstMuxer);
-    pstMuxer = NULL;
-  }
-
-  return ret;
 }
 
-RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
+RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
@@ -1158,7 +1146,7 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
   pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
   RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
 
-  RKADK_LOGI("Destory Muxer[%d] Start...", pstMuxer->u32CamId);
+  RKADK_LOGI("Disable Muxer[%d] Start...", pstMuxer->u32CamId);
 
   for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
     pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
@@ -1187,6 +1175,30 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList);
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+  }
+
+  RKADK_LOGI("Disable Muxer[%d] Stop...", pstMuxer->u32CamId);
+  return 0;
+}
+
+RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+  RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
+
+  RKADK_LOGI("Destory Muxer[%d] Start...", pstMuxer->u32CamId);
+
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+
+    if (!pstMuxerHandle) {
+      RKADK_LOGD("Muxer Handle[%d] is NULL", i);
+      continue;
+    }
 
     if (pstMuxerHandle->stVideo.thumb.data) {
       free(pstMuxerHandle->stVideo.thumb.data);

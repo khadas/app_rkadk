@@ -190,6 +190,11 @@ typedef struct {
 RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                            RKADK_MW_PTR *ppHandle);
 
+RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
+                           RKADK_MW_PTR pHandle);
+
+RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle);
+
 /**
  * @brief destory a muxer.
  * @param[in]pRecorder : pointer of muxer

@@ -454,7 +454,10 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
       return ret;
     }
 
-    bUseVpss = RKADK_MUXER_IsUseVpss(pRecorder, pstRecCfg->attribute[i].venc_chn);
+    if (pRecorder)
+      bUseVpss = RKADK_MUXER_IsUseVpss(pRecorder, pstRecCfg->attribute[i].venc_chn);
+    else
+      bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
     if (bUseVpss) {
       ret = RKADK_MPI_VPSS_DeInit(pstRecCfg->attribute[i].vpss_grp, pstRecCfg->attribute[i].vpss_chn);
       if (ret) {
@@ -1328,8 +1331,17 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   if (RKADK_MUXER_Create(&stMuxerAttr, ppRecorder))
     goto failed;
 
-  if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, *ppRecorder))
+  if (RKADK_MUXER_Enable(&stMuxerAttr, *ppRecorder)) {
+    RKADK_LOGE("RKADK_MUXER_Enable failed");
+    RKADK_MUXER_Destroy(*ppRecorder);
     goto failed;
+  }
+
+  if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, *ppRecorder)) {
+    RKADK_MUXER_Disable(*ppRecorder);
+    RKADK_MUXER_Destroy(*ppRecorder);
+    goto failed;
+  }
 
   RKADK_LOGI("Create Record[%d, %d] End...", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
@@ -1387,6 +1399,8 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
     RKADK_LOGE("RKADK_RECORD_UnBindChn failed, ret = %d", ret);
     return ret;
   }
+
+  RKADK_MUXER_Disable(pRecorder);
 
   ret = RKADK_RECORD_DestoryVideoChn(u32CamId, pRecorder);
   if (ret) {

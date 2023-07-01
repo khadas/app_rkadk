@@ -548,7 +548,6 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
     pHandle = NULL;
   }
 
-
   return 0;
 }
 
