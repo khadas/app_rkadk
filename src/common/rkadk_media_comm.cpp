@@ -412,8 +412,15 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
   RKADK_U32 s32SetTrackMode = 0;
   AI_CHN_PARAM_S pstParams;
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
 
   RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
+
+  pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return NULL;
+  }
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
@@ -491,6 +498,11 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     ret = RK_MPI_AI_SetTrackMode(aiDevId, (AUDIO_TRACK_MODE_E)s32SetTrackMode);
     if (ret) {
       RKADK_LOGE("AI[%d, %d] mic type[%d] enable failed[%x]", aiDevId, s32AiChnId, micType, ret);
+    }
+
+    ret = RK_MPI_AI_SetVolume(aiDevId, pstCommCfg->mic_volume);
+    if (ret) {
+      RKADK_LOGE("AI[%d, %d] set volume[%d] failed[%x]", aiDevId, s32AiChnId, pstCommCfg->mic_volume, ret);
     }
 
     g_stMediaCtx.stAiInfo[i].bUsed = true;

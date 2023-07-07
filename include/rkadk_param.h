@@ -88,6 +88,9 @@ extern "C" {
 #define LIVE_AI_CHN RECORD_AI_CHN
 #define LIVE_AENC_CHN RECORD_AENC_CHN
 
+#define PLAYER_AO_CHN 0
+#define PLAYER_ADEC_CHN 0
+
 /* vo default parameters */
 #define VO_DEVICE 0
 #define VOP_LAYER 0

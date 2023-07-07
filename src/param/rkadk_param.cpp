@@ -16,6 +16,8 @@
 
 #include "rkadk_param.h"
 #include "rkadk_param_map.h"
+#include "rk_mpi_ai.h"
+#include "rk_mpi_ao.h"
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -2394,13 +2396,7 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   }
 
   RKADK_LOGI("volume = %d", volume);
-  volume = (int)(volume * 2.55 + 0.5);
-  memset(buffer, 0, RKADK_VOLUME_LEN);
-  sprintf(buffer, "%d", volume);
-#ifdef RV1106_1103
-  RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
-  RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
-#endif
+  RK_MPI_AI_SetVolume(0, volume);
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
@@ -2411,12 +2407,7 @@ static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
   }
 
   RKADK_LOGI("volume = %d", volume);
-  volume = (int)(volume * 0.3 + 0.5);
-  memset(buffer, 0, RKADK_VOLUME_LEN);
-  sprintf(buffer, "%d", volume);
-#ifdef RV1106_1103
-  RK_MPI_AMIX_SetControl(0, "DAC LINEOUT Volume", buffer);
-#endif
+  RK_MPI_AO_SetVolume(0, volume);
 }
 
 static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {

@@ -564,7 +564,7 @@ static RKADK_S32 CreateADECCtx(RKADK_PLAYER_ADEC_CTX_S **pAdecCtx) {
 
   memset(pstAdecCtx, 0, sizeof(RKADK_PLAYER_ADEC_CTX_S));
 
-  pstAdecCtx->chnIndex = 0;
+  pstAdecCtx->chnIndex = PLAYER_ADEC_CHN;
   pstAdecCtx->sampleRate = 16000;
   pstAdecCtx->channel = 2;
   pstAdecCtx->decMode = ADEC_MODE_STREAM;
@@ -623,11 +623,12 @@ static RKADK_S32 CreateAOCtx(RKADK_PLAYER_AO_CTX_S **pAoCtx) {
   memcpy(pstAoCtx->cardName, pstAudioParam->ao_audio_node,
          strlen(pstAudioParam->ao_audio_node));
   pstAoCtx->devId           = 0;
+  pstAoCtx->chnIndex        = PLAYER_AO_CHN;
   pstAoCtx->setVolume       = 100;
   pstAoCtx->setMute         = 0;
   pstAoCtx->setTrackMode    = 0;
   pstAoCtx->setFadeRate     = 0;
-  pstAoCtx->getVolume       = 0;
+  pstAoCtx->getVolume       = 1;
   pstAoCtx->getMute         = 0;
   pstAoCtx->getTrackMode    = 0;
   pstAoCtx->queryChnStat    = 0;
@@ -996,6 +997,12 @@ static RKADK_VOID* SendAudioDataThread(RKADK_VOID *ptr) {
 
 static RKADK_VOID* CommandThread(RKADK_VOID * ptr) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)ptr;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
+  pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return NULL;
+  }
 
   {
     AUDIO_FADE_S aFade;
@@ -1004,7 +1011,7 @@ static RKADK_VOID* CommandThread(RKADK_VOID * ptr) {
     aFade.enFadeInRate = (AUDIO_FADE_RATE_E)pstPlayer->pstAoCtx->setFadeRate;
     RK_BOOL mute = (pstPlayer->pstAoCtx->setMute == 0) ? RK_FALSE : RK_TRUE;
     RK_MPI_AO_SetMute(pstPlayer->pstAoCtx->devId, mute, &aFade);
-    RK_MPI_AO_SetVolume(pstPlayer->pstAoCtx->devId, pstPlayer->pstAoCtx->setVolume);
+    RK_MPI_AO_SetVolume(pstPlayer->pstAoCtx->devId, pstCommCfg->speaker_volume);
   }
 
   if (pstPlayer->pstAoCtx->getVolume) {
