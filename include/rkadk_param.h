@@ -264,6 +264,9 @@ typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   RKADK_S32 qp_step;
   RKADK_S32 max_qp; /* max QP: [8, 51] */
   RKADK_S32 min_qp; /* min QP: [0, 48], can't be larger than max_qp */
+  RKADK_S32 frame_min_qp; /* range:[0, 51]; the frame min QP value, recommended larger than min_qp */
+  RKADK_S32 i_min_qp; /* min qp for i frame */
+  RKADK_S32 i_frame_min_qp; /* range:[0, 51]; the I frame min QP value, recommended larger than i_min_qp */
 
   bool hier_qp_en;
   char hier_qp_delta[RKADK_BUFFER_LEN];

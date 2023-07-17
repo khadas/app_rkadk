@@ -1108,7 +1108,6 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
 RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                              RKADK_MW_PTR *ppHandle) {
-  int i, ret = 0;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
   RKADK_LOGI("Create Record[%d] Start...", pstMuxerAttr->u32CamId);

@@ -419,7 +419,7 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
   pstCommCfg = RKADK_PARAM_GetCommCfg();
   if (!pstCommCfg) {
     RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return NULL;
+    return -1;
   }
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();

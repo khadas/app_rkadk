@@ -1170,6 +1170,12 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.max_qp);
       printf("\t\tsensor[%d] stRecCfg[%d] min_qp: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.min_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] i_min_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.i_min_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] i_frame_min_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.i_frame_min_qp);
+      printf("\t\tsensor[%d] stRecCfg[%d] frame_min_qp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.frame_min_qp);
       printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_en: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param.hier_qp_en);
       printf("\t\tsensor[%d] stRecCfg[%d] hier_qp_delta: %s\n", i, j,
@@ -1238,6 +1244,12 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.max_qp);
     printf("\t\tsensor[%d] stStreamCfg min_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.min_qp);
+    printf("\t\tsensor[%d] stStreamCfg i_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.i_min_qp);
+    printf("\t\tsensor[%d] stStreamCfg i_frame_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.i_frame_min_qp);
+    printf("\t\tsensor[%d] stStreamCfg frame_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.frame_min_qp);
     printf("\t\tsensor[%d] stStreamCfg hier_qp_en: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param.hier_qp_en);
     printf("\t\tsensor[%d] stStreamCfg hier_qp_delta: %s\n", i,
@@ -1282,6 +1294,12 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.max_qp);
     printf("\t\tsensor[%d] stLiveCfg min_qp: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.min_qp);
+    printf("\t\tsensor[%d] stLiveCfg i_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.i_min_qp);
+    printf("\t\tsensor[%d] stLiveCfg i_frame_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.i_frame_min_qp);
+    printf("\t\tsensor[%d] stLiveCfg frame_min_qp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.frame_min_qp);
     printf("\t\tsensor[%d] stLiveCfg hier_qp_en: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param.hier_qp_en);
     printf("\t\tsensor[%d] stLiveCfg hier_qp_delta: %s\n", i,
@@ -2389,7 +2407,6 @@ static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
 }
 
 static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
-  char buffer[RKADK_VOLUME_LEN];
   if (volume < 0 || volume > 100) {
     RKADK_LOGE("Set mic input volume failed. Mic input volume range is [0,100]");
     return;
@@ -2400,7 +2417,6 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
-  char buffer[RKADK_VOLUME_LEN];
   if (volume < 0 || volume > 100) {
     RKADK_LOGE("Set speaker volume failed. Speaker volume range is[0,100]");
     return;
@@ -2477,6 +2493,8 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
   bool bSetRcParam = false;
   int ret = 0;
   RKADK_S32 u32StepQp, u32MinQp, u32MaxQp;
+  RKADK_S32 u32FrmMinQp, u32FrmMinIQp;
+  RKADK_S32 u32MinIQp, u32MaxIQp;
   VENC_RC_PARAM_S stRcParam;
 
   ret = RK_MPI_VENC_GetRcParam(stVencAttr.venc_chn, &stRcParam);
@@ -2489,10 +2507,18 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
     u32StepQp = stRcParam.stParamH264.u32StepQp;
     u32MaxQp = stRcParam.stParamH264.u32MaxQp;
     u32MinQp= stRcParam.stParamH264.u32MinQp;
+    u32FrmMinQp = stRcParam.stParamH264.u32FrmMinQp;
+    u32FrmMinIQp = stRcParam.stParamH264.u32FrmMinIQp;
+    u32MinIQp = stRcParam.stParamH264.u32MinIQp;
+    u32MaxIQp = stRcParam.stParamH264.u32MaxIQp;
   } else if (stVencAttr.codec_type == RKADK_CODEC_TYPE_H265) {
     u32StepQp = stRcParam.stParamH265.u32StepQp;
     u32MaxQp = stRcParam.stParamH265.u32MaxQp;
     u32MinQp= stRcParam.stParamH265.u32MinQp;
+    u32FrmMinQp = stRcParam.stParamH265.u32FrmMinQp;
+    u32FrmMinIQp = stRcParam.stParamH265.u32FrmMinIQp;
+    u32MinIQp = stRcParam.stParamH265.u32MinIQp;
+    u32MaxIQp = stRcParam.stParamH265.u32MaxIQp;
   } else {
     return -1;
   }
@@ -2507,9 +2533,24 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
     bSetRcParam = true;
   }
 
-  if (stVencAttr.venc_param.min_qp >= 1
+  if (stVencAttr.venc_param.min_qp >= 0
     && stVencAttr.venc_param.min_qp <= stVencAttr.venc_param.max_qp) {
     u32MinQp = stVencAttr.venc_param.min_qp;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.i_frame_min_qp >= 0 && stVencAttr.venc_param.i_frame_min_qp <= 51) {
+    u32FrmMinIQp = stVencAttr.venc_param.i_frame_min_qp;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.i_min_qp >= 0 && stVencAttr.venc_param.i_min_qp < u32MaxIQp) {
+    u32MinIQp = stVencAttr.venc_param.i_min_qp;
+    bSetRcParam = true;
+  }
+
+  if (stVencAttr.venc_param.frame_min_qp >= 0 && stVencAttr.venc_param.frame_min_qp <= 51) {
+    u32FrmMinQp = stVencAttr.venc_param.frame_min_qp;
     bSetRcParam = true;
   }
 
@@ -2527,11 +2568,17 @@ static RKADK_S32 RKADK_PARAM_SetRcParam(RKADK_PARAM_VENC_ATTR_S stVencAttr) {
     stRcParam.stParamH264.u32StepQp = u32StepQp;
     stRcParam.stParamH264.u32MaxQp = u32MaxQp;
     stRcParam.stParamH264.u32MinQp = u32MinQp;
+    stRcParam.stParamH264.u32FrmMinQp = u32FrmMinQp;
+    stRcParam.stParamH264.u32FrmMinIQp = u32FrmMinIQp;
+    stRcParam.stParamH264.u32MinIQp = u32MinIQp;
     break;
   case RKADK_CODEC_TYPE_H265:
     stRcParam.stParamH265.u32StepQp = u32StepQp;
     stRcParam.stParamH265.u32MaxQp = u32MaxQp;
     stRcParam.stParamH265.u32MinQp = u32MinQp;
+    stRcParam.stParamH265.u32FrmMinQp = u32FrmMinQp;
+    stRcParam.stParamH265.u32FrmMinIQp = u32FrmMinIQp;
+    stRcParam.stParamH265.u32MinIQp = u32MinIQp;
     break;
   default:
     RKADK_LOGE("Nonsupport codec type: %d", stVencAttr.codec_type);

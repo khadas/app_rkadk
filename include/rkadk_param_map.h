@@ -133,6 +133,9 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
 static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_0[] = {
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_min_qp),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_frame_min_qp),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, int_e, frame_min_qp),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, bool_e, full_range),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, bool_e, scaling_list),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_PARAM_S, bool_e, hier_qp_en),
@@ -164,6 +167,9 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_1[] = {
 static RKADK_SI_CONFIG_MAP_S g_stRecParamMapTable_1[] = {
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_min_qp),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_frame_min_qp),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, int_e, frame_min_qp),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, bool_e, full_range),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, bool_e, scaling_list),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_PARAM_S, bool_e, hier_qp_en),
@@ -190,6 +196,9 @@ static RKADK_SI_CONFIG_MAP_S g_stPreviewCfgMapTable[] = {
 static RKADK_SI_CONFIG_MAP_S g_stPreviewParamMapTable[] = {
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_min_qp),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_frame_min_qp),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, int_e, frame_min_qp),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, bool_e, full_range),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, bool_e, scaling_list),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_PARAM_S, bool_e, hier_qp_en),
@@ -216,6 +225,9 @@ static RKADK_SI_CONFIG_MAP_S g_stLiveCfgMapTable[] = {
 static RKADK_SI_CONFIG_MAP_S g_stLiveParamMapTable[] = {
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, int_e, max_qp),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, int_e, min_qp),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_min_qp),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, int_e, i_frame_min_qp),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, int_e, frame_min_qp),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, bool_e, full_range),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, bool_e, scaling_list),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_PARAM_S, bool_e, hier_qp_en),
