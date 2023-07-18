@@ -374,6 +374,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   MUXER_BUF_CELL_S cell;
   MUXER_BUF_CELL_S *pstCell;
   RKADK_U64 pts = 0;
+  RKADK_U32 framerate = 0;
 
   RKADK_CHECK_POINTER(handle, RKADK_FAILURE);
 
@@ -420,8 +421,9 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   if (!pstMuxerHandle->bEnableStream)
     return 0;
 
+  framerate = pstMuxerHandle->stVideo.frame_rate_num / pstMuxerHandle->stVideo.frame_rate_den;
   while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
-      if (cnt % 100 == 0) {
+      if (cnt % framerate == 0) {
         RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
         if (cnt != 0)
           RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
