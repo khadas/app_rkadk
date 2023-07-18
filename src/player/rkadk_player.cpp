@@ -207,7 +207,7 @@ static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx) {
   pstVdecCtx->inputMode = VIDEO_MODE_FRAME;
   pstVdecCtx->compressMode = COMPRESS_MODE_NONE;
 
-  pstVdecCtx->frameBufferCnt = 2;
+  pstVdecCtx->frameBufferCnt = 3;
   pstVdecCtx->readSize = 1024;
   pstVdecCtx->chNum = 1;
   pstVdecCtx->chnIndex = 0;
