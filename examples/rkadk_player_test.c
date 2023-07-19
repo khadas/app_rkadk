@@ -245,6 +245,10 @@ int main(int argc, char *argv[]) {
     stPlayCfg.bEnableVideo = true;
 
   stPlayCfg.pfnPlayerCallback = PlayerEventFnTest;
+
+  //for rtsp
+  stPlayCfg.stRtspCfg.transport = "udp";
+
   if (RKADK_PLAYER_Create(&pPlayer, &stPlayCfg)) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
     return -1;

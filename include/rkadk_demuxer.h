@@ -43,6 +43,7 @@ typedef struct {
   RKADK_BOOL  readModeFlag;
   RKADK_BOOL  videoEnableFlag;
   RKADK_BOOL  audioEnableFlag;
+  const char *transport;
 } RKADK_DEMUXER_INPUT_S;
 
 typedef struct {

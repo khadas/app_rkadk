@@ -1177,6 +1177,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   stDemuxerInput.readModeFlag = DEMUXER_TYPE_PASSIVE;
   stDemuxerInput.videoEnableFlag = pstPlayer->bEnableVideo;
   stDemuxerInput.audioEnableFlag = pstPlayer->bEnableAudio;
+  stDemuxerInput.transport = pstPlayCfg->stRtspCfg.transport;
   if (RKADK_DEMUXER_Create(&pstPlayer->pDemuxerCfg, &stDemuxerInput)) {
     RKADK_LOGE("RKADK_DEMUXER_Create failed");
     goto __FAILED;
@@ -1271,6 +1272,9 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
 
 RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                                      const RKADK_CHAR *pszfilePath) {
+  const char *suffix = NULL;
+  bool bIsRtsp = false;
+
   RKADK_CHECK_POINTER(pszfilePath, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
 
@@ -1281,7 +1285,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
     RKADK_LOGE("The length(%d) of the file name is unreasonable", strlen(pszfilePath));
     if (pstPlayer->pfnPlayerCallback != NULL)
       pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
-    return RKADK_FALSE;
+    return RKADK_FAILURE;
   }
 
   pstPlayer->bVideoExist = RKADK_FALSE;
@@ -1295,103 +1299,43 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
     memcpy(pstPlayer->pFilePath, pszfilePath, strlen(pszfilePath));
   }
 
-  for(RKADK_S32 i = strlen(pszfilePath) - 1; i >= 0; i--) {
-    if ('.' == pszfilePath[i]) {
-      if(!strcmp(pszfilePath + i + 1, "mp4")) {
-        pstPlayer->demuxerFlag = MIX_VIDEO_FLAG;
-        pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
-        pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
-        if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
-          RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+  if (strstr(pszfilePath, "rtsp://"))
+    bIsRtsp = true;
+  else
+    suffix = strrchr(pszfilePath, '.');
+
+  if (!suffix && !bIsRtsp) {
+    RKADK_LOGD("Non-file format or rtsp: %s", pszfilePath);
+    return RKADK_FAILURE;
+  }
+
+  if((suffix && !strcmp(suffix, ".mp4")) || bIsRtsp) {
+    pstPlayer->demuxerFlag = MIX_VIDEO_FLAG;
+    pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
+    pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
+    if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
+      RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+      goto __FAILED;
+    }
+
+    if (pstPlayer->bEnableVideo == RKADK_TRUE) {
+      if (pstPlayer->stDemuxerParam.pVideoCodec != NULL) {
+        pstPlayer->bVideoExist = RKADK_TRUE;
+
+        if (strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264") && strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h265")) {
+          RKADK_LOGE("Unsupported video format(%s)", pstPlayer->stDemuxerParam.pVideoCodec);
           goto __FAILED;
         }
 
-        if (pstPlayer->bEnableVideo == RKADK_TRUE) {
-          if (pstPlayer->stDemuxerParam.pVideoCodec != NULL) {
-            pstPlayer->bVideoExist = RKADK_TRUE;
-
-            if (strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264") && strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h265")) {
-              RKADK_LOGE("Unsupported video format(%s)", pstPlayer->stDemuxerParam.pVideoCodec);
-              goto __FAILED;
-            }
-
-            if (pstPlayer->stDemuxerParam.videoWidth <= 0 || pstPlayer->stDemuxerParam.videoHeigh <= 0) {
-              RKADK_LOGE("error: videoWidth = %d\n, videoHeigh = %d\n", pstPlayer->stDemuxerParam.videoWidth,
-                          pstPlayer->stDemuxerParam.videoHeigh);
-              goto __FAILED;
-            }
-
-            if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264")) {
-              pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H264;
-            } else if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h265")) {
-#ifdef RV1106_1103
-              RKADK_LOGE("1106 nonsupport h265");
-              goto __FAILED;
-#else
-              pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H265;
-#endif
-            }
-
-            pstPlayer->stVdecCtx.srcWidth = pstPlayer->stDemuxerParam.videoWidth;
-            pstPlayer->stVdecCtx.srcHeight = pstPlayer->stDemuxerParam.videoHeigh;
-
-            if (pstPlayer->stDemuxerParam.VideoFormat == DEMUXER_VIDEO_YUV420SP_10BIT)
-              pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP_10BIT;
-            else
-              pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP;
-          } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
-            RKADK_LOGE("Video does not exist and audio exists but cannot be played");
-            goto __FAILED;
-          }
-        } else
-          RKADK_LOGW("video is unable");
-
-        if (pstPlayer->bEnableAudio == RKADK_TRUE) {
-          if (pstPlayer->stDemuxerParam.pAudioCodec != NULL) {
-            if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "mp3"))
-              eAudioCodecType = RKADK_CODEC_TYPE_MP3;
-            else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "wav"))
-              eAudioCodecType = RKADK_CODEC_TYPE_PCM;
-            else {
-              RKADK_LOGE("Unsupported audio format(%s)", pstPlayer->stDemuxerParam.pAudioCodec);
-              goto __FAILED;
-            }
-
-            pstPlayer->bAudioExist = RKADK_TRUE;
-            pstPlayer->stAdecCtx.sampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
-            pstPlayer->stAdecCtx.channel = pstPlayer->stDemuxerParam.audioChannels;
-            pstPlayer->stAdecCtx.eCodecType = eAudioCodecType;
-            pstPlayer->stAoCtx.reSmpSampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
-
-            if (pstPlayer->stDemuxerParam.audioFormat == 0)
-              pstPlayer->stAoCtx.bitWidth = 8;
-            else if (pstPlayer->stDemuxerParam.audioFormat == 1)
-              pstPlayer->stAoCtx.bitWidth = 16;
-            else {
-              RKADK_LOGE("AO create failed, audioFormat = %d", pstPlayer->stDemuxerParam.audioFormat);
-              goto __FAILED;
-            }
-
-            if (pstPlayer->stDemuxerParam.audioChannels <= 0 ||
-                pstPlayer->stDemuxerParam.audioSampleRate <= 0) {
-              RKADK_LOGE("AO create failed, channel = %d, reSmpSampleRate = %d",
-                          pstPlayer->stDemuxerParam.audioChannels, pstPlayer->stDemuxerParam.audioSampleRate);
-            }
-          } else if (pstPlayer->bEnableVideo == RKADK_FALSE) {
-            RKADK_LOGE("Audio does not exist, and video exists but cannot be played");
-            goto __FAILED;
-          }
-        } else
-          RKADK_LOGW("audio is unable");
-      } else if (!strcmp(pszfilePath + i + 1, "h264") || !strcmp(pszfilePath + i + 1, "h265")) {
-        if (!pstPlayer->bEnableVideo) {
-          RKADK_LOGE("video is unable");
+        if (pstPlayer->stDemuxerParam.videoWidth <= 0 || pstPlayer->stDemuxerParam.videoHeigh <= 0) {
+          RKADK_LOGE("error: videoWidth = %d\n, videoHeigh = %d\n", pstPlayer->stDemuxerParam.videoWidth,
+                      pstPlayer->stDemuxerParam.videoHeigh);
           goto __FAILED;
         }
 
-        if (!strcmp(pszfilePath + i + 1, "h264")) {
+        if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264")) {
           pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H264;
-        } else if (!strcmp(pszfilePath + i + 1, "h265")) {
+        } else if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h265")) {
 #ifdef RV1106_1103
           RKADK_LOGE("1106 nonsupport h265");
           goto __FAILED;
@@ -1400,104 +1344,165 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
 #endif
         }
 
-        pstPlayer->demuxerFlag = VIDEO_FLAG;
-        pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
-        pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
-        if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
-          RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
-          goto __FAILED;
-        }
+        pstPlayer->stVdecCtx.srcWidth = pstPlayer->stDemuxerParam.videoWidth;
+        pstPlayer->stVdecCtx.srcHeight = pstPlayer->stDemuxerParam.videoHeigh;
 
-        if (pstPlayer->stDemuxerParam.pVideoCodec != NULL) {
-          pstPlayer->bVideoExist = RKADK_TRUE;
-
-          if (strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264")) {
-            RKADK_LOGE("Unsupported video format(%s)", pstPlayer->stDemuxerParam.pVideoCodec);
-            goto __FAILED;
-          }
-
-          if (pstPlayer->stDemuxerParam.videoWidth <= 0 || pstPlayer->stDemuxerParam.videoHeigh <= 0) {
-            RKADK_LOGE("error: videoWidth = %d\n, videoHeigh = %d\n", pstPlayer->stDemuxerParam.videoWidth,
-                        pstPlayer->stDemuxerParam.videoHeigh);
-            goto __FAILED;
-          }
-
-          pstPlayer->stVdecCtx.srcWidth = pstPlayer->stDemuxerParam.videoWidth;
-          pstPlayer->stVdecCtx.srcHeight = pstPlayer->stDemuxerParam.videoHeigh;
-
-          if (pstPlayer->stDemuxerParam.VideoFormat == DEMUXER_VIDEO_YUV420SP_10BIT)
-            pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP_10BIT;
-          else
-            pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP;
-        } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
-          RKADK_LOGE("Video does not exist and audio exists but cannot be played");
-          goto __FAILED;
-        }
-
-        return RKADK_SUCCESS;
-      } else if ((!strcmp(pszfilePath + i + 1, "mp3")) || (!strcmp(pszfilePath + i + 1, "wav"))) {
-        if (!pstPlayer->bEnableAudio) {
-          RKADK_LOGE("audio is unable");
-          goto __FAILED;
-        }
-
-        pstPlayer->demuxerFlag = AUDIO_FLAG;
-
-        pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
-        if (!strcmp(pszfilePath + i + 1, "wav"))
-          pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerWavPacket;
+        if (pstPlayer->stDemuxerParam.VideoFormat == DEMUXER_VIDEO_YUV420SP_10BIT)
+          pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP_10BIT;
         else
-          pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
-
-        if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
-          RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
-          goto __FAILED;
-        }
-
-        if (pstPlayer->stDemuxerParam.pAudioCodec != NULL) {
-          if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "mp3"))
-            eAudioCodecType = RKADK_CODEC_TYPE_MP3;
-          else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "wav"))
-            eAudioCodecType = RKADK_CODEC_TYPE_PCM;
-          else {
-            RKADK_LOGE("Unsupported audio format(%s)", pstPlayer->stDemuxerParam.pAudioCodec);
-            goto __FAILED;
-          }
-
-          pstPlayer->bAudioExist = RKADK_TRUE;
-
-          pstPlayer->stAdecCtx.sampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
-          pstPlayer->stAdecCtx.channel = pstPlayer->stDemuxerParam.audioChannels;
-          pstPlayer->stAdecCtx.eCodecType = eAudioCodecType;
-          pstPlayer->stAoCtx.reSmpSampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
-
-          if (pstPlayer->stDemuxerParam.audioFormat == 0)
-            pstPlayer->stAoCtx.bitWidth = 8;
-          else if (pstPlayer->stDemuxerParam.audioFormat == 1)
-            pstPlayer->stAoCtx.bitWidth = 16;
-          else {
-            RKADK_LOGE("AO create failed, audioFormat = %d", pstPlayer->stDemuxerParam.audioFormat);
-            goto __FAILED;
-          }
-
-          if (pstPlayer->stDemuxerParam.audioChannels <= 0 ||
-              pstPlayer->stDemuxerParam.audioSampleRate <= 0) {
-            RKADK_LOGE("AO create failed, channel = %d, reSmpSampleRate = %d",
-                        pstPlayer->stDemuxerParam.audioChannels, pstPlayer->stDemuxerParam.audioSampleRate);
-          }
-        }
-
-        return RKADK_SUCCESS;
-      } else {
-        RKADK_LOGE("Unsupported file format(%s)", pszfilePath);
+          pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP;
+      } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
+        RKADK_LOGE("Video does not exist and audio exists but cannot be played");
         goto __FAILED;
       }
-    }
+    } else
+      RKADK_LOGW("video is unable");
 
-    if (i < 0) {
-      RKADK_LOGE("File suffix does not exist(%s)", pszfilePath);
+    if (pstPlayer->bEnableAudio == RKADK_TRUE) {
+      if (pstPlayer->stDemuxerParam.pAudioCodec != NULL) {
+        if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "mp3"))
+          eAudioCodecType = RKADK_CODEC_TYPE_MP3;
+        else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "wav"))
+          eAudioCodecType = RKADK_CODEC_TYPE_PCM;
+        else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "pcm_alaw"))
+          eAudioCodecType = RKADK_CODEC_TYPE_G711A;
+        else {
+          RKADK_LOGE("Unsupported audio format(%s)", pstPlayer->stDemuxerParam.pAudioCodec);
+          goto __FAILED;
+        }
+
+        pstPlayer->bAudioExist = RKADK_TRUE;
+        pstPlayer->stAdecCtx.sampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
+        pstPlayer->stAdecCtx.channel = pstPlayer->stDemuxerParam.audioChannels;
+        pstPlayer->stAdecCtx.eCodecType = eAudioCodecType;
+        pstPlayer->stAoCtx.reSmpSampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
+
+        if (pstPlayer->stDemuxerParam.audioFormat == 0)
+          pstPlayer->stAoCtx.bitWidth = 8;
+        else if (pstPlayer->stDemuxerParam.audioFormat == 1)
+          pstPlayer->stAoCtx.bitWidth = 16;
+        else {
+          RKADK_LOGE("AO create failed, audioFormat = %d", pstPlayer->stDemuxerParam.audioFormat);
+          goto __FAILED;
+        }
+
+        if (pstPlayer->stDemuxerParam.audioChannels <= 0 ||
+            pstPlayer->stDemuxerParam.audioSampleRate <= 0) {
+          RKADK_LOGE("AO create failed, channel = %d, reSmpSampleRate = %d",
+                      pstPlayer->stDemuxerParam.audioChannels, pstPlayer->stDemuxerParam.audioSampleRate);
+        }
+      } else if (pstPlayer->bEnableVideo == RKADK_FALSE) {
+        RKADK_LOGE("Audio does not exist, and video exists but cannot be played");
+        goto __FAILED;
+      }
+    } else
+      RKADK_LOGW("audio is unable");
+  } else if (suffix && (!strcmp(suffix, ".h264") || !strcmp(suffix, ".h265"))) {
+    if (!pstPlayer->bEnableVideo) {
+      RKADK_LOGE("video is unable");
       goto __FAILED;
     }
+
+    if (!strcmp(suffix, ".h264")) {
+      pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H264;
+    } else if (!strcmp(suffix, ".h265")) {
+#ifdef RV1106_1103
+      RKADK_LOGE("1106 nonsupport h265");
+      goto __FAILED;
+#else
+      pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H265;
+#endif
+    }
+
+    pstPlayer->demuxerFlag = VIDEO_FLAG;
+    pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
+    pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
+    if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
+      RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+      goto __FAILED;
+    }
+
+    if (pstPlayer->stDemuxerParam.pVideoCodec != NULL) {
+      pstPlayer->bVideoExist = RKADK_TRUE;
+
+      if (strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264")) {
+        RKADK_LOGE("Unsupported video format(%s)", pstPlayer->stDemuxerParam.pVideoCodec);
+        goto __FAILED;
+      }
+
+      if (pstPlayer->stDemuxerParam.videoWidth <= 0 || pstPlayer->stDemuxerParam.videoHeigh <= 0) {
+        RKADK_LOGE("error: videoWidth = %d\n, videoHeigh = %d\n", pstPlayer->stDemuxerParam.videoWidth,
+                    pstPlayer->stDemuxerParam.videoHeigh);
+        goto __FAILED;
+      }
+
+      pstPlayer->stVdecCtx.srcWidth = pstPlayer->stDemuxerParam.videoWidth;
+      pstPlayer->stVdecCtx.srcHeight = pstPlayer->stDemuxerParam.videoHeigh;
+
+      if (pstPlayer->stDemuxerParam.VideoFormat == DEMUXER_VIDEO_YUV420SP_10BIT)
+        pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP_10BIT;
+      else
+        pstPlayer->stVdecCtx.outputPixFmt = RK_FMT_YUV420SP;
+    } else if (pstPlayer->bEnableAudio == RKADK_FALSE) {
+      RKADK_LOGE("Video does not exist and audio exists but cannot be played");
+      goto __FAILED;
+    }
+  } else if (suffix && (!strcmp(suffix, ".mp3") || !strcmp(suffix, ".wav"))) {
+    if (!pstPlayer->bEnableAudio) {
+      RKADK_LOGE("audio is unable");
+      goto __FAILED;
+    }
+
+    pstPlayer->demuxerFlag = AUDIO_FLAG;
+
+    pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
+    if (!strcmp(suffix, ".wav"))
+      pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerWavPacket;
+    else
+      pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
+
+    if (RKADK_DEMUXER_GetParam(pstPlayer->pDemuxerCfg, pszfilePath, &pstPlayer->stDemuxerParam)) {
+      RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+      goto __FAILED;
+    }
+
+    if (pstPlayer->stDemuxerParam.pAudioCodec != NULL) {
+      if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "mp3"))
+        eAudioCodecType = RKADK_CODEC_TYPE_MP3;
+      else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "wav"))
+        eAudioCodecType = RKADK_CODEC_TYPE_PCM;
+        else if (!strcmp(pstPlayer->stDemuxerParam.pAudioCodec, "pcm_alaw"))
+          eAudioCodecType = RKADK_CODEC_TYPE_G711A;
+      else {
+        RKADK_LOGE("Unsupported audio format(%s)", pstPlayer->stDemuxerParam.pAudioCodec);
+        goto __FAILED;
+      }
+
+      pstPlayer->bAudioExist = RKADK_TRUE;
+
+      pstPlayer->stAdecCtx.sampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
+      pstPlayer->stAdecCtx.channel = pstPlayer->stDemuxerParam.audioChannels;
+      pstPlayer->stAdecCtx.eCodecType = eAudioCodecType;
+      pstPlayer->stAoCtx.reSmpSampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
+
+      if (pstPlayer->stDemuxerParam.audioFormat == 0)
+        pstPlayer->stAoCtx.bitWidth = 8;
+      else if (pstPlayer->stDemuxerParam.audioFormat == 1)
+        pstPlayer->stAoCtx.bitWidth = 16;
+      else {
+        RKADK_LOGE("AO create failed, audioFormat = %d", pstPlayer->stDemuxerParam.audioFormat);
+        goto __FAILED;
+      }
+
+      if (pstPlayer->stDemuxerParam.audioChannels <= 0 ||
+          pstPlayer->stDemuxerParam.audioSampleRate <= 0) {
+        RKADK_LOGE("AO create failed, channel = %d, reSmpSampleRate = %d",
+                    pstPlayer->stDemuxerParam.audioChannels, pstPlayer->stDemuxerParam.audioSampleRate);
+      }
+    }
+  } else {
+    RKADK_LOGE("Unsupported file format(%s)", pszfilePath);
+    goto __FAILED;
   }
 
   return RKADK_SUCCESS;
@@ -1800,6 +1805,11 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   RKADK_S64 maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
 
+  if (strstr(pstPlayer->pFilePath, "rtsp://")) {
+    RKADK_LOGI("Nonsupport rtsp seek");
+    return -1;
+  }
+
   if (s64TimeInMs > maxSeekTimeInMs) {
     RKADK_LOGE("s64TimeInMs(%lld) is out of range", s64TimeInMs);
     goto __FAILED;
@@ -1870,7 +1880,12 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
 
   if (strlen(pstPlayer->pFilePath) == 0) {
     RKADK_LOGE("RKADK_PLAYER_GetDuration failed, file is NULL");
-    goto __FAILED;
+    return -1;
+  }
+
+  if (strstr(pstPlayer->pFilePath, "rtsp://")) {
+    RKADK_LOGI("Nonsupport get rtsp duration");
+    return -1;
   }
 
   demuxerInput.ptr = RK_NULL;

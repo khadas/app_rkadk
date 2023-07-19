@@ -29,6 +29,7 @@ RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *
   stDemuxerInput.s8ReadModeFlag = demuxerInput->readModeFlag;
   stDemuxerInput.s8VideoEnableFlag = demuxerInput->videoEnableFlag;
   stDemuxerInput.s8AudioEnableFlag = demuxerInput->audioEnableFlag;
+  stDemuxerInput.transport = demuxerInput->transport;
 
   RKADK_S32 ret = rkdemuxer_init(demuxerCfg, &stDemuxerInput);
   if (ret) {
@@ -145,4 +146,3 @@ RKADK_S32 RKADK_DEMUXER_ReadAudioDuration(RKADK_MW_PTR demuxerCfg, RKADK_S64 *du
 
   return RKADK_SUCCESS;
 }
-

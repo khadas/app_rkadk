@@ -229,12 +229,17 @@ typedef struct {
   RKADK_VO_SYNC_INFO_S stSyncInfo;
 } RKADK_PLAYER_FRAME_INFO_S;
 
+typedef struct {
+  const char *transport; //udp or tcp, default: udp
+} RKADK_PLAYER_RTSP_CFG_S;
+
 /** player configuration */
 typedef struct {
   RKADK_BOOL bEnableVideo;
   RKADK_BOOL bEnableAudio;
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
+  RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
 } RKADK_PLAYER_CFG_S;
 
 /**
