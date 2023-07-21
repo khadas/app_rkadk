@@ -17,6 +17,7 @@
 #include "rkadk_rtsp.h"
 #include "rkadk_log.h"
 #include "rkadk_media_comm.h"
+#include "rkadk_audio_encoder.h"
 #include "rkadk_param.h"
 #include "rtsp_demo.h"
 #include <stdio.h>
@@ -52,6 +53,16 @@ static void RKADK_RTSP_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg, RKADK_U
   pstVencChn->enModId = RK_ID_VENC;
   pstVencChn->s32DevId = 0;
   pstVencChn->s32ChnId = pstLiveCfg->attribute.venc_chn;
+}
+
+static void RKADK_RTSP_AudioSetChn(MPP_CHN_S *pstAiChn, MPP_CHN_S *pstAencChn) {
+  pstAiChn->enModId = RK_ID_AI;
+  pstAiChn->s32DevId = 0;
+  pstAiChn->s32ChnId = LIVE_AI_CHN;
+
+  pstAencChn->enModId = RK_ID_AENC;
+  pstAencChn->s32DevId = 0;
+  pstAencChn->s32ChnId = LIVE_AENC_CHN + 1;
 }
 
 static int RKADK_RTSP_SetVencAttr(RKADK_U32 u32CamId,
@@ -113,19 +124,23 @@ static RKADK_S32 RKADK_RTSP_InitService(RKADK_CODEC_TYPE_E enCodecType,
                                         RKADK_U32 port, const char *path,
                                         RKADK_RTSP_HANDLE_S *pHandle) {
   int ret = 0;
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = RKADK_PARAM_GetAudioCfg();
+
+  if (!pstAudioCfg) {
+    RKADK_LOGD("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
 
   pHandle->stRtspHandle = create_rtsp_demo(port);
   pHandle->stRtspSession = rtsp_new_session(pHandle->stRtspHandle, path);
   if (enCodecType == RKADK_CODEC_TYPE_H264) {
-    ret = rtsp_set_video(pHandle->stRtspSession, RTSP_CODEC_ID_VIDEO_H264, NULL,
-                         0);
+    ret = rtsp_set_video(pHandle->stRtspSession, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
     if (ret) {
       RKADK_LOGE("rtsp_set_video failed(%d)", ret);
       return -1;
     }
   } else if (enCodecType == RKADK_CODEC_TYPE_H265) {
-    ret = rtsp_set_video(pHandle->stRtspSession, RTSP_CODEC_ID_VIDEO_H265, NULL,
-                         0);
+    ret = rtsp_set_video(pHandle->stRtspSession, RTSP_CODEC_ID_VIDEO_H265, NULL, 0);
     if (ret) {
       RKADK_LOGE("rtsp_set_video failed(%d)", ret);
       return -1;
@@ -135,11 +150,45 @@ static RKADK_S32 RKADK_RTSP_InitService(RKADK_CODEC_TYPE_E enCodecType,
     return -1;
   }
 
-  return rtsp_sync_video_ts(pHandle->stRtspSession, rtsp_get_reltime(),
+  ret = rtsp_sync_video_ts(pHandle->stRtspSession, rtsp_get_reltime(),
                             rtsp_get_ntptime());
+  if (ret) {
+    RKADK_LOGE("rtsp_sync_video_ts failed(%d)", ret);
+    return -1;
+  }
+
+  ret = rtsp_set_audio(pHandle->stRtspSession, RTSP_CODEC_ID_AUDIO_G711A, NULL, 0);
+  if (ret) {
+    RKADK_LOGE("rtsp_set_audio failed(%d)", ret);
+    return -1;
+  }
+
+  ret = rtsp_sync_audio_ts(pHandle->stRtspSession, rtsp_get_reltime(),
+                            rtsp_get_ntptime());
+  if (ret) {
+    RKADK_LOGE("rtsp_sync_audio_ts failed(%d)", ret);
+    return -1;
+  }
+
+  ret = rtsp_set_audio_sample_rate(pHandle->stRtspSession, pstAudioCfg->samplerate);
+  if (ret) {
+    RKADK_LOGE("rtsp_set_audio_sample_rate failed(%d)", ret);
+    return -1;
+  }
+
+  ret = rtsp_set_audio_channels(pHandle->stRtspSession, pstAudioCfg->channels);
+  if (ret) {
+    RKADK_LOGE("rtsp_set_audio_channels failed(%d)", ret);
+    return -1;
+  }
+
+  return 0;
 }
 
 static void RKADK_RTSP_DeInitService(RKADK_RTSP_HANDLE_S *pHandle) {
+  if (pHandle->stRtspSession)
+    rtsp_del_session(pHandle->stRtspSession);
+
   if (pHandle->stRtspHandle)
     rtsp_del_demo(pHandle->stRtspHandle);
 }
@@ -219,6 +268,27 @@ static void RKADK_RTSP_VencOutCb(RKADK_MEDIA_VENC_DATA_S mb, RKADK_VOID *handle)
   }
 }
 
+static void RKADK_RTSP_AencOutCb(AUDIO_STREAM_S stFrame,
+                                 RKADK_VOID *pHandle) {
+  RKADK_CHECK_POINTER_N(pHandle);
+  RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
+  RKADK_U8 *data;
+  if (!pstHandle) {
+    RKADK_LOGE("Can't find rtsp handle");
+    return;
+  }
+
+  if (!pstHandle->start)
+    return;
+
+  data = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk);
+  if (pstHandle->stRtspHandle && pstHandle->stRtspSession) {
+    rtsp_tx_audio(pstHandle->stRtspSession, (uint8_t *)data,
+                  stFrame.u32Len, stFrame.u64TimeStamp);
+    rtsp_do_event(pstHandle->stRtspHandle);
+  }
+}
+
 static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
                                         MPP_CHN_S *pstVencChn,
                                         RKADK_RTSP_HANDLE_S *pHandle) {
@@ -241,6 +311,21 @@ static RKADK_S32 RKADK_RTSP_VencGetData(RKADK_U32 u32CamId,
 
 
   return ret;
+}
+
+static int RKADK_RTSP_AencGetData(RKADK_U32 u32CamId,
+                                  MPP_CHN_S *pstAencChn,
+                                  RKADK_RTSP_HANDLE_S *pHandle) {
+  int ret;
+
+  ret = RKADK_MEDIA_GetAencBuffer(pstAencChn, RKADK_RTSP_AencOutCb,
+                                  (RKADK_VOID *)pHandle);
+  if (ret) {
+    RKADK_LOGE("RKADK_MEDIA_GetVencBuffer failed = %d", ret);
+    return ret;
+  }
+
+  return 0;
 }
 
 static bool RKADK_RTSP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
@@ -269,12 +354,119 @@ static bool RKADK_RTSP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *p
   return bUseVpss;
 }
 
+static RKADK_S32 RKADK_RTSP_SetAiAttr(AIO_ATTR_S *pstAiAttr,
+                                      RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
+  int bytes = 2;
+  AUDIO_SOUND_MODE_E soundMode;
+  RKADK_CHECK_POINTER(pstAiAttr, RKADK_FAILURE);
+
+  memset(pstAiAttr, 0, sizeof(AIO_ATTR_S));
+  memcpy(pstAiAttr->u8CardName, pstAudioParam->ai_audio_node,
+         strlen(pstAudioParam->ai_audio_node));
+  pstAiAttr->soundCard.channels = AUDIO_DEVICE_CHANNEL;
+  pstAiAttr->soundCard.sampleRate = pstAudioParam->samplerate;
+  bytes = RKADK_MEDIA_GetAudioBitWidth(pstAudioParam->bit_width) / 8;
+  pstAiAttr->soundCard.bitWidth = pstAudioParam->bit_width;
+
+  pstAiAttr->enBitwidth = pstAudioParam->bit_width;
+  pstAiAttr->enSamplerate = (AUDIO_SAMPLE_RATE_E)pstAudioParam->samplerate;
+  soundMode = RKADK_AI_GetSoundMode(pstAudioParam->channels);
+  if (soundMode == AUDIO_SOUND_MODE_BUTT)
+    return -1;
+
+  pstAiAttr->enSoundmode = soundMode;
+  pstAiAttr->u32FrmNum = 2;
+  pstAiAttr->u32PtNumPerFrm = bytes * pstAudioParam->samples_per_frame;
+  pstAiAttr->u32EXFlag = 0;
+  pstAiAttr->u32ChnCnt = pstAudioParam->channels;
+  return 0;
+}
+
+static RKADK_S32 RKADK_RTSP_SetAencAttr(RKADK_U32 u32CamId,
+                                        RKADK_PARAM_AUDIO_CFG_S *pstAudioParam,
+                                        AENC_CHN_ATTR_S *pstAencAttr) {
+
+  RKADK_CHECK_POINTER(pstAudioParam, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstAencAttr, RKADK_FAILURE);
+
+  memset(pstAencAttr, 0, sizeof(AENC_CHN_ATTR_S));
+  pstAencAttr->enType = RK_AUDIO_ID_PCM_ALAW;
+  pstAencAttr->u32BufCount = RKADK_PARAM_GetStreamBufCnt(u32CamId, true);
+  pstAencAttr->stCodecAttr.enType = pstAencAttr->enType;
+  pstAencAttr->stCodecAttr.u32Channels = pstAudioParam->channels;
+  pstAencAttr->stCodecAttr.u32SampleRate = pstAudioParam->samplerate;
+  pstAencAttr->stCodecAttr.enBitwidth = pstAudioParam->bit_width;
+  pstAencAttr->stCodecAttr.pstResv = RK_NULL;
+
+  return 0;
+}
+
+static RKADK_S32 RKADK_RTSP_EnableAudio(RKADK_U32 u32CamId, MPP_CHN_S stAiChn,
+                                        MPP_CHN_S stAencChn, RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
+  int ret;
+  AIO_ATTR_S stAiAttr;
+  AENC_CHN_ATTR_S stAencAttr;
+
+  // Create AI and AENC
+  ret = RKADK_RTSP_SetAiAttr(&stAiAttr, pstAudioParam);
+  if (ret) {
+    RKADK_LOGE("RKADK_RTMP_SetAiAttr failed");
+    return -1;
+  }
+
+  ret = RKADK_MPI_AI_Init(0, stAiChn.s32ChnId, &stAiAttr, pstAudioParam->vqe_mode,
+                          pstAudioParam->vqe_config_path, pstAudioParam->mic_type);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_AI_Init faile(%d)", ret);
+    return -1;
+  }
+
+  if (RKADK_RTSP_SetAencAttr(u32CamId, pstAudioParam, &stAencAttr)) {
+    RKADK_LOGE("RKADK_RTMP_SetAencAttr error");
+    goto failed;
+  }
+
+  ret = RKADK_MPI_AENC_Init(stAencChn.s32ChnId, &stAencAttr);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_AENC_Init error %d", ret);
+    goto failed;
+  }
+
+  return 0;
+failed:
+  RKADK_MPI_AI_DeInit(stAiChn.s32DevId, stAiChn.s32ChnId, pstAudioParam->vqe_mode);
+
+  return ret;
+}
+
+static RKADK_S32 RKADK_RTSP_DisableAudio(MPP_CHN_S stAiChn, MPP_CHN_S stAencChn,
+                                         RKADK_PARAM_AUDIO_CFG_S *pstAudioParam) {
+  int ret;
+
+  // Destroy AENC before AI
+  ret = RKADK_MPI_AENC_DeInit(stAencChn.s32ChnId);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_AENC_DeInit failed(%d)", ret);
+    return ret;
+  }
+
+  // Destroy AI
+  ret = RKADK_MPI_AI_DeInit(stAiChn.s32DevId, stAiChn.s32ChnId, pstAudioParam->vqe_mode);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_AI_DeInit failed %d", ret);
+    return ret;
+  }
+
+  return 0;
+}
+
 RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
                           RKADK_MW_PTR *ppHandle) {
   int ret = 0;
   bool bSysInit = false;
   bool bUseVpss = false;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
+  MPP_CHN_S stAiChn, stAencChn;
   RKADK_STREAM_TYPE_E enType;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
@@ -309,6 +501,12 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     return -1;
   }
 
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
+
   pHandle = (RKADK_RTSP_HANDLE_S *)malloc(sizeof(RKADK_RTSP_HANDLE_S));
   if (!pHandle) {
     RKADK_LOGE("malloc pHandle failed");
@@ -324,6 +522,20 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     RKADK_LOGE("RKADK_RTSP_InitService failed");
     free(pHandle);
     return -1;
+  }
+
+  RKADK_RTSP_AudioSetChn(&stAiChn, &stAencChn);
+  ret = RKADK_RTSP_EnableAudio(u32CamId, stAiChn, stAencChn, pstAudioCfg);
+  if (ret) {
+    RKADK_LOGE("RKADK_RTSP_EnableAudio failed[%d]", ret);
+    free(pHandle);
+    return ret;
+  }
+
+  ret = RKADK_RTSP_AencGetData(u32CamId, &stAencChn, pHandle);
+  if (ret) {
+    RKADK_LOGE("RKADK_RTSP_AencGetData failed(%d)", ret);
+    goto failed;
   }
 
   RKADK_RTSP_SetVideoChn(pstLiveCfg, u32CamId, &stViChn, &stVencChn, &stSrcVpssChn, &stDstVpssChn);
@@ -444,9 +656,25 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     }
   }
 
+  // Bind AI to AENC
+  ret = RKADK_MPI_SYS_Bind(&stAiChn, &stAencChn);
+  if (ret) {
+    RKADK_LOGE("Bind AI[%d] and AENC[%d] failed[%d]", stAiChn.s32ChnId,
+               stAencChn.s32ChnId, ret);
+    goto unbind;
+  }
+
   *ppHandle = (RKADK_MW_PTR)pHandle;
   RKADK_LOGI("Rtsp[%d, %d, %s] Init End...", u32CamId, port, path);
   return 0;
+
+unbind:
+  if (bUseVpss) {
+    RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
+    RKADK_MPI_SYS_UnBind(&stViChn, &stSrcVpssChn);
+  } else {
+    RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
+  }
 
 failed:
   RKADK_LOGE("failed");
@@ -455,6 +683,8 @@ failed:
   RKADK_MPI_VPSS_DeInit(stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId);
 
   RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
+
+  RKADK_RTSP_DisableAudio(stAiChn, stAencChn, pstAudioCfg);
 
   if (pHandle) {
     RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
@@ -468,6 +698,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   int ret = 0;
   bool bUseVpss = false;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
+  MPP_CHN_S stAiChn, stAencChn;
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTSP_HANDLE_S *pstHandle = (RKADK_RTSP_HANDLE_S *)pHandle;
@@ -481,12 +712,22 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
     return -1;
   }
 
+  RKADK_PARAM_AUDIO_CFG_S *pstAudioCfg = RKADK_PARAM_GetAudioCfg();
+  if (!pstAudioCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
+    return -1;
+  }
+
   RKADK_RTSP_SetVideoChn(pstLiveCfg, pstHandle->u32CamId, &stViChn, &stVencChn,
                          &stSrcVpssChn, &stDstVpssChn);
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)
     RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb, pstHandle);
+
+   // Stop get aenc data
+  RKADK_RTSP_AudioSetChn(&stAiChn, &stAencChn);
+  RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTSP_AencOutCb, pstHandle);
 
   bUseVpss = RKADK_RTSP_IsUseVpss(pstHandle->u32CamId, pstLiveCfg);
   if (bUseVpss){
@@ -535,6 +776,19 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   ret = RKADK_MPI_VI_DeInit(pstHandle->u32CamId, stViChn.s32ChnId);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VI_DeInit failed %d", ret);
+    return ret;
+  }
+
+  ret = RKADK_MPI_SYS_UnBind(&stAiChn, &stAencChn);
+  if (ret) {
+    RKADK_LOGE("UnBind AI[%d] and AENC[%d] failed[%d]", stAiChn.s32ChnId,
+               stAencChn.s32ChnId, ret);
+    return ret;
+  }
+
+  ret = RKADK_RTSP_DisableAudio(stAiChn, stAencChn, pstAudioCfg);
+  if (ret) {
+    RKADK_LOGE("RKADK_RTSP_DisableAudio failed(%d)", ret);
     return ret;
   }
 
