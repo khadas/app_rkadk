@@ -22,6 +22,7 @@
 #include "rkadk_signal.h"
 #include "rkadk_thread.h"
 #include "rkmuxer.h"
+#include <sys/time.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(_a) (sizeof(_a) / sizeof((_a)[0]))
@@ -106,6 +107,8 @@ typedef struct {
   struct list_head stVFree;     // video list remain size
   struct list_head stAFree;     // audio list remain size
   struct list_head stProcList;  // process list
+
+  struct timeval checkWriteTime;
 
   MANUAL_THUMB_PARAM stThumbParam;
   MANUAL_SPLIT_ATTR stManualSplit;
@@ -369,6 +372,35 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
   pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
 }
 
+static void RKADK_MUXER_CheckWriteSpeed(MUXER_HANDLE_S *pstMuxerHandle) {
+  int size = 0;
+  struct timeval curTime;
+  float diff = 0;
+  long diffMs = 0;
+
+  gettimeofday(&curTime, NULL);
+  size = RKADK_MUXER_GetListSize(pstMuxerHandle, &pstMuxerHandle->stVFree);
+  if(size <= 5) {
+    if (pstMuxerHandle->checkWriteTime.tv_sec == 0 && pstMuxerHandle->checkWriteTime.tv_usec == 0) {
+      pstMuxerHandle->checkWriteTime.tv_sec = curTime.tv_sec;
+      pstMuxerHandle->checkWriteTime.tv_usec = curTime.tv_usec;
+    } else {
+      diff = (curTime.tv_sec - pstMuxerHandle->checkWriteTime.tv_sec) * 1000000
+              + (curTime.tv_usec - pstMuxerHandle->checkWriteTime.tv_usec);
+      diffMs = diff / 1000;
+      if (diffMs >= 1000) {
+        pstMuxerHandle->checkWriteTime.tv_sec = 0;
+        pstMuxerHandle->checkWriteTime.tv_usec = 0;
+        RKADK_LOGW("Stream[%d] write file slow", pstMuxerHandle->u32VencChn);
+        RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
+      }
+    }
+  } else {
+    pstMuxerHandle->checkWriteTime.tv_sec = 0;
+    pstMuxerHandle->checkWriteTime.tv_usec = 0;
+  }
+}
+
 int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   int cnt = 0, isKeyFrame = 0;
   MUXER_BUF_CELL_S cell;
@@ -421,16 +453,19 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   if (!pstMuxerHandle->bEnableStream)
     return 0;
 
+  RKADK_MUXER_CheckWriteSpeed(pstMuxerHandle);
   framerate = pstMuxerHandle->stVideo.frame_rate_num / pstMuxerHandle->stVideo.frame_rate_den;
   while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stVFree)) == NULL) {
-      if (cnt % framerate == 0) {
-        RKADK_LOGI("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
-        if (cnt != 0)
-          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
-      }
+      if (cnt % framerate == 0)
+        RKADK_LOGW("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
+
       cnt++;
+      RKADK_MUXER_CheckWriteSpeed(pstMuxerHandle);
       usleep(10000);
   }
+
+  if (cnt % framerate != 0)
+    RKADK_LOGW("Stream[%d] get video cell fail, retry, cnt = %d", stData.u32ChnId, cnt);
 
   pstCell->buf = cell.buf;
   pstCell->isKeyFrame = isKeyFrame;
