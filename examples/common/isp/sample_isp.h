@@ -107,4 +107,3 @@ int SAMPLE_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx);
 }
 #endif
 #endif
-

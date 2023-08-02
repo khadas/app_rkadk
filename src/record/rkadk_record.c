@@ -20,73 +20,151 @@
 #include "rkadk_media_comm.h"
 #include "rkadk_param.h"
 #include "rkadk_audio_encoder.h"
-#include <deque>
+#include "linux_list.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct {
+  struct list_head mark;
+  char filename[RKADK_MAX_FILE_PATH_LEN];
+} FILE_NAME_CELL_S;
+
 static RKADK_REC_REQUEST_FILE_NAMES_FN
     g_pfnRequestFileNames[RKADK_MAX_SENSOR_CNT] = {NULL};
-static std::deque<char *>
-    g_fileNameDeque[RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
+static struct list_head
+    g_fileNameList[RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
 static pthread_mutex_t g_fileNameMutexLock = PTHREAD_MUTEX_INITIALIZER;
+
+static int GetFileNameListSize(struct list_head *head) {
+  int size = 0;
+  FILE_NAME_CELL_S *cell = NULL;
+
+  list_for_each_entry(cell, head, mark) {
+    size++;
+  }
+
+  return size;
+}
+
+static void FileNameListInit(RKADK_MUXER_HANDLE_S *stRecorder) {
+  int index;
+
+  for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
+    index = i + (RKADK_MUXER_STREAM_MAX_CNT * stRecorder->u32CamId);
+    INIT_LIST_HEAD(&g_fileNameList[index]);
+  }
+}
+
+static FILE_NAME_CELL_S *FileNameCellPop(struct list_head *head) {
+  FILE_NAME_CELL_S *rst = NULL;
+  FILE_NAME_CELL_S *cell = NULL;
+  FILE_NAME_CELL_S *cell_n = NULL;
+
+  do {
+    list_for_each_entry_safe(cell, cell_n, head, mark) {
+      list_del_init(&cell->mark);
+      rst = cell;
+      break;
+    }
+  } while (0);
+  return rst;
+}
+
+static void FileNameListRelease(RKADK_MUXER_HANDLE_S *stRecorder) {
+  int index;
+  FILE_NAME_CELL_S *cell = NULL;
+  FILE_NAME_CELL_S *cell_n = NULL;
+
+  for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
+    index = i + (RKADK_MUXER_STREAM_MAX_CNT * stRecorder->u32CamId);
+
+    list_for_each_entry_safe(cell, cell_n, &g_fileNameList[index], mark) {
+      list_del_init(&cell->mark);
+      free(cell);
+    }
+  }
+}
 
 static int GetRecordFileName(RKADK_VOID *pHandle, RKADK_CHAR *pcFileName,
                              RKADK_U32 muxerId) {
-  int index, ret;
+  int index, ret, size = 0;
+  int len = 0;
+  ARRAY_FILE_NAME fileName = NULL;
+  FILE_NAME_CELL_S *cell = NULL;
+  FILE_NAME_CELL_S *rst = NULL;
   RKADK_MUXER_HANDLE_S *pstRecorder;
 
   RKADK_MUTEX_LOCK(g_fileNameMutexLock);
 
   if (muxerId >= RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT) {
     RKADK_LOGE("Incorrect file index: %d", muxerId);
-    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
-    return -1;
+    goto failed;
   }
 
   pstRecorder = (RKADK_MUXER_HANDLE_S *)pHandle;
   if (!pstRecorder) {
     RKADK_LOGE("pstRecorder is null");
-    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
-    return -1;
+    goto failed;
   }
 
   if (!g_pfnRequestFileNames[pstRecorder->u32CamId]) {
     RKADK_LOGE("Not Registered request name callback");
-    RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
-    return -1;
+    goto failed;
   }
 
-  if (g_fileNameDeque[muxerId].empty()) {
-    ARRAY_FILE_NAME fileName;
+  size = GetFileNameListSize(&g_fileNameList[muxerId]);
+  if (!size) {
     fileName = (ARRAY_FILE_NAME)malloc(pstRecorder->u32StreamCnt *
                                        RKADK_MAX_FILE_PATH_LEN);
+    if (!fileName) {
+      RKADK_LOGE("Stream[%d]: malloc fileName failed", muxerId);
+      goto failed;
+    }
+
     ret = g_pfnRequestFileNames[pstRecorder->u32CamId](
         pHandle, pstRecorder->u32StreamCnt, fileName);
     if (ret) {
-      RKADK_LOGE("get file name failed(%d)", ret);
-      free(fileName);
-      RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
-      return -1;
+      RKADK_LOGE("Stream[%d]: get file name failed(%d)", muxerId, ret);
+      goto failed;
     }
 
-    char *newName[pstRecorder->u32StreamCnt];
     for (int i = 0; i < (int)pstRecorder->u32StreamCnt; i++) {
-      newName[i] = strdup(fileName[i]);
+      cell = (FILE_NAME_CELL_S *)malloc(sizeof(FILE_NAME_CELL_S));
+      if (NULL == cell) {
+        RKADK_LOGE("Stream[%d]: malloc file name cell failed", muxerId);
+        goto failed;
+      }
+      memset(cell->filename, 0, RKADK_MAX_FILE_PATH_LEN);
+      INIT_LIST_HEAD(&cell->mark);
+
+      len = strlen(fileName[i]) > RKADK_MAX_FILE_PATH_LEN ? RKADK_MAX_FILE_PATH_LEN : strlen(fileName[i]);
+      memcpy(cell->filename, fileName[i], len);
+
       index = i + (RKADK_MUXER_STREAM_MAX_CNT * pstRecorder->u32CamId);
-      g_fileNameDeque[index].push_back(newName[i]);
+      list_add_tail(&cell->mark, &g_fileNameList[index]);
     }
     free(fileName);
   }
 
-  auto front = g_fileNameDeque[muxerId].front();
-  strncpy(pcFileName, front, RKADK_MAX_FILE_PATH_LEN);
-  g_fileNameDeque[muxerId].pop_front();
-  free(front);
+  rst = FileNameCellPop(&g_fileNameList[muxerId]);
+  if (!rst) {
+    RKADK_LOGE("Stream[%d]: cell pop failed", muxerId);
+    goto failed;
+  }
+  strncpy(pcFileName, rst->filename, RKADK_MAX_FILE_PATH_LEN);
+  free(rst);
 
   RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
   return 0;
+
+failed:
+  if (fileName)
+    free(fileName);
+
+  RKADK_MUTEX_UNLOCK(g_fileNameMutexLock);
+  return -1;
 }
 
 static RKADK_U32 GetPreRecordCacheTime(RKADK_PARAM_REC_CFG_S *pstRecCfg,
@@ -1337,6 +1415,8 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
     goto failed;
   }
 
+  FileNameListInit(*ppRecorder);
+
   if (RKADK_RECORD_BindChn(pstRecAttr->s32CamID, *ppRecorder)) {
     RKADK_MUXER_Disable(*ppRecorder);
     RKADK_MUXER_Destroy(*ppRecorder);
@@ -1359,7 +1439,7 @@ failed:
 }
 
 RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
-  RKADK_S32 ret, index;
+  RKADK_S32 ret;
   RKADK_U32 u32CamId;
   RKADK_MUXER_HANDLE_S *stRecorder = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
@@ -1383,16 +1463,7 @@ RKADK_S32 RKADK_RECORD_Destroy(RKADK_MW_PTR pRecorder) {
   RKADK_LOGI("Destory Record[%d, %d] Start...", stRecorder->u32CamId,
              pstRecCfg->record_type);
 
-  for (int i = 0; i < (int)stRecorder->u32StreamCnt; i++) {
-    index = i + (RKADK_MUXER_STREAM_MAX_CNT * u32CamId);
-    while (!g_fileNameDeque[index].empty()) {
-      RKADK_LOGI("clear file name deque[%d]", index);
-      auto front = g_fileNameDeque[index].front();
-      g_fileNameDeque[index].pop_front();
-      free(front);
-    }
-    g_fileNameDeque[index].clear();
-  }
+  FileNameListRelease(stRecorder);
 
   ret = RKADK_RECORD_UnBindChn(u32CamId, stRecorder);
   if (ret) {

@@ -108,17 +108,46 @@ static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
 static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
 static int g_bVoLayerDevInitCnt[VO_MAX_LAYER_NUM][VO_MAX_DEV_NUM] = {0};
 
-static void RKADK_MEDIA_CtxInit() {
+static int RKADK_MEDIA_CtxInit() {
+  int ret;
+
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM * sizeof(int));
   memset(g_bVoLayerDevInitCnt, 0, VO_MAX_LAYER_NUM * VO_MAX_DEV_NUM * sizeof(int));
-  g_stMediaCtx.aiMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.aencMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.viMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.vencMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.vpssMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.voMutex = PTHREAD_MUTEX_INITIALIZER;
-  g_stMediaCtx.bindMutex = PTHREAD_MUTEX_INITIALIZER;
+
+  ret = pthread_mutex_init(&g_stMediaCtx.aiMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.aencMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.viMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.vencMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.vpssMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.voMutex, NULL);
+  ret |= pthread_mutex_init(&g_stMediaCtx.bindMutex, NULL);
+
+  if (ret) {
+    RKADK_LOGE("pthread_mutex_init failed[%d]", ret);
+    return -1;
+  }
+
+  return 0;
+}
+
+static int RKADK_MEDIA_CtxDeInit() {
+  int ret;
+
+  ret = pthread_mutex_destroy(&g_stMediaCtx.aiMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.aencMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.viMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.vencMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.vpssMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.voMutex);
+  ret |= pthread_mutex_destroy(&g_stMediaCtx.bindMutex);
+
+  if (ret) {
+    RKADK_LOGE("pthread_mutex_destroy failed[%d]", ret);
+    return -1;
+  }
+
+  return 0;
 }
 
 static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev,
@@ -329,7 +358,12 @@ RKADK_S32 RKADK_MPI_SYS_Init() {
 
   if (!g_bSysInit) {
     RKADK_VERSION_Dump();
-    RKADK_MEDIA_CtxInit();
+    ret = RKADK_MEDIA_CtxInit();
+    if (ret) {
+      RKADK_LOGE("RKADK_MEDIA_CtxInit failed[%d]", ret);
+      return ret;
+    }
+
     ret = RK_MPI_SYS_Init();
     if (ret) {
       RKADK_LOGE("RK_MPI_SYS_Init failed[%d]", ret);
@@ -348,6 +382,7 @@ RKADK_S32 RKADK_MPI_SYS_Exit() {
   int ret;
 
   if (g_bSysInit) {
+    RKADK_MEDIA_CtxDeInit();
     RK_MPI_VO_CloseFd();
 
     ret = RK_MPI_SYS_Exit();

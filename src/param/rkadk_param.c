@@ -27,8 +27,7 @@
 
 /** parameter context */
 static RKADK_PARAM_CONTEXT_S g_stPARAMCtx = {
-    .bInit = false, .mutexLock = PTHREAD_MUTEX_INITIALIZER, .stCfg = {0},
-    .defPath = {0}, .defSensorPath = {0}, .path = {0}, .sensorPath = {0}};
+    .bInit = false, .mutexLock = PTHREAD_MUTEX_INITIALIZER};
 
 static RKADK_S32 RKADK_PARAM_SaveViCfg(char *path, RKADK_U32 viIndex,
                                        RKADK_U32 u32CamId) {
@@ -3376,6 +3375,8 @@ static RKADK_S32 RKADK_PARAM_SetRecTime(RKADK_S32 s32CamId,
 RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
                                   RKADK_PARAM_TYPE_E enParamType,
                                   RKADK_VOID *pvParam) {
+  RKADK_PARAM_FPS_S *pstFps;
+
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
   RKADK_CHECK_INIT(g_stPARAMCtx.bInit, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pvParam, RKADK_FAILURE);
@@ -3394,8 +3395,6 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
 
   switch (enParamType) {
   case RKADK_PARAM_TYPE_FPS:
-    RKADK_PARAM_FPS_S *pstFps;
-
     pstFps = (RKADK_PARAM_FPS_S *)pvParam;
     pstFps->u32Framerate = RKADK_PARAM_GetFps(s32CamId, pstFps->enStreamType);
     break;

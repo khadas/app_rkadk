@@ -202,9 +202,9 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   stAttr.stVencAttr.u32StreamBufCnt = 1;
   stAttr.stVencAttr.u32BufSize = ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
-  stIfd1[0] = {0x0100, 3, 1, ptsThumbCfg->thumb_width,
-              {{.uwv = (uint16_t)ptsThumbCfg->thumb_width }}}; // ImageWidth
-  stIfd1[1] = {0x0100, 3, 1, ptsThumbCfg->thumb_height,
+  stIfd1[0] = (IFD){0x0100, 3, 1, ptsThumbCfg->thumb_width,
+              {{.uwv = (uint16_t)ptsThumbCfg->thumb_width}}}; // ImageWidth
+  stIfd1[1] = (IFD){0x0100, 3, 1, ptsThumbCfg->thumb_height,
               {{.uwv = (uint16_t)ptsThumbCfg->thumb_height}}}; // ImageLength
 
   ret = RKADK_MPI_VENC_Init(u32CamId, ChnId, &stAttr);

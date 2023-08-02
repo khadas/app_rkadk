@@ -18,9 +18,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __cplusplus
 extern "C" {
+#endif
 #include "mp3dec.h"
+#ifdef __cplusplus
 }
+#endif
 
 #define MP3MAXFRAMESIZE 4608
 static RKADK_S32 extCodecHandle = -1;

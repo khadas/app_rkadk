@@ -7,9 +7,9 @@ add_definitions(-Wall -g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -Wno-unused
 aux_source_directory(common/mp3_header MP3_SRC)
 
 if(${RKADK_CHIP} STREQUAL "rv1126")
-	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi1.cpp")
+	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi1.c")
 else()
-	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi2.cpp")
+	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi2.c")
 endif()
 
 #--------------------------

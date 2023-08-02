@@ -87,7 +87,10 @@ RKADK_S32 RKADK_Ini2Struct(char *iniFile, void *structAddr,
       int keyInt = iniparser_getint(ini, sectionKey, -1);
       if (keyInt == -1 && strcmp(mapTable[i].structMember, "first_frame_qp")
         && strcmp(mapTable[i].structMember, "max_qp")
-        && strcmp(mapTable[i].structMember, "min_qp")) {
+        && strcmp(mapTable[i].structMember, "min_qp")
+        && strcmp(mapTable[i].structMember, "frame_min_qp")
+        && strcmp(mapTable[i].structMember, "i_min_qp")
+        && strcmp(mapTable[i].structMember, "i_frame_min_qp")) {
 #ifdef RKADK_DUMP_CONFIG
         RKADK_LOGE("int [%s]: not exist", sectionKey);
 #endif

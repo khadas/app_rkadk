@@ -57,14 +57,14 @@
 typedef RKADK_S32 (*RKADK_REC_MSG_CB)(RKADK_MW_PTR, RKADK_S32, RKADK_MW_PTR,
                                       RKADK_S32, RKADK_MW_PTR);
 
-typedef struct _RKADK_STR_FILE {
-  _RKADK_STR_FILE *next;
+struct RKADK_STR_FILE {
+  struct RKADK_STR_FILE *next;
   RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
   time_t stTime;
   off_t stSize;
   off_t stSpace;
   mode_t stMode;
-} RKADK_STR_FILE;
+};
 
 typedef struct {
   RKADK_CHAR cpath[RKADK_MAX_FILE_PATH_LEN];
@@ -74,8 +74,8 @@ typedef struct {
   off_t totalSize;
   off_t totalSpace;
   pthread_mutex_t mutex;
-  RKADK_STR_FILE *pstFileListFirst;
-  RKADK_STR_FILE *pstFileListLast;
+  struct RKADK_STR_FILE *pstFileListFirst;
+  struct RKADK_STR_FILE *pstFileListLast;
 } RKADK_STR_FOLDER;
 
 typedef struct {
@@ -91,16 +91,16 @@ typedef struct {
   RKADK_STR_FOLDER *pstFolder;
 } RKADK_STR_DEV_STA;
 
-typedef struct _RKADK_TMSG_ELEMENT {
-  _RKADK_TMSG_ELEMENT *next;
+struct RKADK_TMSG_ELEMENT {
+  struct RKADK_TMSG_ELEMENT *next;
   RKADK_S32 msg;
   RKADK_CHAR *data;
   RKADK_S32 s32DataLen;
-} RKADK_TMSG_ELEMENT;
+};
 
 typedef struct {
-  RKADK_TMSG_ELEMENT *first;
-  RKADK_TMSG_ELEMENT *last;
+  struct RKADK_TMSG_ELEMENT *first;
+  struct RKADK_TMSG_ELEMENT *last;
   RKADK_S32 num;
   RKADK_S32 quit;
   pthread_mutex_t mutex;
@@ -307,8 +307,8 @@ exit:
   return ret;
 }
 
-static bool RKADK_STORAGE_FileCompare(RKADK_STR_FILE *existingFile,
-                                      RKADK_STR_FILE *newFile,
+static bool RKADK_STORAGE_FileCompare(struct RKADK_STR_FILE *existingFile,
+                                      struct RKADK_STR_FILE *newFile,
                                       RKADK_SORT_CONDITION cond) {
   bool ret = false;
 
@@ -335,7 +335,7 @@ static RKADK_S32 RKADK_STORAGE_FileListCheck(RKADK_STR_FOLDER *folder,
                                            RKADK_CHAR *filename,
                                            struct stat *statbuf) {
   RKADK_S32 ret = 0;
-  RKADK_STR_FILE *tmp = NULL;
+  struct RKADK_STR_FILE *tmp = NULL;
 
   RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
   RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
@@ -366,15 +366,15 @@ static RKADK_S32 RKADK_STORAGE_FileListCheck(RKADK_STR_FOLDER *folder,
 static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
                                            RKADK_CHAR *filename,
                                            struct stat *statbuf) {
-  RKADK_STR_FILE *tmp = NULL;
-  RKADK_STR_FILE *tmp_1 = NULL;
+  struct RKADK_STR_FILE *tmp = NULL;
+  struct RKADK_STR_FILE *tmp_1 = NULL;
 
   RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
   RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
 
   pthread_mutex_lock(&folder->mutex);
 
-  tmp_1 = (RKADK_STR_FILE *)malloc(sizeof(RKADK_STR_FILE));
+  tmp_1 = (struct RKADK_STR_FILE *)malloc(sizeof(struct RKADK_STR_FILE));
 
   if (!tmp_1) {
     RKADK_LOGE("tmp malloc failed.");
@@ -425,7 +425,7 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
   RKADK_S32 s32FileNum = 0;
   off_t totalSize = 0;
   off_t totalSpace = 0;
-  RKADK_STR_FILE *next = NULL;
+  struct RKADK_STR_FILE *next = NULL;
 
   RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
   RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
@@ -434,7 +434,7 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
 
 again:
   if (folder->pstFileListFirst) {
-    RKADK_STR_FILE *tmp = folder->pstFileListFirst;
+    struct RKADK_STR_FILE *tmp = folder->pstFileListFirst;
     if (!strcmp(tmp->filename, filename)) {
       folder->pstFileListFirst = folder->pstFileListFirst->next;
       free(tmp);
@@ -483,7 +483,7 @@ static RKADK_S32 RKADK_STORAGE_FileListSave(RKADK_STR_FOLDER pstFolder,
   cJSON *fileArray = NULL;
   cJSON *info = NULL;
   RKADK_CHAR *folderStr = NULL;
-  RKADK_STR_FILE *tmp = pstFolder.pstFileListFirst;
+  struct RKADK_STR_FILE *tmp = pstFolder.pstFileListFirst;
 
   folder = cJSON_CreateObject();
   cJSON_AddStringToObject(folder, JSON_KEY_FOLDER_NAME,
@@ -542,7 +542,7 @@ static RKADK_S32 RKADK_STORAGE_FileListLoad(RKADK_STR_FOLDER *pstFolder,
   cJSON *folder = NULL;
   cJSON *fileArray = NULL;
   cJSON *info = NULL;
-  RKADK_STR_FILE *tmp = NULL;
+  struct RKADK_STR_FILE *tmp = NULL;
 
   RKADK_CHECK_POINTER(pstFolder, RKADK_FAILURE);
 
@@ -598,7 +598,7 @@ static RKADK_S32 RKADK_STORAGE_FileListLoad(RKADK_STR_FOLDER *pstFolder,
   }
 
   for (i = 0; i < pstFolder->s32FileNum; i++) {
-    tmp = (RKADK_STR_FILE *)malloc(sizeof(RKADK_STR_FILE));
+    tmp = (struct RKADK_STR_FILE *)malloc(sizeof(struct RKADK_STR_FILE));
     if (!tmp) {
       RKADK_LOGE("tmp malloc failed.");
       cJSON_Delete(folder);
@@ -606,7 +606,7 @@ static RKADK_S32 RKADK_STORAGE_FileListLoad(RKADK_STR_FOLDER *pstFolder,
       return -1;
     }
 
-    memset(tmp, 0, sizeof(RKADK_STR_FILE));
+    memset(tmp, 0, sizeof(struct RKADK_STR_FILE));
     info = cJSON_GetArrayItem(fileArray, i);
     value = cJSON_GetObjectItem(info, JSON_KEY_FILE_NAME);
     sprintf(tmp->filename, "%s", value->valuestring);
@@ -641,8 +641,8 @@ static RKADK_S32 RKADK_STORAGE_Repair(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
 
   for (i = 0; i < pdevAttr->s32FolderNum; i++) {
     RKADK_STR_FOLDER *folder = &pHandle->stDevSta.pstFolder[i];
-    RKADK_STR_FILE *current = NULL;
-    RKADK_STR_FILE *next = NULL;
+    struct RKADK_STR_FILE *current = NULL;
+    struct RKADK_STR_FILE *next = NULL;
 
     pthread_mutex_lock(&folder->mutex);
     j = 0;
@@ -836,7 +836,7 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
   if (RKADK_STORAGE_RKFSCK(pHandle, &devAttr) == RKFSCK_ID_ERR) {
     RKADK_LOGE("RKFSCK_ID_ERR");
     if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
-      pHandle->stDevSta.s32MountStatus = DISK_FORMAT_ERR;
+      pHandle->stDevSta.s32MountStatus = DISK_NOT_FORMATTED;
       RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
     }
     goto file_scan_out;
@@ -1103,7 +1103,7 @@ static RKADK_S32 RKADK_STORAGE_DevRemove(RKADK_CHAR *dev,
 }
 
 static RKADK_S32 RKADK_STORAGE_MsgPutMsgToBuffer(RKADK_TMSG_BUFFER *buf,
-                                                 RKADK_TMSG_ELEMENT *elm) {
+                                                 struct RKADK_TMSG_ELEMENT *elm) {
   RKADK_CHECK_POINTER(buf, RKADK_FAILURE);
   RKADK_CHECK_POINTER(elm, RKADK_FAILURE);
 
@@ -1112,7 +1112,7 @@ static RKADK_S32 RKADK_STORAGE_MsgPutMsgToBuffer(RKADK_TMSG_BUFFER *buf,
 
   pthread_mutex_lock(&buf->mutex);
   if (buf->first) {
-    RKADK_TMSG_ELEMENT *tmp = buf->first;
+    struct RKADK_TMSG_ELEMENT *tmp = buf->first;
     while (tmp->next != NULL) {
       tmp = tmp->next;
     }
@@ -1127,10 +1127,10 @@ static RKADK_S32 RKADK_STORAGE_MsgPutMsgToBuffer(RKADK_TMSG_BUFFER *buf,
   return 0;
 }
 
-static RKADK_TMSG_ELEMENT *
+static struct RKADK_TMSG_ELEMENT *
 RKADK_STORAGE_MsgGetMsgFromBufferTimeout(RKADK_TMSG_BUFFER *buf,
                                          RKADK_S32 s32TimeoutMs) {
-  RKADK_TMSG_ELEMENT *elm = NULL;
+  struct RKADK_TMSG_ELEMENT *elm = NULL;
   struct timeval timeNow;
   struct timespec timeout;
 
@@ -1161,7 +1161,7 @@ RKADK_STORAGE_MsgGetMsgFromBufferTimeout(RKADK_TMSG_BUFFER *buf,
   return elm;
 }
 
-static RKADK_S32 RKADK_STORAGE_MsgFreeMsg(RKADK_TMSG_ELEMENT *elm) {
+static RKADK_S32 RKADK_STORAGE_MsgFreeMsg(struct RKADK_TMSG_ELEMENT *elm) {
   RKADK_CHECK_POINTER(elm, RKADK_FAILURE);
 
   if (elm->data != NULL) {
@@ -1184,7 +1184,7 @@ static RKADK_MW_PTR RKADK_STORAGE_MsgRecMsgThread(RKADK_MW_PTR arg) {
 
   prctl(PR_SET_NAME, "RKADK_STORAGE_MsgRecMsgThread", 0, 0, 0);
   while (msgBuffer->quit == 0) {
-    RKADK_TMSG_ELEMENT *elm =
+    struct RKADK_TMSG_ELEMENT *elm =
         RKADK_STORAGE_MsgGetMsgFromBufferTimeout(msgBuffer, 50);
 
     if (elm) {
@@ -1265,18 +1265,18 @@ static RKADK_S32 RKADK_STORAGE_MsgDestroy(RKADK_STORAGE_HANDLE *pHandle) {
 static RKADK_S32 RKADK_STORAGE_MsgSendMsg(RKADK_S32 msg, RKADK_CHAR *data,
                                           RKADK_S32 s32DataLen,
                                           RKADK_TMSG_BUFFER *buf) {
-  RKADK_TMSG_ELEMENT *elm = NULL;
+  struct RKADK_TMSG_ELEMENT *elm = NULL;
 
   RKADK_CHECK_POINTER(buf, RKADK_FAILURE);
   RKADK_CHECK_POINTER(data, RKADK_FAILURE);
 
-  elm = (RKADK_TMSG_ELEMENT *)malloc(sizeof(RKADK_TMSG_ELEMENT));
+  elm = (struct RKADK_TMSG_ELEMENT *)malloc(sizeof(struct RKADK_TMSG_ELEMENT));
   if (!elm) {
     RKADK_LOGE("elm malloc failed.");
     return -1;
   }
 
-  memset(elm, 0, sizeof(RKADK_TMSG_ELEMENT));
+  memset(elm, 0, sizeof(struct RKADK_TMSG_ELEMENT));
   elm->msg = msg;
   elm->data = NULL;
   elm->s32DataLen = s32DataLen;
@@ -1709,7 +1709,7 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
 
   pthread_mutex_lock(&pstHandle->stDevSta.pstFolder[i].mutex);
 
-  RKADK_STR_FILE *tmp = pstHandle->stDevSta.pstFolder[i].pstFileListFirst;
+  struct RKADK_STR_FILE *tmp = pstHandle->stDevSta.pstFolder[i].pstFileListFirst;
   list->s32FileNum = pstHandle->stDevSta.pstFolder[i].s32FileNum;
   list->file =
       (RKADK_FILE_INFO *)malloc(sizeof(RKADK_FILE_INFO) * list->s32FileNum);

@@ -251,7 +251,6 @@ static void *RKADK_MEDIA_GetVpssMb(void *arg) {
 RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   int ret = 0;
   bool bSysInit = false;
-  char name[256];
   MPP_CHN_S stViChn, stVoChn, stSrcVpssChn, stDstVpssChn;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
@@ -294,6 +293,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
 
   stDispHandle.u32CamId = u32CamId;
 #ifdef RV1106_1103
+  char name[256];
   stDispHandle.bSendBuffer = true;
   ret = pthread_create(&stDispHandle.tid, NULL,
                        RKADK_MEDIA_GetVpssMb, &stDispHandle);

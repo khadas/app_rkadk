@@ -18,12 +18,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __cplusplus
 extern "C" {
-  #include "mp3_enc_types.h"
-  #include "mp3_enc_table1.h"
-  #include "mp3_enc_table2.h"
-  #include "aenc_mp3_register.h"
+#endif
+#include "mp3_enc_types.h"
+#include "mp3_enc_table1.h"
+#include "mp3_enc_table2.h"
+#include "aenc_mp3_register.h"
+#ifdef __cplusplus
 }
+#endif
 
 static RKADK_S32 extCodecHandle = -1;
 static RKADK_U32 mp3InitCnt = 0;

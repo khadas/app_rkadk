@@ -200,8 +200,7 @@ static MUXER_BUF_CELL_S *RKADK_MUXER_CellGet(MUXER_HANDLE_S *pstMuxerHandle,
   return NULL;
 }
 
-static int RKADK_MUXER_GetListSize(MUXER_HANDLE_S *pstMuxerHandle,
-                                             struct list_head *head) {
+static int RKADK_MUXER_GetListSize(struct list_head *head) {
   int size = 0;
   MUXER_BUF_CELL_S *cell = NULL;
 
@@ -284,7 +283,7 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   MANUAL_PRE_RECORD_PARAM *pstPreRecParam;
 
   if (pstMuxerHandle->bLapseRecord) {
-    if (RKADK_MUXER_GetListSize(pstMuxerHandle, pstList) > 0)
+    if (RKADK_MUXER_GetListSize(pstList) > 0)
       RKADK_MUXER_ListRelease(pstMuxerHandle, pstList);
 
     return;
@@ -379,7 +378,7 @@ static void RKADK_MUXER_CheckWriteSpeed(MUXER_HANDLE_S *pstMuxerHandle) {
   long diffMs = 0;
 
   gettimeofday(&curTime, NULL);
-  size = RKADK_MUXER_GetListSize(pstMuxerHandle, &pstMuxerHandle->stVFree);
+  size = RKADK_MUXER_GetListSize(&pstMuxerHandle->stVFree);
   if(size <= 5) {
     if (pstMuxerHandle->checkWriteTime.tv_sec == 0 && pstMuxerHandle->checkWriteTime.tv_usec == 0) {
       pstMuxerHandle->checkWriteTime.tv_sec = curTime.tv_sec;
@@ -640,7 +639,6 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle,
   RKADK_U32 u32Duration;
   bool bThumbPts, bThumbFrame;
   bool bRequestThumb;
-  int ret;
 
   if (pstMuxerHandle->duration <= 0)
     return;
@@ -651,6 +649,7 @@ static void RKADK_MUXER_RequestThumb(MUXER_HANDLE_S *pstMuxerHandle,
     u32Duration = pstMuxerHandle->duration;
 
 #ifndef THUMB_NORMAL
+  int ret;
   bRequestThumb = cell->isKeyFrame && pstMuxerHandle->stThumbParam.bRequestThumb;
 
   bThumbFrame = pstMuxerHandle->frameCnt > ((u32Duration - pstMuxerHandle->gop /
@@ -759,7 +758,7 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   if (pstMuxerHandle->bLapseRecord)
     return 0;
 
-  size = RKADK_MUXER_GetListSize(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+  size = RKADK_MUXER_GetListSize(&pstMuxerHandle->stPreRecParam.stVList);
   if (size < pstMuxerHandle->stVideo.frame_rate_num)
     return 0;
 
@@ -1044,7 +1043,7 @@ exit:
 
 RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                                     RKADK_MW_PTR pHandle) {
-  int i;
+  int i, ret;
   char name[256];
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
@@ -1088,7 +1087,12 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
     memcpy(&pMuxerHandle->stPreRecParam.stAttr, &pstMuxerAttr->stPreRecordAttr,
             sizeof(RKADK_MUXER_PRE_RECORD_ATTR_S));
-    pMuxerHandle->stPreRecParam.mutex = PTHREAD_MUTEX_INITIALIZER;
+    ret = pthread_mutex_init(&pMuxerHandle->stPreRecParam.mutex, NULL);
+    if (ret) {
+      RKADK_LOGE("preRecord mutex init failed[%d]", ret);
+      free(pMuxerHandle);
+      return -1;
+    }
 
     if (i == 0)
       pMuxerHandle->u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
@@ -1107,6 +1111,7 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       break;
     default:
       RKADK_LOGE("not support type: %d", pstSrcStreamAttr->enType);
+      free(pMuxerHandle);
       return -1;
     }
 
@@ -1115,6 +1120,21 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     pMuxerHandle->bUseVpss = pstSrcStreamAttr->bUseVpss;
     if (RKADK_MUXER_SetAVParam(pMuxerHandle, pstSrcStreamAttr)) {
       RKADK_LOGE("RKADK_MUXER_SetAVParam failed");
+      free(pMuxerHandle);
+      return -1;
+    }
+
+    ret = pthread_mutex_init(&pMuxerHandle->mutex, NULL);
+    if (ret) {
+      RKADK_LOGE("handle mutex init failed[%d]", ret);
+      free(pMuxerHandle);
+      return -1;
+    }
+
+    ret = pthread_mutex_init(&pMuxerHandle->paramMutex, NULL);
+    if (ret) {
+      RKADK_LOGE("param mutex init failed[%d]", ret);
+      free(pMuxerHandle);
       return -1;
     }
 
@@ -1125,15 +1145,17 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     pMuxerHandle->pSignal = RKADK_SIGNAL_Create(0, 1);
     if (!pMuxerHandle->pSignal) {
       RKADK_LOGE("RKADK_SIGNAL_Create failed");
+      free(pMuxerHandle);
       return -1;
     }
     snprintf(name, sizeof(name), "Muxer_%d", pMuxerHandle->u32VencChn);
     pMuxerHandle->ptr = (RKADK_MW_PTR)pstMuxer;
-    pMuxerHandle->mutex = PTHREAD_MUTEX_INITIALIZER;
-    pMuxerHandle->paramMutex = PTHREAD_MUTEX_INITIALIZER;
+
     pMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pMuxerHandle, name);
     if (!pMuxerHandle->pThread) {
       RKADK_LOGE("RKADK_THREAD_Create failed");
+      RKADK_SIGNAL_Destroy(pMuxerHandle->pSignal);
+      free(pMuxerHandle);
       return -1;
     }
     pstMuxer->pMuxerHandle[i] = (RKADK_MW_PTR)pMuxerHandle;
@@ -1191,6 +1213,11 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
       RKADK_LOGD("Muxer Handle[%d] is NULL", i);
       continue;
     }
+
+    // Destory mutex
+    pthread_mutex_destroy(&pstMuxerHandle->mutex);
+    pthread_mutex_destroy(&pstMuxerHandle->paramMutex);
+    pthread_mutex_destroy(&pstMuxerHandle->stPreRecParam.mutex);
 
     // Set flag off
     pstMuxerHandle->bEnableStream = false;
