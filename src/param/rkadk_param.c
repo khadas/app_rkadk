@@ -711,6 +711,9 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->img_type, "RGB888",
                                     RKADK_PIX_FMT_LEN, "display pix_fmt");
 
+  change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->splice_mode, "RGA",
+                                    RKADK_SPLICE_MODE_LEN, "display splice_mode");
+
 #ifdef RV1106_1103
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->intf_type, "default",
                                     RKADK_INTF_FMT_LEN, "display intf_type");
@@ -1024,6 +1027,7 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
     pstDispCfg->vpss_grp = 3;
     pstDispCfg->vpss_chn = 0;
     memcpy(pstDispCfg->img_type, "RGB888", strlen("RGB888"));
+    memcpy(pstDispCfg->splice_mode, "RGA", strlen("RGA"));
     pstDispCfg->vo_device = VO_DEVICE;
     pstDispCfg->vo_layer = VOP_LAYER;
     pstDispCfg->vo_chn = 0;
@@ -1327,6 +1331,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stDispCfg.vpss_chn);
     printf("\t\tsensor[%d] stDispCfg img_type: %s\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.img_type);
+    printf("\t\tsensor[%d] stDispCfg splice_mode: %s\n", i,
+           pstCfg->stMediaCfg[i].stDispCfg.splice_mode);
     printf("\t\tsensor[%d] stDispCfg intf_type: %s\n", i,
            pstCfg->stMediaCfg[i].stDispCfg.intf_type);
     printf("\t\tsensor[%d] stDispCfg vo_device: %d\n", i,
@@ -1955,6 +1961,23 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   return index;
 }
 
+RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetSpliceMode(char *spliceMode) {
+  RKADK_VO_SPLICE_MODE_E enVoSpliceMode = SPLICE_MODE_RGA;
+
+  RKADK_CHECK_POINTER(spliceMode, DISPLAY_TYPE_DEFAULT);
+
+  if (!strcmp(spliceMode, "RGA"))
+     enVoSpliceMode = SPLICE_MODE_RGA;
+  else if (!strcmp(spliceMode, "GPU"))
+     enVoSpliceMode = SPLICE_MODE_GPU;
+  else if (!strcmp(spliceMode, "BYPASS"))
+     enVoSpliceMode = SPLICE_MODE_BYPASS;
+  else
+    RKADK_LOGE("Invalid spliceMode: %s, use RGA", spliceMode);
+
+  return enVoSpliceMode;
+}
+
 RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetIntfType(char *intfType) {
   RKADK_VO_INTF_TYPE_E enIntfType = DISPLAY_TYPE_DEFAULT;
 
@@ -1972,6 +1995,8 @@ RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetIntfType(char *intfType) {
     enIntfType = DISPLAY_TYPE_DP;
   else if (!strcmp(intfType, "HDMI_EDP"))
     enIntfType = DISPLAY_TYPE_HDMI_EDP;
+  else if (!strcmp(intfType, "LCD"))
+    enIntfType = DISPLAY_TYPE_LCD;
   else if (!strcmp(intfType, "default"))
     enIntfType = DISPLAY_TYPE_DEFAULT;
   else

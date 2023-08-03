@@ -305,6 +305,7 @@ static RKADK_SI_CONFIG_MAP_S g_stDispCfgMapTable[] = {
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vpss_chn),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, img_type),
+    DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, splice_mode),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, string_e, intf_type),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_device),
     DEFINE_MAP(display, tagRKADK_PARAM_DISP_CFG_S, int_e, vo_layer),

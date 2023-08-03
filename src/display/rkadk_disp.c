@@ -36,6 +36,7 @@ static RKADK_DISP_HANDLE_S stDispHandle = {
 static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
                                RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
   int ret = RK_SUCCESS;
+  RKADK_VO_SPLICE_MODE_E enVoSpliceMode;
   VO_PUB_ATTR_S            stVoPubAttr;
   VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
   VO_CHN_ATTR_S            stChnAttr;
@@ -49,9 +50,16 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stVoPubAttr.enIntfSync = VO_OUTPUT_DEFAULT;
 
   /* Enable Layer */
+  enVoSpliceMode = RKADK_PARAM_GetSpliceMode(pstDispCfg->splice_mode);
   stLayerAttr.enPixFormat      = RKADK_PARAM_GetPixFmt(pstDispCfg->img_type, &enCompressMode);
   stLayerAttr.enCompressMode   = enCompressMode;
   stLayerAttr.u32DispFrmRt     = pstDispCfg->frame_rate;
+  if (enVoSpliceMode == SPLICE_MODE_BYPASS) {
+    stLayerAttr.stDispRect.s32X = pstDispCfg->x;
+    stLayerAttr.stDispRect.s32Y = pstDispCfg->y;
+    stLayerAttr.stDispRect.u32Width = pstDispCfg->width;
+    stLayerAttr.stDispRect.u32Height = pstDispCfg->height;
+  }
 
   stChnAttr.stRect.s32X = pstDispCfg->x;
   stChnAttr.stRect.s32Y = pstDispCfg->y;
@@ -64,7 +72,7 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stChnAttr.u32Priority = 1;
 
   ret = RKADK_MPI_VO_Init(VoLayer, VoDev, pstDispCfg->vo_chn,
-                          &stVoPubAttr, &stLayerAttr, &stChnAttr);
+                          &stVoPubAttr, &stLayerAttr, &stChnAttr, enVoSpliceMode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
     return ret;

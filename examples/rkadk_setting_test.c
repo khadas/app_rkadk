@@ -353,6 +353,12 @@ static void SetDispCfg() {
   stDispCfg.vpss_grp = 3;
   stDispCfg.vpss_chn = 0;
   strcpy(stDispCfg.img_type, "RGB888");
+  strcpy(stDispCfg.splice_mode, "RGA");
+#ifdef RV1106_1103
+  strcpy(stDispCfg.intf_type, "default");
+#else
+  strcpy(stDispCfg.intf_type, "MIPI");
+#endif
   stDispCfg.vo_device = 0;
   stDispCfg.vo_layer = 0;
   stDispCfg.vo_chn = 0;

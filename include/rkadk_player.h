@@ -227,6 +227,7 @@ typedef struct {
   RKADK_VO_INTF_TYPE_E u32EnIntfType;
   RKADK_VO_INTF_SYNC_E enIntfSync;
   RKADK_VO_SYNC_INFO_S stSyncInfo;
+  RKADK_VO_SPLICE_MODE_E enVoSpliceMode;
 } RKADK_PLAYER_FRAME_INFO_S;
 
 typedef struct {

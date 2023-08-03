@@ -342,6 +342,9 @@ static RKADK_S32 RKADK_PLAYER_SetVoCtx(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PL
     case VO_FORMAT_RGB888:
       pstVoCtx->pixFormat = RK_FMT_RGB888;
       break;
+    case VO_FORMAT_NV12:
+      pstVoCtx->pixFormat = RK_FMT_YUV420SP;
+      break;
     default:
       RKADK_LOGW("unsupport pix format: %d, use default(%d)", pstVoCtx->pixFormat, RK_FMT_RGB888);
       pstVoCtx->pixFormat = RK_FMT_RGB888;
@@ -1083,7 +1086,7 @@ __RETRY:
   return;
 }
 
-static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_PLAYER_HANDLE_S *pstPlayer) {
+static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_PLAYER_HANDLE_S *pstPlayer, RKADK_PLAYER_FRAME_INFO_S *pstFrameInfo) {
   RKADK_CHECK_POINTER(pstPlayer, RKADK_FAILURE);
   RKADK_S32 ret = 0;
   VO_VIDEO_LAYER_ATTR_S    stLayerAttr;
@@ -1098,6 +1101,13 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_PLAYER_HANDLE_S *pstPlayer) {
 
   stLayerAttr.enPixFormat = pstPlayer->stVoCtx.pixFormat;
   stLayerAttr.u32DispFrmRt = pstPlayer->stVoCtx.dispFrmRt;
+  if (pstFrameInfo->enVoSpliceMode == SPLICE_MODE_BYPASS) {
+    stLayerAttr.stDispRect.s32X = pstPlayer->stVoCtx.x;
+    stLayerAttr.stDispRect.s32Y = pstPlayer->stVoCtx.y;
+    stLayerAttr.stDispRect.u32Width = pstPlayer->stVoCtx.dispWidth;
+    stLayerAttr.stDispRect.u32Height = pstPlayer->stVoCtx.dispHeight;
+  }
+
   stChnAttr.stRect.s32X = pstPlayer->stVoCtx.x;
   stChnAttr.stRect.s32Y = pstPlayer->stVoCtx.y;
   stChnAttr.stRect.u32Width = pstPlayer->stVoCtx.dispWidth;
@@ -1112,7 +1122,8 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_PLAYER_HANDLE_S *pstPlayer) {
             stChnAttr.stRect.u32Width, stChnAttr.stRect.u32Height);
 
   ret = RKADK_MPI_VO_Init(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoDev,
-                        pstPlayer->stVoCtx.u32VoChn, &stPubAttr, &stLayerAttr, &stChnAttr);
+                        pstPlayer->stVoCtx.u32VoChn, &stPubAttr, &stLayerAttr, &stChnAttr,
+                        pstFrameInfo->enVoSpliceMode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret = %x", ret);
     return ret;
@@ -1194,7 +1205,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
       goto __FAILED;
     }
 
-    if (RKADK_PLAYER_CreateVO(pstPlayer)) {
+    if (RKADK_PLAYER_CreateVO(pstPlayer, &pstPlayCfg->stFrmInfo)) {
       RKADK_LOGE("Create VO failed");
       goto __FAILED;
     }

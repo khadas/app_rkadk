@@ -347,6 +347,7 @@ typedef struct tagRKADK_PARAM_DISP_CFG_S {
   RKADK_U32 vpss_chn;
   char img_type[RKADK_PIX_FMT_LEN]; /* specify PIXEL_FORMAT_E: NV12/RGB888... */
   char intf_type[RKADK_INTF_FMT_LEN]; /* specify RKADK_VO_INTF_TYPE_E */
+  char splice_mode[RKADK_SPLICE_MODE_LEN]; /* vo layer splice mode: RGA/GPU/BYPASS */
   RKADK_U32 vo_device;
   RKADK_U32 vo_layer;
   RKADK_U32 vo_chn;
@@ -516,6 +517,8 @@ PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt, COMPRESS_MODE_E *enCompressMo
 RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetIntfType(char *intfType);
 
 RKADK_U32 RKADK_PARAM_GetStreamBufCnt(RKADK_U32 u32CamId, bool bIsAudio);
+
+RKADK_VO_INTF_TYPE_E RKADK_PARAM_GetSpliceMode(char *spliceMode);
 
 #ifdef __cplusplus
 }

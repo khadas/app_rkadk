@@ -39,6 +39,7 @@ typedef struct {
   RKADK_BOOL bFlip;
   RKADK_VO_FORMAT_E enUiVoFormat;
   RKADK_VO_INTF_TYPE_E enUiVoIntfTye;
+  RKADK_VO_SPLICE_MODE_E enVoSpliceMode;
 } RKADK_UI_ATTR_S;
 
 typedef struct {

@@ -57,14 +57,23 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   /* Enable Layer */
   switch (pstUiAttr->enUiVoFormat) {
     case VO_FORMAT_RGB888:
-        stLayerAttr.enPixFormat = RK_FMT_RGB888;
-        break;
+      stLayerAttr.enPixFormat = RK_FMT_RGB888;
+      break;
+    case VO_FORMAT_NV12:
+      stLayerAttr.enPixFormat = RK_FMT_YUV420SP;
+      break;
     default:
-        RKADK_LOGW("unsupport pix format: %d, use default[%d]", stLayerAttr.enPixFormat , RK_FMT_RGB888);
-        stLayerAttr.enPixFormat = RK_FMT_RGB888;
+      RKADK_LOGW("unsupport pix format: %d, use default[%d]", stLayerAttr.enPixFormat , RK_FMT_RGB888);
+      stLayerAttr.enPixFormat = RK_FMT_RGB888;
   }
-  stLayerAttr.enCompressMode   = COMPRESS_MODE_NONE;
-  stLayerAttr.u32DispFrmRt     = pstUiAttr->u32DispFrmRt;
+  stLayerAttr.enCompressMode = COMPRESS_MODE_NONE;
+  stLayerAttr.u32DispFrmRt = pstUiAttr->u32DispFrmRt;
+  if (pstUiAttr->enVoSpliceMode == SPLICE_MODE_BYPASS) {
+    stLayerAttr.stDispRect.s32X = pstUiAttr->u32DispX;
+    stLayerAttr.stDispRect.s32Y = pstUiAttr->u32DispY;
+    stLayerAttr.stDispRect.u32Width = pstUiAttr->u32DispWidth;
+    stLayerAttr.stDispRect.u32Height = pstUiAttr->u32DispHeight;
+  }
 
   stChnAttr.stRect.s32X = pstUiAttr->u32DispX;
   stChnAttr.stRect.s32Y = pstUiAttr->u32DispY;
@@ -89,7 +98,7 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   pstHandle->u32VoChn = pstUiAttr->u32VoChn;
 
   ret = RKADK_MPI_VO_Init(pstUiAttr->u32VoLay, pstUiAttr->u32VoDev, pstUiAttr->u32VoChn,
-                          &stVoPubAttr, &stLayerAttr, &stChnAttr);
+                          &stVoPubAttr, &stLayerAttr, &stChnAttr, pstUiAttr->enVoSpliceMode);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_Vo_Init failed, ret[%x]", ret);
     goto failed;

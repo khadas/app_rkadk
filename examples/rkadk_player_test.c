@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:mfvh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:t:I:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -54,6 +54,9 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-f: flip enable, Default: disable\n");
   printf("\t-a: set audio enable/disable, option: 0, 1; Default: enable\n");
   printf("\t-v: video enable, Default: disable\n");
+  printf("\t-s: vo layer splice mode, option: 0(RGA), 1(GPU), 2(ByPass); Default: 0\n");
+  printf("\t-t: display pixel type, option: 0(RGB888), 1(NV12); Default: 0\n");
+  printf("\t-I: Type of a VO interface, option: 0(DEFAILT), 1(MIPI), 2(LCD); Default: 1106: 0, other chip: 1\n");
   printf("\t-h: help\n");
 }
 
@@ -134,6 +137,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   pstFrmInfo->stSyncInfo.u16Vbb = 200;
   pstFrmInfo->stSyncInfo.u16Vfb = 194;
   pstFrmInfo->stSyncInfo.u16Vpw = 6;
+  pstFrmInfo->enVoSpliceMode = SPLICE_MODE_RGA;
 
   return;
 }
@@ -160,9 +164,11 @@ int main(int argc, char *argv[]) {
   pthread_t getPosition;
   RKADK_U32 duration = 0;
   const char *iniPath = NULL;
+  int u32VoFormat = -1, u32SpliceMode = -1, u32IntfType = -1;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PLAYER_CFG_S stPlayCfg;
+
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
 
@@ -197,6 +203,15 @@ int main(int argc, char *argv[]) {
     case 'a':
       bAudioEnable = atoi(optarg);
       break;
+    case 's':
+      u32SpliceMode = atoi(optarg);
+      break;
+    case 't':
+      u32VoFormat = atoi(optarg);
+      break;
+    case 'I':
+      u32IntfType = atoi(optarg);
+      break;
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
@@ -210,11 +225,24 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d", file, bVideoEnable, bAudioEnable);
-  RKADK_LOGD(
-      "#video display rect[%d, %d, %d, %d]", stPlayCfg.stFrmInfo.u32FrmInfoX,
-      stPlayCfg.stFrmInfo.u32FrmInfoY, stPlayCfg.stFrmInfo.u32DispWidth,
-      stPlayCfg.stFrmInfo.u32DispHeight);
+  RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
+  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d",
+              stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
+              stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
+              u32SpliceMode, u32VoFormat);
+
+  if (u32SpliceMode == 1)
+    stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_GPU;
+  else if (u32SpliceMode == 2)
+    stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_BYPASS;
+
+  if (u32VoFormat == 1)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_NV12;
+
+  if (u32IntfType == 1)
+    stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_MIPI;
+  else if (u32IntfType == 2)
+    stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_LCD;
 
   signal(SIGINT, sigterm_handler);
 

@@ -113,6 +113,7 @@ int main(int argc, char *argv[]) {
   stUiAttr.u32ImgWidth = u32Width;
   stUiAttr.u32ImgHeight = u32Height;
   stUiAttr.enUiVoFormat = VO_FORMAT_RGB888;
+  stUiAttr.enVoSpliceMode = SPLICE_MODE_RGA;
 #ifdef RV1106_1103
   stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_DEFAULT;
 #else

@@ -117,7 +117,7 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn);
 
 RKADK_S32 RKADK_MPI_VO_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn,
                         VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
-                        VO_CHN_ATTR_S *pstChnAttr);
+                        VO_CHN_ATTR_S *pstChnAttr, RKADK_VO_SPLICE_MODE_E enSpliceMode);
 
 RKADK_S32 RKADK_MPI_VO_DeInit(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s32VoChn);
 
