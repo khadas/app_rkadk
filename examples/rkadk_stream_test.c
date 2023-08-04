@@ -93,7 +93,6 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
 
 static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bMultiCam, RKADK_BOOL bMultiSensor) {
   RKADK_S32 ret;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
   RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   RKADK_VIDEO_INFO_S stVideoInfo;
@@ -114,6 +113,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
   }
 
 #ifdef RKAIQ
+  RKADK_PARAM_FPS_S stFps;
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {

@@ -57,21 +57,25 @@ static void sigterm_handler(int sig) {
 int main(int argc, char *argv[]) {
   int c, ret;
   RKADK_MW_PTR pUi = NULL;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_U32 u32CamId = 0;
   RKADK_U32 u32Size = 0;
   RKADK_U32 u32Width = 720, u32Height = 1280;
   RKADK_VOID *pData;
   RKADK_UI_ATTR_S stUiAttr;
   RKADK_UI_FRAME_INFO stUiFrmInfo;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 
+#ifdef RKAIQ
+  RKADK_PARAM_FPS_S stFps;
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  const char *tmp_optarg = optarg;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -80,6 +84,7 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+#endif
     case 'I':
       u32CamId = atoi(optarg);
       break;
@@ -128,17 +133,6 @@ int main(int argc, char *argv[]) {
 
   RKADK_MPI_SYS_Init();
 
-  ret = RK_MPI_MMZ_Alloc(&stUiFrmInfo.pMblk, u32Size,  RK_MMZ_ALLOC_CACHEABLE);
-  if (ret) {
-    RKADK_LOGE("alloc failed!");
-    return -1;
-  }
-
-  pData = RK_MPI_MMZ_Handle2VirAddr(stUiFrmInfo.pMblk);
-  memset(pData, 0x00, u32Size);
-  RK_MPI_SYS_MmzFlushCache(stUiFrmInfo.pMblk, RK_FALSE);
-
-#ifdef RKAIQ
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
     memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
@@ -158,6 +152,17 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+  ret = RK_MPI_MMZ_Alloc(&stUiFrmInfo.pMblk, u32Size,  RK_MMZ_ALLOC_CACHEABLE);
+  if (ret) {
+    RKADK_LOGE("alloc failed!");
+    return -1;
+  }
+
+  pData = RK_MPI_MMZ_Handle2VirAddr(stUiFrmInfo.pMblk);
+  memset(pData, 0x00, u32Size);
+  RK_MPI_SYS_MmzFlushCache(stUiFrmInfo.pMblk, RK_FALSE);
+
+#ifdef RKAIQ
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {

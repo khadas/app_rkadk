@@ -115,9 +115,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
 
 int main(int argc, char *argv[]) {
   int c, ret, inCmd = 0;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_U32 u32CamId = 0;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_PHOTO_ATTR_S stPhotoAttr;
   RKADK_TAKE_PHOTO_ATTR_S stTakePhotoAttr;
   const char *iniPath = NULL;
@@ -132,9 +130,15 @@ int main(int argc, char *argv[]) {
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32OsdId = 0;
 
+#ifdef RKAIQ
+  RKADK_PARAM_FPS_S stFps;
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  const char *tmp_optarg = optarg;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -143,6 +147,7 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+#endif
     case 'I':
       u32CamId = atoi(optarg);
       break;
@@ -184,8 +189,6 @@ int main(int argc, char *argv[]) {
 
   RKADK_MPI_SYS_Init();
 
-photo:
-#ifdef RKAIQ
   if (iniPath) {
     memset(path, 0, RKADK_PATH_LEN);
     memset(sensorPath, 0, RKADK_MAX_SENSOR_CNT * RKADK_PATH_LEN);
@@ -205,6 +208,8 @@ photo:
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+photo:
+#ifdef RKAIQ
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
@@ -258,9 +263,12 @@ photo:
     if (ret) {
       RKADK_LOGE("RKADK_PHOTO_Init u32CamId[1] failed[%d]", ret);
       RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
       SAMPLE_ISP_Stop(u32CamId);
       if (bMultiCam)
         SAMPLE_ISP_Stop(1);
+#endif
+    return -1;
     }
   }
 
@@ -316,7 +324,9 @@ photo:
       if (ret < 0) {
 #ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
+#endif
         pHandle = NULL;
         goto photo;
 #endif
@@ -328,7 +338,9 @@ photo:
       if (ret < 0) {
 #ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
+#endif
         pHandle = NULL;
         goto photo;
 #endif
@@ -340,7 +352,9 @@ photo:
       if (ret < 0) {
 #ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
+#endif
         pHandle = NULL;
         goto photo;
 #endif
@@ -352,7 +366,9 @@ photo:
       if (ret < 0) {
 #ifndef RV1106_1103
         RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
+#endif
         pHandle = NULL;
         goto photo;
 #endif

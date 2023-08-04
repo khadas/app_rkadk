@@ -178,6 +178,7 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
 }
 #endif
 
+#ifdef RKAIQ
 static int IspProcess(RKADK_S32 u32CamId) {
   int ret;
   bool mirror = false, flip = false;
@@ -208,6 +209,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
 
   return 0;
 }
+#endif
 
 #ifdef ENABLE_STREAM_AUDIO
 static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
@@ -292,27 +294,31 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c, ret, inCmd = 0;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_BOOL bMultiCam = RKADK_FALSE;
   RKADK_BOOL bMultiSensor = RK_FALSE;
   const char *iniPath = NULL;
   char *file = "/mnt/sdcard/photo.wav";
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_U32 u32CamId = 0;
   //record
   RKADK_RECORD_ATTR_S stRecAttr;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecordHandle = NULL, pRecordHandle1 = NULL;
 
+#ifdef RKAIQ
+  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+  RKADK_PARAM_FPS_S stFps;
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  const char *tmp_optarg = optarg;
+#endif
+
 #ifdef ENABLE_RESET
-    int change;
-    RKADK_PARAM_RES_E stResType;
-    RKADK_PARAM_CODEC_CFG_S stCodecType;
-    RKADK_PARAM_REC_TIME_S stRecTime;
-    RKADK_REC_TYPE_E stRecType;
-    RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
+  int change;
+  RKADK_PARAM_RES_E stResType;
+  RKADK_PARAM_CODEC_CFG_S stCodecType;
+  RKADK_PARAM_REC_TIME_S stRecTime;
+  RKADK_REC_TYPE_E stRecType;
+  RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
 #endif
 
 #ifdef ENABLE_PHOTO
@@ -345,8 +351,8 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 #endif
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -355,6 +361,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+#endif
     case 'I':
       u32CamId = atoi(optarg);
       break;

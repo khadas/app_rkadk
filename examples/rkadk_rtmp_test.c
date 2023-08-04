@@ -53,17 +53,21 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c, ret;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_U32 u32CamId = 0;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pHandle = NULL;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
 
+#ifdef RKAIQ
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  RKADK_PARAM_FPS_S stFps;
+  const char *tmp_optarg = optarg;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -72,6 +76,7 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+#endif
     case 'I':
       u32CamId = atoi(optarg);
       break;

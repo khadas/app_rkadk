@@ -13,9 +13,13 @@ file(GLOB_RECURSE OSD_SRC "${CMAKE_SOURCE_DIR}/src/osd/*.c")
 file(GLOB_RECURSE RTMP_SRC "${CMAKE_SOURCE_DIR}/src/live/rtmp/*.c")
 file(GLOB_RECURSE DISP_SRC "${CMAKE_SOURCE_DIR}/src/display/*.c")
 file(GLOB_RECURSE UI_SRC "${CMAKE_SOURCE_DIR}/src/ui/*.c")
-file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.c")
 file(GLOB_RECURSE INIPARSER_SRC "${CMAKE_SOURCE_DIR}/src/third-party/iniparser/*.c")
 file(GLOB_RECURSE CJSON_SRC "${CMAKE_SOURCE_DIR}/src/third-party/cjson/*.c")
+
+if(ENABLE_STORAGE)
+	file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.c")
+endif()
+
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
 add_library(rkadk SHARED
@@ -45,7 +49,7 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
-target_link_libraries(rkadk rkmuxer iconv rtsp z rkaudio rkfsmk rkdemuxer)
+target_link_libraries(rkadk rkmuxer rtsp z rkaudio rkdemuxer)
 
 if(${RKADK_CHIP} STREQUAL "rv1106")
 	target_link_libraries(rkadk rockit_full)
@@ -53,8 +57,12 @@ else()
 	target_link_libraries(rkadk rockit)
 endif()
 
+if(ENABLE_STORAGE)
+	target_link_libraries(rkadk iconv rkfsmk)
+endif()
+
 if(USE_RKAIQ)
-    target_link_libraries(rkadk rkaiq)
+	target_link_libraries(rkadk rkaiq)
 endif()
 
 # install target

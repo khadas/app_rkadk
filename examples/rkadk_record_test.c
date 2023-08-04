@@ -108,6 +108,7 @@ RecordEventCallback(RKADK_MW_PTR pRecorder,
   }
 }
 
+#ifdef RKAIQ
 static int IspProcess(RKADK_S32 u32CamId) {
   int ret;
   bool mirror = false, flip = false;
@@ -138,6 +139,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
 
   return 0;
 }
+#endif
 
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
@@ -145,11 +147,9 @@ static void sigterm_handler(int sig) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret, inCmd = 0;
+  int c, ret;
   RKADK_RECORD_ATTR_S stRecAttr;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pRecorder = NULL, pRecorder1 = NULL;
-  RK_BOOL bMultiCam = RK_FALSE;
   RK_BOOL bMultiSensor = RK_FALSE;
   RKADK_REC_MANUAL_SPLIT_ATTR_S stSplitAttr;
   const char *iniPath = NULL;
@@ -159,12 +159,19 @@ int main(int argc, char *argv[]) {
   RKADK_PARAM_CODEC_CFG_S stCodecType;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_S32 s32CamId = 0;
 
+#ifdef RKAIQ
+  int inCmd = 0;
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+  RK_BOOL bMultiCam = RK_FALSE;
+  const char *tmp_optarg = optarg;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -173,13 +180,6 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
-    case 'I':
-      s32CamId = atoi(optarg);
-      break;
-    case 'p':
-      iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
-      break;
     case 'm':
       inCmd = atoi(optarg);
       if (inCmd == 1) {
@@ -187,6 +187,14 @@ int main(int argc, char *argv[]) {
         bMultiSensor = RKADK_TRUE;
       } else if (inCmd == 2)
         bMultiSensor = RKADK_TRUE;
+      break;
+#endif
+    case 'I':
+      s32CamId = atoi(optarg);
+      break;
+    case 'p':
+      iniPath = optarg;
+      RKADK_LOGD("iniPath: %s", iniPath);
       break;
     case 'h':
     default:

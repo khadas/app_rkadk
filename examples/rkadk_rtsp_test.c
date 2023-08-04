@@ -55,21 +55,24 @@ static void sigterm_handler(int sig) {
 
 int main(int argc, char *argv[]) {
   int c, ret;
-  RKADK_PARAM_FPS_S stFps;
   RKADK_OSD_ATTR_S OsdAttr;
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32CamId = 0;
   RKADK_U32 u32OsdId = 0;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   RKADK_MW_PTR pHandle = NULL;
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   char *osdfile = "/userdata/rkadk_ARGB8888";
 
+#ifdef RKAIQ
+  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
+  const char *tmp_optarg = optarg;
+#endif
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
-    const char *tmp_optarg = optarg;
     switch (c) {
+#ifdef RKAIQ
     case 'a':
       if (!optarg && NULL != argv[optind] && '-' != argv[optind][0]) {
         tmp_optarg = argv[optind++];
@@ -78,6 +81,7 @@ int main(int argc, char *argv[]) {
       if (tmp_optarg)
         pIqfilesPath = (char *)tmp_optarg;
       break;
+#endif
     case 'I':
       u32CamId = atoi(optarg);
       break;
@@ -121,6 +125,7 @@ int main(int argc, char *argv[]) {
   }
 
 #ifdef RKAIQ
+  RKADK_PARAM_FPS_S stFps;
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {

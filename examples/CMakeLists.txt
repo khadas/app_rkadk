@@ -17,7 +17,12 @@ endif()
 #--------------------------
 add_executable(rkadk_photo_test rkadk_photo_test.c ${ISP_SRC})
 add_dependencies(rkadk_photo_test rkadk)
-target_link_libraries(rkadk_photo_test rkadk rkaiq)
+target_link_libraries(rkadk_photo_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_photo_test rkaiq)
+endif()
+
 target_include_directories(rkadk_photo_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_photo_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_photo_test DESTINATION "bin")
@@ -27,7 +32,12 @@ install(TARGETS rkadk_photo_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_record_test rkadk_record_test.c ${ISP_SRC})
 add_dependencies(rkadk_record_test rkadk)
-target_link_libraries(rkadk_record_test rkadk rkaiq)
+target_link_libraries(rkadk_record_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_record_test rkaiq)
+endif()
+
 target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_record_test DESTINATION "bin")
@@ -37,7 +47,12 @@ install(TARGETS rkadk_record_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_rtsp_test rkadk_rtsp_test.c ${ISP_SRC})
 add_dependencies(rkadk_rtsp_test rkadk)
-target_link_libraries(rkadk_rtsp_test rkadk rkaiq)
+target_link_libraries(rkadk_rtsp_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_rtsp_test rkaiq)
+endif()
+
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
@@ -65,11 +80,17 @@ install(TARGETS rkadk_setting_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_stream_test rkadk_stream_test.c ${MP3_SRC} ${ISP_SRC})
 add_dependencies(rkadk_stream_test rkadk)
-target_link_libraries(rkadk_stream_test rkadk rkaiq)
+target_link_libraries(rkadk_stream_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_stream_test rkaiq)
+endif()
+
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_stream_test DESTINATION "bin")
 
+if(ENABLE_STORAGE)
 #--------------------------
 # rkadk_storage_test
 #--------------------------
@@ -78,6 +99,7 @@ add_dependencies(rkadk_storage_test rkadk)
 target_link_libraries(rkadk_storage_test rkadk pthread)
 target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 install(TARGETS rkadk_storage_test DESTINATION "bin")
+endif()
 
 #--------------------------
 # rkadk_thumb_test
@@ -93,7 +115,12 @@ install(TARGETS rkadk_thumb_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_rtmp_test rkadk_rtmp_test.c ${ISP_SRC})
 add_dependencies(rkadk_rtmp_test rkadk)
-target_link_libraries(rkadk_rtmp_test rkadk rkaiq)
+target_link_libraries(rkadk_rtmp_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_rtmp_test rkaiq)
+endif()
+
 target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtmp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtmp_test DESTINATION "bin")
@@ -103,7 +130,12 @@ install(TARGETS rkadk_rtmp_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_media_test rkadk_media_test.c ${ISP_SRC})
 add_dependencies(rkadk_media_test rkadk)
-target_link_libraries(rkadk_media_test rkadk rkaiq)
+target_link_libraries(rkadk_media_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_media_test rkaiq)
+endif()
+
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
@@ -113,7 +145,12 @@ install(TARGETS rkadk_media_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_disp_test rkadk_disp_test.c ${ISP_SRC})
 add_dependencies(rkadk_disp_test rkadk)
-target_link_libraries(rkadk_disp_test rkadk rkaiq)
+target_link_libraries(rkadk_disp_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_disp_test rkaiq)
+endif()
+
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_disp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_disp_test DESTINATION "bin")
@@ -123,7 +160,12 @@ install(TARGETS rkadk_disp_test DESTINATION "bin")
 #--------------------------
 add_executable(rkadk_ui_test rkadk_ui_test.c ${ISP_SRC})
 add_dependencies(rkadk_ui_test rkadk)
-target_link_libraries(rkadk_ui_test rkadk rkaiq)
+target_link_libraries(rkadk_ui_test rkadk)
+
+if(USE_RKAIQ)
+	target_link_libraries(rkadk_ui_test rkaiq)
+endif()
+
 target_include_directories(rkadk_ui_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_ui_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_ui_test DESTINATION "bin")
