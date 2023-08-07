@@ -10,6 +10,10 @@ include(${PROJECT_SOURCE_DIR}/version/Version.cmake)
 install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
+if(${RKADK_CHIP} STREQUAL "rk3506")
+	add_definitions(-DRK3506)
+endif()
+
 if(${RKADK_CHIP} STREQUAL "rv1106")
         add_definitions(-DRV1106_1103)
 else()

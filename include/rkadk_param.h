@@ -49,6 +49,8 @@ extern "C" {
 #define AI_DEPTH 1
 #ifdef RV1106_1103
 #define AUDIO_DEVICE_NAME "hw:0,0"
+#elif RK3506
+#define AUDIO_DEVICE_NAME "hw:0,0"
 #else
 #define AUDIO_DEVICE_NAME "default"
 #endif
