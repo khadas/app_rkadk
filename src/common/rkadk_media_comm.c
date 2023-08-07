@@ -178,7 +178,7 @@ static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
                                           VO_PUB_ATTR_S *pstVoPubAttr, VO_VIDEO_LAYER_ATTR_S *pstLayerAttr,
                                           RKADK_VO_SPLICE_MODE_E enVoSpliceMode) {
   int ret = 0;
-  VO_SPLICE_MODE_E enSpliceMode;
+  VO_SPLICE_MODE_E enSpliceMode = VO_SPLICE_MODE_RGA;
 
   if (!g_bVoLayerDevInitCnt[s32VoLay][s32VoDev]) {
     ret = RK_MPI_VO_BindLayer(s32VoLay, s32VoDev, VO_LAYER_MODE_GRAPHIC);
@@ -205,14 +205,16 @@ static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
       return ret;
     }
 
-    if (enVoSpliceMode == SPLICE_MODE_BYPASS)
-      pstLayerAttr->bBypassFrame = RK_TRUE;
-    else if (enVoSpliceMode == SPLICE_MODE_GPU)
+    if (enVoSpliceMode == SPLICE_MODE_GPU)
       enSpliceMode = VO_SPLICE_MODE_GPU;
-    else
+    else if (enVoSpliceMode == SPLICE_MODE_RGA)
       enSpliceMode = VO_SPLICE_MODE_RGA;
+#ifndef RV1106_1103
+    else if (enVoSpliceMode == SPLICE_MODE_BYPASS)
+      pstLayerAttr->bBypassFrame = RK_TRUE;
+#endif
 
-    if (!pstLayerAttr->bBypassFrame) {
+    if (enVoSpliceMode != SPLICE_MODE_BYPASS) {
       pstLayerAttr->stDispRect.s32X = 0;
       pstLayerAttr->stDispRect.s32Y = 0;
       pstLayerAttr->stDispRect.u32Width = pstVoPubAttr->stSyncInfo.u16Hact;
@@ -229,7 +231,7 @@ static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
       return ret;
     }
 
-    if (!pstLayerAttr->bBypassFrame)
+    if (enVoSpliceMode != SPLICE_MODE_BYPASS)
       RK_MPI_VO_SetLayerSpliceMode(s32VoLay, enSpliceMode);
 
     RK_MPI_VO_SetLayerDispBufLen(s32VoLay, 3);
