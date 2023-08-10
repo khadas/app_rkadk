@@ -36,12 +36,12 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:mfvh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:mfvhb";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-i xxx.mp4] [-x 180] [-y 320] [-W 360] [-H 640] [-r 90] "
-         "[-m] [-f] [-v]\n",
+         "[-m] [-f] [-v] [-b]\n",
          name);
   printf("\t-i: input url, Default: /etc/bsa_file/8k8bpsMono.wav\n");
   printf("\t-x: display x coordinate, Default: 0\n");
@@ -59,6 +59,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-I: Type of a VO interface, option: 0(DEFAILT), 1(MIPI), 2(LCD); Default: 1106: 0, other chip: 1\n");
   printf("\t-F: vo display framerete, Default: 30\n");
   printf("\t-t: rtsp transport protocol, option: 0(udp), 1(tcp); Default: udp\n");
+  printf("\t-b: Black Backgound enable, Default: disable\n");
   printf("\t-h: help\n");
 }
 
@@ -160,6 +161,7 @@ int main(int argc, char *argv[]) {
   char *file = "/userdata/16000_2.mp3";
   RKADK_BOOL bVideoEnable = false;
   RKADK_BOOL bAudioEnable = true;
+  RKADK_BOOL bBlackBackgroundEnable = false;
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
   int pauseFlag = 0;
@@ -204,6 +206,9 @@ int main(int argc, char *argv[]) {
       stPlayCfg.stFrmInfo.bFlip = true;
     case 'v':
       bVideoEnable = true;
+      break;
+    case 'b':
+      bBlackBackgroundEnable = true;
       break;
     case 'a':
       bAudioEnable = atoi(optarg);
@@ -279,6 +284,8 @@ int main(int argc, char *argv[]) {
     stPlayCfg.bEnableAudio = true;
   if (bVideoEnable)
     stPlayCfg.bEnableVideo = true;
+  if (bBlackBackgroundEnable)
+    stPlayCfg.bEnableBlackBackground = true;
 
   stPlayCfg.pfnPlayerCallback = PlayerEventFnTest;
 

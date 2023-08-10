@@ -241,6 +241,7 @@ typedef struct {
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
   RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
+  RKADK_BOOL bEnableBlackBackground;
 } RKADK_PLAYER_CFG_S;
 
 /**
