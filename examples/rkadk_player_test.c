@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:t:I:mfvh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:mfvh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -55,8 +55,10 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-a: set audio enable/disable, option: 0, 1; Default: enable\n");
   printf("\t-v: video enable, Default: disable\n");
   printf("\t-s: vo layer splice mode, option: 0(RGA), 1(GPU), 2(ByPass); Default: 0\n");
-  printf("\t-t: display pixel type, option: 0(RGB888), 1(NV12); Default: 0\n");
+  printf("\t-P: display pixel type, option: 0(RGB888), 1(NV12); Default: 0\n");
   printf("\t-I: Type of a VO interface, option: 0(DEFAILT), 1(MIPI), 2(LCD); Default: 1106: 0, other chip: 1\n");
+  printf("\t-F: vo display framerete, Default: 30\n");
+  printf("\t-t: rtsp transport protocol, option: 0(udp), 1(tcp); Default: udp\n");
   printf("\t-h: help\n");
 }
 
@@ -154,14 +156,14 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
 }
 
 int main(int argc, char *argv[]) {
-  int c, ret;
+  int c, ret, transport = 0;
   char *file = "/userdata/16000_2.mp3";
   RKADK_BOOL bVideoEnable = false;
   RKADK_BOOL bAudioEnable = true;
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
   int pauseFlag = 0;
-  pthread_t getPosition;
+  pthread_t getPosition = 0;
   RKADK_U32 duration = 0;
   const char *iniPath = NULL;
   int u32VoFormat = -1, u32SpliceMode = -1, u32IntfType = -1;
@@ -192,6 +194,9 @@ int main(int argc, char *argv[]) {
     case 'r':
       stPlayCfg.stFrmInfo.u32Rotation = atoi(optarg);
       break;
+    case 'F':
+      stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate = atoi(optarg);
+      break;
     case 'm':
       stPlayCfg.stFrmInfo.bMirror = true;
       break;
@@ -206,11 +211,14 @@ int main(int argc, char *argv[]) {
     case 's':
       u32SpliceMode = atoi(optarg);
       break;
-    case 't':
+    case 'P':
       u32VoFormat = atoi(optarg);
       break;
     case 'I':
       u32IntfType = atoi(optarg);
+      break;
+    case 't':
+      transport = atoi(optarg);
       break;
     case 'p':
       iniPath = optarg;
@@ -226,10 +234,10 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
-  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d",
+  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, transport: %d, fps: %d",
               stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
               stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
-              u32SpliceMode, u32VoFormat);
+              u32SpliceMode, u32VoFormat, transport, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate);
 
   if (u32SpliceMode == 1)
     stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_GPU;
@@ -275,7 +283,10 @@ int main(int argc, char *argv[]) {
   stPlayCfg.pfnPlayerCallback = PlayerEventFnTest;
 
   //for rtsp
-  stPlayCfg.stRtspCfg.transport = "udp";
+  if (transport == 1)
+    stPlayCfg.stRtspCfg.transport = "tcp";
+  else
+    stPlayCfg.stRtspCfg.transport = "udp";
 
   if (RKADK_PLAYER_Create(&pPlayer, &stPlayCfg)) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
@@ -399,7 +410,10 @@ int main(int argc, char *argv[]) {
 __FAILED:
   stopFlag = RKADK_TRUE;
   RKADK_PLAYER_Destroy(pPlayer);
-  pthread_join(getPosition, RKADK_NULL);
+
+  if (getPosition)
+    pthread_join(getPosition, RKADK_NULL);
+
   pPlayer = NULL;
   RKADK_MPI_SYS_Exit();
   return 0;

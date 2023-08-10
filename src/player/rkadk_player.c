@@ -184,6 +184,8 @@ typedef struct {
   pthread_cond_t WavCond;
   pthread_mutex_t PauseAudioMutex;
 
+  RKADK_BOOL bIsRtsp;
+
   RKADK_VOID *pDemuxerCfg;
   RKADK_DEMUXER_PARAM_S stDemuxerParam;
   RKADK_S8 demuxerFlag;
@@ -679,7 +681,9 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
               costtime = (t_end.tv_sec - t_begin.tv_sec) * 1000000 + (t_end.tv_nsec - t_begin.tv_nsec) / 1000;
               if ((RKADK_S64)sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp > (RKADK_S64)costtime) {
                 voSendTime = sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp - costtime;
-                usleep(voSendTime);
+
+                if (!pstPlayer->bIsRtsp)
+                  usleep(voSendTime);
               }
               voSendTime = frameTime;
             } else {
@@ -689,7 +693,9 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
 
             ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
             clock_gettime(CLOCK_MONOTONIC, &t_begin);
-            usleep(voSendTime);
+
+            if (!pstPlayer->bIsRtsp)
+              usleep(voSendTime);
           }
         }
 
@@ -699,7 +705,7 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
           RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
           RKADK_LOGI("chn %d reach eos frame.", pstPlayer->stVdecCtx.chnIndex);
           break;
-        } 
+        }
       }
     } else {
       usleep(1000);
@@ -1284,7 +1290,6 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
 RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
                                      const RKADK_CHAR *pszfilePath) {
   const char *suffix = NULL;
-  bool bIsRtsp = false;
 
   RKADK_CHECK_POINTER(pszfilePath, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
@@ -1311,16 +1316,16 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
   }
 
   if (strstr(pszfilePath, "rtsp://"))
-    bIsRtsp = true;
+    pstPlayer->bIsRtsp = RKADK_TRUE;
   else
     suffix = strrchr(pszfilePath, '.');
 
-  if (!suffix && !bIsRtsp) {
+  if (!suffix && !pstPlayer->bIsRtsp) {
     RKADK_LOGD("Non-file format or rtsp: %s", pszfilePath);
     return RKADK_FAILURE;
   }
 
-  if((suffix && !strcmp(suffix, ".mp4")) || bIsRtsp) {
+  if((suffix && !strcmp(suffix, ".mp4")) || pstPlayer->bIsRtsp) {
     pstPlayer->demuxerFlag = MIX_VIDEO_FLAG;
     pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DoPullDemuxerVideoPacket;
     pstPlayer->stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DoPullDemuxerAudioPacket;
@@ -1534,6 +1539,11 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
 
   if (pstPlayer->bVideoExist) {
+    if (pstPlayer->bIsRtsp)
+      pstPlayer->stVdecCtx.frameBufferCnt = 8;
+    else
+      pstPlayer->stVdecCtx.frameBufferCnt = 3;
+
     if (CreateVdec(&pstPlayer->stVdecCtx)) {
       RKADK_LOGE("Vdec set param failed");
       goto __FAILED;
