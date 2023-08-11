@@ -1100,6 +1100,7 @@ static RKADK_S32 RKADK_PLAYER_CreateVO(RKADK_PLAYER_HANDLE_S *pstPlayer, RKADK_P
   VO_CHN_ATTR_S stChnAttr;
 
   memset(&stPubAttr, 0, sizeof(VO_PUB_ATTR_S));
+  memset(&stChnAttr, 0, sizeof(VO_CHN_ATTR_S));
   memset(&stLayerAttr, 0, sizeof(VO_VIDEO_LAYER_ATTR_S));
 
   stPubAttr.enIntfType = RKADK_MEDIA_GetRkVoIntfTpye(pstPlayer->stVoCtx.enIntfType);
