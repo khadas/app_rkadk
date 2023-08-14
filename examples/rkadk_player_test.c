@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:mfvhb";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:mfvhb";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -60,6 +60,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-F: vo display framerete, Default: 30\n");
   printf("\t-t: rtsp transport protocol, option: 0(udp), 1(tcp); Default: udp\n");
   printf("\t-b: Black Backgound enable, Default: disable\n");
+  printf("\t-T: rtsp socket I/O timeout(millisecond), option: block\n");
   printf("\t-h: help\n");
 }
 
@@ -204,6 +205,10 @@ int main(int argc, char *argv[]) {
       break;
     case 'f':
       stPlayCfg.stFrmInfo.bFlip = true;
+      break;
+    case 'T':
+      stPlayCfg.stRtspCfg.u32IoTimeout = atoi(optarg) * 1000;
+      break;
     case 'v':
       bVideoEnable = true;
       break;
@@ -239,10 +244,12 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
   RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
-  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, transport: %d, fps: %d",
+  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d,"
+              "transport: %d, fps: %d, u32IoTimeout: %d(us)",
               stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
               stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
-              u32SpliceMode, u32VoFormat, transport, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate);
+              u32SpliceMode, u32VoFormat, transport, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate,
+              stPlayCfg.stRtspCfg.u32IoTimeout);
 
   if (u32SpliceMode == 1)
     stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_GPU;

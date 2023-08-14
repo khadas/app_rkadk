@@ -232,6 +232,7 @@ typedef struct {
 
 typedef struct {
   const char *transport; //udp or tcp, default: udp
+  RKADK_U32 u32IoTimeout; //timeout (in microseconds) of socket I/O operations
 } RKADK_PLAYER_RTSP_CFG_S;
 
 /** player configuration */

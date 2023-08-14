@@ -1229,6 +1229,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   stDemuxerInput.videoEnableFlag = pstPlayer->bEnableVideo;
   stDemuxerInput.audioEnableFlag = pstPlayer->bEnableAudio;
   stDemuxerInput.transport = pstPlayCfg->stRtspCfg.transport;
+  stDemuxerInput.u32IoTimeout = pstPlayCfg->stRtspCfg.u32IoTimeout;
   if (RKADK_DEMUXER_Create(&pstPlayer->pDemuxerCfg, &stDemuxerInput)) {
     RKADK_LOGE("RKADK_DEMUXER_Create failed");
     goto __FAILED;
