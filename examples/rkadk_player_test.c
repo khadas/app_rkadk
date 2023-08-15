@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:mfvhb";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:mfvhb";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -61,6 +61,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-t: rtsp transport protocol, option: 0(udp), 1(tcp); Default: udp\n");
   printf("\t-b: Black Backgound enable, Default: disable\n");
   printf("\t-T: rtsp socket I/O timeout(millisecond), option: block\n");
+  printf("\t-l: vo layer id, Default: 0\n");
   printf("\t-h: help\n");
 }
 
@@ -208,6 +209,9 @@ int main(int argc, char *argv[]) {
       break;
     case 'T':
       stPlayCfg.stRtspCfg.u32IoTimeout = atoi(optarg) * 1000;
+      break;
+    case 'l':
+      stPlayCfg.stFrmInfo.u32VoLay = atoi(optarg);
       break;
     case 'v':
       bVideoEnable = true;

@@ -158,7 +158,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
 
 #ifdef RV1106_1103
   //unbind mode
-  stChnAttr.u32Depth = 2;
+  stChnAttr.u32Depth = 3;
 #else
   stChnAttr.u32Depth = 0;
 #endif
