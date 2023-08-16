@@ -36,7 +36,7 @@ extern int optind;
 extern char *optarg;
 static bool is_quit = false;
 static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:mfvhb";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:mfvhb";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -62,6 +62,8 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-b: Black Backgound enable, Default: disable\n");
   printf("\t-T: rtsp socket I/O timeout(millisecond), option: block\n");
   printf("\t-l: vo layer id, Default: 0\n");
+  printf("\t-c: loop play count, Default: 0\n");
+  printf("\t-d: loop play once duration (second), Default:  file duration\n");
   printf("\t-h: help\n");
 }
 
@@ -174,6 +176,7 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PLAYER_CFG_S stPlayCfg;
+  int loop_count = -1, loop_duration = 0;
 
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
@@ -233,6 +236,12 @@ int main(int argc, char *argv[]) {
       break;
     case 't':
       transport = atoi(optarg);
+      break;
+    case 'c':
+      loop_count = atoi(optarg);
+      break;
+    case 'd':
+      loop_duration = atoi(optarg);
       break;
     case 'p':
       iniPath = optarg;
@@ -324,11 +333,18 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
+
+  if (loop_count > 0 && loop_duration <= 0)
+    loop_duration = duration / 1000 + 1; //ms to m
+
+  RKADK_LOGD("loop_count: %d, loop_duration: %d(m)", loop_count, loop_duration);
+
   ret = RKADK_PLAYER_Play(pPlayer);
   if (ret) {
     RKADK_LOGE("Play failed, ret = %d", ret);
     return -1;
   }
+  loop_count--;
 
   pthread_create(&getPosition, 0, GetPosition, pPlayer);
   // RKADK_PLAYER_Seek(pPlayer, 1000); //seek 1s
@@ -337,57 +353,12 @@ int main(int argc, char *argv[]) {
   printf("\n#Usage: input 'quit' to exit programe!\n"
          "peress any other key to capture one picture to file\n");
   while (!is_quit) {
-    fgets(cmd, sizeof(cmd), stdin);
-    RKADK_LOGD("#Input cmd: %s", cmd);
-    if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
-      if (ret) {
-        goto __FAILED;
-      }
-      break;
-    } else if (strstr(cmd, "pause")) {
-      ret = RKADK_PLAYER_Pause(pPlayer);
-      if (ret) {
-        RKADK_LOGE("Pause failed, ret = %d", ret);
-        break;
-      }
-
-      pauseFlag = 1;
-    } else if (strstr(cmd, "resume")) {
-      if (pauseFlag) {
-        ret = RKADK_PLAYER_Play(pPlayer);
-        if (ret) {
-          RKADK_LOGE("Play failed, ret = %d", ret);
-          break;
-        }
-
-        pauseFlag = 0;
-      } else {
-        if (ret) {
-          goto __FAILED;
-        }
-
-        RKADK_PLAYER_Stop(pPlayer);
-        ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
-        if (ret) {
-          RKADK_LOGE("SetDataSource failed, ret = %d", ret);
-          break;
-        }
-        ret = RKADK_PLAYER_Prepare(pPlayer);
-        if (ret) {
-          RKADK_LOGE("Prepare failed, ret = %d", ret);
-          break;
-        }
-
-        ret = RKADK_PLAYER_Play(pPlayer);
-        if (ret) {
-          RKADK_LOGE("Play failed, ret = %d", ret);
-          break;
-        }
-      }
-    } else if (strstr(cmd, "replay")) {
-      if (ret) {
-        goto __FAILED;
+    if (loop_count >= 0) {
+      sleep(loop_duration);
+      RKADK_LOGD("replay, loop_count: %d", loop_count);
+      if (loop_count == 0) {
+        RKADK_LOGD("loop play end!");
+        goto __EXIT;
       }
 
       RKADK_PLAYER_Stop(pPlayer);
@@ -410,22 +381,98 @@ int main(int argc, char *argv[]) {
         break;
       }
 
-      RKADK_PLAYER_GetDuration(pPlayer, &duration);
-    } else if (strstr(cmd, "seek")) {
+      loop_count--;
+    } else {
       fgets(cmd, sizeof(cmd), stdin);
-      seekTimeInMs = atoi(cmd);
-      if ((seekTimeInMs < 0) || (seekTimeInMs > maxSeekTimeInMs)) {
-        RKADK_LOGE("seekTimeInMs(%lld) is out of range", seekTimeInMs);
+      RKADK_LOGD("#Input cmd: %s", cmd);
+      if (strstr(cmd, "quit") || is_quit) {
+        RKADK_LOGD("#Get 'quit' cmd!");
+        if (ret) {
+          goto __EXIT;
+        }
         break;
+      } else if (strstr(cmd, "pause")) {
+        ret = RKADK_PLAYER_Pause(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Pause failed, ret = %d", ret);
+          break;
+        }
+
+        pauseFlag = 1;
+      } else if (strstr(cmd, "resume")) {
+        if (pauseFlag) {
+          ret = RKADK_PLAYER_Play(pPlayer);
+          if (ret) {
+            RKADK_LOGE("Play failed, ret = %d", ret);
+            break;
+          }
+
+          pauseFlag = 0;
+        } else {
+          if (ret) {
+            goto __EXIT;
+          }
+
+          RKADK_PLAYER_Stop(pPlayer);
+          ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+          if (ret) {
+            RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+            break;
+          }
+          ret = RKADK_PLAYER_Prepare(pPlayer);
+          if (ret) {
+            RKADK_LOGE("Prepare failed, ret = %d", ret);
+            break;
+          }
+
+          ret = RKADK_PLAYER_Play(pPlayer);
+          if (ret) {
+            RKADK_LOGE("Play failed, ret = %d", ret);
+            break;
+          }
+        }
+      } else if (strstr(cmd, "replay")) {
+        if (ret) {
+          goto __EXIT;
+        }
+
+        RKADK_PLAYER_Stop(pPlayer);
+        RKADK_PLAYER_GetDuration(pPlayer, &duration);
+        ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+        if (ret) {
+          RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+          break;
+        }
+
+        ret = RKADK_PLAYER_Prepare(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Prepare failed, ret = %d", ret);
+          break;
+        }
+
+        ret = RKADK_PLAYER_Play(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Play failed, ret = %d", ret);
+          break;
+        }
+
+        RKADK_PLAYER_GetDuration(pPlayer, &duration);
+      } else if (strstr(cmd, "seek")) {
+        fgets(cmd, sizeof(cmd), stdin);
+        seekTimeInMs = atoi(cmd);
+        if ((seekTimeInMs < 0) || (seekTimeInMs > maxSeekTimeInMs)) {
+          RKADK_LOGE("seekTimeInMs(%lld) is out of range", seekTimeInMs);
+          break;
+        }
+
+        RKADK_PLAYER_Seek(pPlayer, seekTimeInMs);
       }
 
-      RKADK_PLAYER_Seek(pPlayer, seekTimeInMs);
+      usleep(500000);
     }
-
-    usleep(500000);
   }
 
-__FAILED:
+__EXIT:
   stopFlag = RKADK_TRUE;
   RKADK_PLAYER_Destroy(pPlayer);
 
