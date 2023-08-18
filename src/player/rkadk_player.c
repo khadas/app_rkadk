@@ -703,14 +703,24 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
       if (ret == 0) {
         if (pstPlayer->bEnableBlackBackground) {
           if (!flagGetTframe) {
-            memcpy(&tFrame, &sFrame, sizeof(VIDEO_FRAME_INFO_S));
+            tFrame.stVFrame.u32Width = sFrame.stVFrame.u32Width;
+            tFrame.stVFrame.u32Height = sFrame.stVFrame.u32Height;
+            tFrame.stVFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
+            tFrame.stVFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
+            tFrame.stVFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+            tFrame.stVFrame.enCompressMode = sFrame.stVFrame.enCompressMode;
             flagGetTframe = 1;
           }
         }
 
         if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
           if (pstPlayer->bEnableBlackBackground) {
-            memcpy(&sFrame, &tFrame, sizeof(VIDEO_FRAME_INFO_S));
+            sFrame.stVFrame.u32Width = tFrame.stVFrame.u32Width;
+            sFrame.stVFrame.u32Height = tFrame.stVFrame.u32Height;
+            sFrame.stVFrame.u32VirWidth = tFrame.stVFrame.u32VirWidth;
+            sFrame.stVFrame.u32VirHeight = tFrame.stVFrame.u32VirHeight;
+            sFrame.stVFrame.enPixelFormat = tFrame.stVFrame.enPixelFormat;
+            sFrame.stVFrame.enCompressMode = tFrame.stVFrame.enCompressMode;
             lastFrame = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(sFrame.stVFrame.pMbBlk);
 
             if (sFrame.stVFrame.enPixelFormat == RK_FMT_YUV420P) {
