@@ -63,7 +63,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-T: rtsp socket I/O timeout(millisecond), option: block\n");
   printf("\t-l: vo layer id, Default: 0\n");
   printf("\t-c: loop play count, Default: 0\n");
-  printf("\t-d: loop play once duration (second), Default:  file duration\n");
+  printf("\t-d: loop play once duration(second), Default: file duration\n");
   printf("\t-h: help\n");
 }
 
@@ -168,7 +168,6 @@ int main(int argc, char *argv[]) {
   RKADK_BOOL bBlackBackgroundEnable = false;
   RKADK_MW_PTR pPlayer = NULL;
   RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
-  int pauseFlag = 0;
   pthread_t getPosition = 0;
   RKADK_U32 duration = 0;
   const char *iniPath = NULL;
@@ -337,7 +336,7 @@ int main(int argc, char *argv[]) {
   if (loop_count > 0 && loop_duration <= 0)
     loop_duration = duration / 1000 + 1; //ms to m
 
-  RKADK_LOGD("loop_count: %d, loop_duration: %d(m)", loop_count, loop_duration);
+  RKADK_LOGD("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
 
   ret = RKADK_PLAYER_Play(pPlayer);
   if (ret) {
@@ -397,47 +396,14 @@ int main(int argc, char *argv[]) {
           RKADK_LOGE("Pause failed, ret = %d", ret);
           break;
         }
-
-        pauseFlag = 1;
       } else if (strstr(cmd, "resume")) {
-        if (pauseFlag) {
-          ret = RKADK_PLAYER_Play(pPlayer);
-          if (ret) {
-            RKADK_LOGE("Play failed, ret = %d", ret);
-            break;
-          }
-
-          pauseFlag = 0;
-        } else {
-          if (ret) {
-            goto __EXIT;
-          }
-
-          RKADK_PLAYER_Stop(pPlayer);
-          ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
-          if (ret) {
-            RKADK_LOGE("SetDataSource failed, ret = %d", ret);
-            break;
-          }
-          ret = RKADK_PLAYER_Prepare(pPlayer);
-          if (ret) {
-            RKADK_LOGE("Prepare failed, ret = %d", ret);
-            break;
-          }
-
-          ret = RKADK_PLAYER_Play(pPlayer);
-          if (ret) {
-            RKADK_LOGE("Play failed, ret = %d", ret);
-            break;
-          }
+        ret = RKADK_PLAYER_Play(pPlayer);
+        if (ret) {
+          RKADK_LOGE("Play failed, ret = %d", ret);
+          break;
         }
       } else if (strstr(cmd, "replay")) {
-        if (ret) {
-          goto __EXIT;
-        }
-
         RKADK_PLAYER_Stop(pPlayer);
-        RKADK_PLAYER_GetDuration(pPlayer, &duration);
         ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
         if (ret) {
           RKADK_LOGE("SetDataSource failed, ret = %d", ret);

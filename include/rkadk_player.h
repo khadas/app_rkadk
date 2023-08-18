@@ -86,9 +86,9 @@ typedef enum {
                               to the initial state after being SetDataSource. */
   RKADK_PLAYER_STATE_PREPARED, /**< The player is in the prepared state. */
   RKADK_PLAYER_STATE_PLAY,     /**< The player is in the playing state. */
-  RKADK_PLAYER_STATE_TPLAY,    /**< The player is in the trick playing state*/
   RKADK_PLAYER_STATE_PAUSE,    /**< The player is in the pause state. */
-  RKADK_PLAYER_STATE_ERR,      /**< The player is in the err state. */
+  RKADK_PLAYER_STATE_STOP,     /**< The player is in the stop state. */
+  RKADK_PLAYER_STATE_ERR,      /**< The player is in the err state(reserved). */
   RKADK_PLAYER_STATE_BUTT
 } RKADK_PLAYER_STATE_E;
 
