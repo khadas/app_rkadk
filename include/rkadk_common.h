@@ -203,6 +203,8 @@ typedef enum {
 #define RKADK_PARAM_NOT_EXIST (-2)
 #define RKADK_STATE_ERR (-3)
 
+#define RKADK_ABS(x)              ((x) < (0) ? -(x) : (x))
+
 #ifndef UPALIGNTO
 #define UPALIGNTO(value, align) ((value + align - 1) & (~(align - 1)))
 #endif
