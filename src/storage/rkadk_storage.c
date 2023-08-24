@@ -798,6 +798,7 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
   RKADK_S32 i;
   pthread_t fileMonitorTid = 0;
   RKADK_STR_DEV_ATTR devAttr;
+  RKFSCK_RET_TYPE fsck_ret;
 
   if (!pHandle) {
     RKADK_LOGE("invalid pHandle");
@@ -809,23 +810,24 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
   RKADK_LOGI("%s, %s, %s, %s", devAttr.cMountPath, pHandle->stDevSta.cDevPath,
              pHandle->stDevSta.cDevType, pHandle->stDevSta.cDevAttr1);
 
-  if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
-    RKADK_LOGI("devAttr.s32FolderNum = %d", devAttr.s32FolderNum);
-    pHandle->stDevSta.s32FolderNum = devAttr.s32FolderNum;
-    pHandle->stDevSta.pstFolder = (RKADK_STR_FOLDER *)malloc(
-        sizeof(RKADK_STR_FOLDER) * devAttr.s32FolderNum);
+  RKADK_LOGI("devAttr.s32FolderNum = %d", devAttr.s32FolderNum);
+  pHandle->stDevSta.s32FolderNum = devAttr.s32FolderNum;
+  pHandle->stDevSta.pstFolder = (RKADK_STR_FOLDER *)malloc(
+      sizeof(RKADK_STR_FOLDER) * devAttr.s32FolderNum);
 
-    if (!pHandle->stDevSta.pstFolder) {
-      RKADK_LOGE("pHandle->stDevSta.pstFolder malloc failed.");
-      return NULL;
-    }
-    memset(pHandle->stDevSta.pstFolder, 0,
-           sizeof(RKADK_STR_FOLDER) * devAttr.s32FolderNum);
-    for (i = 0; i < pHandle->stDevSta.s32FolderNum; i++) {
-      sprintf(pHandle->stDevSta.pstFolder[i].cpath, "%s%s", devAttr.cMountPath,
-              devAttr.pstFolderAttr[i].cFolderPath);
-      RKADK_LOGI("%s", pHandle->stDevSta.pstFolder[i].cpath);
-      pthread_mutex_init(&(pHandle->stDevSta.pstFolder[i].mutex), NULL);
+  if (!pHandle->stDevSta.pstFolder) {
+    RKADK_LOGE("pHandle->stDevSta.pstFolder malloc failed.");
+    return NULL;
+  }
+  memset(pHandle->stDevSta.pstFolder, 0,
+          sizeof(RKADK_STR_FOLDER) * devAttr.s32FolderNum);
+  for (i = 0; i < pHandle->stDevSta.s32FolderNum; i++) {
+    sprintf(pHandle->stDevSta.pstFolder[i].cpath, "%s%s", devAttr.cMountPath,
+            devAttr.pstFolderAttr[i].cFolderPath);
+    RKADK_LOGI("%s", pHandle->stDevSta.pstFolder[i].cpath);
+
+    pthread_mutex_init(&(pHandle->stDevSta.pstFolder[i].mutex), NULL);
+    if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
       if (RKADK_STORAGE_CreateFolder(pHandle->stDevSta.pstFolder[i].cpath)) {
         RKADK_LOGE("CreateFolder failed");
         goto file_scan_out;
@@ -833,12 +835,12 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
     }
   }
 
-  if (RKADK_STORAGE_RKFSCK(pHandle, &devAttr) == RKFSCK_ID_ERR) {
+  fsck_ret = RKADK_STORAGE_RKFSCK(pHandle, &devAttr);
+  if (RKFSCK_ID_ERR == fsck_ret ||
+      RKFSCK_FAIL == fsck_ret) {
     RKADK_LOGE("RKFSCK_ID_ERR");
-    if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {
-      pHandle->stDevSta.s32MountStatus = DISK_NOT_FORMATTED;
-      RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
-    }
+    pHandle->stDevSta.s32MountStatus = DISK_NOT_FORMATTED;
+    RKADK_STORAGE_ProcessStatus(pHandle, pHandle->stDevSta.s32MountStatus);
     goto file_scan_out;
   }
 
@@ -1530,23 +1532,31 @@ static RKADK_S32 RKADK_STORAGE_AutoDeleteInit(RKADK_STORAGE_HANDLE *pstHandle) {
   RKADK_CHECK_POINTER(pstHandle, RKADK_FAILURE);
   stDevAttr = RKADK_STORAGE_GetParam(pstHandle);
 
-  if (!RKADK_STORAGE_GetMountDev(
-          stDevAttr.cMountPath, pstHandle->stDevSta.cDevPath,
-          pstHandle->stDevSta.cDevType, pstHandle->stDevSta.cDevAttr1)) {
-    pstHandle->stDevSta.s32MountStatus = DISK_SCANNING;
+    if (!RKADK_STORAGE_GetMountDev(stDevAttr.cMountPath,
+                                 pstHandle->stDevSta.cDevPath,
+                                 pstHandle->stDevSta.cDevType,
+                                 pstHandle->stDevSta.cDevAttr1)) {
+        pstHandle->stDevSta.s32MountStatus = DISK_SCANNING;
+    } else {
+        if (0 != access(stDevAttr.cDevPath, F_OK))
+            pstHandle->stDevSta.s32MountStatus = DISK_NOT_EXIST;
+        else
+            pstHandle->stDevSta.s32MountStatus = DISK_UNMOUNTED;
+    }
+
     RKADK_STORAGE_ProcessStatus(pstHandle, pstHandle->stDevSta.s32MountStatus);
+
+    if (DISK_NOT_EXIST == pstHandle->stDevSta.s32MountStatus) {
+      RKADK_LOGE("Device node does not exist.");
+      return -1;
+    }
+
     if (pthread_create(&(pstHandle->stDevSta.fileScanTid), NULL,
                        RKADK_STORAGE_FileScanThread,
                        (RKADK_MW_PTR)(pstHandle))) {
       RKADK_LOGE("FileScanThread create failed.");
       return -1;
     }
-  } else {
-    pstHandle->stDevSta.s32MountStatus = DISK_UNMOUNTED;
-    RKADK_STORAGE_ProcessStatus(pstHandle, pstHandle->stDevSta.s32MountStatus);
-    RKADK_LOGE("GetMountDev failed.");
-    return -1;
-  }
 
   return 0;
 }
