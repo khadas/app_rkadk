@@ -35,8 +35,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_BOOL stopFlag = RKADK_FALSE;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:mfvhb";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:O:mfvhb";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -64,6 +63,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-l: vo layer id, Default: 0\n");
   printf("\t-c: loop play count, Default: 0\n");
   printf("\t-d: loop play once duration(second), Default: file duration\n");
+  printf("\t-O: Vdec output buffer count, Default: 3\n");
   printf("\t-h: help\n");
 }
 
@@ -151,7 +151,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
 
 RKADK_VOID *GetPosition(RKADK_VOID *arg) {
     RKADK_S64 position = 0;
-    while (!stopFlag) {
+    while (!is_quit) {
       position = RKADK_PLAYER_GetCurrentPosition(arg);
       printf("position = %lld\n", position);
       usleep(1000000);
@@ -214,6 +214,9 @@ int main(int argc, char *argv[]) {
       break;
     case 'l':
       stPlayCfg.stFrmInfo.u32VoLay = atoi(optarg);
+      break;
+    case 'O':
+      stPlayCfg.stVdecCfg.u32FrameBufCnt = atoi(optarg);
       break;
     case 'v':
       bVideoEnable = true;
@@ -333,7 +336,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
 
-  if (loop_count > 0 && loop_duration <= 0)
+  if (loop_duration <= 0 || loop_duration > duration / 1000)
     loop_duration = duration / 1000 + 1; //ms to m
 
   RKADK_LOGD("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
@@ -439,7 +442,6 @@ int main(int argc, char *argv[]) {
   }
 
 __EXIT:
-  stopFlag = RKADK_TRUE;
   RKADK_PLAYER_Destroy(pPlayer);
 
   if (getPosition)

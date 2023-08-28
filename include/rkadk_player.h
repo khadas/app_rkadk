@@ -29,7 +29,6 @@ extern "C" {
 #define MIX_VIDEO_FLAG 1
 #define VIDEO_FLAG 2
 #define AUDIO_FLAG 3
-#define MAX_STREAM_CNT 3
 #define MAX_VDEC_PIXEL 9437184
 #define VDEC_ARRAY_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
 #define MAX_FRAME_QUEUE 3
@@ -235,6 +234,11 @@ typedef struct {
   RKADK_U32 u32IoTimeout; //timeout (in microseconds) of socket I/O operations
 } RKADK_PLAYER_RTSP_CFG_S;
 
+typedef struct {
+  RKADK_U32 u32FrameBufCnt; //frame buffer cnt(output), default: 3
+  RKADK_U32 u32StreamBufCnt; //stream buffer cnt(input), default: 3
+} RKADK_PLAYER_VDEC_CFG_S;
+
 /** player configuration */
 typedef struct {
   RKADK_BOOL bEnableVideo;
@@ -242,6 +246,7 @@ typedef struct {
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
   RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
+  RKADK_PLAYER_VDEC_CFG_S stVdecCfg;
   RKADK_BOOL bEnableBlackBackground;
 } RKADK_PLAYER_CFG_S;
 

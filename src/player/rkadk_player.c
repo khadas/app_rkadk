@@ -73,6 +73,7 @@ typedef struct {
   RKADK_CODEC_TYPE_E eCodecType;
   RKADK_U32   compressMode;
   RKADK_U32   frameBufferCnt;
+  RKADK_U32   streamBufferCnt;
   RKADK_U32   extraDataSize;
   RKADK_U32   readSize;
   RKADK_S32   chnFd;
@@ -217,13 +218,14 @@ static void RKADK_PLAYER_ProcessEvent(RKADK_PLAYER_HANDLE_S *pstPlayer,
     pstPlayer->pfnPlayerCallback((RKADK_MW_PTR)pstPlayer, enEvent, pData);
 }
 
-static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx) {
+static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx, RKADK_PLAYER_VDEC_CFG_S stVdecCfg) {
   memset(pstVdecCtx, 0, sizeof(RKADK_PLAYER_VDEC_CTX_S));
 
   pstVdecCtx->inputMode = VIDEO_MODE_FRAME;
   pstVdecCtx->compressMode = COMPRESS_MODE_NONE;
 
-  pstVdecCtx->frameBufferCnt = 3;
+  pstVdecCtx->frameBufferCnt = stVdecCfg.u32FrameBufCnt;
+  pstVdecCtx->streamBufferCnt = stVdecCfg.u32StreamBufCnt;
   pstVdecCtx->readSize = 1024;
   pstVdecCtx->chNum = 1;
   pstVdecCtx->chnIndex = 0;
@@ -232,6 +234,12 @@ static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx) {
   pstVdecCtx->eCodecType = RKADK_CODEC_TYPE_H264;
   pstVdecCtx->srcWidth = 320;
   pstVdecCtx->srcHeight = 240;
+
+  if (pstVdecCtx->frameBufferCnt <= 0)
+    pstVdecCtx->frameBufferCnt = 3;
+
+  if (pstVdecCtx->streamBufferCnt <= 0)
+    pstVdecCtx->streamBufferCnt = 3;
 
   return RKADK_SUCCESS;
 }
@@ -274,7 +282,7 @@ static RKADK_S32 CreateVdec(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx) {
   } else
     stAttr.u32FrameBufCnt = pstVdecCtx->frameBufferCnt;
 
-  stAttr.u32StreamBufCnt = MAX_STREAM_CNT;
+  stAttr.u32StreamBufCnt = pstVdecCtx->streamBufferCnt;
   /*
     * if decode 10bit stream, need specify the u32FrameBufSize,
     * other conditions can be set to 0, calculated internally.
@@ -1303,7 +1311,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   }
 
   if (pstPlayer->bEnableVideo) {
-    if (VdecCtxInit(&pstPlayer->stVdecCtx)) {
+    if (VdecCtxInit(&pstPlayer->stVdecCtx, pstPlayCfg->stVdecCfg)) {
       RKADK_LOGE("Create VDEC ctx failed");
       goto __FAILED;
     }
@@ -1668,11 +1676,6 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   }
 
   if (pstPlayer->bVideoExist) {
-    if (pstPlayer->bIsRtsp)
-      pstPlayer->stVdecCtx.frameBufferCnt = 8;
-    else
-      pstPlayer->stVdecCtx.frameBufferCnt = 3;
-
     ret = CreateVdec(&pstPlayer->stVdecCtx);
     if (ret) {
       RKADK_LOGE("Create VDEC failed");
