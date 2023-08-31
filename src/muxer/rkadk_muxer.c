@@ -1214,11 +1214,6 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
       continue;
     }
 
-    // Destory mutex
-    pthread_mutex_destroy(&pstMuxerHandle->mutex);
-    pthread_mutex_destroy(&pstMuxerHandle->paramMutex);
-    pthread_mutex_destroy(&pstMuxerHandle->stPreRecParam.mutex);
-
     // Set flag off
     pstMuxerHandle->bEnableStream = false;
 
@@ -1238,6 +1233,11 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList);
     RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+
+    // Destory mutex
+    pthread_mutex_destroy(&pstMuxerHandle->mutex);
+    pthread_mutex_destroy(&pstMuxerHandle->paramMutex);
+    pthread_mutex_destroy(&pstMuxerHandle->stPreRecParam.mutex);
   }
 
   RKADK_LOGI("Disable Muxer[%d] Stop...", pstMuxer->u32CamId);
