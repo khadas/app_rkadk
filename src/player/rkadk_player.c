@@ -16,6 +16,8 @@
 
 #include "rkadk_common.h"
 #include "rkadk_log.h"
+#include "rkadk_signal.h"
+#include "rkadk_thread.h"
 #include "rkadk_param.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_player.h"
@@ -41,6 +43,9 @@
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <fcntl.h>
+
+#define PLAYER_SNAPSHOT_MAX_WIDTH 4096
+#define PLAYER_SNAPSHOT_MAX_HEIGHT 4096
 
 typedef enum {
   RKADK_PLAYER_PAUSE_FALSE = 0x0,
@@ -124,6 +129,7 @@ typedef struct {
   RKADK_U32  dispFrmRt;
   MIRROR_E    enMirror;
   ROTATION_E  enRotation;
+  RKADK_VO_SPLICE_MODE_E enVoSpliceMode;
 } RKADK_PLAYER_VO_CTX_S;
 
 typedef struct {
@@ -172,6 +178,29 @@ typedef struct {
 } RKADK_PLAYER_THREAD_PARAM_S;
 
 typedef struct {
+  PIXEL_FORMAT_E enPixelFormat;
+  RKADK_U32 u32Width;
+  RKADK_U32 u32Height;
+  RKADK_U32 u32VirWidth;
+  RKADK_U32 u32VirHeight;
+  MB_BLK pMbBlk;
+} PLAYER_SNAPSHOT_FRAME_S;
+
+typedef struct {
+  bool bSnapshot;
+  bool bVencChnExist;
+  RKADK_U32 u32VencChn;
+  RKADK_U32 u32MaxWidth;
+  RKADK_U32 u32MaxHeight;
+  PLAYER_SNAPSHOT_FRAME_S stFrame;
+
+  void *pThread;
+  void *pSignal;
+  pthread_mutex_t mutex;
+  RKADK_PPLAYER_SNAPSHOT_RECV_FN pfnDataCallback;
+} RKADK_PLAYER_SNAPSHOT_PARAM_S;
+
+typedef struct {
   RKADK_CHAR pFilePath[RKADK_PATH_LEN];
   RKADK_PLAYER_STATE_E enStatus;
   RKADK_PLAYER_EOF_STATE_E enEofStatus;
@@ -199,6 +228,8 @@ typedef struct {
   RKADK_S64 positionTimeStamp;
   RKADK_PLAYER_THREAD_PARAM_S stThreadParam;
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
+
+  RKADK_PLAYER_SNAPSHOT_PARAM_S stSnapshotParam;
 } RKADK_PLAYER_HANDLE_S;
 
 static void RKADK_PLAYER_ProcessEvent(RKADK_PLAYER_HANDLE_S *pstPlayer,
@@ -371,6 +402,7 @@ static RKADK_S32 SetVoCtx(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAME_IN
   pstVoCtx->imageHeight = pstFrameInfo->u32ImgHeight;
   pstVoCtx->dispFrmRt = pstFrameInfo->stSyncInfo.u16FrameRate;
   pstVoCtx->enIntfType = pstFrameInfo->u32EnIntfType;
+  pstVoCtx->enVoSpliceMode = pstFrameInfo->enVoSpliceMode;
 
   switch (pstFrameInfo->u32VoFormat) {
     case VO_FORMAT_RGB888:
@@ -677,6 +709,231 @@ static RKADK_S32 VdecPollEvent(RKADK_S32 timeoutMsec, RKADK_S32 fd) {
   return ret;
 }
 
+static bool SnapshotProc(void *pHandle) {
+  int ret;
+  RKADK_PLAYER_SNAPSHOT_S stData;
+  VENC_RECV_PIC_PARAM_S stRecvParam;
+  VENC_CHN_ATTR_S stAttr;
+  VIDEO_FRAME_INFO_S stFrame;
+  VENC_STREAM_S stStream;
+  VENC_PACK_S stPack;
+  PLAYER_SNAPSHOT_FRAME_S stSnapshotFrame;
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pHandle;
+
+  memset(&stSnapshotFrame, 0, sizeof(PLAYER_SNAPSHOT_FRAME_S));
+  if (!pstPlayer) {
+    RKADK_LOGE("pstPlayer is null");
+    goto __EXIT;
+  }
+
+  RKADK_SIGNAL_Wait(pstPlayer->stSnapshotParam.pSignal, -1);
+
+  if (!pstPlayer->stSnapshotParam.bSnapshot)
+    return false;
+
+  if (pstPlayer->enStatus == RKADK_PLAYER_STATE_STOP)
+    goto __EXIT;
+
+  if (!pstPlayer->stSnapshotParam.pfnDataCallback) {
+    RKADK_LOGE("Unregistered snapshot data callback");
+    goto __EXIT;
+  }
+
+  if (!pstPlayer->stSnapshotParam.stFrame.pMbBlk) {
+    RKADK_LOGE("Snapshot pMbBlk is null");
+    goto __EXIT;
+  }
+
+  pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+  memcpy(&stSnapshotFrame, &pstPlayer->stSnapshotParam.stFrame, sizeof(PLAYER_SNAPSHOT_FRAME_S));
+  RK_MPI_MB_AddUserCnt(stSnapshotFrame.pMbBlk);
+  pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
+  if (!pstPlayer->stSnapshotParam.bVencChnExist) {
+    memset(&stAttr, 0, sizeof(VENC_CHN_ATTR_S));
+
+    stAttr.stVencAttr.enType = RK_VIDEO_ID_JPEG;
+    stAttr.stVencAttr.enPixelFormat = stSnapshotFrame.enPixelFormat;
+    stAttr.stVencAttr.u32MaxPicWidth = pstPlayer->stSnapshotParam.u32MaxWidth;
+    stAttr.stVencAttr.u32MaxPicHeight = pstPlayer->stSnapshotParam.u32MaxHeight;
+    stAttr.stVencAttr.u32PicWidth = stSnapshotFrame.u32Width;
+    stAttr.stVencAttr.u32PicHeight = stSnapshotFrame.u32Height;
+    stAttr.stVencAttr.u32VirWidth = stSnapshotFrame.u32VirWidth;
+    stAttr.stVencAttr.u32VirHeight = stSnapshotFrame.u32VirHeight;
+    stAttr.stVencAttr.u32StreamBufCnt = 1;
+    stAttr.stVencAttr.u32BufSize =
+        stAttr.stVencAttr.u32MaxPicWidth * stAttr.stVencAttr.u32MaxPicHeight;
+
+    ret = RK_MPI_VENC_CreateChn(pstPlayer->stSnapshotParam.u32VencChn, &stAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGD("Create snapshot venc[%d] failed[%x]", pstPlayer->stSnapshotParam.u32VencChn, ret);
+      goto __EXIT;
+    }
+
+    memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
+    stRecvParam.s32RecvPicNum = -1;
+    ret = RK_MPI_VENC_StartRecvFrame(pstPlayer->stSnapshotParam.u32VencChn, &stRecvParam);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGD("Snapshot ven[%d] start recv frame failed[%x]", pstPlayer->stSnapshotParam.u32VencChn, ret);
+      RK_MPI_VENC_DestroyChn(pstPlayer->stSnapshotParam.u32VencChn);
+      goto __EXIT;
+    }
+
+    pstPlayer->stSnapshotParam.bVencChnExist = true;
+  } else {
+    ret = RK_MPI_VENC_GetChnAttr(pstPlayer->stSnapshotParam.u32VencChn, &stAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Get snapshot venc[%d] attr failed[%x]", pstPlayer->stSnapshotParam.u32VencChn, ret);
+      goto __EXIT;
+    }
+
+    if (stAttr.stVencAttr.enPixelFormat != stSnapshotFrame.enPixelFormat)
+      RKADK_LOGW("venc chn pix[%x] != snapshot pix[%x]",stAttr.stVencAttr.enPixelFormat,
+                  stSnapshotFrame.enPixelFormat);
+
+    if (stAttr.stVencAttr.u32PicWidth != stSnapshotFrame.u32Width
+        || stAttr.stVencAttr.u32PicHeight != stSnapshotFrame.u32Height) {
+      RKADK_LOGD("Reset vencAttr[%d, %d], cell[%d, %d]", stAttr.stVencAttr.u32PicWidth,
+                  stAttr.stVencAttr.u32PicHeight, stSnapshotFrame.u32Width, stSnapshotFrame.u32Height);
+      stAttr.stVencAttr.u32PicWidth = stSnapshotFrame.u32Width;
+      stAttr.stVencAttr.u32PicHeight = stSnapshotFrame.u32Height;
+      stAttr.stVencAttr.u32VirWidth = stSnapshotFrame.u32VirWidth;
+      stAttr.stVencAttr.u32VirHeight = stSnapshotFrame.u32VirHeight;
+
+      ret = RK_MPI_VENC_SetChnAttr(pstPlayer->stSnapshotParam.u32VencChn, &stAttr);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("Set snapshot venc[%d] attr failed[%x]",
+                    pstPlayer->stSnapshotParam.u32VencChn, ret);
+        goto __EXIT;
+      }
+    }
+  }
+
+  memset(&stFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
+  stFrame.stVFrame.pMbBlk = stSnapshotFrame.pMbBlk;
+  stFrame.stVFrame.u32Width = stSnapshotFrame.u32Width;
+  stFrame.stVFrame.u32Height = stSnapshotFrame.u32Height;
+  stFrame.stVFrame.u32VirWidth = stSnapshotFrame.u32VirWidth;
+  stFrame.stVFrame.u32VirHeight = stSnapshotFrame.u32VirHeight;
+  stFrame.stVFrame.enPixelFormat = stSnapshotFrame.enPixelFormat;
+
+  ret = RK_MPI_VENC_SendFrame(pstPlayer->stSnapshotParam.u32VencChn, &stFrame, -1);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Snapshot venc[%d] send frame failed[%x]",
+                pstPlayer->stSnapshotParam.u32VencChn, ret);
+    goto __EXIT;
+  }
+
+  ret = RK_MPI_MB_ReleaseMB(stSnapshotFrame.pMbBlk);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("RK_MPI_MB_ReleaseMB failed[%x]", ret);
+    goto __EXIT;
+  }
+  stSnapshotFrame.pMbBlk = NULL;
+
+  memset(&stStream, 0, sizeof(VENC_STREAM_S));
+  memset(&stPack, 0, sizeof(VENC_PACK_S));
+  stStream.pstPack = &stPack;
+  ret = RK_MPI_VENC_GetStream(pstPlayer->stSnapshotParam.u32VencChn, &stStream, -1);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Snapshot venc[%d] get stream failed[%x]",
+                pstPlayer->stSnapshotParam.u32VencChn, ret);
+    goto __EXIT;
+  }
+
+  memset(&stData, 0, sizeof(RKADK_PLAYER_SNAPSHOT_S));
+  stData.u32Width = stSnapshotFrame.u32Width;
+  stData.u32Height = stSnapshotFrame.u32Height;
+  stData.u32DataLen = stStream.pstPack->u32Len;
+  stData.pu8DataBuf = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stStream.pstPack->pMbBlk);
+  pstPlayer->stSnapshotParam.pfnDataCallback(&stData);
+  RKADK_LOGD("Snapshot done, w*h[%d, %d], pu8DataBuf[%p, %d]",
+              stData.u32Width, stData.u32Height, stData.pu8DataBuf, stData.u32DataLen);
+
+  RK_MPI_VENC_ReleaseStream(pstPlayer->stSnapshotParam.u32VencChn, &stStream);
+  pstPlayer->stSnapshotParam.bSnapshot = false;
+  return true;
+
+__EXIT:
+  if (stSnapshotFrame.pMbBlk) {
+    ret = RK_MPI_MB_ReleaseMB(stSnapshotFrame.pMbBlk);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("RK_MPI_MB_ReleaseMB failed[%x]", ret);
+      return -1;
+    }
+  }
+
+  pstPlayer->stSnapshotParam.bSnapshot = false;
+  return false;
+}
+
+static int SnapshotEnable(RKADK_PLAYER_HANDLE_S *pstPlayer, RKADK_PLAYER_SNAPSHOT_CFG_S stSnapshotCfg) {
+  char name[20];
+
+   pstPlayer->stSnapshotParam.u32VencChn = stSnapshotCfg.u32VencChn;
+  if (stSnapshotCfg.u32MaxWidth > 0)
+    pstPlayer->stSnapshotParam.u32MaxWidth = stSnapshotCfg.u32MaxWidth;
+  else
+    pstPlayer->stSnapshotParam.u32MaxWidth = PLAYER_SNAPSHOT_MAX_WIDTH;
+
+  if (stSnapshotCfg.u32MaxHeight > 0)
+    pstPlayer->stSnapshotParam.u32MaxHeight = stSnapshotCfg.u32MaxHeight;
+  else
+    pstPlayer->stSnapshotParam.u32MaxHeight = PLAYER_SNAPSHOT_MAX_HEIGHT;
+
+  // Create signal
+  pstPlayer->stSnapshotParam.pSignal = RKADK_SIGNAL_Create(0, 1);
+  if (!pstPlayer->stSnapshotParam.pSignal) {
+    RKADK_LOGE("Create snapshot signal failed");
+    return -1;
+  }
+
+  // Create thread
+  snprintf(name, sizeof(name), "%s", "snapshot");
+  pstPlayer->stSnapshotParam.pThread = RKADK_THREAD_Create(SnapshotProc, pstPlayer, name);
+  if (!pstPlayer->stSnapshotParam.pThread) {
+    RKADK_LOGE("Create snapshot thread failed");
+    RKADK_SIGNAL_Destroy(pstPlayer->stSnapshotParam.pSignal);
+    return -1;
+  }
+
+  pthread_mutex_init(&pstPlayer->stSnapshotParam.mutex, NULL);
+  pstPlayer->stSnapshotParam.pfnDataCallback = stSnapshotCfg.pfnDataCallback;
+  return 0;
+}
+
+static int SnapshotDisable(RKADK_PLAYER_HANDLE_S *pstPlayer) {
+  int ret;
+
+  // Exit thread
+  if (pstPlayer->stSnapshotParam.pThread)
+    RKADK_THREAD_SetExit(pstPlayer->stSnapshotParam.pThread);
+
+  if (pstPlayer->stSnapshotParam.pSignal)
+    RKADK_SIGNAL_Give(pstPlayer->stSnapshotParam.pSignal);
+
+  // Destroy thread
+  if (pstPlayer->stSnapshotParam.pThread) {
+    RKADK_THREAD_Destory(pstPlayer->stSnapshotParam.pThread);
+    pstPlayer->stSnapshotParam.pThread = NULL;
+  }
+
+  // Destroy signal
+  if (pstPlayer->stSnapshotParam.pSignal)
+    RKADK_SIGNAL_Destroy(pstPlayer->stSnapshotParam.pSignal);
+
+  // Destory mutex
+  pthread_mutex_destroy(&pstPlayer->stSnapshotParam.mutex);
+
+  if (pstPlayer->stSnapshotParam.bVencChnExist) {
+    ret = RK_MPI_VENC_DestroyChn(pstPlayer->stSnapshotParam.u32VencChn);
+    if (ret != RK_SUCCESS)
+      RKADK_LOGE("Destory snapshot venc chn failed[%x]", ret);
+  }
+
+  return 0;
+}
+
 static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)ptr;
   VIDEO_FRAME_INFO_S sFrame;
@@ -768,10 +1025,32 @@ static RKADK_VOID* SendVideoDataThread(RKADK_VOID *ptr) {
           voSendTime = frameTime;
         }
         pstPlayer->videoTimeStamp = sFrame.stVFrame.u64PTS;
+
         ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
-        if (ret != 0)
-          RKADK_LOGE("sys mmz flush cache fail , %x.", ret);
+        if (ret != RK_SUCCESS)
+          RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
+
+        // save snapshot frame info
+        pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+        pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
+        pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
+        pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
+        pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
+        pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
+
+        //vo only support 420sp display, bypass mode internally converts 420p to 420sp
+        if (pstPlayer->stVoCtx.enVoSpliceMode == SPLICE_MODE_BYPASS
+            && sFrame.stVFrame.enPixelFormat == RK_FMT_YUV420P
+            && pstPlayer->stVoCtx.pixFormat == RK_FMT_YUV420SP)
+          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = RK_FMT_YUV420SP;
+        else
+          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+        pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
+        if (ret != RK_SUCCESS)
+          RKADK_LOGE("send vo failed[%x]", ret);
+
         clock_gettime(CLOCK_MONOTONIC, &t_begin);
 
         if (!pstPlayer->bIsRtsp)
@@ -1345,6 +1624,14 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   }
 
   pthread_mutex_init(&(pstPlayer->mutex), NULL);
+
+  if (pstPlayCfg->stSnapshotCfg.pfnDataCallback) {
+    if (SnapshotEnable(pstPlayer, pstPlayCfg->stSnapshotCfg)) {
+      RKADK_LOGE("Enable snapshot failed");
+      goto __FAILED;
+    }
+  }
+
   pstPlayer->enStatus = RKADK_PLAYER_STATE_IDLE;
   RKADK_LOGI("Create Player[%d, %d] End...", pstPlayCfg->bEnableVideo,
              pstPlayCfg->bEnableAudio);
@@ -1397,6 +1684,10 @@ RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer) {
     RKADK_DEMUXER_Destroy(&pstPlayer->pDemuxerCfg);
 
   pthread_mutex_destroy(&(pstPlayer->mutex));
+
+  if (pstPlayer->stSnapshotParam.pfnDataCallback)
+    if (SnapshotDisable(pstPlayer))
+      RKADK_LOGE("Disable snapshot failed");
 
   if (pstPlayer)
     free(pstPlayer);
@@ -1844,6 +2135,9 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     pstPlayer->stThreadParam.tidAudioSend = 0;
   }
 
+  pstPlayer->stSnapshotParam.bSnapshot = false;
+  pstPlayer->stSnapshotParam.stFrame.pMbBlk = NULL;
+
   pstPlayer->enEofStatus = RKADK_PLAYER_EOF_NO;
   if (pstPlayer->bVideoExist) {
       if (DestroyVdec(&pstPlayer->stVdecCtx))
@@ -2091,4 +2385,25 @@ RKADK_S64 RKADK_PLAYER_GetCurrentPosition(RKADK_MW_PTR pPlayer) {
   } else {
     return RKADK_FAILURE;
   }
+}
+
+RKADK_S32 RKADK_PLAYER_Snapshot(RKADK_MW_PTR pPlayer) {
+  RKADK_PLAYER_HANDLE_S *pstPlayer;
+
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+
+  if (!pstPlayer->bVideoExist) {
+    RKADK_LOGW("%s no video track", pstPlayer->pFilePath);
+    return -1;
+  }
+
+  if (!pstPlayer->stSnapshotParam.bSnapshot) {
+    pstPlayer->stSnapshotParam.bSnapshot = true;
+    RKADK_SIGNAL_Give(pstPlayer->stSnapshotParam.pSignal);
+  } else {
+    RKADK_LOGD("Have been in snapshot");
+  }
+
+  return 0;
 }

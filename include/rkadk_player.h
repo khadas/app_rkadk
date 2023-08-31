@@ -105,6 +105,18 @@ typedef enum {
   RKADK_PLAYER_EVENT_BUTT
 } RKADK_PLAYER_EVENT_E;
 
+/* snap shot data */
+typedef struct {
+  RKADK_U32 u32Width;
+  RKADK_U32 u32Height;
+  RKADK_U32 u32DataLen;
+  RKADK_U8 *pu8DataBuf;
+} RKADK_PLAYER_SNAPSHOT_S;
+
+/* snap shot data recv callback */
+typedef void (*RKADK_PPLAYER_SNAPSHOT_RECV_FN)(
+    RKADK_PLAYER_SNAPSHOT_S *pstData);
+
 typedef RKADK_VOID (*RKADK_PLAYER_EVENT_FN)(RKADK_MW_PTR pPlayer,
                                             RKADK_PLAYER_EVENT_E enEvent,
                                             RKADK_VOID *pData);
@@ -239,15 +251,23 @@ typedef struct {
   RKADK_U32 u32StreamBufCnt; //stream buffer cnt(input), default: 3
 } RKADK_PLAYER_VDEC_CFG_S;
 
+typedef struct {
+  RKADK_U32 u32VencChn;
+  RKADK_U32 u32MaxWidth;    //Support snapshot max width, default 4096
+  RKADK_U32 u32MaxHeight;   //Support snapshot max height, default 4096
+  RKADK_PPLAYER_SNAPSHOT_RECV_FN pfnDataCallback;
+} RKADK_PLAYER_SNAPSHOT_CFG_S;
+
 /** player configuration */
 typedef struct {
   RKADK_BOOL bEnableVideo;
   RKADK_BOOL bEnableAudio;
-  RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
   RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
   RKADK_PLAYER_VDEC_CFG_S stVdecCfg;
+  RKADK_PLAYER_SNAPSHOT_CFG_S stSnapshotCfg;
   RKADK_BOOL bEnableBlackBackground;
+  RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
 } RKADK_PLAYER_CFG_S;
 
 /**
@@ -333,6 +353,8 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration);
  * @retval  current position(ms)
  */
 RKADK_S64 RKADK_PLAYER_GetCurrentPosition(RKADK_MW_PTR pPlayer);
+
+RKADK_S32 RKADK_PLAYER_Snapshot(RKADK_MW_PTR pPlayer);
 
 #ifdef __cplusplus
 }

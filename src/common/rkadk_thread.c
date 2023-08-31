@@ -26,13 +26,17 @@ typedef struct {
 } RKADK_THREAD_HANDLE_S;
 
 static void *RKADK_THREAD_Proc(void *params) {
+  char name[40];
   RKADK_THREAD_HANDLE_S *pstThread = (RKADK_THREAD_HANDLE_S *)params;
 
   while (!pstThread->exit_flag) {
     pstThread->func(pstThread->param);
   }
 
-  pstThread->exit_flag = 1;
+  memset(name, 0, sizeof(name));
+  pthread_getname_np(pthread_self(), name, sizeof(name));
+
+  RKADK_LOGD("Exit %s thread", name);
   pthread_exit(&(pstThread->tid));
   return NULL;
 }
@@ -57,9 +61,13 @@ void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param, char *name) {
     free(pstThread);
     return NULL;
   }
-  if (name)
+
+  if (name) {
     pthread_setname_np(pstThread->tid, name);
-  RKADK_LOGI("Create thread success!");
+    RKADK_LOGI("Create %s thread success!", name);
+  } else {
+    RKADK_LOGI("Create thread success!");
+  }
   return (void *)pstThread;
 }
 
@@ -73,6 +81,7 @@ int RKADK_THREAD_Destory(void *handle) {
   }
 
   pstThread = (RKADK_THREAD_HANDLE_S *)handle;
+
   do {
     pstThread->exit_flag = 1;
     ret = pthread_join(pstThread->tid, NULL);

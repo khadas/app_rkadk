@@ -160,6 +160,35 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
   return NULL;
 }
 
+static void SnapshotDataRecv(RKADK_PLAYER_SNAPSHOT_S *pstData) {
+  static RKADK_U32 snapshotId = 0;
+  char jpegPath[128];
+  FILE *file = NULL;
+
+  if (!pstData || !pstData->pu8DataBuf) {
+    RKADK_LOGE("Invalid photo data");
+    return;
+  }
+
+  memset(jpegPath, 0, 128);
+  sprintf(jpegPath, "/tmp/Snapshot_%d.jpeg", snapshotId);
+  file = fopen(jpegPath, "w");
+  if (!file) {
+    RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
+    return;
+  }
+
+  RKADK_LOGD("save snapshot[%d, %d] jpeg to %s", pstData->u32Width, pstData->u32Height, jpegPath);
+
+  fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
+  fclose(file);
+
+  snapshotId++;
+  if (snapshotId > 10)
+    snapshotId = 0;
+}
+
+
 int main(int argc, char *argv[]) {
   int c, ret, transport = 0;
   char *file = "/userdata/16000_2.mp3";
@@ -317,6 +346,9 @@ int main(int argc, char *argv[]) {
   else
     stPlayCfg.stRtspCfg.transport = "udp";
 
+  stPlayCfg.stSnapshotCfg.u32VencChn = 15;
+  stPlayCfg.stSnapshotCfg.pfnDataCallback = SnapshotDataRecv;
+
   if (RKADK_PLAYER_Create(&pPlayer, &stPlayCfg)) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
     return -1;
@@ -389,9 +421,9 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("#Input cmd: %s", cmd);
       if (strstr(cmd, "quit") || is_quit) {
         RKADK_LOGD("#Get 'quit' cmd!");
-        if (ret) {
-          goto __EXIT;
-        }
+        if (!is_quit)
+          is_quit = true;
+
         break;
       } else if (strstr(cmd, "pause")) {
         ret = RKADK_PLAYER_Pause(pPlayer);
@@ -435,6 +467,8 @@ int main(int argc, char *argv[]) {
         }
 
         RKADK_PLAYER_Seek(pPlayer, seekTimeInMs);
+      } else if (strstr(cmd, "snap")) {
+        RKADK_PLAYER_Snapshot(pPlayer);
       }
 
       usleep(500000);
