@@ -141,7 +141,8 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
 
   stFrame.pstPack = &stPack;
   stThumbFrame.pstPack = &stThumbPack;
-  u32PhotoLen = pstSensorCfg->max_width * pstSensorCfg->max_height * 3 / 2;
+  u32PhotoLen = pstSensorCfg->max_width * pstSensorCfg->max_height
+                + ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
   RKADK_U8 *pu8Photo = RKADK_PHOTO_Mmap((RKADK_CHAR *)JPG_MMAP_FILE_PATH, u32PhotoLen);
   if (!pu8Photo)
