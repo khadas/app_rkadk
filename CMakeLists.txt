@@ -15,7 +15,7 @@ if(${RKADK_CHIP} STREQUAL "rk3506")
 endif()
 
 if(${RKADK_CHIP} STREQUAL "rv1106")
-        add_definitions(-DRV1106_1103)
+	add_definitions(-DRV1106_1103 -DTHUMB_NORMAL)
 else()
         add_definitions(-DTHUMB_NORMAL)
 endif()

@@ -172,6 +172,7 @@ typedef enum {
   RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
   RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
   RKADK_PARAM_TYPE_SNAP_NUM,       /* continue snap num */
+  RKADK_PARAM_TYPE_JPEG_SLICE,     /* enable/disable jpeg slice */
 
   // COMM Dependent Param
   RKADK_PARAM_TYPE_REC_MUTE,      /* record audio mute, bool */
@@ -335,6 +336,8 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 combo_venc_chn;
   RKADK_U32 qfactor;
   bool switch_res;
+  bool jpeg_slice;
+  RKADK_U32 slice_height;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_PHOTO_CFG_S;
 

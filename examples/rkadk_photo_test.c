@@ -57,27 +57,42 @@ static void sigterm_handler(int sig) {
 }
 
 static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
+  static FILE *file = NULL;
+  static RKADK_U64 write_len = 0;
   static RKADK_U32 photoId = 0;
-  char jpegPath[128];
-  FILE *file = NULL;
+  static char jpegPath[128];
 
   if (!pstData || !pstData->pu8DataBuf) {
     RKADK_LOGE("Invalid photo data");
     return;
   }
 
-  memset(jpegPath, 0, 128);
-  sprintf(jpegPath, "/tmp/PhotoTest_%d.jpeg", photoId);
-  file = fopen(jpegPath, "w");
-  if (!file) {
-    RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
-    return;
+  if (file == NULL) {
+    memset(jpegPath, 0, 128);
+    sprintf(jpegPath, "/tmp/PhotoTest_%d.jpeg", photoId);
+    file = fopen(jpegPath, "w");
+    if (!file) {
+      RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
+      return;
+    }
+
+    RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
   }
 
-  RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
-
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
-  fclose(file);
+  write_len += pstData->u32DataLen;
+
+  if (pstData->bStreamEnd) {
+    RKADK_LOGD("Close file(%s), write len: %lld", jpegPath, write_len);
+    fflush(file);
+    fclose(file);
+    file = NULL;
+    write_len = 0;
+
+    photoId++;
+    if (photoId > 10)
+      photoId = 0;
+  }
 
 #if 0
   RKADK_PHOTO_DATA_ATTR_S stDataAttr;
@@ -107,10 +122,6 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
     RKADK_PHOTO_FreeData(&stDataAttr);
   }
 #endif
-
-  photoId++;
-  if (photoId > 10)
-    photoId = 0;
 }
 
 int main(int argc, char *argv[]) {

@@ -23,6 +23,7 @@ extern "C" {
 
 #include "rkadk_common.h"
 #include "rk_comm_video.h"
+#include <stdbool.h>
 
 #define RKADK_MPF_LARGE_THUMB_NUM_MAX 2
 
@@ -92,6 +93,7 @@ typedef struct {
   RKADK_U8 *pu8DataBuf;
   RKADK_U32 u32DataLen;
   RKADK_U32 u32CamId;
+  bool bStreamEnd;
 } RKADK_PHOTO_RECV_DATA_S;
 
 /* photo data recv callback */

@@ -49,7 +49,7 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
-target_link_libraries(rkadk rkmuxer rtsp z rkaudio rkdemuxer)
+target_link_libraries(rkadk rkmuxer rtsp z rkaudio rkdemuxer rkyuvscaler)
 
 if(${RKADK_CHIP} STREQUAL "rv1106")
 	target_link_libraries(rkadk rockit_full)

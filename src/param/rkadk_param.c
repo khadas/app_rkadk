@@ -512,6 +512,9 @@ static void RKADK_PARAM_CheckPhotoCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->vpss_chn, 0, VPSS_MAX_CHN_NUM,
                                     2, "photo vpss_chn");
 
+  if (pstPhotoCfg->jpeg_slice)
+    change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->slice_height, pstPhotoCfg->image_width, "photo slice_height");
+
   if (change)
     RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -974,6 +977,8 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
   pstPhotoCfg->combo_venc_chn = 0;
   pstPhotoCfg->qfactor = 70;
   pstPhotoCfg->switch_res = true;
+  pstPhotoCfg->jpeg_slice = false;
+  pstPhotoCfg->slice_height = 0;
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -1212,6 +1217,10 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.qfactor);
     printf("\t\tsensor[%d] stPhotoCfg switch_res: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.switch_res);
+    printf("\t\tsensor[%d] stPhotoCfg jpeg_slice: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.jpeg_slice);
+    printf("\t\tsensor[%d] stPhotoCfg slice_height: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.slice_height);
 
     printf("\tPreview Config\n");
     printf("\t\tsensor[%d] stStreamCfg width: %d\n", i,
@@ -1612,9 +1621,11 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
           sensorPath[i],
           &pstCfg->stMediaCfg[i].stRecCfg.attribute[j].venc_param,
           pstParamMapTable->pstMapTable, pstParamMapTable->u32TableLen);
-      if (ret)
+      if (ret) {
         RKADK_LOGW(
             "sensor[%d] rec attribute[%d] venc param not exist, use default", i, j);
+        return ret;
+      }
     }
     RKADK_PARAM_CheckRecCfg(sensorPath[i], i);
 
@@ -1639,8 +1650,10 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(
         sensorPath[i], &pstCfg->stMediaCfg[i].stStreamCfg.attribute.venc_param,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
-    if (ret)
+    if (ret) {
       RKADK_LOGW("sensor[%d] stream venc param not exist, use default", i);
+      return ret;
+    }
 
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_PREVIEW);
 
@@ -1665,8 +1678,10 @@ static RKADK_S32 RKADK_PARAM_LoadParam(char *path,
     ret = RKADK_Ini2Struct(
         sensorPath[i], &pstCfg->stMediaCfg[i].stLiveCfg.attribute.venc_param,
         pstMapTableCfg->pstMapTable, pstMapTableCfg->u32TableLen);
-    if (ret)
+    if (ret) {
       RKADK_LOGW("sensor[%d] live venc param not exist, use default", i);
+      return ret;
+    }
 
     RKADK_PARAM_CheckStreamCfg(sensorPath[i], i, RKADK_STREAM_TYPE_LIVE);
 
@@ -1858,6 +1873,8 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
       &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
+  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
+      &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stPhotoCfg;
 
   RKADK_CHECK_CAMERAID(s32CamId, RKADK_FAILURE);
   memset(module, 0, RKADK_BUFFER_LEN);
@@ -1874,7 +1891,8 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
 
   case RKADK_STREAM_TYPE_SNAP:
     memcpy(module, "PHOTO", strlen("PHOTO"));
-    bSaveViCfg = true;
+    if (!pstPhotoCfg->jpeg_slice)
+      bSaveViCfg = true;
     break;
 
   case RKADK_STREAM_TYPE_PREVIEW:
@@ -3500,6 +3518,9 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
   case RKADK_PARAM_TYPE_SNAP_NUM:
     *(RKADK_U32 *)pvParam = pstPhotoCfg->snap_num;
     break;
+  case RKADK_PARAM_TYPE_JPEG_SLICE:
+    *(bool *)pvParam = pstPhotoCfg->jpeg_slice;
+    break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);
     RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
@@ -3646,6 +3667,12 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
     RKADK_CHECK_EQUAL(pstPhotoCfg->snap_num, *(RKADK_U32 *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstPhotoCfg->snap_num = *(RKADK_U32 *)pvParam;
+    bSavePhotoCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_JPEG_SLICE:
+    RKADK_CHECK_EQUAL(pstPhotoCfg->jpeg_slice, *(bool *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstPhotoCfg->jpeg_slice = *(bool *)pvParam;
     bSavePhotoCfg = true;
     break;
   default:

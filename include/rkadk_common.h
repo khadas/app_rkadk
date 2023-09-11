@@ -206,7 +206,7 @@ typedef enum {
 #define RKADK_ABS(x)              ((x) < (0) ? -(x) : (x))
 
 #ifndef UPALIGNTO
-#define UPALIGNTO(value, align) ((value + align - 1) & (~(align - 1)))
+#define UPALIGNTO(value, align) (((value) + (align) - 1) / (align) * (align))
 #endif
 
 /* Pointer Check */
