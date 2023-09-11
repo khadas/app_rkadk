@@ -1799,6 +1799,7 @@ RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
   RKADK_S32 err = 0;
   RKADK_CHAR *pDevPath = NULL;
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
+  RKADK_CHAR mountPath[RKADK_MAX_FILE_PATH_LEN];
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
@@ -1818,6 +1819,10 @@ RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
 
     if (pstHandle->stDevSta.s32MountStatus != DISK_NOT_FORMATTED)
       RKADK_STORAGE_DevRemove(pDevPath, pstHandle);
+
+    ret = RKADK_STORAGE_GetMountPath(pDevPath, mountPath, RKADK_MAX_FILE_PATH_LEN);
+    if (!ret)
+        umount2(mountPath, MNT_FORCE);
 
     ret = rkfsmk_format_ex(pDevPath, pstHandle->stDevAttr.cVolume, pstHandle->stDevAttr.cFormatId);
     if (!ret)
