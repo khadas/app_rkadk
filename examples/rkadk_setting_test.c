@@ -271,7 +271,6 @@ static void SetPhotoCfg() {
   memset(&stPhotoCfg, 0, sizeof(RKADK_PARAM_PHOTO_CFG_S));
   stPhotoCfg.image_width = PHOTO_VIDEO_WIDTH;
   stPhotoCfg.image_height = PHOTO_VIDEO_HEIGHT;
-  stPhotoCfg.snap_num = 1;
   stPhotoCfg.venc_chn = 2;
   stPhotoCfg.vpss_grp = 0;
   stPhotoCfg.vpss_chn = 0;

@@ -239,7 +239,6 @@ static RKADK_SI_CONFIG_MAP_S g_stLiveParamMapTable[] = {
 static RKADK_SI_CONFIG_MAP_S g_stPhotoCfgMapTable[] = {
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, image_width),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, image_height),
-    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, snap_num),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, venc_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, vpss_chn),
@@ -249,6 +248,8 @@ static RKADK_SI_CONFIG_MAP_S g_stPhotoCfgMapTable[] = {
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, switch_res),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, jpeg_slice),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, slice_height),
+    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, max_slice_width),
+    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, max_slice_height),
 };
 
 /* VI[0] ~ VI[3] map table */

@@ -506,14 +506,16 @@ static void RKADK_PARAM_CheckPhotoCfg(char *path, RKADK_U32 u32CamId) {
                                 "photo width");
   change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->image_height, PHOTO_VIDEO_HEIGHT,
                                  "photo height");
-  change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->snap_num, 1, "photo snap_num");
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->venc_chn, 0, VENC_MAX_CHN_NUM,
                                     2, "photo venc_chn");
   change |= RKADK_PARAM_CheckCfgU32(&pstPhotoCfg->vpss_chn, 0, VPSS_MAX_CHN_NUM,
                                     2, "photo vpss_chn");
 
-  if (pstPhotoCfg->jpeg_slice)
-    change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->slice_height, pstPhotoCfg->image_width, "photo slice_height");
+  if (pstPhotoCfg->jpeg_slice) {
+    change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->slice_height, pstPhotoCfg->image_height, "photo slice_height");
+    change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->max_slice_width, JPEG_SLICE_WIDTH_MAX, "photo max_slice_width");
+    change |= RKADK_PARAM_CheckCfg(&pstPhotoCfg->max_slice_height, JPEG_SLICE_HEIGHT_MAX, "photo max_slice_height");
+  }
 
   if (change)
     RKADK_PARAM_SavePhotoCfg(path, u32CamId);
@@ -967,7 +969,6 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stPhotoCfg;
 
   memset(pstPhotoCfg, 0, sizeof(RKADK_PARAM_PHOTO_CFG_S));
-  pstPhotoCfg->snap_num = 1;
   pstPhotoCfg->image_width = PHOTO_VIDEO_WIDTH;
   pstPhotoCfg->image_height = PHOTO_VIDEO_HEIGHT;
   pstPhotoCfg->venc_chn = 2;
@@ -978,7 +979,6 @@ static void RKADK_PARAM_DefPhotoCfg(RKADK_U32 u32CamId, char *path) {
   pstPhotoCfg->qfactor = 70;
   pstPhotoCfg->switch_res = true;
   pstPhotoCfg->jpeg_slice = false;
-  pstPhotoCfg->slice_height = 0;
 
   RKADK_PARAM_SavePhotoCfg(path, u32CamId);
 }
@@ -1201,8 +1201,6 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.image_width);
     printf("\t\tsensor[%d] stPhotoCfg image_height: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.image_height);
-    printf("\t\tsensor[%d] stPhotoCfg snap_num: %d\n", i,
-           pstCfg->stMediaCfg[i].stPhotoCfg.snap_num);
     printf("\t\tsensor[%d] stPhotoCfg venc_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.venc_chn);
     printf("\t\tsensor[%d] stPhotoCfg vpss_grp: %d\n", i,
@@ -1221,6 +1219,10 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.jpeg_slice);
     printf("\t\tsensor[%d] stPhotoCfg slice_height: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.slice_height);
+    printf("\t\tsensor[%d] stPhotoCfg max_slice_width: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.max_slice_width);
+    printf("\t\tsensor[%d] stPhotoCfg max_slice_height: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.max_slice_height);
 
     printf("\tPreview Config\n");
     printf("\t\tsensor[%d] stStreamCfg width: %d\n", i,
@@ -2958,8 +2960,18 @@ RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height) {
     type = RKADK_RES_1620P;
   else if (width == RKADK_WIDTH_1944P && height == RKADK_HEIGHT_1944P)
     type = RKADK_RES_1944P;
-  else if (width == RKADK_WIDTH_3840P && height == RKADK_HEIGHT_2160P)
+  else if (width == RKADK_WIDTH_2160P && height == RKADK_HEIGHT_2160P)
     type = RKADK_RES_2160P;
+  else if (width == RKADK_WIDTH_3456P && height == RKADK_HEIGHT_3456P)
+    type = RKADK_RES_3456P;
+  else if (width == RKADK_WIDTH_4000P && height == RKADK_HEIGHT_4000P)
+    type = RKADK_RES_4000P;
+  else if (width == RKADK_WIDTH_4275P && height == RKADK_HEIGHT_4275P)
+    type = RKADK_RES_4275P;
+  else if (width == RKADK_WIDTH_4320P && height == RKADK_HEIGHT_4320P)
+    type = RKADK_RES_4320P;
+  else if (width == RKADK_WIDTH_4480P && height == RKADK_HEIGHT_4480P)
+    type = RKADK_RES_4480P;
   else
     RKADK_LOGE("Unsupport resolution(%d*%d)", width, height);
 
@@ -3002,8 +3014,28 @@ RKADK_S32 RKADK_PARAM_GetResolution(RKADK_PARAM_RES_E type, RKADK_U32 *width,
     *height = RKADK_HEIGHT_1944P;
     break;
   case RKADK_RES_2160P:
-    *width = RKADK_WIDTH_3840P;
+    *width = RKADK_WIDTH_2160P;
     *height = RKADK_HEIGHT_2160P;
+    break;
+  case RKADK_RES_3456P:
+    *width = RKADK_WIDTH_3456P;
+    *height = RKADK_HEIGHT_3456P;
+    break;
+  case RKADK_RES_4000P:
+    *width = RKADK_WIDTH_4000P;
+    *height = RKADK_HEIGHT_4000P;
+    break;
+  case RKADK_RES_4275P:
+    *width = RKADK_WIDTH_4275P;
+    *height = RKADK_HEIGHT_4275P;
+    break;
+  case RKADK_RES_4320P:
+    *width = RKADK_WIDTH_4320P;
+    *height = RKADK_HEIGHT_4320P;
+    break;
+  case RKADK_RES_4480P:
+    *width = RKADK_WIDTH_4480P;
+    *height = RKADK_HEIGHT_4480P;
     break;
   default:
     RKADK_LOGE("Unsupport resolution type: %d, set to 1080P", type);
@@ -3515,11 +3547,11 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
     *(RKADK_PARAM_RES_E *)pvParam = RKADK_PARAM_GetResType(
         pstPhotoCfg->image_width, pstPhotoCfg->image_height);
     break;
-  case RKADK_PARAM_TYPE_SNAP_NUM:
-    *(RKADK_U32 *)pvParam = pstPhotoCfg->snap_num;
-    break;
   case RKADK_PARAM_TYPE_JPEG_SLICE:
     *(bool *)pvParam = pstPhotoCfg->jpeg_slice;
+    break;
+  case RKADK_PARAM_TYPE_SLICE_HEIGHT:
+    *(bool *)pvParam = pstPhotoCfg->slice_height;
     break;
   default:
     RKADK_LOGE("Unsupport enParamType(%d)", enParamType);
@@ -3663,16 +3695,16 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
                               &(pstPhotoCfg->image_height));
     bSavePhotoCfg = true;
     break;
-  case RKADK_PARAM_TYPE_SNAP_NUM:
-    RKADK_CHECK_EQUAL(pstPhotoCfg->snap_num, *(RKADK_U32 *)pvParam,
-                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
-    pstPhotoCfg->snap_num = *(RKADK_U32 *)pvParam;
-    bSavePhotoCfg = true;
-    break;
   case RKADK_PARAM_TYPE_JPEG_SLICE:
     RKADK_CHECK_EQUAL(pstPhotoCfg->jpeg_slice, *(bool *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstPhotoCfg->jpeg_slice = *(bool *)pvParam;
+    bSavePhotoCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_SLICE_HEIGHT:
+    RKADK_CHECK_EQUAL(pstPhotoCfg->slice_height, *(bool *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstPhotoCfg->slice_height = *(RKADK_U32 *)pvParam;
     bSavePhotoCfg = true;
     break;
   default:

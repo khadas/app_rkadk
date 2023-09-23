@@ -131,8 +131,23 @@ extern "C" {
 #define RKADK_WIDTH_1944P 2592
 #define RKADK_HEIGHT_1944P 1944
 
-#define RKADK_WIDTH_3840P 3840
+#define RKADK_WIDTH_2160P 3840
 #define RKADK_HEIGHT_2160P 2160
+
+#define RKADK_WIDTH_3456P 4608
+#define RKADK_HEIGHT_3456P 3456
+
+#define RKADK_WIDTH_4000P 6000
+#define RKADK_HEIGHT_4000P 4000
+
+#define RKADK_WIDTH_4480P 6720
+#define RKADK_HEIGHT_4480P 4480
+
+#define RKADK_WIDTH_4275P 7600
+#define RKADK_HEIGHT_4275P 4275
+
+#define RKADK_WIDTH_4320P 7680
+#define RKADK_HEIGHT_4320P 4320
 
 /* Resolution type */
 typedef enum {
@@ -145,6 +160,11 @@ typedef enum {
   RKADK_RES_1620P,    /* 2880*1616, height 8 alignment */
   RKADK_RES_1944P,    /* 2592*1944 */
   RKADK_RES_2160P,    /* 3840*2160 */
+  RKADK_RES_3456P,    /* 4608*3456 */
+  RKADK_RES_4000P,    /* 6000*4000 */
+  RKADK_RES_4480P,    /* 6720*4480 */
+  RKADK_RES_4275P,    /* 7600*4275 */
+  RKADK_RES_4320P,    /* 7680*4320 */
   RKADK_RES_BUTT,
 } RKADK_PARAM_RES_E;
 
@@ -171,8 +191,8 @@ typedef enum {
   RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX */
   RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
   RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
-  RKADK_PARAM_TYPE_SNAP_NUM,       /* continue snap num */
   RKADK_PARAM_TYPE_JPEG_SLICE,     /* enable/disable jpeg slice */
+  RKADK_PARAM_TYPE_SLICE_HEIGHT,     /* set jpeg slice height */
 
   // COMM Dependent Param
   RKADK_PARAM_TYPE_REC_MUTE,      /* record audio mute, bool */
@@ -328,7 +348,6 @@ typedef struct tagRKADK_PARAM_STREAM_CFG_S {
 typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 image_width;
   RKADK_U32 image_height;
-  RKADK_U32 snap_num;
   RKADK_U32 venc_chn;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
@@ -338,6 +357,8 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   bool switch_res;
   bool jpeg_slice;
   RKADK_U32 slice_height;
+  RKADK_U32 max_slice_width;
+  RKADK_U32 max_slice_height;
   RKADK_PRAAM_VI_ATTR_S vi_attr;
 } RKADK_PARAM_PHOTO_CFG_S;
 

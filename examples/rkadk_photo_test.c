@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
   RKADK_OSD_ATTR_S OsdAttr;
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32OsdId = 0;
+  RKADK_U32 u32SliceHeight;
 
 #ifdef RKAIQ
   RKADK_PARAM_FPS_S stFps;
@@ -372,6 +373,40 @@ photo:
       }
     } else if (strstr(cmd, "1296")) {
       type = RKADK_RES_1296P;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
+    } else if (strstr(cmd, "4480")) {
+      u32SliceHeight = 320;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_SLICE_HEIGHT, &u32SliceHeight);
+
+      type = RKADK_RES_4480P;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
+      ret = RKADK_PHOTO_Reset(&pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        pHandle = NULL;
+        goto photo;
+#endif
+      }
+    } else if (strstr(cmd, "4275")) {
+      u32SliceHeight = 304;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_SLICE_HEIGHT, &u32SliceHeight);
+
+      type = RKADK_RES_4275P;
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {

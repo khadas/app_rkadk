@@ -51,8 +51,6 @@
 #define VDEC_GET_DATA_VPSS_GRP 11
 #define VDEC_GET_DATA_VPSS_CHN 0
 
-#define JPEG_SLICE_WIDTH_MAX 8192
-
 #define JPG_MMAP_FILE_PATH "/tmp/.mmap.jpeg"
 
 typedef enum {
@@ -88,6 +86,7 @@ typedef struct {
 typedef struct {
   RKADK_U32 u32CamId;
   RKADK_U32 u32ViChn;
+  bool bReseting;
   bool bUseVpss;
   RKADK_PHOTO_DATA_RECV_FN_PTR pDataRecvFn;
   pthread_t tid;
@@ -126,18 +125,16 @@ static RKADK_U8 *RKADK_PHOTO_Mmap(RKADK_CHAR *FileName, RKADK_U32 u32PhotoLen) {
 }
 
 static int RKADK_PHOTO_SetViSliceParam(RKADK_PHOTO_HANDLE_S *pHandle,
-                                RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg, VIDEO_FRAME_S stVFrame) {
+                                RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg, RKADK_U32 u32Width,
+                                RKADK_U32 u32Height) {
   int count;
   RKADK_U32 multiplier = 0;
   RKADK_S32 s32Height = 0, s32SaveHeight = 0;
 
-  if (pHandle->stSliceParam.stViSlice.s32Witdh == stVFrame.u32VirWidth)
-    return 0;
+  pHandle->stSliceParam.stViSlice.s32Witdh = u32Width;
+  pHandle->stSliceParam.stViSlice.s32LastWidth = u32Width;
 
-  pHandle->stSliceParam.stViSlice.s32Witdh = stVFrame.u32VirWidth;
-  pHandle->stSliceParam.stViSlice.s32LastWidth = stVFrame.u32VirWidth;
-
-  multiplier = stVFrame.u32VirHeight * pHandle->stSliceParam.stVencSlice.s32Height;
+  multiplier = u32Height * pHandle->stSliceParam.stVencSlice.s32Height;
   s32Height = multiplier / pstPhotoCfg->image_height;
   if (multiplier % pstPhotoCfg->image_height) {
     s32SaveHeight = s32Height;
@@ -146,16 +143,16 @@ static int RKADK_PHOTO_SetViSliceParam(RKADK_PHOTO_HANDLE_S *pHandle,
 
 RETRY:
   if (s32Height % 2) {
-    pHandle->stSliceParam.stViSlice.s32Height = s32Height + 1;
-    pHandle->stSliceParam.stViSlice.s32EvenHeight = s32Height - 1;
+    pHandle->stSliceParam.stViSlice.s32Height = s32Height - 1;
+    pHandle->stSliceParam.stViSlice.s32EvenHeight = s32Height + 1;
   } else {
     pHandle->stSliceParam.stViSlice.s32Height = s32Height;
     pHandle->stSliceParam.stViSlice.s32EvenHeight = s32Height;
   }
 
   count = (pHandle->stSliceParam.u32SliceCount - 1) / 2;
-  pHandle->stSliceParam.stViSlice.s32LastHeight = stVFrame.u32VirHeight
-    - (pHandle->stSliceParam.stViSlice.s32Height + pHandle->stSliceParam.stViSlice.s32EvenHeight) * count;
+  pHandle->stSliceParam.stViSlice.s32LastHeight = u32Height - (pHandle->stSliceParam.stViSlice.s32Height
+    + pHandle->stSliceParam.stViSlice.s32EvenHeight) * count;
   if ((pHandle->stSliceParam.u32SliceCount - 1) % 2)
     pHandle->stSliceParam.stViSlice.s32LastHeight -= pHandle->stSliceParam.stViSlice.s32Height;
 
@@ -175,7 +172,19 @@ RETRY:
   return 0;
 }
 
-static int RKADK_PHOTO_SetSliceParam(RKADK_PHOTO_HANDLE_S *pHandle, RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
+static int RKADK_PHOTO_SetSliceParam(RKADK_PHOTO_HANDLE_S *pHandle,
+                              RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
+                              RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
+  if (pstPhotoCfg->slice_height <= 0 || pstPhotoCfg->slice_height > pstPhotoCfg->image_height) {
+    RKADK_LOGE("Invalid slice_height[%d], image_height[%d]", pstPhotoCfg->slice_height, pstPhotoCfg->image_height);
+    return -1;
+  }
+
+  if (pstPhotoCfg->slice_height % 16) {
+    RKADK_LOGE("Invalid slice_height[%d], must be 16 aligned", pstPhotoCfg->slice_height);
+    return -1;
+  }
+
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat != RK_FMT_YUV420SP
       && pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat != RK_FMT_YUV422SP) {
     RKADK_LOGE("Jpeg slice unsupport format: %d", pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat);
@@ -195,6 +204,16 @@ static int RKADK_PHOTO_SetSliceParam(RKADK_PHOTO_HANDLE_S *pHandle, RKADK_PARAM_
   pHandle->stSliceParam.stVencSlice.s32LastHeight
     = pstPhotoCfg->image_height - pstPhotoCfg->slice_height * (pHandle->stSliceParam.u32SliceCount - 1);
 
+  if (pHandle->stSliceParam.stVencSlice.s32Witdh > JPEG_SLICE_WIDTH_MAX) {
+    RKADK_LOGE("Slice output width[%d] > %d", pHandle->stSliceParam.stVencSlice.s32Witdh, JPEG_SLICE_WIDTH_MAX);
+    return -1;
+  }
+
+  if (pHandle->stSliceParam.stVencSlice.s32Height > JPEG_SLICE_HEIGHT_MAX) {
+    RKADK_LOGE("Slice output height[%d] > %d", pHandle->stSliceParam.stVencSlice.s32Witdh, JPEG_SLICE_HEIGHT_MAX);
+    return -1;
+  }
+
   RKADK_LOGD("Jpeg slice w*h[%d, %d], last slice w*h[%d, %d], u32MCUPerECS: %d, slice count: %d",
               pHandle->stSliceParam.stVencSlice.s32Witdh,
               pHandle->stSliceParam.stVencSlice.s32Height,
@@ -213,6 +232,7 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   int srcOffsetY = 0, srcOffsetUV = 0;
   void *pSrcData = NULL, *pDstBuf = NULL;
   RKADK_U32 u32DstBufSize;
+  MB_POOL vencMbPool = MB_INVALID_POOLID;
   VIDEO_FRAME_INFO_S stViFrame, stFrame;
   RkScalerContext scalerContext;
   RkScalerParams scalerParam;
@@ -220,7 +240,6 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = NULL;
   MB_BLK pMbBlk = NULL;
   MB_POOL_CONFIG_S stMbPoolCfg;
-  MB_POOL vencMbPool = MB_INVALID_POOLID;
 
   VENC_STREAM_S stStream;
   VENC_PACK_S stPack;
@@ -272,12 +291,10 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
 
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV420SP) {
     format = SCALER_FMT_YUV420SP;
-    u32DstBufSize = pHandle->stSliceParam.stVencSlice.s32Witdh
-                      * pHandle->stSliceParam.stVencSlice.s32Height * 1.5;
+    u32DstBufSize = pstPhotoCfg->max_slice_width * pstPhotoCfg->max_slice_height * 1.5;
   } else {
     format = SCALER_FMT_YUV422SP;
-    u32DstBufSize = pHandle->stSliceParam.stVencSlice.s32Witdh
-                      * pHandle->stSliceParam.stVencSlice.s32Height * 2;
+    u32DstBufSize = pstPhotoCfg->max_slice_width * pstPhotoCfg->max_slice_height * 2;
   }
 
 #ifdef FULL_IMAGE_TEST
@@ -334,11 +351,9 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
     ret = RK_MPI_VI_GetChnFrame(pHandle->u32CamId, pstPhotoCfg->vi_attr.u32ViChn, &stViFrame, 1000);
     if (ret == RK_SUCCESS) {
       if (pHandle->u32PhotoCnt > 0) {
-        ret = RKADK_PHOTO_SetViSliceParam(pHandle, pstPhotoCfg, stViFrame.stVFrame);
-        if (ret) {
-          RKADK_LOGE("RKADK_PHOTO_SetViSliceParam failed");
-          break;
-        }
+        if (pHandle->stSliceParam.stViSlice.s32Witdh != stViFrame.stVFrame.u32VirWidth)
+          RKADK_PHOTO_SetViSliceParam(pHandle, pstPhotoCfg, stViFrame.stVFrame.u32VirWidth,
+                                      stViFrame.stVFrame.u32VirHeight);
 
         pSrcData = RK_MPI_MB_Handle2VirAddr(stViFrame.stVFrame.pMbBlk);
         srcOffsetY = 0;
@@ -649,13 +664,12 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
         pHandle->pDataRecvFn(&stData);
       }
 
-      pHandle->u32PhotoCnt--;
-
       RKADK_LOGD("Photo success, seq = %d, len = %d", stFrame.u32Seq, stFrame.pstPack->u32Len);
       ret = RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
 
+      pHandle->u32PhotoCnt--;
       RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
     }
   }
@@ -689,27 +703,15 @@ static int RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_HANDLE_S *pHandle,
   }
 
   if (pstPhotoCfg->jpeg_slice) {
-    if (pstPhotoCfg->slice_height <= 0 || pstPhotoCfg->slice_height > pstPhotoCfg->image_height) {
-      RKADK_LOGE("Invalid slice_height[%d]", pstPhotoCfg->slice_height);
-      return -1;
-    }
-
-    if (pstPhotoCfg->slice_height % 16) {
-      RKADK_LOGE("Invalid slice_height[%d], must be 16 aligned", pstPhotoCfg->slice_height);
-      return -1;
-    }
-
-    ret = RKADK_PHOTO_SetSliceParam(pHandle, pstPhotoCfg);
+    ret = RKADK_PHOTO_SetSliceParam(pHandle, pstSensorCfg, pstPhotoCfg);
     if (ret)
       return -1;
 
-    if (pHandle->stSliceParam.stVencSlice.s32Witdh > JPEG_SLICE_WIDTH_MAX) {
-      RKADK_LOGE("Slice output width[%d] > %d", pHandle->stSliceParam.stVencSlice.s32Witdh, JPEG_SLICE_WIDTH_MAX);
-      return -1;
-    }
+    RKADK_PHOTO_SetViSliceParam(pHandle, pstPhotoCfg, pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width,
+                                pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height);
 
-    u32MaxWidth = pHandle->stSliceParam.stVencSlice.s32Witdh;
-    u32MaxHeight = pHandle->stSliceParam.stVencSlice.s32Height;
+    u32MaxWidth = pstPhotoCfg->max_slice_width;
+    u32MaxHeight = pstPhotoCfg->max_slice_height;
   } else {
     u32MaxWidth = pstSensorCfg->max_width;
     u32MaxHeight = pstSensorCfg->max_height;
@@ -1293,7 +1295,12 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   if (pstHandle->u32PhotoCnt > 0) {
-    RKADK_LOGD("The last photo shoot wasn't over, u32PhotoCnt: %d", pstHandle->u32PhotoCnt);
+    RKADK_LOGI("The last photo shoot wasn't over, u32PhotoCnt: %d", pstHandle->u32PhotoCnt);
+    return 0;
+  }
+
+  if (pstHandle->bReseting) {
+    RKADK_LOGI("Now reset, no photos allowed");
     return 0;
   }
 
@@ -1368,8 +1375,8 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   return -1;
 #endif
 
-  if (pstHandle->stSliceParam.bJpegSlice) {
-    RKADK_LOGE("Slice mode nonsupport dynamic setting resolution, please recreate!");
+  if (pstHandle->u32PhotoCnt > 0) {
+    RKADK_LOGE("The last photo shoot wasn't over, u32PhotoCnt: %d", pstHandle->u32PhotoCnt);
     return -1;
   }
 
@@ -1393,6 +1400,8 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
     return -1;
   }
 
+  pstHandle->bReseting = true;
+
   RKADK_PHOTO_SetVideoChn(pstPhotoCfg, pstHandle->u32CamId, &stViChn, &stVencChn,
                      &stSrcVpssChn, &stDstVpssChn);
   stViChn.s32ChnId = pstHandle->u32ViChn;
@@ -1401,16 +1410,18 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   memset(&stViAttr, 0, sizeof(VI_CHN_ATTR_S));
   memset(&stVpssAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
-  ret = RK_MPI_VI_GetChnAttr(pstHandle->u32CamId, stViChn.s32ChnId, &stViAttr);
-  if (ret != RK_SUCCESS) {
-    RKADK_LOGE("Photo get vi[%d] attr failed[%x]", stViChn.s32ChnId, ret);
-    return -1;
+  if (!pstHandle->stSliceParam.bJpegSlice) {
+    ret = RK_MPI_VI_GetChnAttr(pstHandle->u32CamId, stViChn.s32ChnId, &stViAttr);
+    if (ret != RK_SUCCESS) {
+      RKADK_LOGE("Photo get vi[%d] attr failed[%x]", stViChn.s32ChnId, ret);
+      goto EXIT;
+    }
   }
 
   ret = RK_MPI_VENC_GetChnAttr(stVencChn.s32ChnId, &stVencAttr);
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo get venc[%d] attr failed[%x]", stVencChn.s32ChnId, ret);
-    return -1;
+    goto EXIT;
   }
 
   if (pstHandle->bUseVpss) {
@@ -1418,7 +1429,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
     if (ret) {
       RKADK_LOGE("Photo get vpss grp[%d] chn[%d] attr failed[%x]",
                   pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
-      return -1;
+      goto EXIT;
     }
   }
 
@@ -1427,26 +1438,33 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
                                   pstPhotoCfg->image_height);
   if (!bPhoto) {
     RKADK_LOGE("Photo dose not reset venc attr");
-    return -1;
+    goto EXIT;
   }
 
   RKADK_PHOTO_ResetAttr(pstSensorCfg, pstPhotoCfg,
                         &stVencAttr, &stViAttr, &stVpssAttr);
 
-  if (pstHandle->bUseVpss) {
+  if (pstHandle->stSliceParam.bJpegSlice) {
+    ret = RKADK_PHOTO_SetSliceParam(pstHandle, pstSensorCfg, pstPhotoCfg);
+    if (ret)
+      goto EXIT;
+
+    RKADK_PHOTO_SetViSliceParam(pstHandle, pstPhotoCfg, pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width,
+                                pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height);
+  } else if (pstHandle->bUseVpss) {
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
     if (ret) {
       RKADK_LOGE("UnBind VPSS[%d] to VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
-      return -1;
+      goto EXIT;
     }
   } else {
     ret = RKADK_MPI_SYS_UnBind(&stViChn, &stVencChn);
     if (ret != RK_SUCCESS) {
       RKADK_LOGE("Photo VI UnBind VENC [%d %d]fail %x", stViChn.s32ChnId,
                   stVencChn.s32ChnId, ret);
-      return -1;
+      goto EXIT;
     }
   }
 
@@ -1454,41 +1472,67 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   if (ret != RK_SUCCESS) {
     RKADK_LOGE("Photo set venc[%d] attr failed %x",
                 stVencChn.s32ChnId, ret);
-    return -1;
+    goto EXIT;
   }
 
-  if (pstHandle->bUseVpss) {
+  if (pstHandle->stSliceParam.bJpegSlice) {
+    VENC_JPEG_PARAM_S stJpegParam;
+    memset(&stJpegParam, 0, sizeof(VENC_JPEG_PARAM_S));
+
+#if 0
+    //RK_MPI_VENC_GetJpegParam not yet released
+    ret = RK_MPI_VENC_GetJpegParam(stVencChn.s32ChnId, &stJpegParam);
+    if (ret) {
+      RKADK_LOGE("GetJpegParam failed[%x]", ret);
+      goto EXIT;
+    }
+#else
+    stJpegParam.u32Qfactor = pstPhotoCfg->qfactor;
+#endif
+
+    stJpegParam.u32MCUPerECS = pstHandle->stSliceParam.u32MCUPerECS;
+    ret = RK_MPI_VENC_SetJpegParam(stVencChn.s32ChnId, &stJpegParam);
+    if (ret) {
+      RKADK_LOGE("SetJpegParam failed[%x]", ret);
+      goto EXIT;
+    }
+  } else if (pstHandle->bUseVpss) {
     ret = RK_MPI_VPSS_SetChnAttr(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, &stVpssAttr);
     if (ret) {
       RKADK_LOGE("Photo set vpss grp[%d] chn[%d] attr falied[%x]",
                   pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn, ret);
-      return -1;
+      goto EXIT;
     }
 
     ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stVencChn);
     if (ret) {
       RKADK_LOGE("Photo VPSS[%d] Bind VENC[%d] failed[%x]", stSrcVpssChn.s32ChnId,
                  stVencChn.s32ChnId, ret);
-      return -1;
+      goto EXIT;
     }
   } else {
     ret = RK_MPI_VI_SetChnAttr(pstHandle->u32CamId, stViChn.s32ChnId,
                               &stViAttr);
     if (ret != RK_SUCCESS) {
       RKADK_LOGE("Photo set VI[%d] attr failed %x", stViChn.s32ChnId, ret);
-      return -1;
+      goto EXIT;
     }
 
     ret = RKADK_MPI_SYS_Bind(&stViChn, &stVencChn);
     if (ret != RK_SUCCESS) {
       RKADK_LOGE("Photo VI Bind VENC [%d %d] fail %x",stViChn.s32ChnId,
                   stVencChn.s32ChnId, ret);
-      return -1;
+      goto EXIT;
     }
   }
 
+  pstHandle->bReseting = false;
   RKADK_LOGI("Photo[%d] Reset end...", pstHandle->u32CamId);
   return 0;
+
+EXIT:
+  pstHandle->bReseting = false;
+  return -1;
 }
 
 static RKADK_S32 RKADK_PHOTO_GetJpgResolution(RKADK_CHAR *pcFileName,
