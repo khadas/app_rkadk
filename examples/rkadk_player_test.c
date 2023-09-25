@@ -392,6 +392,7 @@ int main(int argc, char *argv[]) {
       RKADK_LOGD("replay, loop_count: %d", loop_count);
       if (loop_count == 0) {
         RKADK_LOGD("loop play end!");
+        is_quit = true;
         goto __EXIT;
       }
 
