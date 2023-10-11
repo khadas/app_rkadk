@@ -94,6 +94,7 @@ typedef struct {
   RKADK_U32 u32DataLen;
   RKADK_U32 u32CamId;
   bool bStreamEnd;
+  void *userdata;
 } RKADK_PHOTO_RECV_DATA_S;
 
 /* photo data recv callback */
@@ -113,6 +114,7 @@ typedef struct {
   RKADK_U32 u32CamId; /** cam id, 0--front 1--rear */
   RKADK_PHOTO_THUMB_ATTR_S stThumbAttr;
   RKADK_PHOTO_DATA_RECV_FN_PTR pfnPhotoDataProc;
+  void *userdata;
 } RKADK_PHOTO_ATTR_S;
 
 /****************************************************************************/

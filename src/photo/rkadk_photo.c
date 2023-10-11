@@ -93,6 +93,7 @@ typedef struct {
   bool bGetJpeg;
   RKADK_U32 u32PhotoCnt;
   RKADK_JPG_SLICE_PARAM stSliceParam;
+  void *userdata;
 } RKADK_PHOTO_HANDLE_S;
 
 static RKADK_U8 *RKADK_PHOTO_Mmap(RKADK_CHAR *FileName, RKADK_U32 u32PhotoLen) {
@@ -267,6 +268,11 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
   if (!pHandle) {
     RKADK_LOGE("Get jpeg thread invalid param");
+    return NULL;
+  }
+
+  if (!pHandle->pDataRecvFn) {
+    RKADK_LOGE("u32CamId[%d] don't register callback", pHandle->u32CamId);
     return NULL;
   }
 
@@ -482,6 +488,7 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
           if (ret == RK_SUCCESS) {
             pu8JpgData = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stStream.pstPack->pMbBlk);
             memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
+            stData.userdata = pHandle->userdata;
 
             if (!bGetThumb) {
               ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
@@ -642,6 +649,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
     if (ret == RK_SUCCESS) {
       pu8JpgData = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
       memset(&stData, 0, sizeof(RKADK_PHOTO_RECV_DATA_S));
+      stData.userdata = pHandle->userdata;
 
       ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
       if (ret == RK_SUCCESS) {
@@ -925,6 +933,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
 
   pHandle->u32CamId = pstPhotoAttr->u32CamId;
   pHandle->pDataRecvFn = pstPhotoAttr->pfnPhotoDataProc;
+  pHandle->userdata = pstPhotoAttr->userdata;
 
   pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
   if (!pstPhotoCfg) {
