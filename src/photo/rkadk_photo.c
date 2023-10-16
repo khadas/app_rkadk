@@ -20,7 +20,6 @@
 #include "rkadk_param.h"
 #include "rkadk_thumb_comm.h"
 #include "rkadk_signal.h"
-#include "libRkScalerApi.h"
 #include <byteswap.h>
 #include <assert.h>
 #include <malloc.h>
@@ -34,6 +33,10 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <utime.h>
+
+#ifdef JPEG_SLICE
+#include "libRkScalerApi.h"
+#endif
 
 #define JPG_THM_FIND_NUM_MAX 50
 #define JPG_EXIF_FLAG_LEN 6
@@ -229,6 +232,7 @@ static int RKADK_PHOTO_SetSliceParam(RKADK_PHOTO_HANDLE_S *pHandle,
 //#define JPEG_SLICE_WRITE
 //#define FULL_IMAGE_TEST
 static void *RKADK_PHOTO_SliceProc(void *params) {
+#ifdef JPEG_SLICE
   int ret, i = 0;
   int srcOffsetY = 0, srcOffsetUV = 0;
   void *pSrcData = NULL, *pDstBuf = NULL;
@@ -578,6 +582,10 @@ Exit:
 
   RKADK_LOGD("Exit jpeg slice thread");
   return NULL;
+#else
+  RKADK_LOGE("No define JPEG_SLICE macro");
+  return NULL;
+#endif
 }
 
 static void *RKADK_PHOTO_GetJpeg(void *params) {
@@ -833,12 +841,14 @@ static bool RKADK_PHOTO_EnableJpegSlice(RKADK_U32 u32CamId,
   if (!pstPhotoCfg->jpeg_slice)
     return false;
 
+#ifdef JPEG_SLICE
   if (pstPhotoCfg->image_width != u32ViWidth ||
       pstPhotoCfg->image_height != u32ViHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32ViWidth, u32ViHeight,
                pstPhotoCfg->image_width, pstPhotoCfg->image_height);
     bJpegSlice = true;
   }
+#endif
 
   return bJpegSlice;
 }
