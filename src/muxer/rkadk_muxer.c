@@ -24,6 +24,11 @@
 #include "rkmuxer.h"
 #include <sys/time.h>
 
+#ifdef FILE_CACHE
+#include "file_msg.h"
+#include "file_cache.h"
+#endif
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(_a) (sizeof(_a) / sizeof((_a)[0]))
 #endif // ARRAY_SIZE
@@ -84,6 +89,7 @@ typedef struct {
   int32_t duration;     // s
   int32_t realDuration; // ms
   int64_t startTime;    // us
+  RKADK_U32 keyFrameCnt;
   RKADK_U32 frameCnt;
   bool bEnableStream;
   bool bReseting;
@@ -114,6 +120,10 @@ typedef struct {
   MANUAL_SPLIT_ATTR stManualSplit;
   MANUAL_PRE_RECORD_PARAM stPreRecParam;
 } MUXER_HANDLE_S;
+
+#ifdef FILE_CACHE
+static RKADK_MW_PTR g_pRecorder[RKADK_MAX_SENSOR_CNT] = {NULL};
+#endif
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
   INIT_LIST_HEAD(&pstMuxerHandle->stVFree);
@@ -365,9 +375,17 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
   }
 
   stEventInfo.enEvent = enEventType;
-  stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
-  memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
-         pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+
+  if (enEventType == RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL
+      || enEventType == RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL) {
+    stEventInfo.unEventInfo.stErrorInfo.s32ErrorCode = value;
+    memcpy(stEventInfo.unEventInfo.stErrorInfo.asFileName,
+           pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+  } else {
+    stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
+    memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
+           pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+  }
   pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
 }
 
@@ -376,6 +394,10 @@ static void RKADK_MUXER_CheckWriteSpeed(MUXER_HANDLE_S *pstMuxerHandle) {
   struct timeval curTime;
   float diff = 0;
   long diffMs = 0;
+
+#ifdef FILE_CACHE
+  return;
+#endif
 
   gettimeofday(&curTime, NULL);
   size = RKADK_MUXER_GetListSize(&pstMuxerHandle->stVFree);
@@ -523,8 +545,10 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
     while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
       if (cnt % 100 == 0) {
         RKADK_LOGI("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->u32VencChn, cnt);
+#ifndef FILE_CACHE
         if (cnt != 0)
           RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
+#endif
       }
       cnt++;
       usleep(10000);
@@ -577,6 +601,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->stThumbParam.bRequestThumb = false;
   pstMuxerHandle->stManualSplit.bEnableSplit = false;
   pstMuxerHandle->stManualSplit.bSplitRecord = false;
+  pstMuxerHandle->keyFrameCnt = 0;
 }
 
 static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -739,8 +764,9 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle,
   bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
                 (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
   if (bFileSwitch) {
-    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d",
-        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt + 1);
+    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d, keyFrameCnt: %d",
+        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration,
+        pstMuxerHandle->frameCnt + 1, pstMuxerHandle->keyFrameCnt);
     RKADK_MUXER_Close(pstMuxerHandle);
     return true;
   }
@@ -852,9 +878,7 @@ static bool RKADK_MUXER_Proc(void *params) {
         if (ret) {
           RKADK_LOGE("request file name failed");
         } else {
-          RKADK_LOGI("Ready to recod new video file path:[%s]",
-                    pstMuxerHandle->cFileName);
-          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN, u32Duration);
+          RKADK_LOGI("Ready to recod new video file path:[%s]", pstMuxerHandle->cFileName);
 
           RKADK_MUTEX_LOCK(pstMuxerHandle->paramMutex);
           ret = rkmuxer_init(pstMuxerHandle->muxerId,
@@ -864,7 +888,13 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_MUTEX_UNLOCK(pstMuxerHandle->paramMutex);
           if (ret) {
             RKADK_LOGE("rkmuxer_init[%d] failed[%d]", pstMuxerHandle->muxerId, ret);
+#ifndef FILE_CACHE
+            RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL, 0);
+#endif
           } else {
+#ifndef FILE_CACHE
+            RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN, u32Duration);
+#endif
             if (RKADK_MUXER_PreRecProc(pstMuxerHandle)) {
               MUXER_BUF_CELL_S *firstCell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
               if (firstCell) {
@@ -916,6 +946,8 @@ static bool RKADK_MUXER_Proc(void *params) {
                         pstMuxerHandle->u32VencChn, cell->pts, pstMuxerHandle->startTime);
           pstMuxerHandle->realDuration = (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
+          if(cell->isKeyFrame)
+            pstMuxerHandle->keyFrameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
 
           if (pstMuxerHandle->stThumbParam.bGetThumb && pstMuxerHandle->realDuration >= 5000)
@@ -1191,6 +1223,9 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   pstMuxer->bLapseRecord = pstMuxerAttr->bLapseRecord;
 
   *ppHandle = (RKADK_MW_PTR)pstMuxer;
+#ifdef FILE_CACHE
+  g_pRecorder[pstMuxer->u32CamId] = (RKADK_MW_PTR)pstMuxer;
+#endif
   RKADK_LOGI("Create Record[%d] Stop...", pstMuxerAttr->u32CamId);
   return 0;
 }
@@ -1272,12 +1307,14 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     pstMuxer->pMuxerHandle[i] = NULL;
   }
 
+#ifdef FILE_CACHE
+  g_pRecorder[pstMuxer->u32CamId] = NULL;
+#endif
+
   RKADK_LOGI("Destory Muxer[%d] Stop...", pstMuxer->u32CamId);
 
-  if (pstMuxer) {
-    free(pstMuxer);
-    pstMuxer = NULL;
-  }
+  free(pstMuxer);
+  pstMuxer = NULL;
 
   return 0;
 }
@@ -1573,3 +1610,75 @@ RKADK_S32 RKADK_MUXER_UpdateRes(RKADK_MW_PTR pHandle, RKADK_U32 chnId,
   RKADK_MUTEX_UNLOCK(pstMuxerHandle->paramMutex);
   return 0;
 }
+
+#ifdef FILE_CACHE
+static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
+  int i = 0, j = 0;
+  RKADK_U32 value = 0;
+  FILE_NOTIFY enNotify = cmd;
+  char *filename = (char *)msg0;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_EVENT_E enEventType = RKADK_MUXER_EVENT_BUTT;
+
+  for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+    if (g_pRecorder[i]) {
+      pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
+      for (j = 0; j < (int)pstMuxer->u32StreamCnt; j++) {
+        pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[j];
+        if (!pstMuxerHandle) {
+          RKADK_LOGD("Muxer Handle[%d] is NULL", j);
+          continue;
+        }
+
+        if (!strcmp(pstMuxerHandle->cFileName, filename))
+          break;
+
+        pstMuxerHandle = NULL;
+      }
+    }
+  }
+
+  if (!pstMuxerHandle)
+    return;
+
+  switch (enNotify) {
+    case FILE_NEW:
+      enEventType = RKADK_MUXER_EVENT_FILE_BEGIN;
+      if (pstMuxerHandle->stManualSplit.bSplitRecord)
+        value = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
+      else
+        value = pstMuxerHandle->duration;
+      break;
+#if 0
+    case FILE_END:
+      if (pstMuxerHandle->stManualSplit.bSplitRecord)
+        enEventType = RKADK_MUXER_EVENT_MANUAL_SPLIT_END;
+      else
+        enEventType = RKADK_MUXER_EVENT_FILE_END;
+      value = pstMuxerHandle->realDuration;
+      break;
+#endif
+    case OPEN_FAILED:
+      enEventType = RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL;
+      value = *(int *)msg1;
+      break;
+    case WRITE_FAILED:
+      enEventType = RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL;
+      value = *(int *)msg1;
+      break;
+    case WRITE_SLOW:
+      enEventType = RKADK_MUXER_EVENT_FILE_WRITING_SLOW;
+      break;
+  }
+
+  if (enEventType == RKADK_MUXER_EVENT_BUTT)
+    return;
+
+  RKADK_MUXER_ProcessEvent(pstMuxerHandle, enEventType, value);
+}
+
+void RKADK_MUXER_FsCacheNotify() {
+  file_msg_reg_callback(RKADK_MUXER_NotifyCallback);
+}
+#endif

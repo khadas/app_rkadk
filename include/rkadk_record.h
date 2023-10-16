@@ -48,9 +48,28 @@ typedef struct {
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
 } RKADK_RECORD_ATTR_S;
 
+typedef struct {
+  RKADK_U32 u32WriteCache; /* write cache size(byte), default 1M */
+  RKADK_U32 u32TatalCache; /* total cache size(byte), default 10M */
+} FILE_CACHE_ATTR_S;
+
 /****************************************************************************/
 /*                            Interface Definition                          */
 /****************************************************************************/
+/**
+ * @brief initialize file cache
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr);
+
+/**
+ * @brief deinitialize file cache
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_RECORD_FileCacheDeInit();
+
 /**
  * @brief create a new recorder
  * @param[in]pstRecAttr : the attribute of recorder

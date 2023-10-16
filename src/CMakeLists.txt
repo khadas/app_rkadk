@@ -66,6 +66,11 @@ if(ENABLE_STORAGE)
 	target_link_libraries(rkadk iconv rkfsmk)
 endif()
 
+if(ENABLE_FILE_CACHE)
+	add_definitions(-DFILE_CACHE)
+	#target_link_libraries(rkadk file_cache)
+endif()
+
 if(USE_RKAIQ)
 	target_link_libraries(rkadk rkaiq)
 endif()

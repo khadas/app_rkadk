@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef FILE_CACHE
+#include "file_cache.h"
+#endif
+
 typedef struct {
   struct list_head mark;
   char filename[RKADK_MAX_FILE_PATH_LEN];
@@ -1735,4 +1739,29 @@ RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
   }
 
   return -1;
+}
+
+RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr) {
+#ifdef FILE_CACHE
+  int ret;
+  FILE_CACHE_ARG stCacheArg;
+
+  RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
+
+  stCacheArg.write_cache = pstFileCacheAttr->u32WriteCache;
+  stCacheArg.tatal_cache = pstFileCacheAttr->u32TatalCache;
+  ret = file_cache_init(&stCacheArg);
+  RKADK_MUXER_FsCacheNotify();
+  return ret;
+#else
+  return -1;
+#endif
+}
+
+RKADK_S32 RKADK_RECORD_FileCacheDeInit() {
+#ifdef FILE_CACHE
+  return file_cache_deinit();
+#else
+  return -1;
+#endif
 }

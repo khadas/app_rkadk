@@ -270,6 +270,10 @@ bool RKADK_MUXER_IsUseVpss(RKADK_MW_PTR pHandle, RKADK_U32 u32VencChn);
 RKADK_S32 RKADK_MUXER_UpdateRes(RKADK_MW_PTR pHandle, RKADK_U32 chnId,
                               RKADK_U32 u32Wdith, RKADK_U32 u32Hieght);
 
+#ifdef FILE_CACHE
+void RKADK_MUXER_FsCacheNotify();
+#endif
+
 #ifdef __cplusplus
 }
 #endif

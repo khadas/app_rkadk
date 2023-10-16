@@ -97,10 +97,17 @@ RecordEventCallback(RKADK_MW_PTR pRecorder,
            pstEventInfo->unEventInfo.stFileInfo.u32Duration);
     break;
   case RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL:
-    printf("+++++ RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL +++++\n");
+    printf("+++++ RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL[%d, %s] +++++\n",
+            pstEventInfo->unEventInfo.stErrorInfo.s32ErrorCode,
+            strerror(pstEventInfo->unEventInfo.stErrorInfo.s32ErrorCode));
     break;
   case RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL:
-    printf("+++++ RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL +++++\n");
+    printf("+++++ RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL[%d, %s] +++++\n",
+            pstEventInfo->unEventInfo.stErrorInfo.s32ErrorCode,
+            strerror(pstEventInfo->unEventInfo.stErrorInfo.s32ErrorCode));
+    break;
+  case RKADK_MUXER_EVENT_FILE_WRITING_SLOW:
+    printf("+++++ RKADK_MUXER_EVENT_FILE_WRITING_SLOW +++++\n");
     break;
   default:
     printf("+++++ Unknown event(%d) +++++\n", pstEventInfo->enEvent);
@@ -160,6 +167,7 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_S32 s32CamId = 0;
+  FILE_CACHE_ATTR_S stFileCacheAttr;
 
 #ifdef RKAIQ
   int inCmd = 0;
@@ -254,6 +262,10 @@ record:
   }
 #endif
 
+  stFileCacheAttr.u32TatalCache = 7 * 1024 * 1024; // 7M
+  stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
+  RKADK_RECORD_FileCacheInit(&stFileCacheAttr);
+
   stRecAttr.s32CamID = s32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
   stRecAttr.pfnEventCallback = RecordEventCallback;
@@ -280,6 +292,7 @@ record:
 #endif
       return -1;
     }
+
     RKADK_RECORD_Start(pRecorder1);
   }
 
@@ -494,6 +507,7 @@ record:
 #endif
   }
 
+  RKADK_RECORD_FileCacheDeInit();
   RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
   return 0;
