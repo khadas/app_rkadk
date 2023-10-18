@@ -456,6 +456,9 @@ static RKADK_S32 CreateAdec(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx) {
   pstChnAttr.enType = RKADK_MEDIA_GetRkCodecType(pstAdecCtx->eCodecType);
   pstChnAttr.enMode = (ADEC_MODE_E)pstAdecCtx->decMode;
   pstChnAttr.u32BufCount = 4;
+#ifndef RV1106_1103
+  pstChnAttr.u32Depth = 4;
+#endif
   pstChnAttr.u32BufSize = 50 * 1024;
 
   ret = RK_MPI_ADEC_CreateChn(pstAdecCtx->chnIndex, &pstChnAttr);
