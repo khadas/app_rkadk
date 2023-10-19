@@ -165,6 +165,7 @@ typedef struct {
   RKADK_U32 u32CamId;
   bool bLapseRecord;
   RKADK_U32 u32StreamCnt; /* stream cnt */
+  RKADK_U32 u32FragKeyFrame;
   RKADK_MUXER_STREAM_ATTR_S
   astStreamAttr[RKADK_MUXER_STREAM_MAX_CNT]; /* array of stream attr */
   RKADK_MUXER_PRE_RECORD_ATTR_S stPreRecordAttr;
@@ -178,6 +179,7 @@ typedef struct {
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
   RKADK_U64 u64AudioPts;
+  RKADK_U32 u32FragKeyFrame;
 } RKADK_MUXER_HANDLE_S;
 
 /**

@@ -31,7 +31,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:m:h";
+static RKADK_CHAR optstr[] = "a:I:p:m:kh";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -44,6 +44,7 @@ static void print_usage(const RKADK_CHAR *name) {
          "without this option aiq should run in other application\n");
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
+  printf("\t-k: key frame fragment, Default: disable\n");
   printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
 }
 
@@ -177,6 +178,8 @@ int main(int argc, char *argv[]) {
   const char *tmp_optarg = optarg;
 #endif
 
+  memset(&stRecAttr, 0, sizeof(RKADK_RECORD_ATTR_S));
+
   while ((c = getopt(argc, argv, optstr)) != -1) {
     switch (c) {
 #ifdef RKAIQ
@@ -203,6 +206,9 @@ int main(int argc, char *argv[]) {
     case 'p':
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
+      break;
+    case 'k':
+      stRecAttr.u32FragKeyFrame = 1;
       break;
     case 'h':
     default:
@@ -262,7 +268,7 @@ record:
   }
 #endif
 
-  stFileCacheAttr.u32TatalCache = 7 * 1024 * 1024; // 7M
+  stFileCacheAttr.u32TotalCache = 7 * 1024 * 1024; // 7M
   stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
   RKADK_RECORD_FileCacheInit(&stFileCacheAttr);
 

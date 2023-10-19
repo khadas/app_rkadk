@@ -44,13 +44,14 @@ typedef enum {
 /** record task's attribute */
 typedef struct {
   RKADK_S32 s32CamID;                                  /* camera id */
+  RKADK_U32 u32FragKeyFrame;
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
 } RKADK_RECORD_ATTR_S;
 
 typedef struct {
   RKADK_U32 u32WriteCache; /* write cache size(byte), default 1M */
-  RKADK_U32 u32TatalCache; /* total cache size(byte), default 10M */
+  RKADK_U32 u32TotalCache; /* total cache size(byte), default 10M */
 } FILE_CACHE_ATTR_S;
 
 /****************************************************************************/

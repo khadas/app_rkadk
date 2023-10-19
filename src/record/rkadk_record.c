@@ -1409,6 +1409,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
     goto failed;
   }
   stMuxerAttr.pfnEventCallback = pstRecAttr->pfnEventCallback;
+  stMuxerAttr.u32FragKeyFrame = pstRecAttr->u32FragKeyFrame;
 
   if (RKADK_MUXER_Create(&stMuxerAttr, ppRecorder))
     goto failed;
@@ -1749,7 +1750,7 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr) {
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
 
   stCacheArg.write_cache = pstFileCacheAttr->u32WriteCache;
-  stCacheArg.tatal_cache = pstFileCacheAttr->u32TatalCache;
+  stCacheArg.tatal_cache = pstFileCacheAttr->u32TotalCache;
   ret = file_cache_init(&stCacheArg);
   RKADK_MUXER_FsCacheNotify();
   return ret;
