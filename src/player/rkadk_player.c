@@ -214,6 +214,7 @@ typedef struct {
   RKADK_PLAYER_SEEK_STATUS_E enSeekStatus;
   RKADK_S64 seekTimeStamp;
   RKADK_U32 duration;
+  RKADK_S32 frameCount;
   RKADK_S64 positionTimeStamp;
   pthread_t tidDataSend;
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
@@ -1046,6 +1047,8 @@ static void SendVideoData(RKADK_VOID *ptr) {
         pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
 
         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
+        if (!ret)
+          pstPlayer->frameCount++;
         if (ret != RK_SUCCESS)
           RKADK_LOGE("send vo failed[%x]", ret);
 
@@ -1351,6 +1354,8 @@ __GETVDEC:
                         RKADK_LOGE("sys mmz flush cache fail , %d.", ret);
                       if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP)
                         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+                        if (!ret)
+                          pstPlayer->frameCount++;
                       RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
                     } else if (pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp > 0.5 * frameTime) {
                       // video is slower than audio
@@ -2310,6 +2315,7 @@ RKADK_S32 RKADK_PLAYER_Play(RKADK_MW_PTR pPlayer) {
     return RKADK_STATE_ERR;
   }
 
+  pstPlayer->frameCount = 0;
   if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_WAIT)
     startPts = pstPlayer->seekTimeStamp;
 
@@ -2411,6 +2417,7 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     pstPlayer->tidDataSend = 0;
   }
 
+  pstPlayer->frameCount = 0;
   pstPlayer->stSnapshotParam.bSnapshot = false;
   pstPlayer->stSnapshotParam.stFrame.pMbBlk = NULL;
 
@@ -2475,6 +2482,7 @@ RKADK_S32 RKADK_PLAYER_Pause(RKADK_MW_PTR pPlayer) {
   }
 
   pstPlayer->enStatus = RKADK_PLAYER_STATE_PAUSE;
+  pstPlayer->frameCount = 0;
   pthread_mutex_unlock(&pstPlayer->mutex);
   RKADK_PLAYER_ProcessEvent(pPlayer, RKADK_PLAYER_EVENT_PAUSED, NULL);
   return RKADK_SUCCESS;
@@ -2583,6 +2591,14 @@ RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
   pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
   *penState = pstPlayer->enStatus;
   return RKADK_SUCCESS;
+}
+
+RKADK_S32 RKADK_PLAYER_GetSendFrameNum(RKADK_MW_PTR pPlayer) {
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+
+  return pstPlayer->frameCount;
 }
 
 RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
