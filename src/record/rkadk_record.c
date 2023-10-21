@@ -1750,7 +1750,7 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr) {
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
 
   stCacheArg.write_cache = pstFileCacheAttr->u32WriteCache;
-  stCacheArg.tatal_cache = pstFileCacheAttr->u32TotalCache;
+  stCacheArg.total_cache = pstFileCacheAttr->u32TotalCache;
   ret = file_cache_init(&stCacheArg);
   RKADK_MUXER_FsCacheNotify();
   return ret;
