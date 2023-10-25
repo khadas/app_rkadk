@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
+#include <stdbool.h>
 
 #define USE_AO_MIXER 0
 #define VIDEO_ID 1
@@ -258,10 +259,45 @@ typedef struct {
   RKADK_PPLAYER_SNAPSHOT_RECV_FN pfnDataCallback;
 } RKADK_PLAYER_SNAPSHOT_CFG_S;
 
+typedef RKADK_S32 (*RKADK_MPI_MB_FREE_CB)(void *);
+
+typedef struct {
+  bool bEofFlag;
+  RKADK_S8 *s8PacketData;
+  RKADK_S32 s32PacketSize;
+  RKADK_U32 u32Seq;
+  RKADK_S64 s64Pts;
+
+  //if bypass, must set pFreeCB;
+  bool bBypass;
+  RKADK_MPI_MB_FREE_CB pFreeCB;
+} RKADK_PLAYER_PACKET;
+
+typedef struct {
+  const RKADK_CHAR *pFilePath;
+  RKADK_BOOL bIsRtsp;
+  RKADK_BOOL bVideoExist;
+  RKADK_BOOL bAudioExist;
+
+  //video param
+  RKADK_CODEC_TYPE_E enVCodecType;
+  RKADK_U32 u32Width;
+  RKADK_U32 u32Height;
+  RKADK_FORMAT_E enPixFmt; //output pixel format
+  RKADK_U32 u32FrameRate;
+
+  //audio param
+  RKADK_CODEC_TYPE_E enACodecType;
+  RKADK_S32 u32BitWidth;
+  RKADK_S32 u32SampleRate;
+  RKADK_S32 u32Channel;
+} RKADK_PLAYER_DATA_PARAM_S;
+
 /** player configuration */
 typedef struct {
   RKADK_BOOL bEnableVideo;
   RKADK_BOOL bEnableAudio;
+  RKADK_BOOL bEnableThirdDemuxer;
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
   RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
   RKADK_PLAYER_VDEC_CFG_S stVdecCfg;
@@ -285,6 +321,15 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *ppPlayer,
  *  @retval 0 success, others failed
  */
 RKADK_S32 RKADK_PLAYER_Destroy(RKADK_MW_PTR pPlayer);
+
+/**
+ * @brief     Set the parameters of the data to be played, when enable third-party demuxer
+ * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
+ * @param[in] pstDataParam : data parameters
+ * @retval  0 success, others failed
+ */
+RKADK_S32 RKADK_PLAYER_SetDataParam(RKADK_MW_PTR pPlayer,
+                                      RKADK_PLAYER_DATA_PARAM_S *pstDataParam);
 
 /**
  * @brief    set the file for playing
@@ -363,6 +408,12 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration);
 RKADK_S64 RKADK_PLAYER_GetCurrentPosition(RKADK_MW_PTR pPlayer);
 
 RKADK_S32 RKADK_PLAYER_Snapshot(RKADK_MW_PTR pPlayer);
+
+RKADK_S32 RKADK_PLAYER_SendAudioPacket(RKADK_MW_PTR pPlayer,
+                              RKADK_PLAYER_PACKET *pstPacket);
+
+RKADK_S32 RKADK_PLAYER_SendVideoPacket(RKADK_MW_PTR pPlayer,
+                              RKADK_PLAYER_PACKET *pstPacket);
 
 #ifdef __cplusplus
 }

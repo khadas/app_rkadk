@@ -165,6 +165,9 @@ typedef enum {
   RKADK_FMT_RGBA8888,                                   /* 32-bit RGB               */
   RKADK_FMT_BGRA8888,                                   /* 32-bit RGB               */
   RKADK_FMT_2BPP,
+  RKADK_FMT_YUV420SP,
+  RKADK_FMT_YUV420SP_10BIT,
+  RKADK_FMT_YUV422SP,
   RKADK_FMT_BUTT,
 } RKADK_FORMAT_E;
 
@@ -175,6 +178,8 @@ typedef enum {
   VO_FORMAT_BGR888,
   VO_FORMAT_ARGB1555,
   VO_FORMAT_ABGR1555,
+  VO_FORMAT_RGB565,
+  VO_FORMAT_RGB444,
   VO_FORMAT_NV12,
   VO_FORMAT_NV21
 } RKADK_VO_FORMAT_E;

@@ -19,6 +19,8 @@
 #include "rkadk_log.h"
 #include "rkadk_param.h"
 #include "rkadk_player.h"
+#include "rkadk_demuxer.h"
+#include "rkdemuxer.h"
 #include <math.h>
 
 #include <getopt.h>
@@ -35,8 +37,9 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:O:mfvhb";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:O:mfvbDh";
 
+static RKADK_VOID *mDemuxerCfg = NULL;
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
   printf("\t%s [-i xxx.mp4] [-x 180] [-y 320] [-W 360] [-H 640] [-r 90] "
@@ -54,7 +57,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-a: set audio enable/disable, option: 0, 1; Default: enable\n");
   printf("\t-v: video enable, Default: disable\n");
   printf("\t-s: vo layer splice mode, option: 0(RGA), 1(GPU), 2(ByPass); Default: 0\n");
-  printf("\t-P: display pixel type, option: 0(RGB888), 1(NV12); Default: 0\n");
+  printf("\t-P: display pixel type, option: 0(RGB888), 1(NV12), 2(RGB565), 3(RGB444); Default: 0\n");
   printf("\t-I: Type of a VO interface, option: 0(DEFAILT), 1(MIPI), 2(LCD); Default: 1106: 0, other chip: 1\n");
   printf("\t-F: vo display framerete, Default: 30\n");
   printf("\t-t: rtsp transport protocol, option: 0(udp), 1(tcp); Default: udp\n");
@@ -64,6 +67,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-c: loop play count, Default: 0\n");
   printf("\t-d: loop play once duration(second), Default: file duration\n");
   printf("\t-O: Vdec output buffer count, Default: 3\n");
+  printf("\t-D: enable third-party demuxer, Default: disable\n");
   printf("\t-h: help\n");
 }
 
@@ -188,6 +192,146 @@ static void SnapshotDataRecv(RKADK_PLAYER_SNAPSHOT_S *pstData) {
     snapshotId = 0;
 }
 
+static RKADK_S32 DemuxerBufferFree(RKADK_VOID *opaque) {
+  if (opaque) {
+    free(opaque);
+    opaque = NULL;
+  }
+
+  return 0;
+}
+
+static RKADK_VOID DemuxerReadVideoPacket(RKADK_VOID* pPacket) {
+  int ret;
+  RKADK_PLAYER_PACKET stPacket;
+  DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pPacket;
+
+  memset(&stPacket, 0, sizeof(RKADK_PLAYER_PACKET));
+  stPacket.bBypass = false;
+  stPacket.pFreeCB = DemuxerBufferFree;
+  stPacket.bEofFlag = pstDemuxerPacket->s8EofFlag ? true : false;
+  stPacket.s32PacketSize = pstDemuxerPacket->s32PacketSize;
+  stPacket.s8PacketData = (RKADK_S8 *)pstDemuxerPacket->s8PacketData;
+  stPacket.s64Pts = pstDemuxerPacket->s64Pts;
+  stPacket.u32Seq = pstDemuxerPacket->s32Series;
+
+  ret = RKADK_PLAYER_SendVideoPacket(pstDemuxerPacket->ptr, &stPacket);
+  if (ret)
+    RKADK_LOGE("SendVideoPacket failed");
+}
+
+static RKADK_VOID DemuxerReadAudioPacket(RKADK_VOID* pPacket) {
+  int ret;
+  RKADK_PLAYER_PACKET stPacket;
+  DemuxerPacket *pstDemuxerPacket = (DemuxerPacket *)pPacket;
+
+  memset(&stPacket, 0, sizeof(RKADK_PLAYER_PACKET));
+  stPacket.bBypass = false;
+  stPacket.pFreeCB = DemuxerBufferFree;
+  stPacket.bEofFlag = pstDemuxerPacket->s8EofFlag ? true : false;
+  stPacket.s32PacketSize = pstDemuxerPacket->s32PacketSize;
+  stPacket.s8PacketData = (RKADK_S8 *)pstDemuxerPacket->s8PacketData;
+  stPacket.s64Pts = pstDemuxerPacket->s64Pts;
+  stPacket.u32Seq = pstDemuxerPacket->s32Series;
+
+  ret = RKADK_PLAYER_SendAudioPacket(pstDemuxerPacket->ptr, &stPacket);
+  if (ret)
+    RKADK_LOGE("SendAudioPacket failed");
+}
+
+static int DemuxerSetDataParam(RKADK_MW_PTR pPlayer, char *file,
+                                          RKADK_PLAYER_CFG_S stPlayCfg) {
+  int ret;
+  RKADK_DEMUXER_INPUT_S stDemuxerInput;
+  RKADK_DEMUXER_PARAM_S stDemuxerParam;
+  RKADK_PLAYER_DATA_PARAM_S stDataParam;
+
+  memset(&stDemuxerInput, 0, sizeof(RKADK_DEMUXER_INPUT_S));
+  memset(&stDemuxerParam, 0, sizeof(RKADK_DEMUXER_PARAM_S));
+  memset(&stDataParam, 0, sizeof(RKADK_PLAYER_DATA_PARAM_S));
+
+  stDemuxerInput.ptr = pPlayer;
+  stDemuxerInput.readModeFlag = DEMUXER_TYPE_PASSIVE;
+  stDemuxerInput.videoEnableFlag = stPlayCfg.bEnableVideo;
+  stDemuxerInput.audioEnableFlag = stPlayCfg.bEnableAudio;
+  stDemuxerInput.transport = stPlayCfg.stRtspCfg.transport;
+  stDemuxerInput.u32IoTimeout = stPlayCfg.stRtspCfg.u32IoTimeout;
+
+  if (RKADK_DEMUXER_Create(&mDemuxerCfg, &stDemuxerInput)) {
+    RKADK_LOGE("RKADK_DEMUXER_Create failed");
+    return -1;
+  }
+
+  stDemuxerParam.pstReadPacketCallback.pfnReadVideoPacketCallback = DemuxerReadVideoPacket;
+  stDemuxerParam.pstReadPacketCallback.pfnReadAudioPacketCallback = DemuxerReadAudioPacket;
+  if (RKADK_DEMUXER_GetParam(mDemuxerCfg, file, &stDemuxerParam)) {
+    RKADK_LOGE("RKADK_DEMUXER_GetParam failed");
+    return -1;
+  }
+
+  stDataParam.pFilePath = file;
+  stDataParam.bVideoExist = stPlayCfg.bEnableVideo;
+  stDataParam.bAudioExist = stPlayCfg.bEnableAudio;
+  if (strstr(file, "rtsp://"))
+    stDataParam.bIsRtsp = RKADK_TRUE;
+
+  if (stDataParam.bVideoExist) {
+    if (stDemuxerParam.pVideoCodec != NULL) {
+      if (!strcmp(stDemuxerParam.pVideoCodec, "h264")) {
+        stDataParam.enVCodecType = RKADK_CODEC_TYPE_H264;
+      } else if (!strcmp(stDemuxerParam.pVideoCodec, "h265")) {
+        stDataParam.enVCodecType = RKADK_CODEC_TYPE_H265;
+      } else {
+        RKADK_LOGE("Unsupported audio format[%s]", stDemuxerParam.pVideoCodec);
+        return -1;
+      }
+    }
+
+    if (stDemuxerParam.VideoFormat == DEMUXER_VIDEO_YUV420SP_10BIT)
+      stDataParam.enPixFmt = RK_FMT_YUV420SP_10BIT;
+    else
+      stDataParam.enPixFmt = RK_FMT_YUV420SP;
+
+    stDataParam.u32Width = stDemuxerParam.videoWidth;
+    stDataParam.u32Height = stDemuxerParam.videoHeigh;
+    stDataParam.u32FrameRate = stDemuxerParam.videoAvgFrameRate;
+  }
+
+  if (stDataParam.bAudioExist) {
+    if (stDemuxerParam.pAudioCodec != NULL) {
+      if (!strcmp(stDemuxerParam.pAudioCodec, "mp3"))
+        stDataParam.enACodecType = RKADK_CODEC_TYPE_MP3;
+      else if (!strcmp(stDemuxerParam.pAudioCodec, "wav"))
+        stDataParam.enACodecType = RKADK_CODEC_TYPE_PCM;
+      else if (!strcmp(stDemuxerParam.pAudioCodec, "pcm_alaw"))
+        stDataParam.enACodecType = RKADK_CODEC_TYPE_G711A;
+      else {
+        RKADK_LOGE("Unsupported audio format[%s]", stDemuxerParam.pAudioCodec);
+        return -1;
+      }
+    }
+
+    if (stDemuxerParam.audioFormat == 0)
+      stDataParam.u32BitWidth = 8;
+    else if (stDemuxerParam.audioFormat == 1)
+      stDataParam.u32BitWidth = 16;
+    else {
+      RKADK_LOGE("Unsupported audioFormat = %d", stDemuxerParam.audioFormat);
+      return -1;
+    }
+
+    stDataParam.u32SampleRate = stDemuxerParam.audioSampleRate;
+    stDataParam.u32Channel = stDemuxerParam.audioChannels;
+  }
+
+  ret = RKADK_PLAYER_SetDataParam(pPlayer, &stDataParam);
+  if (ret) {
+    RKADK_LOGE("SetDataParam failed, ret = %d", ret);
+    return -1;
+  }
+
+  return 0;
+}
 
 int main(int argc, char *argv[]) {
   int c, ret, transport = 0;
@@ -205,6 +349,7 @@ int main(int argc, char *argv[]) {
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_PLAYER_CFG_S stPlayCfg;
   int loop_count = -1, loop_duration = 0;
+  RKADK_PLAYER_STATE_E enState = RKADK_PLAYER_STATE_BUTT;
 
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
@@ -278,6 +423,10 @@ int main(int argc, char *argv[]) {
       iniPath = optarg;
       RKADK_LOGD("iniPath: %s", iniPath);
       break;
+    case 'D':
+      stPlayCfg.bEnableThirdDemuxer = true;
+      RKADK_LOGD("Enable third-party demuxer");
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -302,6 +451,10 @@ int main(int argc, char *argv[]) {
 
   if (u32VoFormat == 1)
     stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_NV12;
+  else if (u32VoFormat == 2)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_RGB565;
+  else if (u32VoFormat == 3)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_RGB444;
 
   if (u32IntfType == 1)
     stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_MIPI;
@@ -354,16 +507,24 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
-  if (ret) {
-    RKADK_LOGE("SetDataSource failed, ret = %d", ret);
-    return -1;
+  if (stPlayCfg.bEnableThirdDemuxer) {
+    ret = DemuxerSetDataParam(pPlayer, file, stPlayCfg);
+    if (ret) {
+      RKADK_LOGE("DemuxerSetDataParam failed");
+      goto __EXIT;
+    }
+  } else {
+    ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+    if (ret) {
+      RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+      goto __EXIT;
+    }
   }
 
   ret = RKADK_PLAYER_Prepare(pPlayer);
   if (ret) {
     RKADK_LOGE("Prepare failed, ret = %d", ret);
-    return -1;
+    goto __EXIT;
   }
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
@@ -372,6 +533,14 @@ int main(int argc, char *argv[]) {
     loop_duration = duration / 1000 + 1; //ms to m
 
   RKADK_LOGD("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
+
+  if (stPlayCfg.bEnableThirdDemuxer) {
+    ret = RKADK_DEMUXER_ReadPacketStart(mDemuxerCfg, 0);
+    if (ret != 0) {
+      RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+      goto __EXIT;
+    }
+  }
 
   ret = RKADK_PLAYER_Play(pPlayer);
   if (ret) {
@@ -387,7 +556,7 @@ int main(int argc, char *argv[]) {
   printf("\n#Usage: input 'quit' to exit programe!\n"
          "peress any other key to capture one picture to file\n");
   while (!is_quit) {
-    if (loop_count >= 0) {
+    if (loop_count >= 0 && !stPlayCfg.bEnableThirdDemuxer) {
       sleep(loop_duration);
       RKADK_LOGD("replay, loop_count: %d", loop_count);
       if (loop_count == 0) {
@@ -439,17 +608,43 @@ int main(int argc, char *argv[]) {
           break;
         }
       } else if (strstr(cmd, "replay")) {
+        if (stPlayCfg.bEnableThirdDemuxer) {
+          //for exit ao pause
+          RKADK_PLAYER_GetPlayStatus(pPlayer, &enState);
+          if (enState == RKADK_PLAYER_STATE_PAUSE)
+            RKADK_PLAYER_Play(pPlayer);
+
+          RKADK_DEMUXER_ReadPacketStop(mDemuxerCfg);
+        }
+
         RKADK_PLAYER_Stop(pPlayer);
-        ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
-        if (ret) {
-          RKADK_LOGE("SetDataSource failed, ret = %d", ret);
-          break;
+
+        if (stPlayCfg.bEnableThirdDemuxer) {
+          ret = DemuxerSetDataParam(pPlayer, file, stPlayCfg);
+          if (ret) {
+            RKADK_LOGE("DemuxerSetDataParam failed");
+            break;
+          }
+        } else {
+          ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+          if (ret) {
+            RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+            break;
+          }
         }
 
         ret = RKADK_PLAYER_Prepare(pPlayer);
         if (ret) {
           RKADK_LOGE("Prepare failed, ret = %d", ret);
           break;
+        }
+
+        if (stPlayCfg.bEnableThirdDemuxer) {
+          ret = RKADK_DEMUXER_ReadPacketStart(mDemuxerCfg, 0);
+          if (ret != 0) {
+            RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+            break;
+          }
         }
 
         ret = RKADK_PLAYER_Play(pPlayer);
@@ -460,6 +655,9 @@ int main(int argc, char *argv[]) {
 
         RKADK_PLAYER_GetDuration(pPlayer, &duration);
       } else if (strstr(cmd, "seek")) {
+        if (stPlayCfg.bEnableThirdDemuxer)
+          break;
+
         fgets(cmd, sizeof(cmd), stdin);
         seekTimeInMs = atoi(cmd);
         if ((seekTimeInMs < 0) || (seekTimeInMs > maxSeekTimeInMs)) {
@@ -477,6 +675,18 @@ int main(int argc, char *argv[]) {
   }
 
 __EXIT:
+  if (stPlayCfg.bEnableThirdDemuxer) {
+    //for exit ao pause
+    RKADK_PLAYER_GetPlayStatus(pPlayer, &enState);
+    if (enState == RKADK_PLAYER_STATE_PAUSE)
+      RKADK_PLAYER_Play(pPlayer);
+
+    RKADK_DEMUXER_ReadPacketStop(mDemuxerCfg);
+
+    if (mDemuxerCfg)
+      RKADK_DEMUXER_Destroy(&mDemuxerCfg);
+  }
+
   RKADK_PLAYER_Destroy(pPlayer);
 
   if (getPosition)
