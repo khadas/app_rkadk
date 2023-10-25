@@ -339,6 +339,14 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs);
  */
 RKADK_S32 RKADK_PLAYER_GetPlayStatus(RKADK_MW_PTR pPlayer,
                                      RKADK_PLAYER_STATE_E *penState);
+
+/**
+ * @brief get the current frame number
+ * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
+ *  @retval  frame num
+ */
+RKADK_S32 RKADK_PLAYER_GetSendFrameNum(RKADK_MW_PTR pPlayer);
+
 /**
  * @brief get the current play file duration(ms)
  * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
