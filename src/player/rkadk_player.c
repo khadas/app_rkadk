@@ -1043,14 +1043,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
         pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
         pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
         pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
-
-        //vo only support 420sp display, bypass mode internally converts 420p to 420sp
-        if (pstPlayer->stVoCtx.enVoSpliceMode == SPLICE_MODE_BYPASS
-            && sFrame.stVFrame.enPixelFormat == RK_FMT_YUV420P
-            && pstPlayer->stVoCtx.pixFormat == RK_FMT_YUV420SP)
-          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = RK_FMT_YUV420SP;
-        else
-          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+        pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
         pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
 
         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
@@ -1243,6 +1236,16 @@ static void SendData(RKADK_VOID *ptr) {
           if (ret != 0)
             RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
 
+          // save snapshot frame info
+          pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+          pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
+          pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
+          pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
+          pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
+          pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
+          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+          pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
           ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
           if (ret != 0)
             RKADK_LOGE("send frame to vo failed[%x]", ret);
@@ -1365,6 +1368,16 @@ __GETVDEC:
                         RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
 
                       if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
+                        // save snapshot frame info
+                        pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+                        pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
+                        pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
+                        pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
+                        pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
+                        pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
+                        pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+                        pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
                         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
                         if (ret != 0)
                           RKADK_LOGE("send frame to vo failed[%x]", ret);
