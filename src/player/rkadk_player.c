@@ -983,6 +983,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
 
       ret = RK_MPI_VDEC_GetFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame, MAX_TIME_OUT_MS);
       if (ret == 0) {
+        pstPlayer->frameCount++;
         if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE)
         pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_DONE;
 
@@ -1047,8 +1048,6 @@ static void SendVideoData(RKADK_VOID *ptr) {
         pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
 
         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
-        if (!ret)
-          pstPlayer->frameCount++;
         if (ret != RK_SUCCESS)
           RKADK_LOGE("send vo failed[%x]", ret);
 
@@ -1213,6 +1212,7 @@ static void SendData(RKADK_VOID *ptr) {
       while (pstPlayer->videoTimeStamp < pstPlayer->seekTimeStamp) {
         ret = RK_MPI_VDEC_GetFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame, -1);
         if (ret == 0) {
+          pstPlayer->frameCount++;
           pstPlayer->videoTimeStamp = sFrame.stVFrame.u64PTS;
           if (pstPlayer->videoTimeStamp < pstPlayer->seekTimeStamp) {
             RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
@@ -1238,8 +1238,10 @@ static void SendData(RKADK_VOID *ptr) {
           //send sFrame to vo
           ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
           if (ret != 0)
-            RKADK_LOGE("sys mmz flush cache fail , %d.", ret);
+            RKADK_LOGE("sys mmz flush cache fail , %x.", ret);
           ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+          if (ret != 0)
+            RKADK_LOGE("send frame to vo fail , %x.", ret);
           RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
 
           pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_DONE;
@@ -1338,6 +1340,7 @@ __RETRY:
 __GETVDEC:
                   ret = RK_MPI_VDEC_GetFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame, 0);
                   if (ret == 0) {
+                    pstPlayer->frameCount++;
                     pstPlayer->videoTimeStamp = sFrame.stVFrame.u64PTS;
                     if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
                       SendBlackBackground(pstPlayer, &tFrame, &sFrame);
@@ -1351,11 +1354,13 @@ __GETVDEC:
                       // normal video send
                       ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
                       if (ret != 0)
-                        RKADK_LOGE("sys mmz flush cache fail , %d.", ret);
-                      if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP)
+                        RKADK_LOGE("sys mmz flush cache fail , %x.", ret);
+
+                      if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
                         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
-                        if (!ret)
-                          pstPlayer->frameCount++;
+                        if (ret != 0)
+                          RKADK_LOGE("send frame to vo fail , %x.", ret);
+                      }
                       RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
                     } else if (pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp > 0.5 * frameTime) {
                       // video is slower than audio
@@ -1391,8 +1396,12 @@ __GETVDEC:
           if (stFrmInfoCache.pstFrame->u32Len > 0) {
             stFrmInfoCache.pstFrame->u64TimeStamp += frameTime;
             result = RK_MPI_AO_SendFrame(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.chnIndex, stFrmInfoCache.pstFrame, s32MilliSec);
+            if (result != 0)
+              RKADK_LOGE("send frame to ao fail , %x.", ret);
           }
           result = RK_MPI_AO_SendFrame(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.chnIndex, stFrmInfo.pstFrame, s32MilliSec);
+          if (result != 0)
+            RKADK_LOGE("send frame to ao fail , %x.", ret);
 
           if(pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP)
             RKADK_LOGI("audio data send eof");
