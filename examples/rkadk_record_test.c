@@ -110,6 +110,9 @@ RecordEventCallback(RKADK_MW_PTR pRecorder,
   case RKADK_MUXER_EVENT_FILE_WRITING_SLOW:
     printf("+++++ RKADK_MUXER_EVENT_FILE_WRITING_SLOW +++++\n");
     break;
+  case RKADK_MUXER_EVENT_ERR_CARD_NONEXIST:
+    printf("+++++ RKADK_MUXER_EVENT_ERR_CARD_NONEXIST +++++\n");
+    break;
   default:
     printf("+++++ Unknown event(%d) +++++\n", pstEventInfo->enEvent);
     break;
@@ -268,6 +271,7 @@ record:
   }
 #endif
 
+  stFileCacheAttr.pSdcardPath = "/dev/mmcblk1p1";
   stFileCacheAttr.u32TotalCache = 7 * 1024 * 1024; // 7M
   stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
   RKADK_RECORD_FileCacheInit(&stFileCacheAttr);

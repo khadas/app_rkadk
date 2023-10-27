@@ -378,16 +378,21 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
 
   stEventInfo.enEvent = enEventType;
 
-  if (enEventType == RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL
-      || enEventType == RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL) {
-    stEventInfo.unEventInfo.stErrorInfo.s32ErrorCode = value;
-    memcpy(stEventInfo.unEventInfo.stErrorInfo.asFileName,
-           pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
-  } else {
-    stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
-    memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
-           pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+  switch (enEventType) {
+    case RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL:
+    case RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL:
+    case RKADK_MUXER_EVENT_ERR_CARD_NONEXIST:
+      stEventInfo.unEventInfo.stErrorInfo.s32ErrorCode = value;
+      memcpy(stEventInfo.unEventInfo.stErrorInfo.asFileName,
+             pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+      break;
+    default:
+      stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
+      memcpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
+             pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
+      break;
   }
+
   pstMuxerHandle->pfnEventCallback(pstMuxerHandle->ptr, &stEventInfo);
 }
 
@@ -1631,6 +1636,11 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_EVENT_E enEventType = RKADK_MUXER_EVENT_BUTT;
 
+  if (!filename) {
+    RKADK_LOGW("filename is null");
+    return;
+  }
+
   for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
     if (g_pRecorder[i]) {
       pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
@@ -1679,6 +1689,9 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
       break;
     case WRITE_SLOW:
       enEventType = RKADK_MUXER_EVENT_FILE_WRITING_SLOW;
+      break;
+    case CARD_NONEXIST:
+      enEventType = RKADK_MUXER_EVENT_ERR_CARD_NONEXIST;
       break;
     default:
       RKADK_LOGW("Nosupport notify cmd: %d", enNotify);

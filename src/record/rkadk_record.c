@@ -1749,6 +1749,7 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr) {
 
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
 
+  stCacheArg.sdcard_path = pstFileCacheAttr->pSdcardPath;
   stCacheArg.write_cache = pstFileCacheAttr->u32WriteCache;
   stCacheArg.total_cache = pstFileCacheAttr->u32TotalCache;
   ret = file_cache_init(&stCacheArg);

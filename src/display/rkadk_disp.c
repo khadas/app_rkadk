@@ -220,7 +220,7 @@ static bool RKADK_DISP_CheckRect(RKADK_RECT_S stRect,
   return true;
 }
 
-static void *RKADK_MEDIA_GetVpssMb(void *arg) {
+static void *RKADK_DISP_GetVpssMb(void *arg) {
   int s32Ret;
   VIDEO_FRAME_INFO_S stVideoFrame;
 
@@ -246,9 +246,10 @@ static void *RKADK_MEDIA_GetVpssMb(void *arg) {
 
       s32Ret = RK_MPI_VPSS_ReleaseChnFrame(pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, &stVideoFrame);
       if (s32Ret != RK_SUCCESS)
-        RK_LOGE("RK_MPI_VPSS_ReleaseChnFrame failed[%x]", s32Ret);
+        RKADK_LOGE("RK_MPI_VPSS_ReleaseChnFrame failed[%x]", s32Ret);
     } else {
-      RK_LOGE("RK_MPI_VPSS_GetChnFrame timeout[%x]", s32Ret);
+      RKADK_LOGE("RK_MPI_VPSS_GetChnFrame[%d, %d] timeout[%x]",
+                pstDispCfg->vpss_grp, pstDispCfg->vpss_chn, s32Ret);
     }
   }
 
@@ -304,7 +305,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   char name[256];
   stDispHandle.bSendBuffer = true;
   ret = pthread_create(&stDispHandle.tid, NULL,
-                       RKADK_MEDIA_GetVpssMb, &stDispHandle);
+                       RKADK_DISP_GetVpssMb, &stDispHandle);
   if (ret) {
     RKADK_LOGE("Create get vpss mb(%d) thread failed %d", stSrcVpssChn.s32ChnId, ret);
     goto failed;

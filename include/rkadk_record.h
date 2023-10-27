@@ -50,6 +50,7 @@ typedef struct {
 } RKADK_RECORD_ATTR_S;
 
 typedef struct {
+  const char *pSdcardPath;
   RKADK_U32 u32WriteCache; /* write cache size(byte), default 1M */
   RKADK_U32 u32TotalCache; /* total cache size(byte), default 10M */
 } FILE_CACHE_ATTR_S;
