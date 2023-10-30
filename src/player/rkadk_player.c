@@ -1153,6 +1153,7 @@ static void SendData(RKADK_VOID *ptr) {
   struct timespec t_begin, t_end;
   RKADK_S32 flagGetFirstframe = 0, flagVideoEnd = 0, flagAudioEnd = 0, flagsSendNullFrame = 0;
   RKADK_S32 frameTime = 0, costtime = 0, maxNullFrameCount = 0, flagSendBlackFrameEnd = 0;
+  RKADK_S32 audioBytes = 0, sampleNum = 0;
   RK_U32 cacheBufferLen = 0, copySize = 0, secondPartLen = 0;
   RK_U32 bufferOffset = 0, originOffset = 0;
   RK_U64 firstAudioTimeStamp = -1;
@@ -1187,11 +1188,14 @@ static void SendData(RKADK_VOID *ptr) {
   stFrmInfoCache.pstFrame->u32Len = 0;
   stFrmInfoCache.pstFrame->u64TimeStamp = 0;
 
-  cacheBufferLen = (float)((FindBitWidth(pstPlayer->stAoCtx.bitWidth) + 1) * (float)pstPlayer->stDemuxerParam.audioChannels *
-    (float)pstPlayer->stDemuxerParam.audioSampleRate / (float)pstPlayer->stDemuxerParam.videoAvgFrameRate);
+  audioBytes = pstPlayer->stAoCtx.bitWidth / 8;
+  cacheBufferLen = audioBytes * pstPlayer->stDemuxerParam.audioChannels *
+    pstPlayer->stDemuxerParam.audioSampleRate / pstPlayer->stDemuxerParam.videoAvgFrameRate;
+  // Divisor correction
+  sampleNum = cacheBufferLen / (audioBytes * pstPlayer->stDemuxerParam.audioChannels);
+  cacheBufferLen = sampleNum * audioBytes * pstPlayer->stDemuxerParam.audioChannels;
+
   maxNullFrameCount = 2 * (1 + pstPlayer->stAoCtx.periodCount) * pstPlayer->stAoCtx.periodCount * pstPlayer->stAoCtx.periodSize / cacheBufferLen;
-  if (cacheBufferLen % 2 != 0)
-    cacheBufferLen++;
 
   cacheFrame = (RK_U8 *)(calloc(cacheBufferLen, sizeof(RK_U8)));
   memset(cacheFrame, 0, cacheBufferLen);
@@ -1683,7 +1687,7 @@ static RKADK_VOID DoPullDemuxerAudioPacket(RKADK_VOID* pHandle) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pstDemuxerPacket->ptr;
 
   if ((pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_WAIT)
-    || (pstDemuxerPacket->s64Pts < pstPlayer->seekTimeStamp)) {
+    || (pstDemuxerPacket->s32PacketSize && pstDemuxerPacket->s64Pts < pstPlayer->seekTimeStamp)) {
     if (pstDemuxerPacket->s8PacketData) {
       free(pstDemuxerPacket->s8PacketData);
       pstDemuxerPacket->s8PacketData = NULL;
