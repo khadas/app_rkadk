@@ -1298,10 +1298,10 @@ static void SendData(RKADK_VOID *ptr) {
       }
 
       ret = RK_MPI_ADEC_GetFrame(pstPlayer->stAdecCtx.chnIndex, &stFrmInfo, false);
-      if (firstAudioTimeStamp == -1)
-        firstAudioTimeStamp = stFrmInfo.pstFrame->u64TimeStamp;
-
       if (!ret) {
+        if (firstAudioTimeStamp == -1)
+          firstAudioTimeStamp = stFrmInfo.pstFrame->u64TimeStamp;
+
         size = stFrmInfo.pstFrame->u32Len;
         if (size > 0) {
           stFrmInfoCache.pstFrame->enBitWidth = stFrmInfo.pstFrame->enBitWidth;
