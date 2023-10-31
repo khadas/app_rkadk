@@ -1362,38 +1362,37 @@ __GETVDEC:
                       RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
                       RKADK_LOGI("chn %d reach eos frame", pstPlayer->stVdecCtx.chnIndex);
                       flagVideoEnd = 1;
-                      continue;
-                    }
-
-                    if (abs(pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp) <= 0.5 * frameTime) {
-                      // normal video send
-                      ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
-                      if (ret != 0)
-                        RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
-
-                      if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
-                        // save snapshot frame info
-                        pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
-                        pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
-                        pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
-                        pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
-                        pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
-                        pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
-                        pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
-                        pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
-
-                        ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
-                        if (ret != 0)
-                          RKADK_LOGE("send frame to vo failed[%x]", ret);
-                      }
-
-                      RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
-                    } else if (pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp > 0.5 * frameTime) {
-                      // video is slower than audio
-                      RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
-                      goto __GETVDEC;
                     } else {
-                      RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
+                      if (abs(pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp) <= 0.5 * frameTime) {
+                        // normal video send
+                        ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
+                        if (ret != 0)
+                          RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
+
+                        if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
+                          // save snapshot frame info
+                          pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+                          pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
+                          pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
+                          pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
+                          pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
+                          pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
+                          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
+                          pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
+                          ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+                          if (ret != 0)
+                            RKADK_LOGE("send frame to vo failed[%x]", ret);
+                        }
+
+                        RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
+                      } else if (pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp > 0.5 * frameTime) {
+                        // video is slower than audio
+                        RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
+                        goto __GETVDEC;
+                      } else {
+                        RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
+                      }
                     }
                   }
                 }
