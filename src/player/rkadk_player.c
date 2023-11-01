@@ -947,7 +947,7 @@ static void SendBlackBackground(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_IN
     sFrame->stVFrame.enCompressMode = tFrame->stVFrame.enCompressMode;
     lastFrame = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(sFrame->stVFrame.pMbBlk);
 
-    if (sFrame->stVFrame.enPixelFormat == RK_FMT_YUV420P) {
+    if (sFrame->stVFrame.enPixelFormat == RK_FMT_YUV420SP) {
       memset(lastFrame, 0, sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight);
       lastFrame += sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight;
       memset(lastFrame, 128, sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight / 2);
