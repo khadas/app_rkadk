@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_BOOL fec_enable = RKADK_FALSE;
   SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, stFps.u32Framerate);
+  RKADK_BUFINFO("isp[%d] init", u32CamId);
 #endif
 
   ret = RKADK_RTSP_Init(u32CamId, 554, "/live/main_stream", &pHandle);

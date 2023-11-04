@@ -476,6 +476,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
 
   RKADK_LOGI("Rtsp[%d, %d, %s] Init...", u32CamId, port, path);
+  RKADK_BUFINFO("enter rtsp[%d]", u32CamId);
 
   if (*ppHandle) {
     RKADK_LOGE("rtsp handle has been created");
@@ -566,6 +567,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     RKADK_LOGE("RKADK_MPI_VI_Init faled %d", ret);
     goto failed;
   }
+  RKADK_BUFINFO("create vi[%d]", stViChn.s32ChnId);
 
   bUseVpss = RKADK_RTSP_IsUseVpss(u32CamId, pstLiveCfg);
   if (bUseVpss) {
@@ -595,6 +597,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
       RKADK_LOGE("RKADK_MPI_VPSS_Init falied[%d]",ret);
       goto failed;
     }
+    RKADK_BUFINFO("create vpss[%d, %d]", stSrcVpssChn.s32DevId, stSrcVpssChn.s32ChnId);
   }
 
   // Create VENC
@@ -610,6 +613,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
     goto failed;
   }
+  RKADK_BUFINFO("create venc[%d]", stVencChn.s32ChnId);
 
   RK_MPI_VENC_SetSceneMode(stVencChn.s32ChnId, RKADK_ENCODE_SENSE_CVR);
   RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
@@ -655,6 +659,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
       goto failed;
     }
   }
+  RKADK_BUFINFO("rtsp bind[%d, %d, %d]", stViChn.s32ChnId, stSrcVpssChn.s32ChnId, stVencChn.s32ChnId);
 
   // Bind AI to AENC
   ret = RKADK_MPI_SYS_Bind(&stAiChn, &stAencChn);

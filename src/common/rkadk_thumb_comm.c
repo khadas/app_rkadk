@@ -350,6 +350,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
                 stViChn.s32ChnId, ret);
     return -1;
   }
+  RKADK_BUFINFO("create thumb vi[%d]", ptsThumbCfg->vi_attr.u32ViChn);
 
   bUseVpss = RKADK_THUMB_IsUseVpss(u32CamId, ptsThumbCfg);
   if (bUseVpss) {
@@ -360,6 +361,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
       RKADK_MPI_VI_DeInit(u32CamId, stViChn.s32ChnId);
       return ret;
     }
+    RKADK_BUFINFO("create thumb vpss[%d, %d]", ptsThumbCfg->vpss_grp, ptsThumbCfg->vpss_chn);
   }
 
   ret = RKADK_Thumbnail_Venc(u32CamId, stVencChn.s32ChnId, ptsThumbCfg);
@@ -370,6 +372,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
     RKADK_MPI_VPSS_DeInit(ptsThumbCfg->vpss_grp, ptsThumbCfg->vpss_chn);
     return -1;
   }
+  RKADK_BUFINFO("create thumb venc[%d]", stVencChn.s32ChnId);
 
   if (bUseVpss) {
     // VPSS Bind VENC
@@ -397,6 +400,7 @@ RKADK_S32 ThumbnailInit(RKADK_U32 u32CamId, RKADK_THUMB_MODULE_E enThumbModule,
       goto failed;
     }
   }
+  RKADK_BUFINFO("thumb bind[%d, %d, %d]", ptsThumbCfg->vi_attr.u32ViChn, ptsThumbCfg->vpss_chn, stVencChn.s32ChnId);
 
   RKADK_LOGI("Thumbnail [%d, %d] init end!", u32CamId, enThumbModule);
   return 0;

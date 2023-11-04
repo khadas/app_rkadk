@@ -231,6 +231,7 @@ photo:
 
   rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+  RKADK_BUFINFO("isp[%d] init", u32CamId);
 
   if (bMultiCam) {
     ret = RKADK_PARAM_GetCamParam(1, RKADK_PARAM_TYPE_FPS, &stFps);
@@ -241,6 +242,7 @@ photo:
     }
 
     SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+    RKADK_BUFINFO("isp[1] init");
   }
 #endif
 

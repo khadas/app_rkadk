@@ -395,6 +395,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       RKADK_LOGE("RKADK_MPI_VI_Init faile, ret = %d", ret);
       return ret;
     }
+    RKADK_BUFINFO("create vi[%d]", pstRecCfg->vi_attr[i].u32ViChn);
 
     // Create VPSS
     bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
@@ -432,6 +433,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
         RKADK_MPI_VPSS_DeInit(u32VpssGrp, u32VpssChn);
         return ret;
       }
+      RKADK_BUFINFO("create vpss[%d, %d]", u32VpssGrp, u32VpssChn);
 
       if (i == 0) {
         ret = RK_MPI_VPSS_GetChnAttr(u32VpssGrp, u32VpssChn, &stChnAttr);
@@ -467,6 +469,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
+    RKADK_BUFINFO("create venc[%d]", pstRecCfg->attribute[i].venc_chn);
 
     RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[i].venc_chn, RKADK_ENCODE_SENSE_CVR);
     RKADK_PARAM_SetVAdvancedParam(pstRecCfg->attribute[i]);
@@ -822,6 +825,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
         return ret;
       }
     }
+    RKADK_BUFINFO("record bind[%d, %d, %d]", stSrcChn.s32ChnId, stSrcVpssChn.s32ChnId, stDestChn.s32ChnId);
   }
 
   return 0;
@@ -1388,6 +1392,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
 
   RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID,
              pstRecCfg->record_type);
+  RKADK_BUFINFO("enter record[%d]", pstRecAttr->s32CamID);
 
   if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
     return -1;

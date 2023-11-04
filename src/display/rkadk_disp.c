@@ -131,6 +131,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
     RKADK_LOGE("RKADK_MPI_VI_Init faled %d", ret);
     return ret;
   }
+  RKADK_BUFINFO("create vi[%d] end", pstDispCfg->vi_attr.u32ViChn);
 
   // Create VPSS
   memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
@@ -169,6 +170,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
     RKADK_LOGE("RKADK_MPI_VPSS_Init vpss falied[%d]",ret);
     return ret;
   }
+  RKADK_BUFINFO("create vpss[%d, %d] end", pstDispCfg->vpss_grp, pstDispCfg->vpss_chn);
 
   // Create VO
   ret = RKADK_DISP_CreateVo(pstDispCfg->vo_layer, pstDispCfg->vo_device, pstDispCfg);
@@ -177,6 +179,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
                 pstDispCfg->vo_device, pstDispCfg->vo_layer, pstDispCfg->vo_chn, ret);
     return ret;
   }
+  RKADK_BUFINFO("create vo[%d] end", pstDispCfg->vo_chn);
 
   return 0;
 }

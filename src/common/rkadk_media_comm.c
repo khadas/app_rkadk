@@ -106,13 +106,35 @@ static const struct RKADK_FORMAT_MAP fromat[] = {
     {RKADK_FMT_2BPP, RK_FMT_2BPP}
 };
 
+static int g_dumpBufinfo = 0;
 static bool g_bSysInit = false;
 static RKADK_MEDIA_CONTEXT_S g_stMediaCtx;
 static int g_bVpssGrpInitCnt[VPSS_MAX_GRP_NUM] = {0};
 static int g_bVoLayerDevInitCnt[VO_MAX_LAYER_NUM][VO_MAX_DEV_NUM] = {0};
 
+void RKADK_MEDIA_DumpBufinfo(const char *fmt, const char *fname, const int row, ...) {
+  char line[256];
+
+  if (!g_dumpBufinfo)
+    return;
+
+  va_list args;
+  va_start(args, row);
+  snprintf(line, sizeof(line), "[RKADK_BUFINFO] %s[%d]: %s\n", fname, row, fmt);
+  vfprintf(stdout, line, args);
+  va_end(args);
+
+#ifdef RV1106_1103
+  system("cat /proc/rk_dma_heap/dma_heap_info");
+#else
+  system("cat /sys/kernel/debug/dma_buf/bufinfo");
+#endif
+}
+
 static int RKADK_MEDIA_CtxInit() {
   int ret;
+
+  g_dumpBufinfo = getenv("rkadk_dump_bufinfo") && atoi(getenv("rkadk_dump_bufinfo"));
 
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM * sizeof(int));

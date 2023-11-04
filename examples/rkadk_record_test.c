@@ -256,6 +256,7 @@ record:
   }
 
   SAMPLE_ISP_Start(s32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+  RKADK_BUFINFO("isp[%d] init", s32CamId);
   //IspProcess(s32CamId);
 
   if (bMultiCam) {
@@ -267,6 +268,7 @@ record:
     }
 
     SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+  RKADK_BUFINFO("isp[1] init");
     //IspProcess(1);
   }
 #endif

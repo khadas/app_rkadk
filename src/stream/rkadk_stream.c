@@ -298,6 +298,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   }
 
   RKADK_LOGI("Preview[%d] Video Init...", pstVideoAttr->u32CamId);
+  RKADK_BUFINFO("enter preview[%d]", pstVideoAttr->u32CamId);
 
   if (!RKADK_MPI_SYS_CHECK()) {
     RKADK_LOGE("System is not initialized");
@@ -366,6 +367,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     RKADK_LOGE("RKADK_MPI_VI_Init faleded[%x]", ret);
     return ret;
   }
+  RKADK_BUFINFO("create vi[%d]", stViChn.s32ChnId);
 
   bUseVpss = RKADK_STREAM_IsUseVpss(pVideoHandle->u32CamId, pstStreamCfg);
   // Cteate VPSS
@@ -398,6 +400,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
       RKADK_MPI_VPSS_DeInit(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
       return ret;
     }
+    RKADK_BUFINFO("create vpss[%d, %d]", pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
   }
 
   // Create VENC
@@ -406,6 +409,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     RKADK_LOGE("RKADK_MPI_VENC_Init failed[%x]", ret);
     goto failed;
   }
+  RKADK_BUFINFO("create venc[%d]", stVencChn.s32ChnId);
 
   RK_MPI_VENC_SetSceneMode(stVencChn.s32ChnId, RKADK_ENCODE_SENSE_CVR);
   RKADK_PARAM_SetVAdvancedParam(pstStreamCfg->attribute);
@@ -449,6 +453,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
       goto failed;
     }
   }
+  RKADK_BUFINFO("preview bind[%d, %d, %d]", stViChn.s32ChnId, stSrcVpssChn.s32ChnId, stVencChn.s32ChnId);
 
   *ppHandle = (RKADK_MW_PTR)pVideoHandle;
   RKADK_LOGI("Preview[%d] Video Init End...", pVideoHandle->u32CamId);

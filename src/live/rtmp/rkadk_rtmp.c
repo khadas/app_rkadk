@@ -283,6 +283,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     RKADK_LOGE("RKADK_MPI_VI_Init faled %d", ret);
     return ret;
   }
+  RKADK_BUFINFO("create vi[%d]", stViChn.s32ChnId);
 
   // Create VPSS
   if (bUseVpss) {
@@ -314,6 +315,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
       RKADK_MPI_VPSS_DeInit(pstLiveCfg->attribute.vpss_grp, pstLiveCfg->attribute.vpss_chn);
       return ret;
     }
+    RKADK_BUFINFO("create vpss[%d, %d]", pstLiveCfg->attribute.vpss_grp, pstLiveCfg->attribute.vpss_chn);
   }
 
   // Create VENC
@@ -328,6 +330,7 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
     goto failed;
   }
+  RKADK_BUFINFO("create venc[%d]", stVencChn.s32ChnId);
 
   RKADK_PARAM_SetVAdvancedParam(pstLiveCfg->attribute);
 
@@ -576,6 +579,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
 
   RKADK_LOGI("Rtmp[%d, %s] Init...", u32CamId, path);
+  RKADK_BUFINFO("enter rtmp[%d]", u32CamId);
 
   if (*ppHandle) {
     RKADK_LOGE("rtmp handle has been created");
@@ -699,6 +703,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
       goto failed;
     }
   }
+  RKADK_BUFINFO("rtmp bind[%d, %d, %d]", stViChn.s32ChnId, stSrcVpssChn.s32ChnId, stVencChn.s32ChnId);
 
   // Bind AI to AENC
   if (bEnableAudio) {

@@ -85,6 +85,8 @@ typedef void (*RKADK_MEDIA_VENC_DATA_PROC_FUNC)(RKADK_MEDIA_VENC_DATA_S stData,
 typedef void (*RKADK_MEDIA_AENC_DATA_PROC_FUNC)(AUDIO_STREAM_S stFrame,
                                                 RKADK_VOID *pHandle);
 
+#define RKADK_BUFINFO(fmt, ...)  RKADK_MEDIA_DumpBufinfo(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
 RKADK_S32 RKADK_MPI_SYS_Init();
 RKADK_S32 RKADK_MPI_SYS_Exit();
 bool RKADK_MPI_SYS_CHECK();
@@ -190,6 +192,9 @@ RKADK_S32 RKADK_MEDIA_ToggleVencMirror(RKADK_U32 u32CamId,
 RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   bool flip);
+
+
+void RKADK_MEDIA_DumpBufinfo(const char *fmt, const char *fname, const int row, ...);
 
 #ifdef __cplusplus
 }
