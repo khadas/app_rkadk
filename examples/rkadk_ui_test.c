@@ -33,7 +33,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:W:H:p:h";
+static RKADK_CHAR optstr[] = "a:I:W:H:p:f:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -47,6 +47,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-W: display width, default 720\n");
   printf("\t-H: display height, default 1280\n");
+  printf("\t-f: display pixel format, option: 0(RGB888), 1(NV12), 2(RGB565), 3(RGB444); Default: 0\n");
 }
 
 static void sigterm_handler(int sig) {
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
+  int u32VoFormat = -1;
 
 #ifdef RKAIQ
   RKADK_PARAM_FPS_S stFps;
@@ -98,6 +100,9 @@ int main(int argc, char *argv[]) {
     case 'H':
       u32Height = atoi(optarg);
       break;
+    case 'f':
+      u32VoFormat = atoi(optarg);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -111,13 +116,21 @@ int main(int argc, char *argv[]) {
 
   memset(&stUiAttr, 0, sizeof(RKADK_UI_ATTR_S));
 
+  if (u32VoFormat == 1)
+    stUiAttr.enUiVoFormat = VO_FORMAT_NV12;
+  else if (u32VoFormat == 2)
+    stUiAttr.enUiVoFormat = VO_FORMAT_RGB565;
+  else if (u32VoFormat == 3)
+    stUiAttr.enUiVoFormat = VO_FORMAT_RGB444;
+  else
+    stUiAttr.enUiVoFormat = VO_FORMAT_RGB888;
+
   stUiAttr.u32VoChn = 1;
   stUiAttr.u32DispWidth = u32Width;
   stUiAttr.u32DispHeight = u32Height;
   stUiAttr.u32DispFrmRt = 30;
   stUiAttr.u32ImgWidth = u32Width;
   stUiAttr.u32ImgHeight = u32Height;
-  stUiAttr.enUiVoFormat = VO_FORMAT_RGB888;
   stUiAttr.enVoSpliceMode = SPLICE_MODE_RGA;
 #ifdef RV1106_1103
   stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_DEFAULT;

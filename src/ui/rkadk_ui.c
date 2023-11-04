@@ -62,6 +62,12 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
     case VO_FORMAT_NV12:
       stLayerAttr.enPixFormat = RK_FMT_YUV420SP;
       break;
+    case VO_FORMAT_RGB565:
+      stLayerAttr.enPixFormat = RK_FMT_RGB565;
+      break;
+    case VO_FORMAT_RGB444:
+      stLayerAttr.enPixFormat = RK_FMT_RGB444;
+      break;
     default:
       RKADK_LOGW("unsupport pix format: %d, use default[%d]", stLayerAttr.enPixFormat , RK_FMT_RGB888);
       stLayerAttr.enPixFormat = RK_FMT_RGB888;
