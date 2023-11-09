@@ -253,6 +253,11 @@ typedef struct {
 } RKADK_PLAYER_VDEC_CFG_S;
 
 typedef struct {
+  RKADK_U32 u32AoDevId;
+  RKADK_U32 u32AoChnId;
+} RKADK_PLAYER_AUDIO_CFG_S;
+
+typedef struct {
   RKADK_U32 u32VencChn;
   RKADK_U32 u32MaxWidth;    //Support snapshot max width, default 4096
   RKADK_U32 u32MaxHeight;   //Support snapshot max height, default 4096
@@ -301,6 +306,7 @@ typedef struct {
   RKADK_PLAYER_FRAME_INFO_S stFrmInfo;
   RKADK_PLAYER_RTSP_CFG_S stRtspCfg;
   RKADK_PLAYER_VDEC_CFG_S stVdecCfg;
+  RKADK_PLAYER_AUDIO_CFG_S stAudioCfg;
   RKADK_PLAYER_SNAPSHOT_CFG_S stSnapshotCfg;
   RKADK_BOOL bEnableBlackBackground;
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;

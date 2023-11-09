@@ -468,7 +468,7 @@ static RKADK_S32 CreateAdec(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx) {
   return ret;
 }
 
-static RKADK_S32 AoCtxInit(RKADK_PLAYER_AO_CTX_S *pstAoCtx) {
+static RKADK_S32 AoCtxInit(RKADK_PLAYER_AO_CTX_S *pstAoCtx, RKADK_PLAYER_AUDIO_CFG_S *pstAudioCfg) {
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
     RKADK_LOGE("RKADK_PARAM_GetAudioCfg failed");
@@ -488,8 +488,8 @@ static RKADK_S32 AoCtxInit(RKADK_PLAYER_AO_CTX_S *pstAoCtx) {
   pstAoCtx->periodSize      = 1024;
   memcpy(pstAoCtx->cardName, pstAudioParam->ao_audio_node,
          strlen(pstAudioParam->ao_audio_node));
-  pstAoCtx->devId           = 0;
-  pstAoCtx->chnIndex        = PLAYER_AO_CHN;
+  pstAoCtx->devId           = pstAudioCfg->u32AoDevId;
+  pstAoCtx->chnIndex        = pstAudioCfg->u32AoChnId;
   pstAoCtx->setVolume       = 100;
   pstAoCtx->setMute         = 0;
   pstAoCtx->setTrackMode    = 0;
@@ -2130,7 +2130,7 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
       goto __FAILED;
     }
 
-    if(AoCtxInit(&pstPlayer->stAoCtx)) {
+    if(AoCtxInit(&pstPlayer->stAoCtx, &pstPlayCfg->stAudioCfg)) {
       RKADK_LOGE("Create AO ctx failed");
       goto __FAILED;
     }
