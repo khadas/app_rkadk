@@ -952,8 +952,14 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->keyFrameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
 
-          if (pstMuxerHandle->stThumbParam.bGetThumb && pstMuxerHandle->realDuration >= 5000)
-            pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
+          if (pstMuxerHandle->stThumbParam.bGetThumb) {
+            if (pstMuxerHandle->enableFileCache) {
+              if (pstMuxerHandle->realDuration >= 5000)
+                pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
+            } else {
+              pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
+            }
+          }
         } else if (cell->pool == &pstMuxerHandle->stAFree) {
           ret = rkmuxer_write_audio_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts);
@@ -1142,6 +1148,14 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       pMuxerHandle->u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
     else
       pMuxerHandle->u32ThumbVencChn = ptsThumbCfg->record_sub_venc_chn;
+
+    ret = RK_MPI_VENC_StopRecvFrame(pMuxerHandle->u32ThumbVencChn);
+    if (ret)
+      RKADK_LOGW("RK_MPI_VENC_StopRecvFrame[%d] failed[%x]", pMuxerHandle->u32ThumbVencChn, ret);
+
+    ret = RK_MPI_VENC_ResetChn(pMuxerHandle->u32ThumbVencChn);
+    if (ret)
+      RKADK_LOGW("RK_MPI_VENC_ResetChn[%d] failed[%x]", pMuxerHandle->u32ThumbVencChn, ret);
 
     switch (pstSrcStreamAttr->enType) {
     case RKADK_MUXER_TYPE_MP4:
