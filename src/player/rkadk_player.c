@@ -2821,6 +2821,11 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
     return -1;
   }
 
+  if (pstPlayer->enSeekStatus != RKADK_PLAYER_SEEK_NO) {
+    RKADK_LOGE("Seek operation has not done for last time");
+    return RKADK_FAILURE;
+  }
+
   if (pstPlayer->enStatus < RKADK_PLAYER_STATE_PREPARED
       || pstPlayer->enStatus > RKADK_PLAYER_STATE_STOP) {
     RKADK_LOGW("State[%d] err", pstPlayer->enStatus);
