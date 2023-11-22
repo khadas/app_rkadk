@@ -306,10 +306,12 @@ int main(int argc, char *argv[]) {
   RKADK_MW_PTR pRecordHandle = NULL, pRecordHandle1 = NULL;
 
 #ifdef RKAIQ
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
   RKADK_PARAM_FPS_S stFps;
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   const char *tmp_optarg = optarg;
+  SAMPLE_ISP_PARAM stIspParam;
+
+  memset(&stIspParam, 0, sizeof(SAMPLE_ISP_PARAM));
+  stIspParam.iqFileDir = IQ_FILE_PATH;
 #endif
 
 #ifdef ENABLE_RESET
@@ -359,7 +361,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       }
 
       if (tmp_optarg)
-        pIqfilesPath = (char *)tmp_optarg;
+        stIspParam.iqFileDir = (char *)tmp_optarg;
       break;
 #endif
     case 'I':
@@ -459,7 +461,10 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
     return -1;
   }
 
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+  stIspParam.WDRMode = RK_AIQ_WORKING_MODE_NORMAL;
+  stIspParam.bMultiCam = bMultiCam;
+  stIspParam.fps = stFps.u32Framerate;
+  SAMPLE_ISP_Start(u32CamId, stIspParam);
   //IspProcess(u32CamId);
 
   if (bMultiCam) {
@@ -470,7 +475,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       return -1;
     }
 
-    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+    SAMPLE_ISP_Start(1, stIspParam);
   }
 #endif
 

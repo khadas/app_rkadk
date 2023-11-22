@@ -29,6 +29,10 @@ if(USE_RKAIQ)
     endif()
 endif()
 
+if(ENABLE_AOV)
+	add_definitions(-DENABLE_AOV)
+endif()
+
 #-Wextra
 add_definitions(-Wall
 		-Wshadow

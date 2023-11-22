@@ -121,8 +121,13 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
     return -1;
   }
 
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+  SAMPLE_ISP_PARAM stIspParam;
+  memset(&stIspParam, 0, sizeof(SAMPLE_ISP_PARAM));
+  stIspParam.WDRMode = RK_AIQ_WORKING_MODE_NORMAL;
+  stIspParam.fps = stFps.u32Framerate;
+  stIspParam.bMultiCam = bMultiCam;
+  stIspParam.iqFileDir = pIqfilesPath;
+  SAMPLE_ISP_Start(u32CamId, stIspParam);
   RKADK_BUFINFO("isp[%d] init", u32CamId);
 
   if (bMultiCam) {
@@ -133,7 +138,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
       return -1;
     }
 
-    SAMPLE_ISP_Start(1, hdr_mode, bMultiCam, pIqfilesPath, stFps.u32Framerate);
+    SAMPLE_ISP_Start(1, stIspParam);
     RKADK_BUFINFO("isp[1] init");
   }
 #endif

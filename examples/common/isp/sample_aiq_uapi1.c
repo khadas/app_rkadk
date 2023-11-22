@@ -100,8 +100,7 @@ static int SAMPLE_ISP_GetIdx(RKADK_U32 u32CamId) {
   return -1;
 }
 
-static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
-                             bool bMultiCam, const char *iq_file_dir) {
+static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
   int ret;
   char hdrStr[16];
   rk_aiq_sys_ctx_t *pstAiqCtx;
@@ -110,7 +109,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   setlinebuf(stdout);
 
   // must set HDR_MODE, before init
-  snprintf(hdrStr, sizeof(hdrStr), "%d", (int)WDRMode);
+  snprintf(hdrStr, sizeof(hdrStr), "%d", (int)stIspParam.WDRMode);
   setenv("HDR_MODE", hdrStr, 1);
 
   ret = rk_aiq_uapi_sysctl_enumStaticMetas(u32CamId, &atAiqStaticInfo);
@@ -120,16 +119,16 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   }
 
   RKADK_LOGD("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
-             atAiqStaticInfo.sensor_info.sensor_name, iq_file_dir);
+             atAiqStaticInfo.sensor_info.sensor_name, stIspParam.iqFileDir);
 
   pstAiqCtx = rk_aiq_uapi_sysctl_init(atAiqStaticInfo.sensor_info.sensor_name,
-                                      iq_file_dir, NULL, NULL);
+                                      stIspParam.iqFileDir, NULL, NULL);
   if (!pstAiqCtx) {
     RKADK_LOGE("rk_aiq_uapi_sysctl_init u32CamId[%d] failed", u32CamId);
     return -1;
   }
 
-  if (bMultiCam)
+  if (stIspParam.bMultiCam)
     rk_aiq_uapi_sysctl_setMulCamConc(pstAiqCtx, true);
 
   gstIspHandle[u32CamId].pstAiqCtx = pstAiqCtx;
@@ -163,12 +162,11 @@ static int SAMPLE_ISP_Run(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode) {
   return 0;
 }
 
-int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
-                       bool bMultiCam, const char *iq_file_dir, int fps) {
+int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
   int index, ret;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(iq_file_dir, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(stIspParam.iqFileDir, RKADK_FAILURE);
 
   index = SAMPLE_ISP_GetIdx(u32CamId);
   if (index < 0) {
@@ -185,19 +183,19 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
     return 0;
   }
 
-  ret = SAMPLE_ISP_Init(u32CamId, WDRMode, bMultiCam, iq_file_dir);
+  ret = SAMPLE_ISP_Init(u32CamId, stIspParam);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_Init u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
-  ret = SAMPLE_ISP_Run(u32CamId, WDRMode);
+  ret = SAMPLE_ISP_Run(u32CamId, stIspParam.WDRMode);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_Run u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
-  ret = SAMPLE_ISP_SET_FrameRate(u32CamId, fps);
+  ret = SAMPLE_ISP_SET_FrameRate(u32CamId, stIspParam.fps);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_SET_FrameRate failed[%d]", ret);
     return ret;
@@ -1079,6 +1077,13 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   ret = rk_aiq_uapi_sysctl_setCrop(gstIspHandle[u32CamId].pstAiqCtx, rect);
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
   return ret;
+}
+
+void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId) {
+  printf("aiq uapi1 unsupport pause");
+}
+void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId) {
+  printf("aiq uapi1 unsupport resume");
 }
 
 #endif

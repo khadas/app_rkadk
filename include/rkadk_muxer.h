@@ -26,6 +26,7 @@ extern "C" {
 #include <string.h>
 #include <stdbool.h>
 #include "rkadk_common.h"
+#include "rkadk_aov.h"
 #include "rkadk_media_comm.h"
 
 #define RKADK_MUXER_FILE_NAME_LEN 256
@@ -161,10 +162,29 @@ typedef struct {
   RKADK_STREAM_TYPE_E enStreamType; /* stream type */
 } RKADK_MUXER_FPS_ATTR_S;
 
+/* record type enum */
+typedef enum {
+  RKADK_REC_TYPE_NORMAL = 0, /* normal record */
+  RKADK_REC_TYPE_LAPSE, /* time lapse record, record a frame by an fixed time
+                           interval */
+  RKADK_REC_TYPE_AOV_LAPSE, /* low power time lapse record */
+} RKADK_MUXER_REC_TYPE_E;
+
+typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId);
+typedef void (*RKADK_ISP_WAKE_UP_RESUME)(RKADK_U32 u32CamId);
+typedef int (*RKADK_ISP_SET_FRAME_RATE)(RKADK_U32 u32CamId, unsigned int uFps);
+
+typedef struct {
+  RKADK_META_PARA_VIR *pMetaVir;
+  RKADK_ISP_WAKE_UP_PAUSE pfnWakeUpPause;
+  RKADK_ISP_WAKE_UP_RESUME pfnWakeUpResume;
+  RKADK_ISP_SET_FRAME_RATE pfnSetFrameRate;
+} RKADK_AOV_ATTR_S;
+
 /* muxer attribute param */
 typedef struct {
   RKADK_U32 u32CamId;
-  bool bLapseRecord;
+  RKADK_MUXER_REC_TYPE_E enRecType;
   RKADK_U32 u32StreamCnt; /* stream cnt */
   RKADK_U32 u32FragKeyFrame;
   RKADK_MUXER_STREAM_ATTR_S
@@ -172,15 +192,17 @@ typedef struct {
   RKADK_MUXER_PRE_RECORD_ATTR_S stPreRecordAttr;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
+  RKADK_AOV_ATTR_S stAovAttr;
 } RKADK_MUXER_ATTR_S;
 
 typedef struct {
   RKADK_U32 u32CamId;
-  bool bLapseRecord;
+  RKADK_MUXER_REC_TYPE_E enRecType;
   RKADK_U32 u32StreamCnt;
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
   RKADK_U64 u64AudioPts;
   RKADK_U32 u32FragKeyFrame;
+  RKADK_AOV_ATTR_S stAovAttr;
 } RKADK_MUXER_HANDLE_S;
 
 /**
@@ -279,7 +301,7 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts, void 
 RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
                               RKADK_MUXER_ATTR_S *pstMuxerAttr, int index);
 
-RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId);
+RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle);
 
 void RKADK_MUXER_SetResetState(RKADK_MW_PTR pHandle, bool state);
 

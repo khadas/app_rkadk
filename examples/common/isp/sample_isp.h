@@ -32,8 +32,18 @@ extern "C" {
 #include <rk_aiq_user_api_sysctl.h>
 #endif
 
-int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
-                       bool bMultiCam, const char *iq_file_dir, int fps);
+typedef struct {
+  const char *iqFileDir;
+  rk_aiq_working_mode_t WDRMode;
+  bool bMultiCam;
+  int fps;
+
+  void *iqAddr;
+  int iqLen;
+  void *aiqRttShare;
+} SAMPLE_ISP_PARAM;
+
+int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam);
 int SAMPLE_ISP_Stop(RKADK_U32 u32CamId);
 int SAMPLE_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile);
 int SAMPLE_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable);
@@ -101,6 +111,9 @@ int SAMPLE_ISP_SET_BypassStreamRotation(RKADK_U32 u32CamId, int S32Rotation);
 int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect);
 
 int SAMPLE_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx);
+void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId);
+void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId);
+
 #endif
 
 #ifdef __cplusplus

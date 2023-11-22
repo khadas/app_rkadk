@@ -695,8 +695,8 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
 
-      pHandle->u32PhotoCnt--;
       RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
+      pHandle->u32PhotoCnt--;
     }
   }
 

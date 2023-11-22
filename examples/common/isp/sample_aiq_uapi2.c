@@ -100,8 +100,7 @@ static int SAMPLE_ISP_GetIdx(RKADK_U32 u32CamId) {
   return -1;
 }
 
-static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
-                             bool bMultiCam, const char *iq_file_dir) {
+static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
   int ret;
   char hdrStr[16];
   rk_aiq_sys_ctx_t *pstAiqCtx;
@@ -110,7 +109,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
   setlinebuf(stdout);
 
   // must set HDR_MODE, before init
-  snprintf(hdrStr, sizeof(hdrStr), "%d", (int)WDRMode);
+  snprintf(hdrStr, sizeof(hdrStr), "%d", (int)stIspParam.WDRMode);
   setenv("HDR_MODE", hdrStr, 1);
 
   ret = rk_aiq_uapi2_sysctl_enumStaticMetasByPhyId(u32CamId, &atAiqStaticInfo);
@@ -119,23 +118,39 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
     return ret;
   }
 
-  RKADK_LOGD("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
-             atAiqStaticInfo.sensor_info.sensor_name, iq_file_dir);
+  if (stIspParam.iqAddr) {
+    rk_aiq_tb_info_t tb_info;
+    memset(&tb_info, 0, sizeof(rk_aiq_tb_info_t));
+    tb_info.magic = sizeof(rk_aiq_tb_info_t) - 2;
+    tb_info.is_start_once = false;
+    tb_info.is_pre_aiq = false;
+    tb_info.rtt_share_addr = stIspParam.aiqRttShare;
+    tb_info.prd_type = RK_AIQ_PRD_TYPE_SINGLE_FRAME;
+    if (stIspParam.iqFileDir != NULL) {
+      RKADK_LOGD("rkaiq use iqfiles from %s", stIspParam.iqFileDir);
+      tb_info.iq_bin_mode = RK_AIQ_META_NOT_FULL_IQ_BIN;
+    }
+    ret = rk_aiq_uapi2_sysctl_preInit_tb_info(atAiqStaticInfo.sensor_info.sensor_name, &tb_info);
+    rk_aiq_uapi2_sysctl_preInit_iq_addr(atAiqStaticInfo.sensor_info.sensor_name, stIspParam.iqAddr, stIspParam.iqLen);
+  }
 
-  if(bMultiCam) {
+  RKADK_LOGD("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
+             atAiqStaticInfo.sensor_info.sensor_name, stIspParam.iqFileDir);
+
+  if(stIspParam.bMultiCam) {
     ret = rk_aiq_uapi2_sysctl_preInit_devBufCnt(atAiqStaticInfo.sensor_info.sensor_name, "rkraw_rx", 2);
     if (ret)
       RKADK_LOGE("rk_aiq_uapi2_sysctl_preInit_devBufCnt u32CamId[%d] failed[%d]", u32CamId, ret);
   }
 
   pstAiqCtx = rk_aiq_uapi2_sysctl_init(atAiqStaticInfo.sensor_info.sensor_name,
-                                      iq_file_dir, NULL, NULL);
+                                      stIspParam.iqFileDir, NULL, NULL);
   if (!pstAiqCtx) {
     RKADK_LOGE("rk_aiq_uapi2_sysctl2_init u32CamId[%d] failed", u32CamId);
     return -1;
   }
 
-  if (bMultiCam)
+  if (stIspParam.bMultiCam)
     rk_aiq_uapi2_sysctl_setMulCamConc(pstAiqCtx, true);
 
   gstIspHandle[u32CamId].pstAiqCtx = pstAiqCtx;
@@ -188,12 +203,11 @@ int SAMPLE_ISP_SET_FrameRate(RKADK_U32 u32CamId, RKADK_U32 uFps) {
   return ret;
 }
 
-int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
-                       bool bMultiCam, const char *iq_file_dir, int fps) {
+int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
   int index, ret;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
-  RKADK_CHECK_POINTER(iq_file_dir, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(stIspParam.iqFileDir, RKADK_FAILURE);
 
   index = SAMPLE_ISP_GetIdx(u32CamId);
   if (index < 0) {
@@ -210,19 +224,19 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode,
     return 0;
   }
 
-  ret = SAMPLE_ISP_Init(u32CamId, WDRMode, bMultiCam, iq_file_dir);
+  ret = SAMPLE_ISP_Init(u32CamId, stIspParam);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_Init u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
-  ret = SAMPLE_ISP_Run(u32CamId, WDRMode);
+  ret = SAMPLE_ISP_Run(u32CamId, stIspParam.WDRMode);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_Run u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
   }
 
-  ret = SAMPLE_ISP_SET_FrameRate(u32CamId, fps);
+  ret = SAMPLE_ISP_SET_FrameRate(u32CamId, stIspParam.fps);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_SET_FrameRate u32CamId[%d] failed[%d]", u32CamId, ret);
     return ret;
@@ -312,9 +326,6 @@ int SAMPLE_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile) {
   return ret;
 }
 
-/*
-set after SAMPLE_ISP_Init and before SAMPLE_ISP_Run
-*/
 int SAMPLE_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable) {
   int ret = 0;
 
@@ -1076,7 +1087,7 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
-
+  ret = rk_aiq_uapi2_sysctl_setCrop(gstIspHandle[u32CamId].pstAiqCtx, rect);
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
   return ret;
 }
@@ -1091,5 +1102,35 @@ int SAMPLE_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx) {
   *ppAiqCtx = (RKADK_MW_PTR)gstIspHandle[u32CamId].pstAiqCtx;
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
   return ret;
+}
+
+void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId) {
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    printf("Invalid u32CamId[%d]", u32CamId);
+    return;
+  }
+
+  if (!gstIspHandle[u32CamId].pstAiqCtx) {
+    printf("pstAiqCtx not init");
+    return;
+  }
+
+  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_pause");
+  rk_aiq_uapi2_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx);
+}
+
+void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId) {
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    printf("Invalid u32CamId[%d]", u32CamId);
+    return;
+  }
+
+  if (!gstIspHandle[u32CamId].pstAiqCtx) {
+    printf("pstAiqCtx not init");
+    return;
+  }
+
+  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
+  rk_aiq_uapi2_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
 }
 #endif

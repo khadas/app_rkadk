@@ -1504,7 +1504,7 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
   stData.stFrame.pstPack = &stPack;
   stData.u32ChnId = pstMediaInfo->s32ChnId;
   while (pstMediaInfo->stGetVencMBAttr.bGetBuffer) {
-    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 1200);
+    ret = RK_MPI_VENC_GetStream(pstMediaInfo->s32ChnId, &stData.stFrame, 2000);
 
     if (ret == RK_SUCCESS) {
       for (int i = 0; i < (int)pstMediaInfo->stGetVencMBAttr.s32GetCnt; i++)
@@ -1520,10 +1520,15 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
     } else {
       RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
       pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt++;
+
       //dump video info
 #ifdef RV1106_1103
+      system("cat proc/rkisp-vir0 | grep frame");
       system("cat /dev/mpi/vsys");
+
+#ifndef ENABLE_AOV
       system("cat /proc/vcodec/enc/venc_info");
+#endif
 #else
       system("dumpsys sys");
       system("dumpsys vi");
@@ -2275,6 +2280,9 @@ int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat,
   case RK_FMT_YUV422SP:
     memcpy(cPixFmt, "NV16", strlen("NV16"));
     break;
+  case RK_FMT_YUV422_UYVY:
+    memcpy(cPixFmt, "UYVY", strlen("UYVY"));
+    break;
   default:
     RKADK_LOGE("Unsupport pixel format: %d", enPixelFormat);
     ret = -1;
@@ -2377,7 +2385,7 @@ RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E en
   }
 
   u64TimeoutCnt = g_stMediaCtx.stVencInfo[i].stGetVencMBAttr.u64TimeoutCnt;
-  if (u64TimeoutCnt >= 5) {
+  if (u64TimeoutCnt >= 3) {
     RKADK_LOGW("CamId[%d] VENC[%d] timeout more than %lld times!", u32CamId, s32ChnId, u64TimeoutCnt);
     ret = -1;
     goto exit;

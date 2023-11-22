@@ -20,6 +20,10 @@ if(ENABLE_STORAGE)
 	file(GLOB_RECURSE STORAGE_SRC "${CMAKE_SOURCE_DIR}/src/storage/*.c")
 endif()
 
+if(ENABLE_AOV)
+	file(GLOB_RECURSE AOV_SRC "${CMAKE_SOURCE_DIR}/src/aov/*.c")
+endif()
+
 add_definitions(-g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -D_GNU_SOURCE)
 
 add_library(rkadk SHARED
@@ -40,7 +44,8 @@ add_library(rkadk SHARED
 		${UI_SRC}
 		${STORAGE_SRC}
 		${INIPARSER_SRC}
-		${CJSON_SRC})
+		${CJSON_SRC}
+		${AOV_SRC})
 
 set_target_properties(rkadk PROPERTIES LINK_FLAGS -Wl,--version-script,${CMAKE_CURRENT_LIST_DIR}/export.map)
 #set_target_properties(rkadk PROPERTIES COMPILE_OPTIONS -Wl,-Bsymbolic)
@@ -49,7 +54,7 @@ target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/demuxer")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/third-party")
 target_include_directories(rkadk PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 
-target_link_libraries(rkadk rkmuxer rtsp z rkaudio rkdemuxer)
+target_link_libraries(rkadk rkmuxer rtsp rkaudio rkdemuxer)
 
 if(${RKADK_CHIP} STREQUAL "rv1106")
 	target_link_libraries(rkadk rockit_full)
@@ -69,10 +74,6 @@ endif()
 if(ENABLE_FILE_CACHE)
 	add_definitions(-DFILE_CACHE)
 	#target_link_libraries(rkadk file_cache)
-endif()
-
-if(USE_RKAIQ)
-	target_link_libraries(rkadk rkaiq)
 endif()
 
 # install target

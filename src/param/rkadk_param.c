@@ -529,7 +529,7 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
       &g_stPARAMCtx.stCfg.stMediaCfg[u32CamId].stRecCfg;
 
   change = RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->record_type,
-                                   RKADK_REC_TYPE_NORMAL, RKADK_REC_TYPE_LAPSE,
+                                   RKADK_REC_TYPE_NORMAL, RKADK_REC_TYPE_AOV_LAPSE,
                                    RKADK_REC_TYPE_NORMAL, "record_type");
 
   change |= RKADK_PARAM_CheckCfgU32((RKADK_U32 *)&pstRecCfg->file_type,

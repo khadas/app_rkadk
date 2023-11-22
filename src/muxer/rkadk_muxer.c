@@ -21,8 +21,11 @@
 #include "rkadk_log.h"
 #include "rkadk_signal.h"
 #include "rkadk_thread.h"
+#include "rkadk_msg.h"
 #include "rkmuxer.h"
 #include <sys/time.h>
+
+//#define RKADK_MUXER_TEST
 
 #ifdef FILE_CACHE
 #include "file_msg.h"
@@ -64,14 +67,33 @@ typedef struct {
 typedef struct {
   bool bGetThumb;
   bool bRequestThumb;
-} MANUAL_THUMB_PARAM;
+} MUXER_THUMB_PARAM;
 
 typedef struct {
   struct list_head stVList;
   struct list_head stAList;
   RKADK_MUXER_PRE_RECORD_ATTR_S stAttr;
   pthread_mutex_t mutex;
-} MANUAL_PRE_RECORD_PARAM;
+} MUXER_PRE_RECORD_PARAM;
+
+#ifdef ENABLE_AOV
+#define RKADK_IPCMSG_KEY 1030
+
+typedef struct {
+  bool bIsPause;
+  bool bIsSleep;
+} AOV_PARAM_S;
+
+typedef struct {
+  int initCnt;
+  int msgid;
+  pthread_t tid;
+  pthread_mutex_t msgLock;
+  RKADK_AOV_ATTR_S stAovAttr;
+} AOV_HANDLE_S;
+
+static AOV_HANDLE_S stAovHandle = {.initCnt = 0, .msgid = -1, .tid = 0};
+#endif
 
 typedef struct {
   RKADK_MW_PTR ptr;
@@ -89,13 +111,14 @@ typedef struct {
   int32_t duration;     // s
   int32_t realDuration; // ms
   int64_t startTime;    // us
+  int64_t lapseTimeStamp;
   RKADK_U32 keyFrameCnt;
   RKADK_U32 frameCnt;
   bool bEnableStream;
   bool bReseting;
   bool bMuxering;
   bool bFirstFile;
-  bool bLapseRecord;
+  RKADK_MUXER_REC_TYPE_E enRecType;
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
   bool bIOError;
@@ -116,15 +139,216 @@ typedef struct {
 
   struct timeval checkWriteTime;
 
-  MANUAL_THUMB_PARAM stThumbParam;
+  MUXER_THUMB_PARAM stThumbParam;
   MANUAL_SPLIT_ATTR stManualSplit;
-  MANUAL_PRE_RECORD_PARAM stPreRecParam;
+  MUXER_PRE_RECORD_PARAM stPreRecParam;
 
   int enableFileCache;
+
+#ifdef ENABLE_AOV
+  AOV_PARAM_S stAovParam;
+#endif
+
+#ifdef RKADK_MUXER_TEST
+  RKADK_S64 diff_pts;
+  RKADK_U64 pre_pts;
+#endif
 } MUXER_HANDLE_S;
 
-#ifdef FILE_CACHE
+#if defined(FILE_CACHE) || defined(ENABLE_AOV)
 static RKADK_MW_PTR g_pRecorder[RKADK_MAX_SENSOR_CNT] = {NULL};
+#endif
+
+static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
+                                              RKADK_U32 chnId) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+
+    if (pstMuxerHandle && pstMuxerHandle->u32VencChn == chnId)
+      break;
+  }
+
+  return pstMuxerHandle;
+}
+
+#ifdef ENABLE_AOV
+static void *RKADK_MUXER_AovProc(void *arg) {
+  int i, j, ret;
+  RKADK_MSG stAovMsg;
+  bool bIsPause, bIsResume, bIsSleep;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+
+  prctl(PR_SET_NAME, "rkadk_aov_proc", 0, 0, 0);
+  while(1) {
+    bIsPause = true;
+    bIsResume = true;
+    bIsSleep = true;
+
+    ret = RKADK_MSG_Recv(pstAovHandle->msgid, &stAovMsg);
+    if (ret < 0) {
+      RKADK_LOGE("rec msg failed");
+      continue;
+    }
+
+    RKADK_LOGD("u32CamId: %d, u32VencChn: %d, cmd: %d", stAovMsg.u32CamId, stAovMsg.u32VencChn, stAovMsg.command);
+
+    if (stAovMsg.command == RKADK_CMD_EXIT) {
+      RKADK_LOGI("aov proc pthread will exit");
+      break;
+    }
+
+    if (stAovMsg.u32CamId >= RKADK_MAX_SENSOR_CNT) {
+      RKADK_LOGE("Invalid camId[%d]", stAovMsg.u32CamId);
+      continue;
+    }
+
+    pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[stAovMsg.u32CamId];
+    pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, stAovMsg.u32VencChn);
+    if (!pstMuxerHandle) {
+      RKADK_LOGE("Not find pstMuxerHandle[%d, %d]", stAovMsg.u32CamId, stAovMsg.u32VencChn);
+      continue;
+    }
+
+    if (stAovMsg.command == RKADK_CMD_PAUSE)
+      pstMuxerHandle->stAovParam.bIsPause = true;
+    else if (stAovMsg.command == RKADK_CMD_RESUME)
+      pstMuxerHandle->stAovParam.bIsPause = false;
+    else if (stAovMsg.command == RKADK_CMD_SLEEP)
+      pstMuxerHandle->stAovParam.bIsSleep = true;
+
+    for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+      if (!g_pRecorder[i])
+        continue;
+
+      pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
+      for (j = 0; j < (int)pstMuxer->u32StreamCnt; j++) {
+        pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[j];
+        if (pstMuxerHandle) {
+          if (!pstMuxerHandle->stAovParam.bIsPause)
+            bIsPause = false;
+          else
+            bIsResume = false;
+
+          if (!pstMuxerHandle->stAovParam.bIsSleep)
+            bIsSleep = false;
+        }
+      }
+
+      if (stAovMsg.command == RKADK_CMD_PAUSE) {
+        if (bIsPause) {
+          if (pstAovHandle->stAovAttr.pfnWakeUpPause)
+            pstAovHandle->stAovAttr.pfnWakeUpPause(pstMuxer->u32CamId);
+          else
+            RKADK_LOGE("No registered pfnWakeUpPause");
+        }
+      } else if (stAovMsg.command == RKADK_CMD_RESUME) {
+        if (bIsResume) {
+          if (pstAovHandle->stAovAttr.pfnWakeUpResume)
+            pstAovHandle->stAovAttr.pfnWakeUpResume(pstMuxer->u32CamId);
+          else
+            RKADK_LOGE("No registered pfnWakeUpResume");
+        }
+      }
+    }
+
+    if (stAovMsg.command == RKADK_CMD_SLEEP) {
+      if (bIsSleep) {
+        if (!RKADK_AOV_IsExitAOV(pstAovHandle->stAovAttr.pMetaVir))
+          RKADK_AOV_EnterSleep();
+
+        for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+          if (!g_pRecorder[i])
+            continue;
+
+          pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
+          for (j = 0; j < (int)pstMuxer->u32StreamCnt; j++) {
+            pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[j];
+            if (pstMuxerHandle)
+              pstMuxerHandle->stAovParam.bIsSleep = false;
+          }
+        }
+      }
+    }
+  }
+
+  return NULL;
+}
+
+static int RKADK_MUXER_AovInit(RKADK_AOV_ATTR_S *pstAovAttr) {
+  int ret;
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+
+  if (pstAovHandle->initCnt == 0) {
+    if (pthread_mutex_init(&pstAovHandle->msgLock, NULL) != 0) {
+      RKADK_LOGE("msg lock init failed");
+      return -1;
+    }
+
+    ret = RKADK_MSG_Init(RKADK_IPCMSG_KEY, &pstAovHandle->msgid);
+    if (ret != 0) {
+      RKADK_LOGE("RKADK_MSG_Init failed");
+      pthread_mutex_destroy(&pstAovHandle->msgLock);
+      return -1;
+    }
+
+    ret = pthread_create(&pstAovHandle->tid, NULL, RKADK_MUXER_AovProc, NULL);
+    if (ret) {
+      RKADK_LOGE("create aov proc thread failed[%d]", ret);
+      pthread_mutex_destroy(&pstAovHandle->msgLock);
+      RKADK_MSG_Deinit(RKADK_IPCMSG_KEY, &pstAovHandle->msgid);
+      return -1;
+    }
+
+    memcpy(&pstAovHandle->stAovAttr, pstAovAttr, sizeof(RKADK_AOV_ATTR_S));
+    RKADK_LOGD("Aov init done");
+  }
+
+  pstAovHandle->initCnt++;
+  return 0;
+}
+
+static int RKADK_MUXER_AovDeinit() {
+  int ret;
+  RKADK_MSG stAovMsg;
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+
+  if (pstAovHandle->initCnt == 0) {
+    RKADK_LOGD("Aov has been deinit");
+    return 0;
+  }
+
+  if (pstAovHandle->initCnt == 1) {
+    if (pstAovHandle->tid) {
+      stAovMsg.u32CamId = 0;
+      stAovMsg.u32VencChn = 0;
+      stAovMsg.command = RKADK_CMD_EXIT;
+      ret = RKADK_MSG_Send(pstAovHandle->msgid, &stAovMsg);
+      if (ret)
+        RKADK_LOGE("Send exit msg failed");
+
+      ret = pthread_join(pstAovHandle->tid, NULL);
+      if (ret)
+        RKADK_LOGE("Exit aov proc thread failed!");
+      else
+        RKADK_LOGE("Exit aov proc thread ok");
+
+      pstAovHandle->tid = 0;
+    }
+
+    RKADK_MSG_Deinit(RKADK_IPCMSG_KEY, &pstAovHandle->msgid);
+    pthread_mutex_destroy(&pstAovHandle->msgLock);
+
+    memset(&pstAovHandle->stAovAttr, 0, sizeof(RKADK_AOV_ATTR_S));
+    RKADK_LOGD("Aov deinit done");
+  }
+
+  pstAovHandle->initCnt--;
+  return 0;
+}
 #endif
 
 static void RKADK_MUXER_ListInit(MUXER_HANDLE_S *pstMuxerHandle) {
@@ -292,9 +516,10 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   int64_t cacheDuration = 0;
   MUXER_BUF_CELL_S *cell = NULL, *cell_n = NULL;
   MUXER_BUF_CELL_S *pstPreRecCell = NULL;
-  MANUAL_PRE_RECORD_PARAM *pstPreRecParam;
+  MUXER_PRE_RECORD_PARAM *pstPreRecParam;
 
-  if (pstMuxerHandle->bLapseRecord) {
+  //lapse record unsupport prerecord
+  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL) {
     if (RKADK_MUXER_GetListSize(pstList) > 0)
       RKADK_MUXER_ListRelease(pstMuxerHandle, pstList);
 
@@ -350,20 +575,6 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   }
 
   RKADK_MUTEX_UNLOCK(pstMuxerHandle->stPreRecParam.mutex);
-}
-
-static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
-                                              RKADK_U32 chnId) {
-  MUXER_HANDLE_S *pstMuxerHandle = NULL;
-
-  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
-    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
-
-    if (pstMuxerHandle && pstMuxerHandle->u32VencChn == chnId)
-      break;
-  }
-
-  return pstMuxerHandle;
 }
 
 void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
@@ -445,11 +656,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   if (pstMuxerHandle->bReseting)
     return 0;
 
-  if(pstMuxer->bLapseRecord)
-    pts = stData.stFrame.pstPack->u64PTS / pstMuxerHandle->stVideo.frame_rate_num;
-  else
-    pts = stData.stFrame.pstPack->u64PTS;
-
+  pts = stData.stFrame.pstPack->u64PTS;
   if ((stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_ISLICE ||
       stData.stFrame.pstPack->DataType.enH264EType == H264E_NALU_IDRSLICE) ||
       (stData.stFrame.pstPack->DataType.enH265EType == H265E_NALU_ISLICE ||
@@ -479,6 +686,16 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
 
   if (!pstMuxerHandle->bEnableStream)
     return 0;
+
+#ifdef RKADK_MUXER_TEST
+  if (pstMuxer->enRecType != RKADK_REC_TYPE_NORMAL) {
+    pstMuxerHandle->diff_pts = pts - pstMuxerHandle->pre_pts;
+    pstMuxerHandle->pre_pts = pts;
+    printf("\n\n----- muxerId[%d]: pts: %lld, frameCnt: %d, diff_pts: %lld -----\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->diff_pts);
+    system("cat proc/rkisp-vir0 | grep frame");
+    system("cat /proc/vcodec/enc/venc_info | grep -A 2 RealFps");
+  }
+#endif
 
   RKADK_MUXER_CheckWriteSpeed(pstMuxerHandle);
   framerate = pstMuxerHandle->stVideo.frame_rate_num / pstMuxerHandle->stVideo.frame_rate_den;
@@ -577,6 +794,10 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   if (!pstMuxerHandle->bMuxering)
     return;
 
+  RKADK_LOGI("File end: chn = %d, duration: %d, frameCnt = %d, keyFrameCnt: %d",
+      pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration,
+      pstMuxerHandle->frameCnt, pstMuxerHandle->keyFrameCnt);
+
   // Stop muxer
   rkmuxer_deinit(pstMuxerHandle->muxerId);
 
@@ -597,6 +818,7 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   // Reset muxer
   pstMuxerHandle->realDuration = 0;
   pstMuxerHandle->startTime = 0;
+  pstMuxerHandle->lapseTimeStamp = 0;
   pstMuxerHandle->frameCnt = 0;
   pstMuxerHandle->bMuxering = false;
   pstMuxerHandle->bFirstFile = false;
@@ -655,8 +877,6 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       RK_MPI_VENC_ResetChn(pstMuxerHandle->u32ThumbVencChn);
       return bBuildInOk;
     } else {
-      RKADK_LOGW("Get thumb frame failed[%x]", ret);
-      system("cat /proc/vcodec/enc/venc_info");
       return true;
     }
   } else {
@@ -734,7 +954,7 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle,
   int position = 0;
   RKADK_U32 u32Duration;
 
-  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0)
+  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0 || !pstMuxerHandle->startTime)
     return false;
 
   if (pstMuxerHandle->stManualSplit.bSplitRecord)
@@ -770,9 +990,6 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle,
   bFileSwitch = cell->pts - pstMuxerHandle->startTime >=
                 (u32Duration * 1000000 - 1000000 / pstMuxerHandle->stVideo.frame_rate_num);
   if (bFileSwitch) {
-    RKADK_LOGI("File switch: chn = %d, duration: %d, frameCnt = %d, keyFrameCnt: %d",
-        pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration,
-        pstMuxerHandle->frameCnt + 1, pstMuxerHandle->keyFrameCnt);
     RKADK_MUXER_Close(pstMuxerHandle);
     return true;
   }
@@ -787,7 +1004,7 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   MUXER_BUF_CELL_S *cell = NULL;
   RKADK_MUXER_PRE_RECORD_ATTR_S *pstAttr;
 
-  if (pstMuxerHandle->bLapseRecord)
+  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL)
     return 0;
 
   size = RKADK_MUXER_GetListSize(&pstMuxerHandle->stPreRecParam.stVList);
@@ -859,6 +1076,7 @@ static bool RKADK_MUXER_Proc(void *params) {
   int ret = 0;
   RKADK_U32 u32Duration;
   MUXER_BUF_CELL_S *cell = NULL;
+  RKADK_U32 u32LapseFrameInterval = 0;
 
   if (!params) {
     RKADK_LOGE("Invalid param");
@@ -866,6 +1084,7 @@ static bool RKADK_MUXER_Proc(void *params) {
   }
 
   MUXER_HANDLE_S *pstMuxerHandle = (MUXER_HANDLE_S *)params;
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
   RKADK_SIGNAL_Wait(pstMuxerHandle->pSignal, pstMuxerHandle->duration * 1000);
 
   cell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
@@ -876,6 +1095,18 @@ static bool RKADK_MUXER_Proc(void *params) {
         u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
       else
         u32Duration = pstMuxerHandle->duration;
+
+      if (pstMuxer->enRecType == RKADK_REC_TYPE_LAPSE) {
+        cell->pts = cell->pts / pstMuxerHandle->stVideo.frame_rate_num;
+      } else if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+        if (pstMuxerHandle->startTime != 0 && cell->pool == &pstMuxerHandle->stVFree) {
+          u32LapseFrameInterval = 1000000 / pstMuxerHandle->stVideo.frame_rate_num; // us
+          pstMuxerHandle->lapseTimeStamp += u32LapseFrameInterval;
+          cell->pts = pstMuxerHandle->lapseTimeStamp;
+        }
+      }
+
+      RKADK_MUXER_CheckEnd(pstMuxerHandle, cell);
 
       if (!pstMuxerHandle->bMuxering && cell->isKeyFrame) {
         ret = pstMuxerHandle->pcbRequestFileNames(pstMuxerHandle->ptr,
@@ -912,6 +1143,7 @@ static bool RKADK_MUXER_Proc(void *params) {
 
             pstMuxerHandle->bMuxering = true;
             pstMuxerHandle->startTime = cell->pts;
+            pstMuxerHandle->lapseTimeStamp = pstMuxerHandle->startTime;
             pstMuxerHandle->stThumbParam.bGetThumb = true;
             pstMuxerHandle->stThumbParam.bRequestThumb = true;
           }
@@ -925,9 +1157,6 @@ static bool RKADK_MUXER_Proc(void *params) {
 
       // Process
       if (pstMuxerHandle->bMuxering) {
-        if (RKADK_MUXER_CheckEnd(pstMuxerHandle, cell))
-          continue;
-
         // Write
         if (cell->pool == &pstMuxerHandle->stVFree) {
           ret = rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
@@ -950,6 +1179,7 @@ static bool RKADK_MUXER_Proc(void *params) {
                         pstMuxerHandle->u32VencChn, cell->pts, pstMuxerHandle->startTime);
           pstMuxerHandle->realDuration = (cell->pts - pstMuxerHandle->startTime) / 1000;
           pstMuxerHandle->frameCnt++;
+
           if(cell->isKeyFrame)
             pstMuxerHandle->keyFrameCnt++;
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
@@ -974,6 +1204,28 @@ static bool RKADK_MUXER_Proc(void *params) {
         } else {
           RKADK_LOGE("unknow pool");
         }
+
+#ifdef ENABLE_AOV
+        RKADK_MSG stAovMsg;
+        AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+
+        stAovMsg.u32CamId = pstMuxer->u32CamId;
+        stAovMsg.u32VencChn = pstMuxerHandle->u32VencChn;
+        if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+          if (!pstMuxerHandle->stAovParam.bIsPause) {
+            stAovMsg.command = RKADK_CMD_PAUSE;
+            if (RKADK_MSG_Send(pstAovHandle->msgid, &stAovMsg))
+              RKADK_LOGE("Send pause cmd failed");
+
+          }
+
+          if (!pstMuxerHandle->stAovParam.bIsSleep) {
+            stAovMsg.command = RKADK_CMD_SLEEP;
+            if (RKADK_MSG_Send(pstAovHandle->msgid, &stAovMsg))
+              RKADK_LOGE("Send sleep cmd failed");
+          }
+        }
+#endif
       }
     }
 
@@ -1128,7 +1380,7 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         i + (pstMuxerAttr->u32CamId * RKADK_MUXER_STREAM_MAX_CNT);
     pMuxerHandle->pcbRequestFileNames = pstMuxerAttr->pcbRequestFileNames;
     pMuxerHandle->pfnEventCallback = pstMuxerAttr->pfnEventCallback;
-    pMuxerHandle->bLapseRecord = pstMuxer->bLapseRecord;
+    pMuxerHandle->enRecType = pstMuxer->enRecType;
     pMuxerHandle->bReseting = false;
 
     pstSrcStreamAttr = &(pstMuxerAttr->astStreamAttr[i]);
@@ -1249,13 +1501,27 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 
   pstMuxer->u32CamId = pstMuxerAttr->u32CamId;
   pstMuxer->u32StreamCnt = pstMuxerAttr->u32StreamCnt;
-  pstMuxer->bLapseRecord = pstMuxerAttr->bLapseRecord;
+  pstMuxer->enRecType = pstMuxerAttr->enRecType;
   pstMuxer->u32FragKeyFrame = pstMuxerAttr->u32FragKeyFrame;
+  memcpy(&pstMuxer->stAovAttr, &pstMuxerAttr->stAovAttr, sizeof(RKADK_AOV_ATTR_S));
 
   *ppHandle = (RKADK_MW_PTR)pstMuxer;
-#ifdef FILE_CACHE
+
+#ifdef ENABLE_AOV
+  if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+    if (pstMuxerAttr->stAovAttr.pfnSetFrameRate)
+      pstMuxerAttr->stAovAttr.pfnSetFrameRate(pstMuxer->u32CamId, 1);
+    else
+      RKADK_LOGE("No registered pfnSetFrameRate");
+
+    RKADK_MUXER_AovInit(&pstMuxerAttr->stAovAttr);
+  }
+#endif
+
+#if defined(FILE_CACHE) || defined(ENABLE_AOV)
   g_pRecorder[pstMuxer->u32CamId] = (RKADK_MW_PTR)pstMuxer;
 #endif
+
   RKADK_LOGI("Create Record[%d] Stop...", pstMuxerAttr->u32CamId);
   return 0;
 }
@@ -1263,6 +1529,11 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+#ifdef ENABLE_AOV
+  RKADK_MSG stAovMsg;
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+#endif
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
 
@@ -1303,6 +1574,16 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
     pthread_mutex_destroy(&pstMuxerHandle->mutex);
     pthread_mutex_destroy(&pstMuxerHandle->paramMutex);
     pthread_mutex_destroy(&pstMuxerHandle->stPreRecParam.mutex);
+
+#ifdef ENABLE_AOV
+    if (pstMuxerHandle->stAovParam.bIsPause) {
+      stAovMsg.u32CamId = pstMuxer->u32CamId;
+      stAovMsg.u32VencChn = pstMuxerHandle->muxerId;
+      stAovMsg.command = RKADK_CMD_RESUME;
+      if (RKADK_MSG_Send(pstAovHandle->msgid, &stAovMsg))
+        RKADK_LOGE("Send resume cmd failed");
+    }
+#endif
   }
 
   RKADK_LOGI("Disable Muxer[%d] Stop...", pstMuxer->u32CamId);
@@ -1312,6 +1593,10 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
 RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+
+#ifdef ENABLE_AOV
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+#endif
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
 
@@ -1337,7 +1622,24 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
     pstMuxer->pMuxerHandle[i] = NULL;
   }
 
-#ifdef FILE_CACHE
+#ifdef ENABLE_AOV
+  if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+    RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstMuxer->u32CamId);
+    if (!pstSensorCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+      return -1;
+    }
+
+    if (pstAovHandle->stAovAttr.pfnSetFrameRate)
+      pstAovHandle->stAovAttr.pfnSetFrameRate(pstMuxer->u32CamId, pstSensorCfg->framerate);
+    else
+      RKADK_LOGE("No registered pfnSetFrameRate");
+  }
+
+  RKADK_MUXER_AovDeinit();
+#endif
+
+#if defined(FILE_CACHE) || defined(ENABLE_AOV)
   g_pRecorder[pstMuxer->u32CamId] = NULL;
 #endif
 
@@ -1562,9 +1864,10 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
     return -1;
   }
 
-  pstMuxerHandle->bLapseRecord = pstMuxerAttr->bLapseRecord;
+  pstMuxer->enRecType = pstMuxerAttr->enRecType;
+  pstMuxerHandle->enRecType = pstMuxerAttr->enRecType;
   pstMuxerHandle->duration = pstMuxerAttr->astStreamAttr[index].u32TimeLenSec;
-  if (pstMuxerHandle->bLapseRecord)
+  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL)
     memset(&pstMuxerHandle->stAudio, 0, sizeof(AudioParam));
 
   ret = RKADK_MUXER_SetAVParam(pstMuxerHandle, &pstMuxerAttr->astStreamAttr[index],
@@ -1577,45 +1880,93 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
   return 0;
 }
 
-RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle, RKADK_U32 chnId) {
+RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   char name[256];
+
+#ifdef ENABLE_AOV
+  RKADK_MSG stAovMsg;
+  AOV_HANDLE_S *pstAovHandle = &stAovHandle;
+#endif
 
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
 
   pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
   RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
 
-  RKADK_LOGI("Reset Muxer[%d] Start...", chnId);
-
-  pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, chnId);
-
-  if (!pstMuxerHandle) {
-    RKADK_LOGD("Muxer Handle is NULL");
+  RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(pstMuxer->u32CamId);
+  if (!pstRecCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  RKADK_THREAD_SetExit(pstMuxerHandle->pThread);
-  RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
+  for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
+    pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
+    if (!pstMuxerHandle) {
+      RKADK_LOGD("Muxer Handle[%d] is NULL", i);
+      continue;
+    }
 
-  // Destroy thread
-  RKADK_THREAD_Destory(pstMuxerHandle->pThread);
-  pstMuxerHandle->pThread = NULL;
+    RKADK_LOGI("Reset Muxer[%d] Start...", pstMuxerHandle->muxerId);
 
-  snprintf(name, sizeof(name), "Muxer_%d", pstMuxerHandle->u32VencChn);
-  pstMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pstMuxerHandle, name);
-  if (!pstMuxerHandle->pThread) {
-    RKADK_LOGE("RKADK_THREAD_Create failed");
-    return -1;
+    RKADK_THREAD_SetExit(pstMuxerHandle->pThread);
+    RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
+
+    // Destroy thread
+    RKADK_THREAD_Destory(pstMuxerHandle->pThread);
+    pstMuxerHandle->pThread = NULL;
+
+    snprintf(name, sizeof(name), "Muxer_%d", pstMuxerHandle->u32VencChn);
+    pstMuxerHandle->pThread = RKADK_THREAD_Create(RKADK_MUXER_Proc, pstMuxerHandle, name);
+    if (!pstMuxerHandle->pThread) {
+      RKADK_LOGE("RKADK_THREAD_Create failed");
+      return -1;
+    }
+
+    // Release list
+    RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
+    RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList);
+    RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+
+#ifdef ENABLE_AOV
+    if (pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE && pstMuxerHandle->stAovParam.bIsPause) {
+      stAovMsg.u32CamId = pstMuxer->u32CamId;
+      stAovMsg.u32VencChn = pstMuxerHandle->muxerId;
+      stAovMsg.command = RKADK_CMD_RESUME;
+      if (RKADK_MSG_Send(pstAovHandle->msgid, &stAovMsg))
+        RKADK_LOGE("Send resume cmd failed");
+    }
+
+    pstMuxerHandle->stAovParam.bIsSleep = false;
+#endif
+
+    RKADK_LOGI("Reset Muxer[%d] End...", pstMuxerHandle->muxerId);
   }
 
-  // Release list
-  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stProcList);
-  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stAList);
-  RKADK_MUXER_ListRelease(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList);
+#ifdef ENABLE_AOV
+  if (pstAovHandle->initCnt == 0)
+    RKADK_MUXER_AovInit(&pstMuxer->stAovAttr);
 
-  RKADK_LOGI("Reset Muxer[%d] End...", chnId);
+  if (pstMuxer->enRecType != RKADK_REC_TYPE_AOV_LAPSE && pstRecCfg->record_type == RKADK_REC_TYPE_AOV_LAPSE) {
+    if (pstAovHandle->stAovAttr.pfnSetFrameRate)
+      pstAovHandle->stAovAttr.pfnSetFrameRate(pstMuxer->u32CamId, 1);
+    else
+      RKADK_LOGE("No registered pfnSetFrameRate");
+  } else if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE && pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE) {
+    RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstMuxer->u32CamId);
+    if (!pstSensorCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
+      return -1;
+    }
+
+    if (pstAovHandle->stAovAttr.pfnSetFrameRate)
+      pstAovHandle->stAovAttr.pfnSetFrameRate(pstMuxer->u32CamId, pstSensorCfg->framerate);
+    else
+      RKADK_LOGE("No registered pfnSetFrameRate");
+  }
+#endif
+
   return 0;
 }
 

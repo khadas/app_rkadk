@@ -42,6 +42,23 @@ target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/include
 target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_record_test DESTINATION "bin")
 
+if(ENABLE_AOV)
+#--------------------------
+# rkadk_aov_record_test
+#--------------------------
+add_executable(rkadk_aov_record_test rkadk_aov_record_test.c ${ISP_SRC})
+add_dependencies(rkadk_aov_record_test rkadk)
+target_link_libraries(rkadk_aov_record_test rkadk)
+
+if(USE_RKAIQ)
+        target_link_libraries(rkadk_aov_record_test rkaiq)
+endif()
+
+target_include_directories(rkadk_aov_record_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(rkadk_aov_record_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
+install(TARGETS rkadk_aov_record_test DESTINATION "bin")
+endif()
+
 #--------------------------
 # rkadk_rtsp_test
 #--------------------------

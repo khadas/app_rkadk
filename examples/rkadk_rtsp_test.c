@@ -66,8 +66,11 @@ int main(int argc, char *argv[]) {
   char *osdfile = "/userdata/rkadk_ARGB8888";
 
 #ifdef RKAIQ
-  RKADK_CHAR *pIqfilesPath = IQ_FILE_PATH;
   const char *tmp_optarg = optarg;
+  SAMPLE_ISP_PARAM stIspParam;
+
+  memset(&stIspParam, 0, sizeof(SAMPLE_ISP_PARAM));
+  stIspParam.iqFileDir = IQ_FILE_PATH;
 #endif
 
   while ((c = getopt(argc, argv, optstr)) != -1) {
@@ -79,7 +82,7 @@ int main(int argc, char *argv[]) {
       }
 
       if (tmp_optarg)
-        pIqfilesPath = (char *)tmp_optarg;
+        stIspParam.iqFileDir = (char *)tmp_optarg;
       break;
 #endif
     case 'I':
@@ -133,9 +136,10 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-  RKADK_BOOL fec_enable = RKADK_FALSE;
-  SAMPLE_ISP_Start(u32CamId, hdr_mode, fec_enable, pIqfilesPath, stFps.u32Framerate);
+  stIspParam.WDRMode = RK_AIQ_WORKING_MODE_NORMAL;
+  stIspParam.bMultiCam = false;
+  stIspParam.fps = stFps.u32Framerate;
+  SAMPLE_ISP_Start(u32CamId, stIspParam);
   RKADK_BUFINFO("isp[%d] init", u32CamId);
 #endif
 

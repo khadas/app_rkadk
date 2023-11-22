@@ -27,19 +27,13 @@ extern "C" {
 typedef RKADK_MUXER_FPS_ATTR_S RKADK_RECORD_FPS_ATTR_S;
 typedef RKADK_MUXER_MANUAL_SPLIT_ATTR_S RKADK_REC_MANUAL_SPLIT_ATTR_S;
 typedef RKADK_MUXER_EVENT_CALLBACK_FN RKADK_REC_EVENT_CALLBACK_FN;
+typedef RKADK_MUXER_REC_TYPE_E RKADK_REC_TYPE_E;
+
 
 /* record create file function */
 typedef RKADK_S32 (*RKADK_REC_REQUEST_FILE_NAMES_FN)(
     RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
     RKADK_CHAR (*paszFilename)[RKADK_MAX_FILE_PATH_LEN]);
-
-/* record type enum */
-typedef enum {
-  RKADK_REC_TYPE_NORMAL = 0, /* normal record */
-  RKADK_REC_TYPE_LAPSE, /* time lapse record, record a frame by an fixed time
-                           interval */
-  RKADK_REC_TYPE_BUTT
-} RKADK_REC_TYPE_E;
 
 /** record task's attribute */
 typedef struct {
@@ -47,6 +41,7 @@ typedef struct {
   RKADK_U32 u32FragKeyFrame;
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
+  RKADK_AOV_ATTR_S stAovAttr;
 } RKADK_RECORD_ATTR_S;
 
 typedef struct {
