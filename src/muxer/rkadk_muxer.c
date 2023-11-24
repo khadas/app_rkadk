@@ -1399,6 +1399,64 @@ RKADK_S32 RKADK_MUXER_Stop(RKADK_MW_PTR pHandle) {
   return 0;
 }
 
+RKADK_S32 RKADK_MUXER_Single_Start(RKADK_MW_PTR pHandle, RKADK_STREAM_TYPE_E enStrmType) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  int s32VencChn = -1;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+
+  s32VencChn = RKADK_PARAM_GetVencChnId(pstMuxer->u32CamId, enStrmType);
+  if (s32VencChn == -1) {
+    RKADK_LOGE("Not find venc channel");
+    return -1;
+  }
+
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, s32VencChn);
+  if (!pstMuxerHandle) {
+    RKADK_LOGE("Not find muxer[%d] handle", s32VencChn);
+    return -1;
+  }
+
+  RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
+  RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
+  pstMuxerHandle->bEnableStream = true;
+  pstMuxerHandle->bFirstFile = true;
+  RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_START, 0);
+
+  return 0;
+}
+
+RKADK_S32 RKADK_MUXER_Single_Stop(RKADK_MW_PTR pHandle, RKADK_STREAM_TYPE_E enStrmType) {
+  MUXER_HANDLE_S *pstMuxerHandle = NULL;
+  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
+  int s32VencChn = -1;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
+
+  s32VencChn = RKADK_PARAM_GetVencChnId(pstMuxer->u32CamId, enStrmType);
+  if (s32VencChn == -1) {
+    RKADK_LOGE("Not find venc channel");
+    return -1;
+  }
+
+  pstMuxerHandle = RKADK_MUXER_FindHandle(pstMuxer, s32VencChn);
+  if (!pstMuxerHandle) {
+    RKADK_LOGE("Not find muxer[%d] handle", s32VencChn);
+    return -1;
+  }
+
+  pstMuxerHandle->bEnableStream = false;
+  pstMuxerHandle->stManualSplit.bEnableSplit = false;
+  pstMuxerHandle->stManualSplit.bSplitRecord = false;
+  RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_STREAM_STOP, 0);
+  RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
+
+  return 0;
+}
+
 RKADK_S32 RKADK_MUXER_SetFrameRate(RKADK_MW_PTR pHandle,
                                    RKADK_MUXER_FPS_ATTR_S stFpsAttr) {
   return 0;

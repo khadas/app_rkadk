@@ -1517,6 +1517,24 @@ RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder) {
   return RKADK_MUXER_Stop(pRecorder);
 }
 
+RKADK_S32 RKADK_RECORD_Single_Start(RKADK_MW_PTR pRecorder, RKADK_STREAM_TYPE_E enStrmType) {
+  if (enStrmType != RKADK_STREAM_TYPE_VIDEO_MAIN && enStrmType != RKADK_STREAM_TYPE_VIDEO_SUB) {
+    RKADK_LOGE("Invalid stream type[%d]", enStrmType);
+    return -1;
+  }
+
+  return RKADK_MUXER_Single_Start(pRecorder, enStrmType);
+}
+
+RKADK_S32 RKADK_RECORD_Single_Stop(RKADK_MW_PTR pRecorder, RKADK_STREAM_TYPE_E enStrmType) {
+  if (enStrmType != RKADK_STREAM_TYPE_VIDEO_MAIN && enStrmType != RKADK_STREAM_TYPE_VIDEO_SUB) {
+    RKADK_LOGE("Invalid stream type[%d]", enStrmType);
+    return -1;
+  }
+
+  return RKADK_MUXER_Single_Stop(pRecorder, enStrmType);
+}
+
 int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
                                          RKADK_PARAM_REC_CFG_S *pstRecCfg,
                                          RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,

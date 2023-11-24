@@ -208,7 +208,7 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle);
 
 /**
  * @brief start muxer
- * @param[in]pRecorder, pointer of muxer
+ * @param[in]pRecorder : pointer of muxer
  * @return 0 success
  * @return -1 failure
  */
@@ -217,11 +217,28 @@ RKADK_S32 RKADK_MUXER_Start(RKADK_MW_PTR pHandle);
 /**
  * @brief stop muxer
  * @param[in]pRecorder : pointer of muxer
- * @param[in]bQuickMode : quick stop mode flag.
  * @return 0 success
  * @return others failure
  */
 RKADK_S32 RKADK_MUXER_Stop(RKADK_MW_PTR pHandle);
+
+/**
+ * @brief start muxer
+ * @param[in]pRecorder : pointer of muxer
+ * @param[in]enStrmType : stream type, mainStream or subStream
+ * @return 0 success
+ * @return -1 failure
+ */
+RKADK_S32 RKADK_MUXER_Single_Start(RKADK_MW_PTR pHandle, RKADK_STREAM_TYPE_E enStrmType);
+
+/**
+ * @brief stop muxer
+ * @param[in]pRecorder : pointer of muxer
+ * @param[in]enStrmType : stream type, mainStream or subStream
+ * @return 0 success
+ * @return others failure
+ */
+RKADK_S32 RKADK_MUXER_Single_Stop(RKADK_MW_PTR pHandle, RKADK_STREAM_TYPE_E enStrmType);
 
 /**
  * @brief set muxer framerate

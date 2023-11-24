@@ -107,6 +107,25 @@ RKADK_S32 RKADK_RECORD_Start(RKADK_MW_PTR pRecorder);
 RKADK_S32 RKADK_RECORD_Stop(RKADK_MW_PTR pRecorder);
 
 /**
+ * @brief start recorder
+ * @param[in]pRecorder : pointer of recorder
+ * @param[in]enStrmType : stream type, mainStream or subStream
+ * @return 0 success
+ * @return -1 failure
+ */
+RKADK_S32 RKADK_RECORD_Single_Start(RKADK_MW_PTR pRecorder, RKADK_STREAM_TYPE_E enStrmType);
+
+/**
+ * @brief stop recorder
+ * @param[in]pRecorder : pointer of recorder
+ * @param[in]enStrmType : stream type, mainStream or subStream
+ * @return 0 success
+ * @return -1 failure
+ */
+RKADK_S32 RKADK_RECORD_Single_Stop(RKADK_MW_PTR pRecorder, RKADK_STREAM_TYPE_E enStrmType);
+
+
+/**
  * @param[in]pRecorder : pointer of recorder
  * @return 0 success
  * @return others failure
