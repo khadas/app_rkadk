@@ -510,6 +510,7 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
                 RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
               } else {
                 RKADK_LOGW("Get thumb venc frame failed[%x]", ret);
+                RK_MPI_VENC_StopRecvFrame(ptsThumbCfg->photo_venc_chn);
                 stData.pu8DataBuf = pu8JpgData;
                 stData.u32DataLen = stStream.pstPack->u32Len;
                 stData.u32CamId = pHandle->u32CamId;
@@ -638,17 +639,21 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
 
   // drop first frame
   ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
-  if (ret == RK_SUCCESS)
+  if (ret == RK_SUCCESS) {
     RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
-  else
+  } else {
     RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", pstPhotoCfg->venc_chn, ret);
+    RK_MPI_VENC_StopRecvFrame(pstPhotoCfg->venc_chn);
+  }
 
   // drop first thumb frame
   ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
-  if (ret == RK_SUCCESS)
+  if (ret == RK_SUCCESS) {
     RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
-  else
+  } else {
     RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", ptsThumbCfg->photo_venc_chn, ret);
+    RK_MPI_VENC_StopRecvFrame(ptsThumbCfg->photo_venc_chn);
+  }
 
   RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
   RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
@@ -674,6 +679,9 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
 
         RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
       } else {
+        RKADK_LOGW("Get thumb frame failed[%x]", ret);
+        system("cat /proc/vcodec/enc/venc_info");
+        RK_MPI_VENC_StopRecvFrame(ptsThumbCfg->photo_venc_chn);
         stData.pu8DataBuf = pu8JpgData;
         stData.u32DataLen = stFrame.pstPack->u32Len;
         stData.u32CamId = pHandle->u32CamId;

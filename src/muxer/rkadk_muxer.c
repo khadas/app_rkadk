@@ -655,6 +655,8 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       RK_MPI_VENC_ResetChn(pstMuxerHandle->u32ThumbVencChn);
       return bBuildInOk;
     } else {
+      RKADK_LOGW("Get thumb frame failed[%x]", ret);
+      system("cat /proc/vcodec/enc/venc_info");
       return true;
     }
   } else {
