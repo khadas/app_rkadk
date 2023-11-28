@@ -2043,6 +2043,8 @@ PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt,
     enPixelFormat = RK_FMT_YUV420SP_10BIT;
   else if (!strcmp(pixFmt, "NV16"))
     enPixelFormat = RK_FMT_YUV422SP;
+  else if (!strcmp(pixFmt, "UYVY"))
+    enPixelFormat = RK_FMT_YUV422_UYVY;
   else if (!strcmp(pixFmt, "YUV422SP_10BIT"))
     enPixelFormat = RK_FMT_YUV422SP_10BIT;
   else if (!strcmp(pixFmt, "YUV420P"))
