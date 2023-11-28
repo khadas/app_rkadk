@@ -65,6 +65,9 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
     case VO_FORMAT_RGB565:
       stLayerAttr.enPixFormat = RK_FMT_RGB565;
       break;
+    case VO_FORMAT_BGR565:
+      stLayerAttr.enPixFormat = RK_FMT_BGR565;
+      break;
     case VO_FORMAT_RGB444:
       stLayerAttr.enPixFormat = RK_FMT_RGB444;
       break;

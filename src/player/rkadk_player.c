@@ -408,6 +408,9 @@ static RKADK_S32 SetVoCtx(RKADK_PLAYER_VO_CTX_S *pstVoCtx, RKADK_PLAYER_FRAME_IN
     case VO_FORMAT_RGB444:
       pstVoCtx->pixFormat = RK_FMT_RGB444;
       break;
+    case VO_FORMAT_BGR565:
+      pstVoCtx->pixFormat = RK_FMT_BGR565;
+      break;
     default:
       RKADK_LOGW("unsupport pix format[%d], use default[%d]", pstVoCtx->pixFormat, RK_FMT_RGB888);
       pstVoCtx->pixFormat = RK_FMT_RGB888;
