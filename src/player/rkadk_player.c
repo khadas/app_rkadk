@@ -212,6 +212,8 @@ typedef struct {
   RKADK_VOID *pDemuxerCfg;
   RKADK_DEMUXER_PARAM_S stDemuxerParam;
   RKADK_BOOL bEnableThirdDemuxer;
+  RKADK_BOOL bVideoSendStreamFail;
+  RKADK_S32 videoStreamCount;
 
   RKADK_PLAYER_SEEK_STATUS_E enSeekStatus;
   RKADK_S64 seekTimeStamp;
@@ -1414,6 +1416,16 @@ __GETVDEC:
                       RKADK_LOGI("chn %d reach eos frame", pstPlayer->stVdecCtx.chnIndex);
                       flagVideoEnd = 1;
                     } else {
+                      if (pstPlayer->bIsRtsp) {
+                        pthread_mutex_lock(&pstPlayer->mutex);
+                        if ((pstPlayer->videoStreamCount - pstPlayer->frameCount) >= (pstPlayer->stVdecCtx.streamBufferCnt + pstPlayer->stVdecCtx.frameBufferCnt - 1)) {
+                          RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
+                          pthread_mutex_unlock(&pstPlayer->mutex);
+                          goto __GETVDEC;
+                        }
+                        pthread_mutex_unlock(&pstPlayer->mutex);
+                      }
+
                       if (abs(pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp) <= 0.5 * frameTime) {
                         // normal video send
                         ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
@@ -1687,19 +1699,35 @@ static RKADK_VOID DoPullDemuxerVideoPacket(RKADK_VOID* pHandle) {
     stStream.bBypassMbBlk = RK_TRUE;
 
 __RETRY:
-    ret = RK_MPI_VDEC_SendStream(pstPlayer->stVdecCtx.chnIndex, &stStream, -1);
-    if (ret) {
-      if (pstPlayer->enStatus == RKADK_PLAYER_STATE_STOP) {
-        RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
-        return;
+    if (pstPlayer->bIsRtsp) {
+      if (!pstPlayer->bVideoSendStreamFail || pstDemuxerPacket->s8SpecialFlag)
+        ret = RK_MPI_VDEC_SendStream(pstPlayer->stVdecCtx.chnIndex, &stStream, 0);
+      else
+        ret = RKADK_FAILURE;
+
+      if (ret) {
+        pstPlayer->bVideoSendStreamFail = true;
+      } else {
+        pstPlayer->bVideoSendStreamFail = false;
+        pstPlayer->videoStreamCount++;
       }
+      RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
 
-      RKADK_LOGE("RK_MPI_VDEC_SendStream failed[%x]", ret);
+    } else {
+      ret = RK_MPI_VDEC_SendStream(pstPlayer->stVdecCtx.chnIndex, &stStream, -1);
+      if (ret) {
+        if (pstPlayer->enStatus == RKADK_PLAYER_STATE_STOP) {
+          RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
+          return;
+        }
 
-      usleep(1000llu);
-      goto  __RETRY;
+        RKADK_LOGE("RK_MPI_VDEC_SendStream failed[%x]", ret);
+
+        usleep(1000llu);
+        goto  __RETRY;
+      }
+      RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
     }
-    RK_MPI_MB_ReleaseMB(stStream.pMbBlk);
   } else {
     if (pstDemuxerPacket->s8PacketData) {
       free(pstDemuxerPacket->s8PacketData);
@@ -1754,10 +1782,16 @@ static RKADK_VOID DoPullDemuxerAudioPacket(RKADK_VOID* pHandle) {
     RK_MPI_SYS_CreateMB(&(stAudioStream.pMbBlk), &stExtConfig);
 
 __RETRY:
-    ret = RK_MPI_ADEC_SendStream(pstPlayer->stAdecCtx.chnIndex, &stAudioStream, RK_TRUE);
-    if (ret != RK_SUCCESS) {
-      RKADK_LOGE("RK_MPI_ADEC_SendStream failed[%x]", ret);
-      goto __RETRY;
+    if (pstPlayer->bIsRtsp) {
+      ret = RK_MPI_ADEC_SendStream(pstPlayer->stAdecCtx.chnIndex, &stAudioStream, RK_FALSE);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_ADEC_SendStream failed[%x]", ret);
+    } else {
+      ret = RK_MPI_ADEC_SendStream(pstPlayer->stAdecCtx.chnIndex, &stAudioStream, RK_TRUE);
+      if (ret != RK_SUCCESS) {
+        RKADK_LOGE("RK_MPI_ADEC_SendStream failed[%x]", ret);
+        goto __RETRY;
+      }
     }
     RK_MPI_MB_ReleaseMB(stAudioStream.pMbBlk);
   }
@@ -2115,6 +2149,8 @@ RKADK_S32 RKADK_PLAYER_Create(RKADK_MW_PTR *pPlayer,
   pstPlayer->bEnableAudio = pstPlayCfg->bEnableAudio;
   pstPlayer->bEnableBlackBackground = pstPlayCfg->bEnableBlackBackground;
   pstPlayer->enStatus = RKADK_PLAYER_STATE_BUTT;
+  pstPlayer->bVideoSendStreamFail = false;
+  pstPlayer->videoStreamCount = 0;
 
   pstPlayer->bEnableThirdDemuxer = pstPlayCfg->bEnableThirdDemuxer;
   if (!pstPlayCfg->bEnableThirdDemuxer) {
@@ -2772,6 +2808,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   pstPlayer->frameCount = 0;
   pstPlayer->stSnapshotParam.bSnapshot = false;
   pstPlayer->stSnapshotParam.stFrame.pMbBlk = NULL;
+  pstPlayer->bVideoSendStreamFail = false;
+  pstPlayer->videoStreamCount = 0;
 
   if (pstPlayer->bVideoExist) {
       if (DestroyVdec(&pstPlayer->stVdecCtx))
