@@ -47,6 +47,7 @@
 
 #define PLAYER_SNAPSHOT_MAX_WIDTH 4096
 #define PLAYER_SNAPSHOT_MAX_HEIGHT 4096
+#define MAX_BUFFER_SZIE 4096
 
 typedef enum {
   RKADK_PLAYER_PAUSE_FALSE = 0x0,
@@ -967,6 +968,25 @@ static void SendBlackBackground(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_IN
   return;
 }
 
+static void AoVolumeControl(RKADK_PLAYER_HANDLE_S *pstPlayer) {
+  AUDIO_FADE_S aFade;
+  aFade.bFade = RK_FALSE;
+  RK_BOOL mute;
+  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
+
+  pstCommCfg = RKADK_PARAM_GetCommCfg();
+  if (!pstCommCfg) {
+    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
+    return;
+  }
+
+  aFade.enFadeOutRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
+  aFade.enFadeInRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
+  mute = (pstPlayer->stAoCtx.setMute == 0) ? RK_FALSE : RK_TRUE;
+  RK_MPI_AO_SetMute(pstPlayer->stAoCtx.devId, mute, &aFade);
+  RK_MPI_AO_SetVolume(pstPlayer->stAoCtx.devId, pstCommCfg->speaker_volume);
+}
+
 static void SendVideoData(RKADK_VOID *ptr) {
   RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)ptr;
   VIDEO_FRAME_INFO_S sFrame;
@@ -1159,7 +1179,7 @@ static void SendData(RKADK_VOID *ptr) {
   struct timespec t_begin, t_end;
   RKADK_S32 flagGetFirstframe = 0, flagVideoEnd = 0, flagAudioEnd = 0, flagsSendNullFrame = 0;
   RKADK_S32 frameTime = 0, costtime = 0, maxNullFrameCount = 0, flagSendBlackFrameEnd = 0;
-  RKADK_S32 audioBytes = 0, sampleNum = 0;
+  RKADK_S32 audioBytes = 0, sampleNum = 0, tmpNUm = 0;
   RK_U32 cacheBufferLen = 0, copySize = 0, secondPartLen = 0;
   RK_U32 bufferOffset = 0, originOffset = 0;
   RK_U64 firstAudioTimeStamp = -1;
@@ -1200,6 +1220,31 @@ static void SendData(RKADK_VOID *ptr) {
   // Divisor correction
   sampleNum = cacheBufferLen / (audioBytes * pstPlayer->stDemuxerParam.audioChannels);
   cacheBufferLen = sampleNum * audioBytes * pstPlayer->stDemuxerParam.audioChannels;
+  pstPlayer->stAoCtx.periodSize = cacheBufferLen;
+
+  if (pstPlayer->stAoCtx.sampleRate != pstPlayer->stAoCtx.reSmpSampleRate) {
+      if (((pstPlayer->stAoCtx.sampleRate > pstPlayer->stAoCtx.reSmpSampleRate) &&
+          ((pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate) ||
+          ((pstPlayer->stAoCtx.sampleRate / pstPlayer->stAoCtx.reSmpSampleRate) % 2))) ||
+          ((pstPlayer->stAoCtx.sampleRate < pstPlayer->stAoCtx.reSmpSampleRate) &&
+          (pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate ||
+          ((pstPlayer->stAoCtx.reSmpSampleRate / pstPlayer->stAoCtx.sampleRate) % 2)))) {
+          tmpNUm = (RK_S32)(sampleNum *
+                              ((float)(pstPlayer->stAoCtx.sampleRate) / (float)(pstPlayer->stAoCtx.reSmpSampleRate)) + 1);
+      }
+  }
+
+  pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
+  if (sampleNum != 1024) {
+    DestoryDeviceAo(&pstPlayer->stAoCtx);
+    ret = CreateDeviceAo(&pstPlayer->stAoCtx);
+    if (ret) {
+      RKADK_LOGE("Create AO failed");
+      return -1;
+    }
+
+    AoVolumeControl(pstPlayer);
+  }
 
   maxNullFrameCount = 2 * (1 + pstPlayer->stAoCtx.periodCount) * pstPlayer->stAoCtx.periodCount * pstPlayer->stAoCtx.periodSize / cacheBufferLen;
 
@@ -1521,25 +1566,6 @@ static RKADK_VOID* SendDataThread(RKADK_VOID *ptr) {
 
   RKADK_LOGI("Exit send data thread");
   return RKADK_NULL;
-}
-
-static void AoVolumeControl(RKADK_PLAYER_HANDLE_S *pstPlayer) {
-  AUDIO_FADE_S aFade;
-  aFade.bFade = RK_FALSE;
-  RK_BOOL mute;
-  RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
-
-  pstCommCfg = RKADK_PARAM_GetCommCfg();
-  if (!pstCommCfg) {
-    RKADK_LOGE("RKADK_PARAM_GetCommCfg failed");
-    return;
-  }
-
-  aFade.enFadeOutRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
-  aFade.enFadeInRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
-  mute = (pstPlayer->stAoCtx.setMute == 0) ? RK_FALSE : RK_TRUE;
-  RK_MPI_AO_SetMute(pstPlayer->stAoCtx.devId, mute, &aFade);
-  RK_MPI_AO_SetVolume(pstPlayer->stAoCtx.devId, pstCommCfg->speaker_volume);
 }
 
 static void AoDebugProcess(RKADK_PLAYER_HANDLE_S *pstPlayer) {
