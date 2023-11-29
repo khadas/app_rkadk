@@ -2632,6 +2632,16 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   return RKADK_SUCCESS;
 
 __FAILED:
+  if (pstPlayer->bVideoExist)
+    DestroyVdec(&pstPlayer->stVdecCtx);
+
+  if (pstPlayer->bAudioExist) {
+    if (pstPlayer->stAdecCtx.eCodecType != RKADK_CODEC_TYPE_PCM)
+      RK_MPI_ADEC_DestroyChn(pstPlayer->stAdecCtx.chnIndex);
+
+    DestoryDeviceAo(&pstPlayer->stAoCtx);
+  }
+
   pthread_mutex_unlock(&pstPlayer->mutex);
   RKADK_PLAYER_ProcessEvent(pPlayer, RKADK_PLAYER_EVENT_ERROR, NULL);
 
