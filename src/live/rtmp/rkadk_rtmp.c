@@ -173,6 +173,7 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId,
                                    RKADK_PARAM_AUDIO_CFG_S *pstAudioParam,
                                    RKADK_RTMP_HANDLE_S *pHandle) {
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
+  bool bEnableAudio = pstAudioParam->codec_type == RKADK_CODEC_TYPE_ACC ? true : false;
 
   pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
   if (!pstSensorCfg) {
@@ -201,6 +202,9 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId,
     RKADK_LOGE("not support enCodecType: %d", pstLiveCfg->attribute.codec_type);
     return -1;
   }
+
+  if (!bEnableAudio)
+    return 0;
 
   pHandle->stAudio.channels = pstAudioParam->channels;
   pHandle->stAudio.frame_size = pstAudioParam->samples_per_frame;
@@ -469,8 +473,7 @@ static RKADK_S32 RKADK_RTMP_InitMuxer(RKADK_U32 u32CamId, char *path,
                                       RKADK_RTMP_HANDLE_S *pHandle) {
   int ret = 0;
 
-  ret = RKADK_RTMP_SetMuxerAttr(u32CamId, pstLiveCfg, pstAudioParam,
-                                pHandle);
+  ret = RKADK_RTMP_SetMuxerAttr(u32CamId, pstLiveCfg, pstAudioParam, pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_RTMP_SetMuxerAttr failed");
     return ret;
