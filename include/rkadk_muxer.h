@@ -168,6 +168,7 @@ typedef enum {
   RKADK_REC_TYPE_LAPSE, /* time lapse record, record a frame by an fixed time
                            interval */
   RKADK_REC_TYPE_AOV_LAPSE, /* low power time lapse record */
+  RKADK_REC_TYPE_BUTT,
 } RKADK_MUXER_REC_TYPE_E;
 
 typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId);
