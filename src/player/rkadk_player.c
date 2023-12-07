@@ -1007,7 +1007,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
   memset(&sFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
   memset(&tFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
 
-  while (1) {
+  while (!pstPlayer->bStopSendStream) {
     if (pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
       if (pstPlayer->stVdecCtx.chnFd > 0) {
         ret = VdecPollEvent(MAX_TIME_OUT_MS, pstPlayer->stVdecCtx.chnFd);
@@ -1116,7 +1116,7 @@ static void SendAudioData(RKADK_VOID *ptr) {
   }
   #endif
 
-  while (1) {
+  while (!pstPlayer->bStopSendStream) {
     ret = RK_MPI_ADEC_GetFrame(pstPlayer->stAdecCtx.chnIndex, &stFrmInfo, pstPlayer->stAdecCtx.bBlock);
     if (!ret) {
       size = stFrmInfo.pstFrame->u32Len;
