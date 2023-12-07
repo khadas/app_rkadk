@@ -71,6 +71,9 @@ int main(int argc, char *argv[]) {
   RKADK_THUMB_ATTR_S stThumbAttr;
   memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
   stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
+  stThumbAttr.s32VdecChn = -1;
+  stThumbAttr.s32VpssGrp = -1;
+  stThumbAttr.s32VpssChn = -1;
 #endif
 
   while ((c = getopt(argc, argv, optstr)) != -1) {

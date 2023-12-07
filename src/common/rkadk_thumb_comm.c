@@ -19,9 +19,9 @@
 #define THM_BOX_HEADER_LEN 8 /* size: 4byte, type: 4byte */
 #define VPSS_ZOOM_MAX 16
 
-#define VDEC_MP4_THM_CHN 11
-#define VDEC_MP4_THM_VPSS_GRP 11
-#define VDEC_MP4_THM_VPSS_CHN 0
+#define THM_VDEC_CHN (VDEC_MAX_CHN_NUM - 1)
+#define THM_VPSS_GRP (VPSS_MAX_GRP_NUM - 1)
+#define THM_VPSS_CHN 0
 
 typedef struct {
   uint16_t tag_no; // tag number
@@ -549,7 +549,6 @@ RKADK_S32 ThumbnailRequest(RKADK_U32 u32VencChnTb) {
   return 0;
 }
 
-#ifndef RV1106_1103
 static RKADK_S32 VdecThmFree(void *opaque) {
   RKADK_LOGD("vdec free: %p", opaque);
   if (opaque) {
@@ -558,68 +557,41 @@ static RKADK_S32 VdecThmFree(void *opaque) {
   }
   return 0;
 }
-#endif
 
-static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
-                                       RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree,
-                                       RKADK_S32 s32VdecChnID) {
-#ifndef RV1106_1103
-  int ret = 0, deinitRet = 0;
-  VDEC_CHN_ATTR_S stAttr;
-  VDEC_CHN_PARAM_S stVdecParam;
-  MB_BLK jpgMbBlk = RK_NULL;
-  MB_EXT_CONFIG_S stMbExtConfig;
-  VDEC_STREAM_S stStream;
-  VIDEO_FRAME_INFO_S sFrame = {0};
-  RK_U8 *pVdecData = RK_NULL;
-  RK_U64 VdecDataLen = 0;
-  VPSS_GRP_ATTR_S stGrpAttr;
-  VPSS_CHN_ATTR_S stChnAttr;
-  MPP_CHN_S stVdecChn, stVpssChn;
-  RKADK_U32 u32MaxW, u32MaxH;
-
-  if (pstSrcThmAttr->pu8Buf[0] != 0xFF || pstSrcThmAttr->pu8Buf[1] != 0xD8) {
-    RKADK_LOGD("Invalid jpeg thumbnail data");
-    *bFree = true;
+static RKADK_S32 ThumbDataCopy(RKADK_THUMB_ATTR_S *pstDstThmAttr,
+                                        RK_U8 *pVdecData, RK_U64 VdecDataLen) {
+  if (!pVdecData) {
+    RKADK_LOGE("pVdecData is null");
     return -1;
   }
 
-  memset(&stAttr, 0, sizeof(VDEC_CHN_ATTR_S));
-  memset(&stVdecParam, 0, sizeof(VDEC_CHN_PARAM_S));
-  memset(&stMbExtConfig, 0, sizeof(MB_EXT_CONFIG_S));
-  memset(&stStream, 0, sizeof(VDEC_STREAM_S));
+  if (!pstDstThmAttr->pu8Buf) {
+    pstDstThmAttr->pu8Buf = (RKADK_U8 *)malloc(VdecDataLen);
+    if (!pstDstThmAttr->pu8Buf) {
+      RKADK_LOGE("malloc thumb buffer failed, VdecDataLen: %lld", VdecDataLen);
+      return -1;
+    }
+    RKADK_LOGD("malloc thumb buffer[%p, %lld]", pstDstThmAttr->pu8Buf, VdecDataLen);
 
-  stVdecChn.enModId = RK_ID_VDEC;
-  stVdecChn.s32DevId = 0;
-  stVdecChn.s32ChnId = s32VdecChnID;
-
-  stVpssChn.enModId = RK_ID_VPSS;
-  stVpssChn.s32DevId = VDEC_MP4_THM_VPSS_GRP;
-  stVpssChn.s32ChnId = VDEC_MP4_THM_VPSS_CHN;
-
-  stAttr.enMode = VIDEO_MODE_FRAME;
-  stAttr.enType = RK_VIDEO_ID_JPEG;
-  stAttr.u32PicWidth = pstSrcThmAttr->u32Width;
-  stAttr.u32PicHeight = pstSrcThmAttr->u32Height;
-  stAttr.u32FrameBufCnt = 3;
-  stAttr.u32StreamBufCnt = 2;
-  ret = RK_MPI_VDEC_CreateChn(s32VdecChnID, &stAttr);
-  if (ret != RK_SUCCESS) {
-    RK_LOGE("create vdec[%d] failed[%x]", s32VdecChnID, ret);
-    *bFree = true;
-    return ret;
+    pstDstThmAttr->u32BufSize = (RKADK_U32)VdecDataLen;
+  } else {
+    if (pstDstThmAttr->u32BufSize < VdecDataLen)
+      RKADK_LOGW("buffer size[%d] < thumb size[%lld]",
+                 pstDstThmAttr->u32BufSize, VdecDataLen);
+    else
+      pstDstThmAttr->u32BufSize = VdecDataLen;
   }
 
-  stVdecParam.enType = RK_VIDEO_ID_JPEG;
-  stVdecParam.stVdecPictureParam.enPixelFormat = RK_FMT_YUV420SP;
-  ret = RK_MPI_VDEC_SetChnParam(s32VdecChnID, &stVdecParam);
-  if (ret != RK_SUCCESS) {
-    RK_LOGE("set vdec chn[%d] param failed[%x]", s32VdecChnID, ret);
-    *bFree = true;
-    goto exit;
-  }
+  memcpy(pstDstThmAttr->pu8Buf, pVdecData, pstDstThmAttr->u32BufSize);
+  return 0;
+}
 
-  //Create VPSS
+static RKADK_S32 ThumbVpssInit(MPP_CHN_S stVpssChn, RKADK_THUMB_ATTR_S *pstSrcThmAttr,
+                                       RKADK_THUMB_ATTR_S *pstDstThmAttr) {
+  RKADK_U32 u32MaxW, u32MaxH;
+  VPSS_GRP_ATTR_S stGrpAttr;
+  VPSS_CHN_ATTR_S stChnAttr;
+
   memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
   memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
 
@@ -630,7 +602,7 @@ static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
 
   stGrpAttr.u32MaxW = u32MaxW;
   stGrpAttr.u32MaxH = u32MaxH;
-  stGrpAttr.enPixelFormat = RK_FMT_YUV420SP;;
+  stGrpAttr.enPixelFormat = RK_FMT_YUV420SP;
   stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
   stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
   stGrpAttr.stFrameRate.s32DstFrameRate = -1;
@@ -644,28 +616,97 @@ static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
   stChnAttr.u32Height = pstDstThmAttr->u32Height;
   stChnAttr.u32Depth = 1;
 
-  ret = RKADK_MPI_VPSS_Init(stVpssChn.s32DevId, stVpssChn.s32ChnId,
+  return RKADK_MPI_VPSS_Init(stVpssChn.s32DevId, stVpssChn.s32ChnId,
                             &stGrpAttr, &stChnAttr);
+}
+
+RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
+                                   RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree) {
+  int ret = 0, deinitRet = 0;
+  VDEC_CHN_ATTR_S stAttr;
+  VDEC_CHN_PARAM_S stVdecParam;
+  MB_BLK jpgMbBlk = RK_NULL;
+  MB_EXT_CONFIG_S stMbExtConfig;
+  VDEC_STREAM_S stStream;
+  VIDEO_FRAME_INFO_S sFrame = {0};
+  RK_U8 *pVdecData = RK_NULL;
+  RK_U64 VdecDataLen = 0;
+  MPP_CHN_S stVdecChn, stVpssChn;
+  bool bIsEnableVpss = false;
+
+#ifdef RV1106_1103
+  VIDEO_FRAME_INFO_S sFrameIn = {0};
+#endif
+
+  if (pstSrcThmAttr->pu8Buf[0] != 0xFF || pstSrcThmAttr->pu8Buf[1] != 0xD8) {
+    RKADK_LOGD("Invalid jpeg data");
+    *bFree = true;
+    return -1;
+  }
+
+  memset(&stAttr, 0, sizeof(VDEC_CHN_ATTR_S));
+  memset(&stVdecParam, 0, sizeof(VDEC_CHN_PARAM_S));
+  memset(&stMbExtConfig, 0, sizeof(MB_EXT_CONFIG_S));
+  memset(&stStream, 0, sizeof(VDEC_STREAM_S));
+
+  stVdecChn.enModId = RK_ID_VDEC;
+  stVdecChn.s32DevId = 0;
+  stVdecChn.s32ChnId = pstDstThmAttr->s32VdecChn;
+
+  stVpssChn.enModId = RK_ID_VPSS;
+  stVpssChn.s32DevId = pstDstThmAttr->s32VpssGrp;
+  stVpssChn.s32ChnId = pstDstThmAttr->s32VpssChn;
+
+  stAttr.enMode = VIDEO_MODE_FRAME;
+  stAttr.enType = RK_VIDEO_ID_JPEG;
+  stAttr.u32PicWidth = pstSrcThmAttr->u32Width;
+  stAttr.u32PicHeight = pstSrcThmAttr->u32Height;
+  stAttr.u32FrameBufCnt = 1;
+  stAttr.u32StreamBufCnt = 1;
+#ifdef RV1106_1103
+  stAttr.u32FrameBufDepth = 1;
+#endif
+  ret = RK_MPI_VDEC_CreateChn(stVdecChn.s32ChnId, &stAttr);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("create vdec[%d] failed[%x]", stVdecChn.s32ChnId, ret);
+    *bFree = true;
+    return ret;
+  }
+
+  stVdecParam.enType = RK_VIDEO_ID_JPEG;
+  stVdecParam.stVdecPictureParam.enPixelFormat = RK_FMT_YUV420SP;
+  ret = RK_MPI_VDEC_SetChnParam(stVdecChn.s32ChnId, &stVdecParam);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("set vdec chn[%d] param failed[%x]", stVdecChn.s32ChnId, ret);
+    *bFree = true;
+    goto exit;
+  }
+
+#ifndef RV1106_1103
+  //create vpss
+  ret = ThumbVpssInit(stVpssChn, pstSrcThmAttr, pstDstThmAttr);
   if (ret) {
     RKADK_LOGE("RKADK_MPI_VPSS_Init vpss_grp[%d] vpss_chn[%d] falied[%x]",
                 stVpssChn.s32DevId, stVpssChn.s32ChnId, ret);
     *bFree = true;
     goto exit;
   }
+  bIsEnableVpss = true;
 
   //vdec bind vpss
   ret = RK_MPI_SYS_Bind(&stVdecChn, &stVpssChn);
   if (ret) {
-    RKADK_LOGE("Bind VDEC[%d] to VPSS[%d, %d] failed[%x]", s32VdecChnID,
+    RKADK_LOGE("Bind VDEC[%d] to VPSS[%d, %d] failed[%x]", stVdecChn.s32ChnId,
                stVpssChn.s32DevId, stVpssChn.s32ChnId, ret);
     *bFree = true;
     goto exit;
   }
+#endif
 
   //decode
-  ret = RK_MPI_VDEC_StartRecvStream(s32VdecChnID);
+  ret = RK_MPI_VDEC_StartRecvStream(stVdecChn.s32ChnId);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("start recv vdec[%d] failed[%x]", s32VdecChnID, ret);
+    RKADK_LOGE("start recv vdec[%d] failed[%x]", stVdecChn.s32ChnId, ret);
     *bFree = true;
     goto exit;
   }
@@ -676,7 +717,7 @@ static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
   stMbExtConfig.u64Size = pstSrcThmAttr->u32BufSize;
   ret = RK_MPI_SYS_CreateMB(&jpgMbBlk, &stMbExtConfig);
   if (ret) {
-    RKADK_LOGE("Create vdec[%d] MB failed[%d]", s32VdecChnID, ret);
+    RKADK_LOGE("Create vdec[%d] MB failed[%d]", stVdecChn.s32ChnId, ret);
     *bFree = true;
     goto exit;
   }
@@ -684,73 +725,102 @@ static RKADK_S32 JpgThmDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
   stStream.u64PTS = 0;
   stStream.pMbBlk = jpgMbBlk;
   stStream.u32Len = pstSrcThmAttr->u32BufSize;
-  stStream.bEndOfStream = RK_TRUE;
-  stStream.bEndOfFrame = RK_TRUE;
+  stStream.bEndOfStream = RK_FALSE;
+  stStream.bEndOfFrame = RK_FALSE;
   stStream.bBypassMbBlk = RK_TRUE;
-  ret = RK_MPI_VDEC_SendStream(s32VdecChnID, &stStream, -1);
+  ret = RK_MPI_VDEC_SendStream(stVdecChn.s32ChnId, &stStream, -1);
   if(ret) {
-    RKADK_LOGE("Send vdec[%d] stream failed[%d]", s32VdecChnID, ret);
+    RKADK_LOGE("Send vdec[%d] stream failed[%d]", stVdecChn.s32ChnId, ret);
     goto exit;
   }
 
+#ifdef RV1106_1103
   //get decode frame
+  memset(&sFrameIn, 0, sizeof(VIDEO_FRAME_INFO_S));
+  ret = RK_MPI_VDEC_GetFrame(stVdecChn.s32ChnId, &sFrameIn, -1);
+  if(ret) {
+    RKADK_LOGE("Get vdec[%d] frame failed[%d]", stVdecChn.s32ChnId, ret);
+    goto exit;
+  }
+
+  if (sFrameIn.stVFrame.enPixelFormat == ThumbToRKPixFmt(pstDstThmAttr->enType)
+        && sFrameIn.stVFrame.u32Width == pstDstThmAttr->u32Width
+        && sFrameIn.stVFrame.u32Height == pstDstThmAttr->u32Height) {
+    pVdecData = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(sFrameIn.stVFrame.pMbBlk);
+    VdecDataLen = RK_MPI_MB_GetSize(sFrameIn.stVFrame.pMbBlk);
+    RKADK_LOGD("vdec output[%p, %lld], w*h[%d, %d]", pVdecData, VdecDataLen,
+                sFrameIn.stVFrame.u32Width, sFrameIn.stVFrame.u32Height);
+
+    ret = ThumbDataCopy(pstDstThmAttr, pVdecData, VdecDataLen);
+    if (ret)
+      RKADK_LOGE("Data copy failed");
+
+    goto exit;
+  }
+
+  //create vpss
+  ret = ThumbVpssInit(stVpssChn, pstSrcThmAttr, pstDstThmAttr);
+  if (ret) {
+    RKADK_LOGE("RKADK_MPI_VPSS_Init vpss_grp[%d] vpss_chn[%d] falied[%x]",
+                stVpssChn.s32DevId, stVpssChn.s32ChnId, ret);
+    goto exit;
+  }
+  bIsEnableVpss = true;
+
+  //send frame to vpss
+  ret = RK_MPI_VPSS_SendFrame(stVpssChn.s32DevId, 0, &sFrameIn, -1);
+  if (ret != RK_SUCCESS) {
+    RKADK_LOGE("Send vpss[%d] frame failed[%d]", stVpssChn.s32DevId, ret);
+    RK_MPI_VDEC_ReleaseFrame(stVdecChn.s32ChnId, &sFrameIn);
+    goto exit;
+  }
+
+  RK_MPI_VDEC_ReleaseFrame(stVdecChn.s32ChnId, &sFrameIn);
+#endif
+
+  //get vpss frame
   memset(&sFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
   ret = RK_MPI_VPSS_GetChnFrame(stVpssChn.s32DevId, stVpssChn.s32ChnId, &sFrame, -1);
   if(ret) {
-    RKADK_LOGE("Get vpss[%d] frame failed[%d]", s32VdecChnID, ret);
+    RKADK_LOGE("Get vpss[%d] frame failed[%d]", stVdecChn.s32ChnId, ret);
     goto exit;
   }
 
   pVdecData = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(sFrame.stVFrame.pMbBlk);
   VdecDataLen = RK_MPI_MB_GetSize(sFrame.stVFrame.pMbBlk);
-  RKADK_LOGD("vdec data[%p, %lld], w*h[%d, %d]", pVdecData, VdecDataLen, sFrame.stVFrame.u32Width, sFrame.stVFrame.u32Height);
+  RKADK_LOGD("vpss output[%p, %lld], w*h[%d, %d]", pVdecData, VdecDataLen,
+              sFrame.stVFrame.u32Width, sFrame.stVFrame.u32Height);
   RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, RK_TRUE);
 
-  if (!pstDstThmAttr->pu8Buf) {
-    pstDstThmAttr->pu8Buf = (RKADK_U8 *)malloc(VdecDataLen);
-    if (!pstDstThmAttr->pu8Buf) {
-      RKADK_LOGE("malloc thumbnail buffer failed, VdecDataLen: %lld", VdecDataLen);
-      ret = -1;
-      goto exit;
-    }
-    RKADK_LOGD("malloc thumbnail buffer[%p, %lld]", pstDstThmAttr->pu8Buf, VdecDataLen);
+  ret = ThumbDataCopy(pstDstThmAttr, pVdecData, VdecDataLen);
+  if (ret)
+    RKADK_LOGE("Data copy failed");
 
-    pstDstThmAttr->u32BufSize = (RKADK_U32)VdecDataLen;
-  } else {
-    if (pstDstThmAttr->u32BufSize < VdecDataLen)
-      RKADK_LOGW("buffer size[%d] < thm data size[%lld]",
-                 pstDstThmAttr->u32BufSize, VdecDataLen);
-    else
-      pstDstThmAttr->u32BufSize = VdecDataLen;
-  }
-
-  memcpy(pstDstThmAttr->pu8Buf, pVdecData, pstDstThmAttr->u32BufSize);
   RK_MPI_VPSS_ReleaseChnFrame(stVpssChn.s32DevId, stVpssChn.s32ChnId, &sFrame);
 
 exit:
-  deinitRet = RK_MPI_SYS_UnBind(&stVdecChn, &stVpssChn);
-  if (deinitRet)
-    RKADK_LOGE("UnBind VDEC[%d] to VPSS[%d, %d] failed[%x]", s32VdecChnID,
-               stVpssChn.s32DevId, stVpssChn.s32ChnId, ret);
+  if (bIsEnableVpss) {
+#ifndef RV1106_1103
+    deinitRet = RK_MPI_SYS_UnBind(&stVdecChn, &stVpssChn);
+    if (deinitRet)
+      RKADK_LOGE("UnBind VDEC[%d] to VPSS[%d, %d] failed[%x]", stVdecChn.s32ChnId,
+                 stVpssChn.s32DevId, stVpssChn.s32ChnId, ret);
+#endif
 
-  deinitRet = RKADK_MPI_VPSS_DeInit(stVpssChn.s32DevId, stVpssChn.s32ChnId);
-  if (deinitRet)
-    RKADK_LOGE("RKADK_MPI_VPSS_DeInit[%d, %d] failed[%d]", stVpssChn.s32DevId, stVpssChn.s32ChnId, deinitRet);
+    deinitRet = RKADK_MPI_VPSS_DeInit(stVpssChn.s32DevId, stVpssChn.s32ChnId);
+    if (deinitRet)
+      RKADK_LOGE("RKADK_MPI_VPSS_DeInit[%d, %d] failed[%d]", stVpssChn.s32DevId, stVpssChn.s32ChnId, deinitRet);
+  }
 
-  RK_MPI_VDEC_StopRecvStream(s32VdecChnID);
-  deinitRet = RK_MPI_VDEC_DestroyChn(s32VdecChnID);
+  RK_MPI_VDEC_StopRecvStream(stVdecChn.s32ChnId);
+  deinitRet = RK_MPI_VDEC_DestroyChn(stVdecChn.s32ChnId);
   if (deinitRet)
-    RKADK_LOGE("RK_MPI_VDEC_DestroyChn[%d] failed[%d]", s32VdecChnID, deinitRet);
+    RKADK_LOGE("RK_MPI_VDEC_DestroyChn[%d] failed[%d]", stVdecChn.s32ChnId, deinitRet);
 
   if(jpgMbBlk)
     RK_MPI_MB_ReleaseMB(jpgMbBlk);
 
   return ret;
-#else
-  RKADK_LOGI("Chip nonsupport vdec");
-  *bFree = true;
-  return -1;
-#endif
 }
 
 static RKADK_S32 BuildInThmToMp4(FILE *fd, RKADK_S64 s64FileSize, RKADK_CHAR *pszFileName,
@@ -1040,7 +1110,7 @@ static RKADK_S32 GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
     goto exit;
   }
 
-  ret = JpgThmDecode(&stTmpThmAttr, pstThumbAttr, &bFree, VDEC_MP4_THM_CHN);
+  ret = ThumbnailJpgDecode(&stTmpThmAttr, pstThumbAttr, &bFree);
   if (!ret) {
     if (BuildInThmToMp4(fd, s64FileSize, pszFileName, pstThumbAttr))
       RKADK_LOGE("BuildInThm to %s failed", pszFileName);
@@ -1075,6 +1145,8 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pu8Buf, RKADK_FAILURE);
 
+  memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
+
   /* thm size is unchangable */
   stThumbAttr.u32Width = 0;
   stThumbAttr.u32Height = 0;
@@ -1083,6 +1155,10 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
   stThumbAttr.enType = RKADK_THUMB_TYPE_JPEG;
   stThumbAttr.pu8Buf = pu8Buf;
   stThumbAttr.u32BufSize = *pu32Size;
+  stThumbAttr.s32VdecChn = THM_VDEC_CHN;
+  stThumbAttr.s32VpssGrp = THM_VPSS_GRP;
+  stThumbAttr.s32VpssChn = THM_VPSS_CHN;
+
   ret = GetThmInMp4(u32CamId, pszFileName, &stThumbAttr);
   if (ret) {
     RKADK_LOGE("Get thumbnail in %s failed!", pszFileName);
@@ -1103,6 +1179,15 @@ RKADK_S32 RKADK_GetThmInMp4Ex(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
 
   RKADK_CHECK_POINTER(pszFileName, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstThumbAttr, RKADK_FAILURE);
+
+  if (pstThumbAttr->s32VdecChn < 0)
+    pstThumbAttr->s32VdecChn = THM_VDEC_CHN;
+
+  if (pstThumbAttr->s32VpssGrp < 0)
+    pstThumbAttr->s32VpssGrp = THM_VPSS_GRP;
+
+  if (pstThumbAttr->s32VpssChn < 0)
+    pstThumbAttr->s32VpssChn = THM_VPSS_CHN;
 
   ret = GetThmInMp4(u32CamId, pszFileName, pstThumbAttr);
   if (ret)

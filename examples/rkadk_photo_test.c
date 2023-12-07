@@ -33,7 +33,7 @@ extern int optind;
 extern char *optarg;
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:m:o:W:H:h";
+static RKADK_CHAR optstr[] = "a:I:p:m:o:W:H:i:t:h";
 
 #define IQ_FILE_PATH "/etc/iqfiles"
 
@@ -46,8 +46,10 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-I: camera id, Default 0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-o: osd file, ARGB8888 fmt, Default:NULL\n");
-  printf("\t-W: osd width, Default:0\n");
-  printf("\t-H: osd height, Default:0\n");
+  printf("\t-W: osd width or input file data width, Default: 1920\n");
+  printf("\t-H: osd height or input file data height, Default: 1080\n");
+  printf("\t-i: input file, Default:null\n");
+  printf("\t-t: input file data type, default NV12, options: NV12, RGB565, RGBA8888, BGRA8888\n");
   printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
 }
 
@@ -93,35 +95,6 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
     if (photoId > 10)
       photoId = 0;
   }
-
-#if 0
-  RKADK_PHOTO_DATA_ATTR_S stDataAttr;
-  memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
-  stDataAttr.enType = RKADK_THUMB_TYPE_BGRA8888;
-  stDataAttr.u32Width = 1280;
-  stDataAttr.u32Height = 720;
-  stDataAttr.u32VirWidth = 1280;
-  stDataAttr.u32VirHeight = 720;
-
-  if (!RKADK_PHOTO_GetData(jpegPath, &stDataAttr)) {
-    RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
-               stDataAttr.u32Height, stDataAttr.u32VirWidth,
-               stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
-
-    memset(jpegPath, 0, 128);
-    sprintf(jpegPath, "/tmp/PhotoTest_%d.bgra8888", photoId);
-    file = fopen(jpegPath, "w");
-    if (!file) {
-      RKADK_LOGE("Create jpeg file(%s) failed", jpegPath);
-    } else {
-      fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
-      fclose(file);
-      RKADK_LOGD("save %s done", jpegPath);
-    }
-
-    RKADK_PHOTO_FreeData(&stDataAttr);
-  }
-#endif
 }
 
 int main(int argc, char *argv[]) {
@@ -136,11 +109,26 @@ int main(int argc, char *argv[]) {
   RKADK_BOOL bMultiCam = RKADK_FALSE;
   RKADK_BOOL bMultiSensor = RK_FALSE;
   char *osdfile = NULL;
-  RKADK_U32 u32OsdWidth = 0, u32OsdHeight = 0;
+  RKADK_U32 u32OsdWidth = 1920, u32OsdHeight = 1080;
   RKADK_OSD_ATTR_S OsdAttr;
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32OsdId = 0;
   RKADK_U32 u32SliceHeight;
+
+  RKADK_CHAR *pInuptPath = NULL;
+  const char *postfix = "nv12";
+  char filePath[RKADK_MAX_FILE_PATH_LEN];
+  RKADK_PHOTO_DATA_ATTR_S stDataAttr;
+
+  memset(&stDataAttr, 0, sizeof(RKADK_PHOTO_DATA_ATTR_S));
+  stDataAttr.enType = RKADK_THUMB_TYPE_NV12;
+  stDataAttr.u32Width = 1920;
+  stDataAttr.u32Height = 1080;
+  stDataAttr.u32VirWidth = 1920;
+  stDataAttr.u32VirHeight = 1080;
+  stDataAttr.s32VdecChn = -1;
+  stDataAttr.s32VpssGrp = -1;
+  stDataAttr.s32VpssChn = -1;
 
 #ifdef RKAIQ
   RKADK_PARAM_FPS_S stFps;
@@ -183,9 +171,31 @@ int main(int argc, char *argv[]) {
       break;
     case 'W':
       u32OsdWidth = atoi(optarg);
+      stDataAttr.u32Width = u32OsdWidth;
+      stDataAttr.u32VirWidth = u32OsdWidth;
       break;
     case 'H':
       u32OsdHeight = atoi(optarg);
+      stDataAttr.u32Height = u32OsdHeight;
+      stDataAttr.u32VirHeight = u32OsdHeight;
+      break;
+    case 't':
+      if (strstr(optarg, "NV12")) {
+        stDataAttr.enType = RKADK_THUMB_TYPE_NV12;
+        postfix = "yuv";
+      } else if (strstr(optarg, "RGB565")) {
+        stDataAttr.enType = RKADK_THUMB_TYPE_RGB565;
+        postfix = "rgb565";
+      } else if (strstr(optarg, "RGBA8888")) {
+        stDataAttr.enType = RKADK_THUMB_TYPE_RGBA8888;
+        postfix = "rgba8888";
+      } else if (strstr(optarg, "BGRA8888")) {
+        stDataAttr.enType = RKADK_THUMB_TYPE_BGRA8888;
+        postfix = "bgra8888";
+      }
+      break;
+    case 'i':
+      pInuptPath = optarg;
       break;
     case 'h':
     default:
@@ -221,6 +231,31 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(path, sPath);
   } else {
     RKADK_PARAM_Init(NULL, NULL);
+  }
+
+  if (pInuptPath) {
+    memset(filePath, 0, RKADK_MAX_FILE_PATH_LEN);
+    sprintf(filePath, "/tmp/photo_data.%s", postfix);
+
+    if (!RKADK_PHOTO_GetData(pInuptPath, &stDataAttr)) {
+      RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
+                 stDataAttr.u32Height, stDataAttr.u32VirWidth,
+                 stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
+
+      FILE *file = fopen(filePath, "w");
+      if (!file) {
+        RKADK_LOGE("Create file(%s) failed", filePath);
+      } else {
+        fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
+        fclose(file);
+        RKADK_LOGD("Save %s done", filePath);
+      }
+
+      RKADK_PHOTO_FreeData(&stDataAttr);
+    }
+
+    RKADK_MPI_SYS_Exit();
+    return 0;
   }
 
 photo:

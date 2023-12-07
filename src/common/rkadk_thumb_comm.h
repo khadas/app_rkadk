@@ -47,6 +47,9 @@ RKADK_S32 ThumbnailRequest(RKADK_U32 u32VencChnTb);
 
 PIXEL_FORMAT_E ThumbToRKPixFmt(RKADK_THUMB_TYPE_E enType);
 
+RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
+                             RKADK_THUMB_ATTR_S *pstDstThmAttr, bool *bFree);
+
 #ifdef __cplusplus
 }
 #endif

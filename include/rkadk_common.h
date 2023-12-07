@@ -107,6 +107,10 @@ typedef struct {
   RKADK_U32 u32VirHeight;
   RKADK_U8 *pu8Buf;
   RKADK_U32 u32BufSize;
+
+  RKADK_S32 s32VdecChn;
+  RKADK_S32 s32VpssGrp;
+  RKADK_S32 s32VpssChn;
 } RKADK_THUMB_ATTR_S;
 
 typedef RKADK_THUMB_ATTR_S RKADK_FRAME_ATTR_S;
