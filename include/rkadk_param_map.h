@@ -127,6 +127,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_0[] = {
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_grp),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
+    DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, bool_e, post_aiisp),
     DEFINE_MAP(record.0, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -161,6 +162,7 @@ static RKADK_SI_CONFIG_MAP_S g_stRecCfgMapTable_1[] = {
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_grp),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
+    DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, bool_e, post_aiisp),
     DEFINE_MAP(record.1, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -190,6 +192,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPreviewCfgMapTable[] = {
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_grp),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
+    DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, bool_e, post_aiisp),
     DEFINE_MAP(preview, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -219,6 +222,7 @@ static RKADK_SI_CONFIG_MAP_S g_stLiveCfgMapTable[] = {
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, venc_chn),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_grp),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, int_e, vpss_chn),
+    DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, bool_e, post_aiisp),
     DEFINE_MAP(live, tagRKADK_PARAM_VENC_ATTR_S, string_e, rc_mode),
 };
 
@@ -242,6 +246,7 @@ static RKADK_SI_CONFIG_MAP_S g_stPhotoCfgMapTable[] = {
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, venc_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, vpss_grp),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, vpss_chn),
+    DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, post_aiisp),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, bool_e, enable_combo),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, combo_venc_chn),
     DEFINE_MAP(photo, tagRKADK_PARAM_PHOTO_CFG_S, int_e, qfactor),

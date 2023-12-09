@@ -1308,7 +1308,7 @@ static void SendData(RKADK_VOID *ptr) {
     ret = CreateDeviceAo(&pstPlayer->stAoCtx);
     if (ret) {
       RKADK_LOGE("Create AO failed");
-      return -1;
+      return;
     }
 
     AoVolumeControl(pstPlayer);

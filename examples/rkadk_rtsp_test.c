@@ -35,7 +35,7 @@ extern char *optarg;
 #define IQ_FILE_PATH "/etc/iqfiles"
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:o";
+static RKADK_CHAR optstr[] = "a:I:p:Aoh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -46,11 +46,33 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-I: Camera id, Default:0\n");
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-o: osd file , Default:/userdata/rkadk_ARGB8888\n");
+  printf("\t-A: enable aiisp, Default:disable\n");
 }
 
 static void sigterm_handler(int sig) {
   fprintf(stderr, "signal %d\n", sig);
   is_quit = true;
+}
+
+static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
+  int ret = 0;
+  RKADK_U32 u32CamId = (RKADK_U32)pPrivateData;
+  rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
+
+  if (pAinrParam == RK_NULL) {
+    RKADK_LOGE("pAinrParam is nullptr!");
+    return -1;
+  }
+
+  memset(pAinrParam, 0, sizeof(rk_ainr_param));
+  ret = SAMPLE_ISP_GetAINrParams(u32CamId, pAinrParam);
+  if (ret) {
+    RKADK_LOGE("u32CamId[%d] can't get ainr param!", u32CamId);
+    return ret;
+  }
+
+  RKADK_LOGD("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+  return ret;
 }
 
 int main(int argc, char *argv[]) {
@@ -64,6 +86,10 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   char *osdfile = "/userdata/rkadk_ARGB8888";
+
+  //aiisp
+  bool bAiispEnable = false;
+  RKADK_POST_ISP_ATTR_S stPostIspAttr;
 
 #ifdef RKAIQ
   const char *tmp_optarg = optarg;
@@ -96,6 +122,10 @@ int main(int argc, char *argv[]) {
       osdfile = optarg;
       RKADK_LOGD("osdfile: %s", osdfile);
       break;
+    case 'A':
+      bAiispEnable = true;
+      break;
+    case 'h':
     default:
       print_usage(argv[0]);
       optind = 0;
@@ -152,6 +182,18 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  //aiisp param init
+  memset(&stPostIspAttr, 0, sizeof(RKADK_POST_ISP_ATTR_S));
+  stPostIspAttr.pModelFilePath = "/oem/usr/lib/";
+  stPostIspAttr.stAiIspCallback.pPrivateData = (void *)u32CamId;
+  stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
+  stPostIspAttr.u32FrameBufCnt = 2;
+  if (bAiispEnable) {
+    ret = RKADK_MEDIA_EnablePostIsp(u32CamId, RKADK_STREAM_TYPE_LIVE, &stPostIspAttr);
+    if (!ret)
+      RKADK_LOGD("Display enable aiisp success!");
+  }
+
   RKADK_RTSP_Start(pHandle);
 
   memset(&OsdAttr, 0, sizeof(RKADK_OSD_ATTR_S));
@@ -195,6 +237,15 @@ int main(int argc, char *argv[]) {
       RKADK_RTSP_Start(pHandle);
     } else if (strstr(cmd, "stop")) {
       RKADK_RTSP_Stop(pHandle);
+    } else if (strstr(cmd, "aiisp")) {
+      if (bAiispEnable)
+        bAiispEnable = false;
+      else
+        bAiispEnable = true;
+
+      ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_LIVE, bAiispEnable, &stPostIspAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
     }
 
     usleep(500000);

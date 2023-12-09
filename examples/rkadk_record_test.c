@@ -157,6 +157,27 @@ static void sigterm_handler(int sig) {
   is_quit = true;
 }
 
+static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
+  int ret = 0;
+  RKADK_S32 s32CamId = (RKADK_S32)pPrivateData;
+  rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
+
+  if (pAinrParam == RK_NULL) {
+    RKADK_LOGE("pAinrParam is nullptr!");
+    return -1;
+  }
+
+  memset(pAinrParam, 0, sizeof(rk_ainr_param));
+  ret = SAMPLE_ISP_GetAINrParams(s32CamId, pAinrParam);
+  if (ret) {
+    RKADK_LOGE("u32CamId[%d] can't get ainr param!", s32CamId);
+    return ret;
+  }
+
+  RKADK_LOGD("aiisp cam %d enable %d", s32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+  return ret;
+}
+
 int main(int argc, char *argv[]) {
   int c, ret;
   RKADK_RECORD_ATTR_S stRecAttr;
@@ -173,6 +194,10 @@ int main(int argc, char *argv[]) {
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_S32 s32CamId = 0;
   FILE_CACHE_ATTR_S stFileCacheAttr;
+
+  //aiisp
+  bool bAiispEnable = true;
+  RKADK_POST_ISP_ATTR_S stPostIspAttr;
 
 #ifdef RKAIQ
   int inCmd = 0;
@@ -279,6 +304,13 @@ record:
   }
 #endif
 
+  //aiisp param init
+  memset(&stPostIspAttr, 0, sizeof(RKADK_POST_ISP_ATTR_S));
+  stPostIspAttr.pModelFilePath = "/oem/usr/lib/";
+  stPostIspAttr.stAiIspCallback.pPrivateData = (void *)s32CamId;
+  stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
+  stPostIspAttr.u32FrameBufCnt = 2;
+
   stFileCacheAttr.pSdcardPath = "/dev/mmcblk1p1";
   stFileCacheAttr.u32TotalCache = 7 * 1024 * 1024; // 7M
   stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
@@ -287,6 +319,7 @@ record:
   stRecAttr.s32CamID = s32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
   stRecAttr.pfnEventCallback = RecordEventCallback;
+  stRecAttr.pstPostIspAttr = &stPostIspAttr;
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("s32CamId[%d] Create recorder failed", s32CamId);
@@ -503,6 +536,19 @@ record:
        RKADK_RECORD_ToggleFlip(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 1);
     } else if (strstr(cmd, "f-0")) {
       RKADK_RECORD_ToggleFlip(pRecorder, RKADK_STREAM_TYPE_VIDEO_MAIN, 0);
+    } else if (strstr(cmd, "aiisp")) {
+      if (bAiispEnable)
+        bAiispEnable = false;
+      else
+        bAiispEnable = true;
+
+      ret = RKADK_MEDIA_SetPostIspAttr(s32CamId, RKADK_STREAM_TYPE_VIDEO_MAIN, bAiispEnable, &stPostIspAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
+
+      ret = RKADK_MEDIA_SetPostIspAttr(s32CamId, RKADK_STREAM_TYPE_VIDEO_SUB, bAiispEnable, &stPostIspAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
     }
 
     usleep(500000);

@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rk_mpi_venc.h"
+#include "rkadk_media_comm.h"
 
 /* the data type of video encode */
 typedef struct {
@@ -95,6 +95,7 @@ typedef struct {
 typedef struct {
   RKADK_U32 u32CamId;
   RKADK_VENC_DATA_PROC_FUNC pfnDataCB;
+  RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
 } RKADK_STREAM_VIDEO_ATTR_S;
 
 RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,

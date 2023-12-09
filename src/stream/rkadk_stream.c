@@ -174,7 +174,6 @@ static void RKADK_STREAM_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
 }
 
 static bool RKADK_STREAM_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstStreamCfg) {
-  bool bUseVpss = false;
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -193,10 +192,13 @@ static bool RKADK_STREAM_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S 
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
-    bUseVpss = true;
+    return true;
   }
 
-  return bUseVpss;
+  if (pstStreamCfg->attribute.post_aiisp)
+    return true;
+
+  return false;
 }
 
 static int RKADK_STREAM_SetVencAttr(RKADK_U32 u32CamId,
@@ -400,6 +402,10 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
       RKADK_MPI_VPSS_DeInit(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
       return ret;
     }
+
+    if (pstStreamCfg->attribute.post_aiisp)
+      RKADK_MEDIA_EnablePostIsp(pVideoHandle->u32CamId, RKADK_STREAM_TYPE_PREVIEW, pstVideoAttr->pstPostIspAttr);
+
     RKADK_BUFINFO("create vpss[%d, %d]", pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn);
   }
 

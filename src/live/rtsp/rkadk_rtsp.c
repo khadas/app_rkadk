@@ -351,6 +351,9 @@ static bool RKADK_RTSP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *p
     bUseVpss = true;
   }
 
+  if (pstLiveCfg->attribute.post_aiisp)
+    bUseVpss = true;
+
   return bUseVpss;
 }
 

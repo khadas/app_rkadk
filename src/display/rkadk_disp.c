@@ -170,6 +170,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
     RKADK_LOGE("RKADK_MPI_VPSS_Init vpss falied[%d]",ret);
     return ret;
   }
+
   RKADK_BUFINFO("create vpss[%d, %d] end", pstDispCfg->vpss_grp, pstDispCfg->vpss_chn);
 
   // Create VO
@@ -184,7 +185,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
   return 0;
 }
 
-static bool RKADK_DISP_CheckParameter(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
+static bool RKADK_DISP_CheckParam(RKADK_PARAM_DISP_CFG_S *pstDispCfg) {
   if (pstDispCfg->x < 0 || pstDispCfg->y < 0 || pstDispCfg->width <= 0 ||
       pstDispCfg->height <= 0) {
     RKADK_LOGE("Display rect erro [x: %d, y: %d, width: %d, height: %d]",
@@ -292,7 +293,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  if (!RKADK_DISP_CheckParameter(pstDispCfg))
+  if (!RKADK_DISP_CheckParam(pstDispCfg))
     return -1;
 
   RKADK_DISP_SetChn(u32CamId, pstDispCfg, &stViChn, &stVoChn,

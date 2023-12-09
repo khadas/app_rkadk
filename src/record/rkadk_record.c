@@ -307,7 +307,6 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
 
 static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
                                 RKADK_PARAM_REC_CFG_S *pstRecCfg) {
-  bool bUseVpss = false;
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -325,21 +324,24 @@ static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
-    bUseVpss = true;
+    return true;
   }
 
 #ifdef RV1106_1103
-  //main record usp vpss switch resolution
+  //main record use vpss switch resolution
   if (!pstSensorCfg->used_isp) {
     if (pstRecCfg->switch_res && index == 0)
-      bUseVpss = true;
+      return true;
   }
 #endif
 
-  return bUseVpss;
+  if (pstRecCfg->attribute[index].post_aiisp)
+    return true;
+
+  return false;
 }
 
-static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
+static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
   int ret;
   RKADK_U32 u32VpssGrp, u32VpssChn;
   VENC_CHN_ATTR_S stVencChnAttr;
@@ -352,14 +354,15 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
   VPSS_CHN_ATTR_S stChnAttr;
   RKADK_U32 u32ThumbVencChn;
   RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
+  RKADK_STREAM_TYPE_E enStrmType;
 
-  pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+  pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
   if (!pstRecCfg) {
     RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
     return -1;
   }
 
-  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(u32CamId);
+  ptsThumbCfg = RKADK_PARAM_GetThumbCfg(pstRecAttr->s32CamID);
   if (!ptsThumbCfg) {
     RKADK_LOGE("RKADK_PARAM_GetThumbCfg failed");
     return -1;
@@ -371,7 +374,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  pstSensorCfg = RKADK_PARAM_GetSensorCfg(u32CamId);
+  pstSensorCfg = RKADK_PARAM_GetSensorCfg(pstRecAttr->s32CamID);
   if (!pstSensorCfg) {
     RKADK_LOGE("RKADK_PARAM_GetSensorCfg failed");
     return -1;
@@ -381,14 +384,14 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     u32VpssGrp = pstRecCfg->attribute[i].vpss_grp;
     u32VpssChn = pstRecCfg->attribute[i].vpss_chn;
 
-    ret = RKADK_RECORD_SetVideoAttr(i, u32CamId, pstRecCfg, &stVencChnAttr);
+    ret = RKADK_RECORD_SetVideoAttr(i, pstRecAttr->s32CamID, pstRecCfg, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_RECORD_SetVideoAttr(%d) failed", i);
       return ret;
     }
 
     // Create VI
-    ret = RKADK_MPI_VI_Init(u32CamId, pstRecCfg->vi_attr[i].u32ViChn,
+    ret = RKADK_MPI_VI_Init(pstRecAttr->s32CamID, pstRecCfg->vi_attr[i].u32ViChn,
                             &(pstRecCfg->vi_attr[i].stChnAttr));
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VI_Init faile, ret = %d", ret);
@@ -397,7 +400,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
     RKADK_BUFINFO("create vi[%d]", pstRecCfg->vi_attr[i].u32ViChn);
 
     // Create VPSS
-    bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
+    bUseVpss = RKADK_RECORD_IsUseVpss(pstRecAttr->s32CamID, i, pstRecCfg);
     if (bUseVpss) {
       memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
       memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
@@ -428,7 +431,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       ret = RKADK_MPI_VPSS_Init(u32VpssGrp, u32VpssChn, &stGrpAttr, &stChnAttr);
       if (ret) {
         RKADK_LOGE("RKADK_MPI_VPSS_Init vpss falied[%d]",ret);
-        RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
+        RKADK_MPI_VI_DeInit(pstRecAttr->s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
         RKADK_MPI_VPSS_DeInit(u32VpssGrp, u32VpssChn);
         return ret;
       }
@@ -439,7 +442,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
         if (ret) {
           RKADK_LOGE("RK_MPI_VPSS_GetChnAttr vpss_grp[%d] vpss_chn[%d] falied[%x]",
                       u32VpssGrp, u32VpssChn, ret);
-          RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
+          RKADK_MPI_VI_DeInit(pstRecAttr->s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
           RKADK_MPI_VPSS_DeInit(u32VpssGrp, u32VpssChn);
           return ret;
         }
@@ -450,22 +453,30 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
         if (ret) {
           RKADK_LOGE("RK_MPI_VPSS_SetChnAttr vpss_grp[%d] vpss_chn[%d] falied[%x]",
                       u32VpssGrp, u32VpssChn, ret);
-          RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
+          RKADK_MPI_VI_DeInit(pstRecAttr->s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
           RKADK_MPI_VPSS_DeInit(u32VpssGrp, u32VpssChn);
           return ret;
         }
       }
+
+      if (pstRecCfg->attribute[i].post_aiisp) {
+        if (i == 0)
+          enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+        else
+          enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+        RKADK_MEDIA_EnablePostIsp(pstRecAttr->s32CamID, enStrmType, pstRecAttr->pstPostIspAttr);
+      }
     }
 
     // Create VENC
-    ret = RKADK_MPI_VENC_Init(u32CamId, pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
+    ret = RKADK_MPI_VENC_Init(pstRecAttr->s32CamID, pstRecCfg->attribute[i].venc_chn, &stVencChnAttr);
     if (ret) {
       RKADK_LOGE("RKADK_MPI_VENC_Init failed(%d)", ret);
 
       if (bUseVpss)
         RKADK_MPI_VPSS_DeInit(u32VpssGrp, u32VpssChn);
 
-      RKADK_MPI_VI_DeInit(u32CamId, pstRecCfg->vi_attr[i].u32ViChn);
+      RKADK_MPI_VI_DeInit(pstRecAttr->s32CamID, pstRecCfg->vi_attr[i].u32ViChn);
       return ret;
     }
     RKADK_BUFINFO("create venc[%d]", pstRecCfg->attribute[i].venc_chn);
@@ -482,7 +493,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
       u32ThumbVencChn = ptsThumbCfg->record_sub_venc_chn;
     }
 
-    ThumbnailInit(u32CamId, enThumbModule, ptsThumbCfg);
+    ThumbnailInit(pstRecAttr->s32CamID, enThumbModule, ptsThumbCfg);
 #ifndef THUMB_NORMAL
     ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn, u32ThumbVencChn);
 #endif
@@ -494,9 +505,9 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_U32 u32CamId) {
         enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
 
       if (pstSensorCfg->mirror)
-        RKADK_MEDIA_ToggleVencMirror(u32CamId, enStrmType, pstSensorCfg->mirror);
+        RKADK_MEDIA_ToggleVencMirror(pstRecAttr->s32CamID, enStrmType, pstSensorCfg->mirror);
       if (pstSensorCfg->flip)
-        RKADK_MEDIA_ToggleVencFlip(u32CamId, enStrmType, pstSensorCfg->flip);
+        RKADK_MEDIA_ToggleVencFlip(pstRecAttr->s32CamID, enStrmType, pstSensorCfg->flip);
     }
   }
 
@@ -1379,7 +1390,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   RKADK_LOGI("Create Record[%d, %d] Start...", pstRecAttr->s32CamID, pstRecCfg->record_type);
   RKADK_BUFINFO("enter record[%d]", pstRecAttr->s32CamID);
 
-  if (RKADK_RECORD_CreateVideoChn(pstRecAttr->s32CamID))
+  if (RKADK_RECORD_CreateVideoChn(pstRecAttr))
     return -1;
 
   bEnableAudio = RKADK_MUXER_EnableAudio(pstRecAttr->s32CamID);

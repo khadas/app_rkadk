@@ -97,6 +97,27 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
   }
 }
 
+static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
+  int ret = 0;
+  RKADK_U32 u32CamId = (RKADK_U32)pPrivateData;
+  rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
+
+  if (pAinrParam == RK_NULL) {
+    RKADK_LOGE("pAinrParam is nullptr!");
+    return -1;
+  }
+
+  memset(pAinrParam, 0, sizeof(rk_ainr_param));
+  ret = SAMPLE_ISP_GetAINrParams(u32CamId, pAinrParam);
+  if (ret) {
+    RKADK_LOGE("u32CamId[%d] can't get ainr param!", u32CamId);
+    return ret;
+  }
+
+  RKADK_LOGD("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+  return ret;
+}
+
 int main(int argc, char *argv[]) {
   int c, ret, inCmd = 0;
   RKADK_U32 u32CamId = 0;
@@ -114,6 +135,10 @@ int main(int argc, char *argv[]) {
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32OsdId = 0;
   RKADK_U32 u32SliceHeight;
+
+  //aiisp
+  bool bAiispEnable = true;
+  RKADK_POST_ISP_ATTR_S stPostIspAttr;
 
   RKADK_CHAR *pInuptPath = NULL;
   const char *postfix = "nv12";
@@ -258,6 +283,13 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  //aiisp param init
+  memset(&stPostIspAttr, 0, sizeof(RKADK_POST_ISP_ATTR_S));
+  stPostIspAttr.pModelFilePath = "/oem/usr/lib/";
+  stPostIspAttr.stAiIspCallback.pPrivateData = (void *)u32CamId;
+  stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
+  stPostIspAttr.u32FrameBufCnt = 2;
+
 photo:
 #ifdef RKAIQ
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
@@ -298,6 +330,7 @@ photo:
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.u8LargeThumbNum = 1;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Width = 320;
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
+  stPhotoAttr.pstPostIspAttr = &stPostIspAttr;
 
   ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle);
   if (ret) {
@@ -461,6 +494,15 @@ photo:
         goto photo;
 #endif
       }
+    } else if (strstr(cmd, "aiisp")) {
+      if (bAiispEnable)
+        bAiispEnable = false;
+      else
+        bAiispEnable = true;
+
+      ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_SNAP, bAiispEnable, &stPostIspAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {

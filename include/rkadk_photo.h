@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #include "rkadk_common.h"
-#include "rk_comm_video.h"
+#include "rkadk_media_comm.h"
 #include <stdbool.h>
 
 #define RKADK_MPF_LARGE_THUMB_NUM_MAX 2
@@ -115,6 +115,7 @@ typedef struct {
   RKADK_PHOTO_THUMB_ATTR_S stThumbAttr;
   RKADK_PHOTO_DATA_RECV_FN_PTR pfnPhotoDataProc;
   void *userdata;
+  RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
 } RKADK_PHOTO_ATTR_S;
 
 /****************************************************************************/

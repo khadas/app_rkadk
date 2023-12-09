@@ -29,7 +29,6 @@ typedef RKADK_MUXER_MANUAL_SPLIT_ATTR_S RKADK_REC_MANUAL_SPLIT_ATTR_S;
 typedef RKADK_MUXER_EVENT_CALLBACK_FN RKADK_REC_EVENT_CALLBACK_FN;
 typedef RKADK_MUXER_REC_TYPE_E RKADK_REC_TYPE_E;
 
-
 /* record create file function */
 typedef RKADK_S32 (*RKADK_REC_REQUEST_FILE_NAMES_FN)(
     RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
@@ -42,6 +41,7 @@ typedef struct {
   RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
   RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
   RKADK_AOV_ATTR_S stAovAttr;
+  RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
 } RKADK_RECORD_ATTR_S;
 
 typedef struct {

@@ -113,6 +113,7 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect);
 int SAMPLE_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx);
 void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId, bool isSingleMode);
 void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId);
+int SAMPLE_ISP_GetAINrParams(RKADK_U32 u32CamId, rk_ainr_param *param);
 
 #endif
 

@@ -91,11 +91,34 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
   return 0;
 }
 
+static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
+  int ret = 0;
+  RKADK_U32 u32CamId = (RKADK_U32)pPrivateData;
+  rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
+
+  if (pAinrParam == RK_NULL) {
+    RKADK_LOGE("pAinrParam is nullptr!");
+    return -1;
+  }
+
+  memset(pAinrParam, 0, sizeof(rk_ainr_param));
+  ret = SAMPLE_ISP_GetAINrParams(u32CamId, pAinrParam);
+  if (ret) {
+    RKADK_LOGE("u32CamId[%d] can't get ainr param!", u32CamId);
+    return ret;
+  }
+
+  RKADK_LOGD("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+  return ret;
+}
+
 static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bMultiCam, RKADK_BOOL bMultiSensor) {
   RKADK_S32 ret;
   RKADK_MW_PTR pHandle = NULL, pHandle1 = NULL;
   RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   RKADK_VIDEO_INFO_S stVideoInfo;
+  bool bAiispEnable = false;
+  RKADK_POST_ISP_ATTR_S stPostIspAttr;
 
   g_output_file = fopen(g_output_path, "w");
   if (!g_output_file) {
@@ -143,9 +166,17 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
   }
 #endif
 
+  //aiisp param init
+  memset(&stPostIspAttr, 0, sizeof(RKADK_POST_ISP_ATTR_S));
+  stPostIspAttr.pModelFilePath = "/oem/usr/lib/";
+  stPostIspAttr.stAiIspCallback.pPrivateData = (void *)u32CamId;
+  stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
+  stPostIspAttr.u32FrameBufCnt = 2;
+
   memset(&stVideoAttr, 0, sizeof(RKADK_STREAM_VIDEO_ATTR_S));
   stVideoAttr.pfnDataCB = VencDataCb;
   stVideoAttr.u32CamId = u32CamId;
+  stVideoAttr.pstPostIspAttr = &stPostIspAttr;
 
   RKADK_STREAM_GetVideoInfo(u32CamId, &stVideoInfo);
   RKADK_LOGD("stVideoInfo.enCodecType: %d", stVideoInfo.enCodecType);
@@ -214,6 +245,15 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
+    } else if (strstr(cmd, "aiisp")) {
+      if (bAiispEnable)
+        bAiispEnable = false;
+      else
+        bAiispEnable = true;
+
+      ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_PREVIEW, bAiispEnable, &stPostIspAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
     }
 
 #if 0

@@ -1133,4 +1133,20 @@ void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId) {
   RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
   rk_aiq_uapi2_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
 }
+
+int SAMPLE_ISP_GetAINrParams(RKADK_U32 u32CamId, rk_ainr_param *param) {
+  int ret;
+
+  RKADK_CHECK_POINTER(param, RKADK_FAILURE);
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
+
+  ret = rk_aiq_uapi2_sysctl_getAinrParams(gstIspHandle[u32CamId].pstAiqCtx, param);
+  if (ret) {
+    printf("rk_aiq_uapi2_sysctl_getAinrParams failed[%x]", ret);
+    return ret;
+  }
+  return 0;
+}
+
 #endif

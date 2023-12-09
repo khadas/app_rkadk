@@ -311,6 +311,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
   RKADK_U32 venc_chn;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
+  bool post_aiisp;
   char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
   RKADK_PARAM_VENC_PARAM_S venc_param;
 } RKADK_PARAM_VENC_ATTR_S;
@@ -351,6 +352,7 @@ typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
   RKADK_U32 venc_chn;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
+  bool post_aiisp;
   bool enable_combo;
   RKADK_U32 combo_venc_chn;
   RKADK_U32 qfactor;
@@ -510,6 +512,10 @@ RKADK_S32 RKADK_PARAM_GetVencChnId(RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_PARAM_GetThumbChnId(RKADK_U32 u32CamId,
                                    RKADK_STREAM_TYPE_E enStrmType);
+
+void RKADK_PARAM_GetVpssId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType,
+                                   RKADK_S32 *s32VpssGrp, RKADK_S32 *s32VpssChn);
+
 
 RKADK_PARAM_CONTEXT_S *RKADK_PARAM_GetCtx(RKADK_VOID);
 

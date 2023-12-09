@@ -865,7 +865,6 @@ static bool RKADK_PHOTO_EnableJpegSlice(RKADK_U32 u32CamId,
 
 static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
                                  RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
-  bool bUseVpss = false;
   RKADK_U32 u32ViWidth = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width;
   RKADK_U32 u32ViHeight = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height;
 
@@ -882,23 +881,26 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
       pstPhotoCfg->image_height != u32ViHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32ViWidth, u32ViHeight,
                pstPhotoCfg->image_width, pstPhotoCfg->image_height);
-    bUseVpss = true;
+    return true;
   }
 
 #ifdef RV1106_1103
-  //usp vpss switch resolution
+  //use vpss switch resolution
   if (!pstSensorCfg->used_isp) {
     if (pstPhotoCfg->switch_res)
-      bUseVpss = true;
+      return true;
   }
 #endif
 
 #ifndef RV1106_1103
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP)
-    bUseVpss = true;
+    return true;
 #endif
 
-  return bUseVpss;
+  if (pstPhotoCfg->post_aiisp)
+    return true;
+
+  return false;
 }
 
 static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
@@ -1049,6 +1051,9 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
       RKADK_MPI_VPSS_DeInit(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn);
       return ret;
     }
+
+    if (pstPhotoCfg->post_aiisp)
+      RKADK_MEDIA_EnablePostIsp(pstPhotoAttr->u32CamId, RKADK_STREAM_TYPE_SNAP, pstPhotoAttr->pstPostIspAttr);
   }
 
   // Create VENC

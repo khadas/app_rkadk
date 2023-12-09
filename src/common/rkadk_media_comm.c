@@ -2523,3 +2523,72 @@ RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
 
   return RKADK_MEDIA_SetVencMirror(u32CamId, enStrmType, enMirror, s32VencChn, &stVencChnAttr);
 }
+
+RKADK_S32 RKADK_MEDIA_EnablePostIsp(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType,
+                                  RKADK_POST_ISP_ATTR_S *pstPostIspAttr) {
+  int ret;
+  RKADK_S32 s32VpssGrp = -1, s32VpssChn = -1;
+  AIISP_ATTR_S stPostIspAttr;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(pstPostIspAttr, RKADK_FAILURE);
+
+  RKADK_PARAM_GetVpssId(u32CamId, enStrmType, &s32VpssGrp, &s32VpssChn);
+  if (s32VpssGrp == -1 || s32VpssChn == -1) {
+    RKADK_LOGE("RKADK_PARAM_GetVpssId[%d, %d] failed", s32VpssGrp, s32VpssChn);
+    return -1;
+  }
+
+  memset(&stPostIspAttr, 0, sizeof(AIISP_ATTR_S));
+  stPostIspAttr.bEnable = RK_TRUE;
+  stPostIspAttr.stAiIspCallback.pfUpdateCallback = pstPostIspAttr->stAiIspCallback.pfUpdateCallback;
+  stPostIspAttr.stAiIspCallback.pPrivateData = pstPostIspAttr->stAiIspCallback.pPrivateData;
+  stPostIspAttr.pModelFilePath = pstPostIspAttr->pModelFilePath;
+  stPostIspAttr.u32FrameBufCnt = pstPostIspAttr->u32FrameBufCnt;
+  ret = RK_MPI_VPSS_SetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
+  if (RK_SUCCESS != ret)
+    RK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+
+  return ret;
+}
+
+RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
+                                  RKADK_STREAM_TYPE_E enStrmType, bool bEnable,
+                                  RKADK_POST_ISP_ATTR_S *pstPostIspAttr) {
+  int ret;
+  RKADK_S32 s32VpssGrp = -1, s32VpssChn = -1;
+  AIISP_ATTR_S stPostIspAttr;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+
+  RKADK_PARAM_GetVpssId(u32CamId, enStrmType, &s32VpssGrp, &s32VpssChn);
+  if (s32VpssGrp == -1 || s32VpssChn == -1) {
+    RKADK_LOGE("RKADK_PARAM_GetVpssId[%d, %d] failed", s32VpssGrp, s32VpssChn);
+    return -1;
+  }
+
+  memset(&stPostIspAttr, 0, sizeof(AIISP_ATTR_S));
+  ret = RK_MPI_VPSS_GetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
+  if (ret != RK_SUCCESS) {
+    RK_LOGE("RK_MPI_VPSS_GetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+    return ret;
+  }
+
+  if (stPostIspAttr.bEnable == (RK_BOOL)bEnable)
+    return 0;
+
+  stPostIspAttr.bEnable = (RK_BOOL)bEnable;
+  if (bEnable) {
+    RKADK_CHECK_POINTER(pstPostIspAttr, RKADK_FAILURE);
+    stPostIspAttr.stAiIspCallback.pfUpdateCallback = pstPostIspAttr->stAiIspCallback.pfUpdateCallback;
+    stPostIspAttr.stAiIspCallback.pPrivateData = pstPostIspAttr->stAiIspCallback.pPrivateData;
+    stPostIspAttr.pModelFilePath = pstPostIspAttr->pModelFilePath;
+    stPostIspAttr.u32FrameBufCnt = pstPostIspAttr->u32FrameBufCnt;
+  }
+
+  ret = RK_MPI_VPSS_SetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
+  if (RK_SUCCESS != ret)
+    RK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+
+  return ret;
+}

@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 #include "rk_comm_video.h"
+#include "rk_comm_aiisp.h"
 #include "rk_mpi_aenc.h"
 #include "rk_mpi_adec.h"
 #include "rk_mpi_ai.h"
@@ -84,6 +85,12 @@ typedef void (*RKADK_MEDIA_VENC_DATA_PROC_FUNC)(RKADK_MEDIA_VENC_DATA_S stData,
                                                 RKADK_VOID *pHandle);
 typedef void (*RKADK_MEDIA_AENC_DATA_PROC_FUNC)(AUDIO_STREAM_S stFrame,
                                                 RKADK_VOID *pHandle);
+
+typedef struct {
+  AIISP_CALLBACK_FUNC_S stAiIspCallback;      /* post isp callback function */
+  const RK_CHAR        *pModelFilePath;       /* post isp model file path   */
+  RK_U32                u32FrameBufCnt;       /* RW; frame buffer cnt    */
+} RKADK_POST_ISP_ATTR_S;
 
 #define RKADK_BUFINFO(fmt, ...)  RKADK_MEDIA_DumpBufinfo(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
@@ -193,8 +200,14 @@ RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
                                   RKADK_STREAM_TYPE_E enStrmType,
                                   bool flip);
 
-
 void RKADK_MEDIA_DumpBufinfo(const char *fmt, const char *fname, const int row, ...);
+
+RKADK_S32 RKADK_MEDIA_EnablePostIsp(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType,
+                                  RKADK_POST_ISP_ATTR_S *pstPostIspAttr);
+
+RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
+                                  RKADK_STREAM_TYPE_E enStrmType, bool bEnable,
+                                  RKADK_POST_ISP_ATTR_S *pstPostIspAttr);
 
 #ifdef __cplusplus
 }

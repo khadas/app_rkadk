@@ -1166,6 +1166,8 @@ static void RKADK_PARAM_Dump() {
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].vpss_grp);
       printf("\t\tsensor[%d] stRecCfg[%d] vpss_chn: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].vpss_chn);
+      printf("\t\tsensor[%d] stRecCfg[%d] post_aiisp: %d\n", i, j,
+             pstCfg->stMediaCfg[i].stRecCfg.attribute[j].post_aiisp);
       printf("\t\tsensor[%d] stRecCfg[%d] codec_type: %d\n", i, j,
              pstCfg->stMediaCfg[i].stRecCfg.attribute[j].codec_type);
       printf("\t\tsensor[%d] stRecCfg[%d] rc_mode: %s\n", i, j,
@@ -1207,6 +1209,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stPhotoCfg.vpss_grp);
     printf("\t\tsensor[%d] stPhotoCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.vpss_chn);
+    printf("\t\tsensor[%d] stPhotoCfg post_aiisp: %d\n", i,
+           pstCfg->stMediaCfg[i].stPhotoCfg.post_aiisp);
     printf("\t\tsensor[%d] stPhotoCfg enable_combo: %d\n", i,
            pstCfg->stMediaCfg[i].stPhotoCfg.enable_combo);
     printf("\t\tsensor[%d] stPhotoCfg combo_venc_chn: %d\n", i,
@@ -1245,6 +1249,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.vpss_grp);
     printf("\t\tsensor[%d] stStreamCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.vpss_chn);
+    printf("\t\tsensor[%d] stStreamCfg post_aiisp: %d\n", i,
+           pstCfg->stMediaCfg[i].stStreamCfg.attribute.post_aiisp);
     printf("\t\tsensor[%d] stStreamCfg codec_type: %d\n", i,
            pstCfg->stMediaCfg[i].stStreamCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stStreamCfg rc_mode: %s\n", i,
@@ -1296,6 +1302,8 @@ static void RKADK_PARAM_Dump() {
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.vpss_grp);
     printf("\t\tsensor[%d] stLiveCfg vpss_chn: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.vpss_chn);
+    printf("\t\tsensor[%d] stLiveCfg post_aiisp: %d\n", i,
+           pstCfg->stMediaCfg[i].stLiveCfg.attribute.post_aiisp);
     printf("\t\tsensor[%d] stLiveCfg codec_type: %d\n", i,
            pstCfg->stMediaCfg[i].stLiveCfg.attribute.codec_type);
     printf("\t\tsensor[%d] stLiveCfg rc_mode: %s\n", i,
@@ -2941,6 +2949,76 @@ RKADK_S32 RKADK_PARAM_GetThumbChnId(RKADK_U32 u32CamId,
   }
 
   return s32VencChnId;
+}
+
+void RKADK_PARAM_GetVpssId(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType,
+                                   RKADK_S32 *s32VpssGrp, RKADK_S32 *s32VpssChn) {
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    RKADK_LOGE("invalid camera id: %d", u32CamId);
+    return;
+  }
+
+  *s32VpssGrp = -1;
+  *s32VpssChn = -1;
+  switch (enStrmType) {
+  case RKADK_STREAM_TYPE_VIDEO_MAIN: {
+    RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+    if (!pstRecCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    } else {
+      *s32VpssGrp = pstRecCfg->attribute[0].vpss_grp;
+      *s32VpssChn = pstRecCfg->attribute[0].vpss_chn;
+    }
+    break;
+  }
+  case RKADK_STREAM_TYPE_VIDEO_SUB: {
+    RKADK_PARAM_REC_CFG_S *pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
+    if (!pstRecCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetRecCfg failed");
+    } else {
+      *s32VpssGrp = pstRecCfg->attribute[1].vpss_grp;
+      *s32VpssChn = pstRecCfg->attribute[1].vpss_chn;
+    }
+    break;
+  }
+  case RKADK_STREAM_TYPE_SNAP: {
+    RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(u32CamId);
+    if (!pstPhotoCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetPhotoCfg failed");
+    } else {
+      *s32VpssGrp = pstPhotoCfg->vpss_grp;
+      *s32VpssChn = pstPhotoCfg->vpss_chn;
+    }
+    break;
+  }
+  case RKADK_STREAM_TYPE_PREVIEW:
+  case RKADK_STREAM_TYPE_LIVE: {
+    RKADK_PARAM_STREAM_CFG_S *pstStreamCfg =
+        RKADK_PARAM_GetStreamCfg(u32CamId, enStrmType);
+    if (!pstStreamCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetStreamCfg failed");
+    } else {
+      *s32VpssGrp = pstStreamCfg->attribute.vpss_grp;
+      *s32VpssChn = pstStreamCfg->attribute.vpss_chn;
+    }
+    break;
+  }
+  case RKADK_STREAM_TYPE_DISP: {
+    RKADK_PARAM_DISP_CFG_S *pstDispCfg = RKADK_PARAM_GetDispCfg(u32CamId);
+    if (!pstDispCfg) {
+      RKADK_LOGE("RKADK_PARAM_GetDispCfg failed");
+    } else {
+      *s32VpssGrp = pstDispCfg->vpss_grp;
+      *s32VpssChn = pstDispCfg->vpss_chn;
+    }
+    break;
+  }
+  default:
+    RKADK_LOGE("Unsupport stream type: %d", enStrmType);
+    break;
+  }
+
+  return;
 }
 
 RKADK_PARAM_RES_E RKADK_PARAM_GetResType(RKADK_U32 width, RKADK_U32 height) {
