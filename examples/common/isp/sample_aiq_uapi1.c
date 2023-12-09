@@ -1079,7 +1079,7 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   return ret;
 }
 
-void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId) {
+void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId, bool isSingleMode) {
   printf("aiq uapi1 unsupport pause");
 }
 void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId) {

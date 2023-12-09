@@ -241,7 +241,7 @@ static void *RKADK_MUXER_AovProc(void *arg) {
       if (stAovMsg.command == RKADK_CMD_PAUSE) {
         if (bIsPause) {
           if (pstAovHandle->stAovAttr.pfnWakeUpPause)
-            pstAovHandle->stAovAttr.pfnWakeUpPause(pstMuxer->u32CamId);
+            pstAovHandle->stAovAttr.pfnWakeUpPause(pstMuxer->u32CamId, true);
           else
             RKADK_LOGE("No registered pfnWakeUpPause");
         }

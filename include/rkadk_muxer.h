@@ -171,7 +171,7 @@ typedef enum {
   RKADK_REC_TYPE_BUTT,
 } RKADK_MUXER_REC_TYPE_E;
 
-typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId);
+typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId, bool isSingleMode);
 typedef void (*RKADK_ISP_WAKE_UP_RESUME)(RKADK_U32 u32CamId);
 typedef int (*RKADK_ISP_SET_FRAME_RATE)(RKADK_U32 u32CamId, unsigned int uFps);
 
