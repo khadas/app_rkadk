@@ -1300,7 +1300,9 @@ static void SendData(RKADK_VOID *ptr) {
       }
   }
 
-  pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
+  if (tmpNUm)
+    pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
+
   if (sampleNum != 1024) {
     DestoryDeviceAo(&pstPlayer->stAoCtx);
     ret = CreateDeviceAo(&pstPlayer->stAoCtx);
