@@ -58,6 +58,7 @@ typedef RKADK_S32 (*RKADK_REC_MSG_CB)(RKADK_MW_PTR, RKADK_S32, RKADK_MW_PTR,
                                       RKADK_S32, RKADK_MW_PTR);
 
 struct RKADK_STR_FILE {
+  struct RKADK_STR_FILE *prev;
   struct RKADK_STR_FILE *next;
   RKADK_CHAR filename[RKADK_MAX_FILE_PATH_LEN];
   time_t stTime;
@@ -123,6 +124,7 @@ typedef struct {
   RKADK_STR_DEV_STA stDevSta;
   RKADK_STR_DEV_ATTR stDevAttr;
   RKADK_MOUNT_STATUS_CALLBACK_FN pfnStatusCallback;
+  RKADK_FILE_FILTER_CALLBACK_FN pfnFileFilterCB;
 } RKADK_STORAGE_HANDLE;
 
 static RKADK_S32 RKADK_STORAGE_RKFSCK(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_DEV_ATTR *pdevAttr);
@@ -386,17 +388,22 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
   tmp_1->stSize = statbuf->st_size;
   tmp_1->stSpace = statbuf->st_blocks << 9;
   tmp_1->stTime = statbuf->st_mtime;
+  tmp_1->prev = NULL;
   tmp_1->next = NULL;
 
   if (folder->pstFileListFirst) {
     tmp = folder->pstFileListFirst;
     if (tmp_1->stTime >= tmp->stTime) {
       tmp_1->next = tmp;
+      tmp->prev = tmp_1;
       folder->pstFileListFirst = tmp_1;
     } else {
       while (tmp->next) {
         if (tmp_1->stTime >= tmp->next->stTime) {
           tmp_1->next = tmp->next;
+          tmp_1->prev = tmp;
+          if (tmp_1->next)
+            tmp_1->next->prev = tmp_1;
           tmp->next = tmp_1;
           break;
         }
@@ -404,6 +411,7 @@ static RKADK_S32 RKADK_STORAGE_FileListAdd(RKADK_STR_FOLDER *folder,
       }
       if (tmp->next == NULL) {
         tmp->next = tmp_1;
+        tmp_1->prev = tmp;
         folder->pstFileListLast = tmp_1;
       }
     }
@@ -426,6 +434,7 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
   off_t totalSize = 0;
   off_t totalSpace = 0;
   struct RKADK_STR_FILE *next = NULL;
+  struct RKADK_STR_FILE *tmp = NULL;
 
   RKADK_CHECK_POINTER(folder, RKADK_FAILURE);
   RKADK_CHECK_POINTER(filename, RKADK_FAILURE);
@@ -434,14 +443,16 @@ static RKADK_S32 RKADK_STORAGE_FileListDel(RKADK_STR_FOLDER *folder,
 
 again:
   if (folder->pstFileListFirst) {
-    struct RKADK_STR_FILE *tmp = folder->pstFileListFirst;
+    tmp = folder->pstFileListFirst;
     if (!strcmp(tmp->filename, filename)) {
       folder->pstFileListFirst = folder->pstFileListFirst->next;
       free(tmp);
-      tmp = folder->pstFileListFirst;
-      if (folder->pstFileListFirst == NULL) {
+
+      if (folder->pstFileListFirst == NULL)
         folder->pstFileListLast = NULL;
-      }
+      else
+        folder->pstFileListFirst->prev = NULL;
+
       goto again;
     }
 
@@ -456,6 +467,9 @@ again:
       }
       if (!strcmp(next->filename, filename)) {
         tmp->next = next->next;
+        if (tmp->next)
+          tmp->next->prev = tmp;
+
         free(next);
         next = tmp->next;
         if(tmp->next == NULL)
@@ -659,16 +673,19 @@ again:
           RKADK_LOGE("Delete %s file error.", file);
         folder->pstFileListFirst = current->next;
         free(current);
-        if (folder->pstFileListFirst == NULL)
+        if (folder->pstFileListFirst == NULL) {
           folder->pstFileListLast = NULL;
-        else if (folder->pstFileListFirst->next == NULL)
-          folder->pstFileListLast = folder->pstFileListFirst;
+        } else {
+          folder->pstFileListFirst->prev = NULL;
+          if (folder->pstFileListFirst->next == NULL)
+            folder->pstFileListLast = folder->pstFileListFirst;
+        }
         folder->s32FileNum--;
         goto again;
       }
     }
-    current = folder->pstFileListFirst;
 
+    current = folder->pstFileListFirst;
     for (; j < REPAIR_FILE_NUM && current && current->next; j++) {
       snprintf(file, 3 * RKADK_MAX_FILE_PATH_LEN, "%s%s%s", pdevAttr->cMountPath,
               pdevAttr->pstFolderAttr[i].cFolderPath,
@@ -679,6 +696,9 @@ again:
           RKADK_LOGE("Delete %s file error.", file);
         next = current->next;
         current->next = next->next;
+        if (current->next)
+          current->next->prev = current;
+
         free(next);
         if (current->next == NULL)
           folder->pstFileListLast = current;
@@ -1707,10 +1727,17 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
                                     RKADK_SORT_TYPE sort) {
   RKADK_S32 i, j;
   RKADK_STORAGE_HANDLE *pstHandle = NULL;
+  RKADK_S32 s32FileNum = 0;
+  struct RKADK_STR_FILE *tmp = NULL;
 
   RKADK_CHECK_POINTER(list, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
+
+  if (list->file) {
+    RKADK_LOGE("list already exists");
+    return -1;
+  }
 
   for (i = 0; i < pstHandle->stDevSta.s32FolderNum; i++) {
     if (!strcmp(list->path, pstHandle->stDevSta.pstFolder[i].cpath))
@@ -1724,37 +1751,47 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
 
   pthread_mutex_lock(&pstHandle->stDevSta.pstFolder[i].mutex);
 
-  struct RKADK_STR_FILE *tmp = pstHandle->stDevSta.pstFolder[i].pstFileListFirst;
-  list->s32FileNum = pstHandle->stDevSta.pstFolder[i].s32FileNum;
+  s32FileNum = pstHandle->stDevSta.pstFolder[i].s32FileNum;
   list->file =
-      (RKADK_FILE_INFO *)malloc(sizeof(RKADK_FILE_INFO) * list->s32FileNum);
+      (RKADK_FILE_INFO *)malloc(sizeof(RKADK_FILE_INFO) * s32FileNum);
   if (!list->file) {
     RKADK_LOGE("list->file malloc failed.");
     return -1;
   }
-  memset(list->file, 0, sizeof(RKADK_FILE_INFO) * list->s32FileNum);
+  memset(list->file, 0, sizeof(RKADK_FILE_INFO) * s32FileNum);
 
-  if (sort == LIST_ASCENDING) {
-    for (j = 0; j < list->s32FileNum && tmp != NULL; j++) {
+  list->s32FileNum = 0;
+  if (sort == LIST_DESCENDING) {
+    tmp = pstHandle->stDevSta.pstFolder[i].pstFileListFirst;
+    for (j = 0; j < s32FileNum && tmp != NULL; j++, tmp = tmp->next) {
+      if (pstHandle->pfnFileFilterCB)
+        if (!pstHandle->pfnFileFilterCB(tmp->filename))
+          continue;
+
       int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
                     ? (RKADK_MAX_FILE_PATH_LEN - 1)
                     : strlen(tmp->filename);
-      strncpy(list->file[j].filename, tmp->filename, len);
-      list->file[j].filename[len] = '\0';
-      list->file[j].stSize = tmp->stSize;
-      list->file[j].stTime = tmp->stTime;
-      tmp = tmp->next;
+      strncpy(list->file[list->s32FileNum].filename, tmp->filename, len);
+      list->file[list->s32FileNum].filename[len] = '\0';
+      list->file[list->s32FileNum].stSize = tmp->stSize;
+      list->file[list->s32FileNum].stTime = tmp->stTime;
+      list->s32FileNum++;
     }
   } else {
-    for (j = list->s32FileNum - 1; j >= 0 && tmp != NULL; j--) {
+    tmp = pstHandle->stDevSta.pstFolder[i].pstFileListLast;
+    for (j = 0; j < s32FileNum && tmp != NULL; j++, tmp = tmp->prev) {
+      if (pstHandle->pfnFileFilterCB)
+        if (!pstHandle->pfnFileFilterCB(tmp->filename))
+          continue;
+
       int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
                     ? (RKADK_MAX_FILE_PATH_LEN - 1)
                     : strlen(tmp->filename);
-      strncpy(list->file[j].filename, tmp->filename, len);
-      list->file[j].filename[len] = '\0';
-      list->file[j].stSize = tmp->stSize;
-      list->file[j].stTime = tmp->stTime;
-      tmp = tmp->next;
+      strncpy(list->file[list->s32FileNum].filename, tmp->filename, len);
+      list->file[list->s32FileNum].filename[len] = '\0';
+      list->file[list->s32FileNum].stSize = tmp->stSize;
+      list->file[list->s32FileNum].stTime = tmp->stTime;
+      list->s32FileNum++;
     }
   }
 
@@ -1841,4 +1878,23 @@ RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat)
 
   RKADK_LOGD("Format %s[%d]", pDevPath, err);
   return err;
+}
+
+RKADK_S32 RKADK_STORAGE_RegisterFileFilterCB(RKADK_MW_PTR pHandle,
+                                      RKADK_FILE_FILTER_CALLBACK_FN pfnFileFilterCB) {
+  RKADK_STORAGE_HANDLE *pstHandle = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
+  pstHandle->pfnFileFilterCB = pfnFileFilterCB;
+  return 0;
+}
+
+RKADK_S32 RKADK_STORAGE_UnRegisterFileFilterCB(RKADK_MW_PTR pHandle) {
+  RKADK_STORAGE_HANDLE *pstHandle = NULL;
+
+  RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
+  pstHandle = (RKADK_STORAGE_HANDLE *)pHandle;
+  pstHandle->pfnFileFilterCB = NULL;
+  return 0;
 }

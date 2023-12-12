@@ -40,6 +40,8 @@ typedef enum {
 typedef RKADK_VOID (*RKADK_MOUNT_STATUS_CALLBACK_FN)(
     RKADK_MW_PTR pHandle, RKADK_MOUNT_STATUS status);
 
+typedef bool (*RKADK_FILE_FILTER_CALLBACK_FN)(const char *fileName);
+
 typedef enum {
   LIST_ASCENDING = 0,
   LIST_DESCENDING,
@@ -115,6 +117,11 @@ RKADK_S32 RKADK_STORAGE_GetFileNum(RKADK_CHAR *fileListPath,
 RKADK_CHAR *RKADK_STORAGE_GetDevPath(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_STORAGE_Format(RKADK_MW_PTR pHandle, RKADK_CHAR* cFormat);
+
+RKADK_S32 RKADK_STORAGE_RegisterFileFilterCB(RKADK_MW_PTR pHandle,
+                                      RKADK_FILE_FILTER_CALLBACK_FN pfnFileFilterCB);
+
+RKADK_S32 RKADK_STORAGE_UnRegisterFileFilterCB(RKADK_MW_PTR pHandle);
 
 #ifdef __cplusplus
 }

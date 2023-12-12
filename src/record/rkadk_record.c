@@ -500,7 +500,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
 
     //if use isp, set mirror/flip using aiq
     if (!pstSensorCfg->used_isp) {
-      RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
       if (i != 0)
         enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
 

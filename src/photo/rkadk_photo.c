@@ -1605,15 +1605,6 @@ static RKADK_S32 RKADK_PHOTO_GetJpgResolution(RKADK_CHAR *pcFileName,
   return -1;
 }
 
-static RKADK_S32 RKADK_PHOTO_VdecFree(void *opaque) {
-  RKADK_LOGD("vdec free: %p", opaque);
-  if (opaque) {
-    free(opaque);
-    opaque = NULL;
-  }
-  return 0;
-}
-
 static RKADK_S32 RKADK_PHOTO_BuildInThm(FILE *fd,
                                         RKADK_THUMB_ATTR_S *pstThumbAttr) {
 
