@@ -21,14 +21,10 @@
 extern "C" {
 #endif
 
-#ifndef OS_RTT
 #include "version.h"
+
 static char stVersionInfo[]  = RKADK_VERSION_INFO;
 static char stVersionBuild[] = RKADK_BUILD_INFO;
-#else
-static char stVersionInfo[]  = "RKADK_VERSION_INFO";
-static char stVersionBuild[] = "RKADK_BUILD_INFO";
-#endif
 
 void RKADK_VERSION_Dump();
 

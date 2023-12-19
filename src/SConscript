@@ -1,6 +1,75 @@
 from building import *
 Import("SOC")
 
+import os
+import subprocess
+from datetime import datetime
+import shutil
+import SCons.Script
+
+
+######### Generate include/version.h ###########
+# Initialize environment
+env = SCons.Script.Environment()
+
+# Get the path to the git executable file
+git_executable = env.WhereIs('git')
+if not git_executable:
+    raise EnvironmentError('git not found in the system')
+
+# working directory
+project_source_dir = GetCurrentDir()  # source directory
+env.Replace(WORKING_DIRECTORY=project_source_dir)
+
+# Get Git version information
+git_log_format = "git-%h %cd"
+process = subprocess.Popen([git_executable, 'log', '-1', '--oneline', '--pretty=format:' + git_log_format],
+                            cwd=project_source_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+stdout, stderr = process.communicate()
+if process.returncode != 0:
+    print("git ret", process.returncode)
+    print("error:", err.decode('utf-8').strip())
+else:
+    version_info = stdout.decode('utf-8').strip()
+    print("git current version:", version_info)
+    version_info = '"' + version_info + '"'
+
+# Execute git command and obtain output
+git_config_command = [git_executable, 'config', 'user.name']
+process = subprocess.Popen(git_config_command, stdout=subprocess.PIPE)
+stdout, stderr = process.communicate()
+# Define source and destination file paths
+source_file = GetCurrentDir()
+source_file += '/../version/version.in'
+target_file = GetCurrentDir()
+target_file += '/../include/version.h'
+
+if process.returncode != 0:
+    print(f'git ret {process.returncode}')
+    print(f'error: {stderr.decode()}')
+else:
+    build_author = stdout.decode().strip()[:3]  # take the first 3 characters
+    build_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # retrieve the current time and format it
+    build_info = f'built {build_time}'  # building Information
+    print("build info:", build_info)
+    build_info = '"' + build_info + '"'
+
+    try:
+        subprocess.run(['cp', source_file, target_file], check=True)
+    except subprocess.TimeoutExpired:
+        pass  # Wait for the command to complete execution
+
+    with open(target_file, 'r') as file:
+        file_contents = file.read()
+
+    # Replace placeholders
+    file_contents = file_contents.replace('@VERSION_INFO@', version_info).replace('@BUILD_INFO@', build_info)
+
+    # Write the replaced content back to the version. h file
+    with open(target_file, 'w') as file:
+        file.write(file_contents)
+############################################
+
 cwd     = GetCurrentDir()
 src     = Split('''
 common/rkadk_media_comm.c
