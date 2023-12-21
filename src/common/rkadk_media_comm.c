@@ -1387,7 +1387,7 @@ RKADK_S32 RKADK_MEDIA_GetAencBuffer(MPP_CHN_S *pstChn,
                                     RKADK_MEDIA_AENC_DATA_PROC_FUNC pfnDataCB,
                                     RKADK_VOID *pHandle) {
   int ret = -1;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
   RKADK_S32 i;
   RKADK_MEDIA_INFO_S *pstMediaInfo;
 
@@ -1547,7 +1547,7 @@ RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
                                     RKADK_VOID *pHandle) {
   int ret = -1;
   RKADK_S32 i;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
   RKADK_MEDIA_INFO_S *pstMediaInfo;
 
   RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);

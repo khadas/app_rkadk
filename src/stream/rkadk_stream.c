@@ -722,7 +722,7 @@ static void *RKADK_STREAM_GetPcmMB(void *params) {
 static int
 RKADK_STREAM_CreateDataThread(STREAM_AUDIO_HANDLE_S *pHandle) {
   int ret = 0;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
 
   pHandle->bGetBuffer = true;
   if (pHandle->enCodecType == RKADK_CODEC_TYPE_PCM) {

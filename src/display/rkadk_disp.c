@@ -306,7 +306,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
 
   stDispHandle.u32CamId = u32CamId;
 #ifdef RV1106_1103
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
   stDispHandle.bSendBuffer = true;
   ret = pthread_create(&stDispHandle.tid, NULL,
                        RKADK_DISP_GetVpssMb, &stDispHandle);

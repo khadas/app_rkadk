@@ -64,7 +64,6 @@ struct RKADK_STR_FILE {
   time_t stTime;
   off_t stSize;
   off_t stSpace;
-  mode_t stMode;
 };
 
 typedef struct {
@@ -1756,6 +1755,7 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
       (RKADK_FILE_INFO *)malloc(sizeof(RKADK_FILE_INFO) * s32FileNum);
   if (!list->file) {
     RKADK_LOGE("list->file malloc failed.");
+    pthread_mutex_unlock(&pstHandle->stDevSta.pstFolder[i].mutex);
     return -1;
   }
   memset(list->file, 0, sizeof(RKADK_FILE_INFO) * s32FileNum);
@@ -1768,11 +1768,7 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
         if (!pstHandle->pfnFileFilterCB(tmp->filename))
           continue;
 
-      int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
-                    ? (RKADK_MAX_FILE_PATH_LEN - 1)
-                    : strlen(tmp->filename);
-      strncpy(list->file[list->s32FileNum].filename, tmp->filename, len);
-      list->file[list->s32FileNum].filename[len] = '\0';
+      snprintf(list->file[list->s32FileNum].filename, sizeof(list->file[list->s32FileNum].filename), "%s", tmp->filename);
       list->file[list->s32FileNum].stSize = tmp->stSize;
       list->file[list->s32FileNum].stTime = tmp->stTime;
       list->s32FileNum++;
@@ -1784,11 +1780,7 @@ RKADK_S32 RKADK_STORAGE_GetFileList(RKADK_FILE_LIST *list, RKADK_MW_PTR pHandle,
         if (!pstHandle->pfnFileFilterCB(tmp->filename))
           continue;
 
-      int len = strlen(tmp->filename) > (RKADK_MAX_FILE_PATH_LEN - 1)
-                    ? (RKADK_MAX_FILE_PATH_LEN - 1)
-                    : strlen(tmp->filename);
-      strncpy(list->file[list->s32FileNum].filename, tmp->filename, len);
-      list->file[list->s32FileNum].filename[len] = '\0';
+      snprintf(list->file[list->s32FileNum].filename, sizeof(list->file[list->s32FileNum].filename), "%s", tmp->filename);
       list->file[list->s32FileNum].stSize = tmp->stSize;
       list->file[list->s32FileNum].stTime = tmp->stTime;
       list->s32FileNum++;

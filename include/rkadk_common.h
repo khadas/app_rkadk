@@ -36,10 +36,11 @@ extern "C" {
 // simultaneous record files num
 #define RECORD_FILE_NUM_MAX 2
 
-#define RKADK_MAX_FILE_PATH_LEN 256
+#define RKADK_MAX_FILE_PATH_LEN 128
 #define RKADK_PIX_FMT_LEN 32
 #define RKADK_INTF_FMT_LEN 32
 #define RKADK_SPLICE_MODE_LEN 10
+#define RKADK_THREAD_NAME_LEN 32
 
 #define JPEG_SLICE_WIDTH_MAX 8192
 #define JPEG_SLICE_HEIGHT_MAX 8192

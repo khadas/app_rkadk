@@ -29,7 +29,7 @@ extern "C" {
 #include "rkadk_aov.h"
 #include "rkadk_media_comm.h"
 
-#define RKADK_MUXER_FILE_NAME_LEN 256
+#define RKADK_MUXER_FILE_NAME_LEN RKADK_MAX_FILE_PATH_LEN
 #define RKADK_MUXER_STREAM_MAX_CNT RECORD_FILE_NUM_MAX
 #define RKADK_MUXER_TRACK_MAX_CNT 2 /* a video track and a audio track */
 #define RKADK_MUXER_CELL_MAX_CNT 40

@@ -925,7 +925,7 @@ static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
 RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHandle) {
   int ret;
   bool bSysInit = false;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   VENC_CHN_ATTR_S stVencAttr;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;

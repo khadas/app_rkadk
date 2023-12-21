@@ -1340,7 +1340,7 @@ exit:
 RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
                                     RKADK_MW_PTR pHandle) {
   int i, ret;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
   MUXER_HANDLE_S *pMuxerHandle = NULL;
   RKADK_MUXER_STREAM_ATTR_S *pstSrcStreamAttr = NULL;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
@@ -1883,7 +1883,7 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
 RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle) {
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
-  char name[256];
+  char name[RKADK_THREAD_NAME_LEN];
 
 #ifdef ENABLE_AOV
   RKADK_MSG stAovMsg;
