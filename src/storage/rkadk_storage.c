@@ -1020,7 +1020,7 @@ static RKADK_S32 RKADK_STORAGE_RKFSCK(RKADK_STORAGE_HANDLE *pHandle, RKADK_STR_D
   RKADK_S32 ret = 0;
   struct reg_para para;
 
-  para.folder_num = 4;
+  para.folder_num = pdevAttr->s32FolderNum;
   para.folder = (struct folder_para *)malloc(sizeof(struct folder_para) * para.folder_num);
   if (para.folder == NULL) {
     RKADK_LOGE("malloc para.folder failed!");
