@@ -209,6 +209,8 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
                                   RKADK_STREAM_TYPE_E enStrmType, bool bEnable,
                                   RKADK_POST_ISP_ATTR_S *pstPostIspAttr);
 
+RKADK_S32 RKADK_MEDIA_SetVencState(RKADK_U32 u32CamId, RKADK_S32 s32ChnId, bool state);
+
 #ifdef __cplusplus
 }
 #endif

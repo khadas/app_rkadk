@@ -54,6 +54,7 @@ typedef struct {
 
 typedef struct {
   bool bUsed;
+  bool bReset;
   RKADK_S32 s32InitCnt;
   RKADK_S32 s32DevId;
   RKADK_S32 s32ChnId;
@@ -405,14 +406,7 @@ static RKADK_S32 RKADK_MEDIA_GetIdx(RKADK_MEDIA_INFO_S *pstInfo, int count,
     if (!pstInfo[i].bUsed)
       continue;
 
-    if (!strcmp(mode, "VI_INIT") || !strcmp(mode, "VI_DEINIT") ||
-        !strcmp(mode, "AI_INIT") || !strcmp(mode, "AI_DEINIT") ||
-        !strcmp(mode, "VPSS_INIT") || !strcmp(mode, "VPSS_DEINIT"))
-      bMatch =
-          pstInfo[i].s32ChnId == s32ChnId && pstInfo[i].s32DevId == s32DevId;
-    else
-      bMatch = pstInfo[i].s32ChnId == s32ChnId;
-
+    bMatch = ((pstInfo[i].s32ChnId == s32ChnId) && (pstInfo[i].s32DevId == s32DevId));
     if (bMatch) {
       RKADK_LOGD("%s: find matched index[%d] s32DevId[%d] ChnId[%d]", mode, i,
                  s32DevId, s32ChnId);
@@ -736,6 +730,7 @@ RKADK_S32 RKADK_MPI_AENC_Init(RKADK_S32 s32AencChnId,
     RK_MPI_AENC_SetMute(s32AencChnId, (RK_BOOL)pstAencChnAttr->stCodecAttr.u32Resv[3]);
 
     g_stMediaCtx.stAencInfo[i].bUsed = true;
+    g_stMediaCtx.stAencInfo[i].s32DevId = 0;
     g_stMediaCtx.stAencInfo[i].s32ChnId = s32AencChnId;
     g_stMediaCtx.stAencInfo[i].enCodecType = pstAencChnAttr->enType;
   }
@@ -777,7 +772,9 @@ RKADK_S32 RKADK_MPI_AENC_DeInit(RKADK_S32 s32AencChnId) {
     }
 
     g_stMediaCtx.stAencInfo[i].bUsed = false;
+    g_stMediaCtx.stAencInfo[i].s32DevId = -1;
     g_stMediaCtx.stAencInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stAencInfo[i].enCodecType = RK_VIDEO_ID_Unused;
   }
 
   g_stMediaCtx.stAencInfo[i].s32InitCnt--;
@@ -1043,6 +1040,8 @@ RKADK_S32 RKADK_MPI_VENC_Init(RKADK_U32 u32CamId, RKADK_S32 s32ChnId,
     //}
 
     g_stMediaCtx.stVencInfo[i].bUsed = true;
+    g_stMediaCtx.stVencInfo[i].bReset = false;
+    g_stMediaCtx.stVencInfo[i].s32DevId = 0;
     g_stMediaCtx.stVencInfo[i].s32ChnId = s32ChnId;
     g_stMediaCtx.stVencInfo[i].enCodecType = pstVencChnAttr->stVencAttr.enType;
   }
@@ -1090,7 +1089,10 @@ RKADK_S32 RKADK_MPI_VENC_DeInit(RKADK_S32 s32ChnId) {
     }
 
     g_stMediaCtx.stVencInfo[i].bUsed = false;
+    g_stMediaCtx.stVencInfo[i].bReset = false;
+    g_stMediaCtx.stVencInfo[i].s32DevId = -1;
     g_stMediaCtx.stVencInfo[i].s32ChnId = -1;
+    g_stMediaCtx.stVencInfo[i].enCodecType = RK_VIDEO_ID_Unused;
   }
 
   g_stMediaCtx.stVencInfo[i].s32InitCnt--;
@@ -1294,6 +1296,7 @@ RKADK_S32 RKADK_MPI_VO_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s3
     }
 
     g_stMediaCtx.stVoInfo[i].bUsed = true;
+    g_stMediaCtx.stVoInfo[i].s32DevId = s32VoDev;
     g_stMediaCtx.stVoInfo[i].s32ChnId = s32VoChn;
   }
 
@@ -1518,23 +1521,25 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
       if (ret)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     } else {
-      RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
-      pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt++;
+      if (!pstMediaInfo->bReset) {
+        RKADK_LOGE("RK_MPI_VENC_GetStream chn[%d] timeout[%x]", pstMediaInfo->s32ChnId, ret);
+        pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt++;
 
-      //dump video info
+        //dump video info
 #ifdef RV1106_1103
-      system("cat proc/rkisp-vir0 | grep frame");
-      system("cat /dev/mpi/vsys");
+        system("cat proc/rkisp-vir0 | grep frame");
+        system("cat /dev/mpi/vsys");
 
 #ifndef ENABLE_AOV
-      system("cat /proc/vcodec/enc/venc_info");
+        system("cat /proc/vcodec/enc/venc_info");
 #endif
 #else
-      system("dumpsys sys");
-      system("dumpsys vi");
-      system("dumpsys vpss");
-      system("dumpsys venc");
+        system("dumpsys sys");
+        system("dumpsys vi");
+        system("dumpsys vpss");
+        system("dumpsys venc");
 #endif
+      }
     }
   }
 
@@ -2591,4 +2596,24 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
     RK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
 
   return ret;
+}
+
+RKADK_S32 RKADK_MEDIA_SetVencState(RKADK_U32 u32CamId, RKADK_S32 s32ChnId, bool state) {
+  RKADK_S32 i;
+
+  RKADK_MUTEX_LOCK(g_stMediaCtx.vencMutex);
+
+  i = RKADK_MEDIA_GetIdx(g_stMediaCtx.stVencInfo, RKADK_MEDIA_VENC_MAX_CNT, 0,
+                         s32ChnId, "VENC_STATE");
+  if (i < 0) {
+    RKADK_LOGE("not find matched index[%d] s32ChnId[%d]", i, s32ChnId);
+    RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
+    return -1;
+  }
+
+  if (g_stMediaCtx.stVencInfo[i].s32InitCnt > 0)
+    g_stMediaCtx.stVencInfo[i].bReset = state;
+
+  RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
+  return 0;
 }

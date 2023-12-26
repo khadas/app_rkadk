@@ -1987,6 +1987,7 @@ void RKADK_MUXER_SetResetState(RKADK_MW_PTR pHandle, bool state) {
     }
 
     pstMuxerHandle->bReseting = state;
+    RKADK_MEDIA_SetVencState(pstMuxerHandle->u32CamId, pstMuxerHandle->u32VencChn, state);
   }
 }
 
