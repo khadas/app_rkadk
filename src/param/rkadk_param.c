@@ -3925,7 +3925,7 @@ RKADK_VOID RKADK_PARAM_SetDefPath() {
   memset(g_stPARAMCtx.defPath, 0, RKADK_PATH_LEN);
   if (pDefPath) {
     u32PathLen = strlen(pDefPath) + strlen("rkadk_defsetting_sensor_0.ini");
-    if (u32PathLen < RKADK_PATH_LEN) {
+    if (u32PathLen < (RKADK_PATH_LEN - 1)) {
       sprintf(g_stPARAMCtx.defPath, "%s/%s", pDefPath, "rkadk_defsetting.ini");
       RKADK_LOGI("defPath: %s", g_stPARAMCtx.defPath);
 
@@ -3954,35 +3954,45 @@ RKADK_VOID RKADK_PARAM_SetDefPath() {
 }
 
 RKADK_VOID RKADK_PARAM_SetPath(char *path, char **sensorPath) {
+  int i;
   RKADK_U32 u32PathLen;
   RKADK_U32 sPathCount = 0;
   char *sPath = NULL;
+  const char *pDirPath = NULL;
+  bool bDone = false;
+
+  pDirPath = getenv("rkadk_ini_path");
 
   memset(g_stPARAMCtx.path, 0, RKADK_PATH_LEN);
   if (path) {
     u32PathLen = strlen(path);
-    if (u32PathLen > (RKADK_PATH_LEN - 1)) {
-      RKADK_LOGW("path[%s] len[%d] > %d", path, u32PathLen, RKADK_PATH_LEN - 1);
-      memcpy(g_stPARAMCtx.path, RKADK_PARAM_PATH, strlen(RKADK_PARAM_PATH));
-    } else {
+    if (u32PathLen < RKADK_PATH_LEN) {
       memcpy(g_stPARAMCtx.path, path, u32PathLen);
+      bDone = true;
     }
-  } else {
-    memcpy(g_stPARAMCtx.path, RKADK_PARAM_PATH, strlen(RKADK_PARAM_PATH));
+  } else if (pDirPath) {
+    u32PathLen = strlen(pDirPath) + strlen("rkadk_setting.ini");
+    if (u32PathLen < (RKADK_PATH_LEN - 1)) {
+      sprintf(g_stPARAMCtx.path, "%s/%s", pDirPath, "rkadk_setting.ini");
+      bDone = true;
+    }
   }
+
+  if (!bDone)
+    memcpy(g_stPARAMCtx.path, RKADK_PARAM_PATH, strlen(RKADK_PARAM_PATH));
+  else
+    bDone = false;
+
   RKADK_LOGI("path: %s", g_stPARAMCtx.path);
 
   if (sensorPath) {
     while ((sPath = *sensorPath++) != NULL) {
       if (sPathCount == RKADK_MAX_SENSOR_CNT) {
-        RKADK_LOGW("input sensor path count > RKADK_MAX_SENSOR_CNT[%d]",
-                   RKADK_MAX_SENSOR_CNT);
+        RKADK_LOGW("input sensor path count > RKADK_MAX_SENSOR_CNT[%d]", RKADK_MAX_SENSOR_CNT);
         break;
       }
 
-      u32PathLen = strlen(sPath) > (RKADK_PATH_LEN - 1) ? (RKADK_PATH_LEN - 1)
-                                                        : strlen(sPath);
-
+      u32PathLen = strlen(sPath) > (RKADK_PATH_LEN - 1) ? (RKADK_PATH_LEN - 1) : strlen(sPath);
       memset(g_stPARAMCtx.sensorPath[sPathCount], 0, RKADK_PATH_LEN);
       memcpy(g_stPARAMCtx.sensorPath[sPathCount], sPath, u32PathLen);
       RKADK_LOGI("sensorPath[%d]: %s[%d]", sPathCount,
@@ -3990,8 +4000,23 @@ RKADK_VOID RKADK_PARAM_SetPath(char *path, char **sensorPath) {
 
       sPathCount++;
     }
-  } else {
-    for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+
+    bDone = true;
+  } else if (pDirPath) {
+    u32PathLen = strlen(pDirPath) + strlen("rkadk_setting_sensor_0.ini");
+    if (u32PathLen < (RKADK_PATH_LEN - 1)) {
+      for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+        memset(g_stPARAMCtx.sensorPath[i], 0, RKADK_PATH_LEN);
+        sprintf(g_stPARAMCtx.sensorPath[i], "%s/%s_%d.ini", pDirPath, "rkadk_setting_sensor", i);
+        RKADK_LOGI("sensorPath[%d]: %s", i, g_stPARAMCtx.sensorPath[i]);
+      }
+
+      bDone = true;
+    }
+  }
+
+  if (!bDone) {
+    for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
       memset(g_stPARAMCtx.sensorPath[i], 0, RKADK_PATH_LEN);
       sprintf(g_stPARAMCtx.sensorPath[i], "%s_%d.ini",
               RKADK_PARAM_PATH_SENSOR_PREFIX, i);
