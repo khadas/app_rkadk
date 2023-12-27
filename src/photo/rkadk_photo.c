@@ -349,12 +349,24 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   stStream.pstPack = &stPack;
   stThumbFrame.pstPack = &stThumbPack;
 
+  // drop first frame
+  ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stStream, 1000);
+  if (ret == RK_SUCCESS) {
+    RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stStream);
+  } else {
+    RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", pstPhotoCfg->venc_chn, ret);
+    RK_MPI_VENC_StopRecvFrame(pstPhotoCfg->venc_chn);
+  }
+  RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
+
   // drop first thumb frame
   ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
-  if (ret == RK_SUCCESS)
+  if (ret == RK_SUCCESS) {
     RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
-  else
+  } else {
     RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", ptsThumbCfg->photo_venc_chn, ret);
+    RK_MPI_VENC_StopRecvFrame(ptsThumbCfg->photo_venc_chn);
+  }
   RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
 
   while (pHandle->bGetJpeg) {
@@ -1082,14 +1094,12 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     RK_MPI_VENC_SetJpegParam(stVencChn.s32ChnId, &stJpegParam);
 
     // must, for no streams callback running failed
-    if (!pHandle->stSliceParam.bJpegSlice) {
-      VENC_RECV_PIC_PARAM_S stRecvParam;
-      stRecvParam.s32RecvPicNum = 1;
-      ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
-      if (ret) {
-        RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
-        goto failed;
-      }
+    VENC_RECV_PIC_PARAM_S stRecvParam;
+    stRecvParam.s32RecvPicNum = 1;
+    ret = RK_MPI_VENC_StartRecvFrame(stVencChn.s32ChnId, &stRecvParam);
+    if (ret) {
+      RKADK_LOGE("RK_MPI_VENC_StartRecvFrame failed[%x]", ret);
+      goto failed;
     }
   }
 
