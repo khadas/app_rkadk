@@ -71,10 +71,5 @@ if(ENABLE_STORAGE)
 	target_link_libraries(rkadk iconv rkfsmk)
 endif()
 
-if(ENABLE_FILE_CACHE)
-	add_definitions(-DFILE_CACHE)
-	#target_link_libraries(rkadk file_cache)
-endif()
-
 # install target
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)

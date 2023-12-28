@@ -1754,28 +1754,17 @@ RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
   return -1;
 }
 
-RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ATTR_S *pstFileCacheAttr) {
 #ifdef FILE_CACHE
+RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ARG *pstFileCacheAttr) {
   int ret;
-  FILE_CACHE_ARG stCacheArg;
 
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
-
-  stCacheArg.sdcard_path = pstFileCacheAttr->pSdcardPath;
-  stCacheArg.write_cache = pstFileCacheAttr->u32WriteCache;
-  stCacheArg.total_cache = pstFileCacheAttr->u32TotalCache;
-  ret = file_cache_init(&stCacheArg);
+  ret = file_cache_init(pstFileCacheAttr);
   RKADK_MUXER_FsCacheNotify();
   return ret;
-#else
-  return -1;
-#endif
 }
 
 RKADK_S32 RKADK_RECORD_FileCacheDeInit() {
-#ifdef FILE_CACHE
   return file_cache_deinit();
-#else
-  return -1;
-#endif
 }
+#endif

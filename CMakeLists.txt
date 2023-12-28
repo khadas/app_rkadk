@@ -29,6 +29,10 @@ if(USE_RKAIQ)
     endif()
 endif()
 
+if(ENABLE_FILE_CACHE)
+	add_definitions(-DFILE_CACHE)
+endif()
+
 if(ENABLE_AOV)
 	add_definitions(-DENABLE_AOV)
 endif()

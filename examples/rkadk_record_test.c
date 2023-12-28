@@ -193,7 +193,10 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_S32 s32CamId = 0;
-  FILE_CACHE_ATTR_S stFileCacheAttr;
+
+#ifdef FILE_CACHE
+  FILE_CACHE_ARG stFileCacheAttr;
+#endif
 
   //aiisp
   bool bAiispEnable = true;
@@ -311,10 +314,14 @@ record:
   stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
   stPostIspAttr.u32FrameBufCnt = 2;
 
-  stFileCacheAttr.pSdcardPath = "/dev/mmcblk1p1";
-  stFileCacheAttr.u32TotalCache = 7 * 1024 * 1024; // 7M
-  stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
+#ifdef FILE_CACHE
+  stFileCacheAttr.sdcard_path = "/dev/mmcblk1p1";
+  stFileCacheAttr.total_cache = 7 * 1024 * 1024; // 7M
+  stFileCacheAttr.write_cache = 1024 * 1024; // 1M
+  stFileCacheAttr.write_thread_arg.sched_policy = FILE_SCHED_FIFO;
+  stFileCacheAttr.write_thread_arg.priority = 99;
   RKADK_RECORD_FileCacheInit(&stFileCacheAttr);
+#endif
 
   stRecAttr.s32CamID = s32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
@@ -571,7 +578,10 @@ record:
 #endif
   }
 
+#ifdef FILE_CACHE
   RKADK_RECORD_FileCacheDeInit();
+#endif
+
   RKADK_MPI_SYS_Exit();
   RKADK_LOGD("exit!");
   return 0;
