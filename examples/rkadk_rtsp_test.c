@@ -20,6 +20,7 @@
 #include "rkadk_param.h"
 #include "rkadk_rtsp.h"
 #include "isp/sample_isp.h"
+#include "isp/sample_iio_aiq.h"
 #include "rkadk_osd.h"
 #include <getopt.h>
 #include <signal.h>
@@ -35,7 +36,7 @@ extern char *optarg;
 #define IQ_FILE_PATH "/etc/iqfiles"
 
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "a:I:p:Aoh";
+static RKADK_CHAR optstr[] = "a:I:p:Aoeh";
 
 static void print_usage(const RKADK_CHAR *name) {
   printf("usage example:\n");
@@ -47,6 +48,9 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-o: osd file , Default:/userdata/rkadk_ARGB8888\n");
   printf("\t-A: enable aiisp, Default:disable\n");
+#ifdef ENABLE_EIS
+  printf("\t-e: enable eis, Default: disable\n");
+#endif
 }
 
 static void sigterm_handler(int sig) {
@@ -91,6 +95,11 @@ int main(int argc, char *argv[]) {
   bool bAiispEnable = false;
   RKADK_POST_ISP_ATTR_S stPostIspAttr;
 
+#ifdef ENABLE_EIS
+  bool bEnableEis = false;
+  rk_aiq_mems_sensor_intf_t eis_api;
+#endif
+
 #ifdef RKAIQ
   const char *tmp_optarg = optarg;
   SAMPLE_ISP_PARAM stIspParam;
@@ -125,6 +134,11 @@ int main(int argc, char *argv[]) {
     case 'A':
       bAiispEnable = true;
       break;
+#ifdef ENABLE_EIS
+    case 'e':
+      bEnableEis = true;
+      break;
+#endif
     case 'h':
     default:
       print_usage(argv[0]);
@@ -157,6 +171,23 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+#ifdef ENABLE_EIS
+  memset(&eis_api, 0, sizeof(rk_aiq_mems_sensor_intf_t));
+  eis_api.createContext             = rkiio_aiq_sensor_ctx_create;
+  eis_api.destroyContext            = rkiio_aiq_sensor_ctx_destroy;
+  eis_api.getSensorList             = rkiio_aiq_sensors_list_get;
+  eis_api.releaseSensorList         = rkiio_aiq_sensors_list_release;
+  eis_api.getSensorCapabilities     = rkiio_aiq_sensor_cap_get;
+  eis_api.releaseSensorCapabilities = rkiio_aiq_sensor_cap_release;
+  eis_api.getConfig                 = rkiio_aiq_sensor_config_get;
+  eis_api.setConfig                 = rkiio_aiq_sensor_config_set;
+  eis_api.createHandle              = rkiio_aiq_sensor_handle_create;
+  eis_api.destroyHandle             = rkiio_aiq_sensor_handle_destroy;
+  eis_api.getData                   = rkiio_aiq_getData;
+  eis_api.getLastNSamples           = rkiio_aiq_getLastNSamples;
+  eis_api.releaseSamplesData        = rkiio_aiq_sensor_data_release;
+#endif
+
 #ifdef RKAIQ
   RKADK_PARAM_FPS_S stFps;
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
@@ -169,6 +200,10 @@ int main(int argc, char *argv[]) {
   stIspParam.WDRMode = RK_AIQ_WORKING_MODE_NORMAL;
   stIspParam.bMultiCam = false;
   stIspParam.fps = stFps.u32Framerate;
+#ifdef ENABLE_EIS
+  if (bEnableEis)
+    stIspParam.pEisApi = &eis_api;
+#endif
   SAMPLE_ISP_Start(u32CamId, stIspParam);
   RKADK_BUFINFO("isp[%d] init", u32CamId);
 #endif

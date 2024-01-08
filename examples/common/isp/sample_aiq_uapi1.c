@@ -189,6 +189,11 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
     return ret;
   }
 
+#ifdef ENABLE_EIS
+  if (stIspParam.pEisApi)
+    SAMPLE_ISP_RegMemsSensorIntf(u32CamId, stIspParam.pEisApi);
+#endif
+
   ret = SAMPLE_ISP_Run(u32CamId, stIspParam.WDRMode);
   if (ret) {
     RKADK_LOGE("SAMPLE_ISP_Run u32CamId[%d] failed[%d]", u32CamId, ret);
@@ -237,6 +242,28 @@ int SAMPLE_ISP_Stop(RKADK_U32 u32CamId) {
   gstIspHandle[index].s32CamId = -1;
   gstIspHandle[index].u32StartCnt = 0;
   RKADK_LOGI("u32CamId[%d] done!", u32CamId);
+  return 0;
+}
+
+// register mems_sensor_intf api to aiq_ctx when EIS on
+int SAMPLE_ISP_RegMemsSensorIntf(RKADK_U32 u32CamId, rk_aiq_mems_sensor_intf_t *api) {
+  int ret = 0;
+
+  RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(api, RKADK_FAILURE);
+  RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
+
+  pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
+
+  ret = rk_aiq_uapi_sysctl_regMemsSensorIntf(gstIspHandle[u32CamId].pstAiqCtx, api);
+  if (ret) {
+    RKADK_LOGE("rk_aiq_uapi_sysctl_regMemsSensorIntf failed!");
+    pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
+    return -1;
+  }
+
+  pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
+  RKADK_LOGD("rk_aiq_uapi_sysctl_regMemsSensorIntf succeed");
   return 0;
 }
 

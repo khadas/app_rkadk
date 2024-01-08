@@ -12,6 +12,10 @@ else()
 	file(GLOB_RECURSE ISP_SRC "common/isp/sample_aiq_uapi2.c")
 endif()
 
+if(ENABLE_EIS)
+	file(GLOB_RECURSE IIO_SRC "common/isp/sample_iio_aiq.c")
+endif()
+
 #--------------------------
 # rkadk_photo_test
 #--------------------------
@@ -30,12 +34,16 @@ install(TARGETS rkadk_photo_test DESTINATION "bin")
 #--------------------------
 # rkadk_record_test
 #--------------------------
-add_executable(rkadk_record_test rkadk_record_test.c ${ISP_SRC})
+add_executable(rkadk_record_test rkadk_record_test.c ${ISP_SRC} ${IIO_SRC})
 add_dependencies(rkadk_record_test rkadk)
 target_link_libraries(rkadk_record_test rkadk)
 
 if(USE_RKAIQ)
 	target_link_libraries(rkadk_record_test rkaiq)
+endif()
+
+if(ENABLE_EIS)
+        target_link_libraries(rkadk_record_test easyiio iio)
 endif()
 
 target_include_directories(rkadk_record_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -62,12 +70,16 @@ endif()
 #--------------------------
 # rkadk_rtsp_test
 #--------------------------
-add_executable(rkadk_rtsp_test rkadk_rtsp_test.c ${ISP_SRC})
+add_executable(rkadk_rtsp_test rkadk_rtsp_test.c ${ISP_SRC} ${IIO_SRC})
 add_dependencies(rkadk_rtsp_test rkadk)
 target_link_libraries(rkadk_rtsp_test rkadk)
 
 if(USE_RKAIQ)
 	target_link_libraries(rkadk_rtsp_test rkaiq)
+endif()
+
+if(ENABLE_EIS)
+        target_link_libraries(rkadk_rtsp_test easyiio iio)
 endif()
 
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)

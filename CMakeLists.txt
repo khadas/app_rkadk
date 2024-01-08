@@ -37,6 +37,10 @@ if(ENABLE_AOV)
 	add_definitions(-DENABLE_AOV)
 endif()
 
+if(ENABLE_EIS)
+	add_definitions(-DENABLE_EIS)
+endif()
+
 #-Wextra
 add_definitions(-Wall
 		-Wshadow
