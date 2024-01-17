@@ -21,14 +21,11 @@
 #include "rkadk_param.h"
 #include "rkadk_audio_encoder.h"
 #include "linux_list.h"
+#include "file_cache.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef FILE_CACHE
-#include "file_cache.h"
-#endif
 
 typedef struct {
   struct list_head mark;
@@ -1754,17 +1751,25 @@ RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
   return -1;
 }
 
-#ifdef FILE_CACHE
 RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ARG *pstFileCacheAttr) {
-  int ret;
+#ifdef FILE_CACHE
+  int ret = 0;
 
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
   ret = file_cache_init(pstFileCacheAttr);
   RKADK_MUXER_FsCacheNotify();
   return ret;
+#else
+  RKADK_LOGE("Not define FILE_CACHE");
+  return -1;
+#endif
 }
 
 RKADK_S32 RKADK_RECORD_FileCacheDeInit() {
+#ifdef FILE_CACHE
   return file_cache_deinit();
-}
+#else
+  RKADK_LOGE("Not define FILE_CACHE");
+  return -1;
 #endif
+}

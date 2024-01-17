@@ -23,10 +23,7 @@ extern "C" {
 
 #include "rkadk_common.h"
 #include "rkadk_muxer.h"
-
-#ifdef FILE_CACHE
 #include "file_common.h"
-#endif
 
 typedef RKADK_MUXER_FPS_ATTR_S RKADK_RECORD_FPS_ATTR_S;
 typedef RKADK_MUXER_MANUAL_SPLIT_ATTR_S RKADK_REC_MANUAL_SPLIT_ATTR_S;
@@ -48,7 +45,6 @@ typedef struct {
   RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
 } RKADK_RECORD_ATTR_S;
 
-#ifdef FILE_CACHE
 /****************************************************************************/
 /*                            Interface Definition                          */
 /****************************************************************************/
@@ -65,7 +61,6 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ARG *pstFileCacheAttr);
  * @return others failure
  */
 RKADK_S32 RKADK_RECORD_FileCacheDeInit();
-#endif
 
 /**
  * @brief create a new recorder
