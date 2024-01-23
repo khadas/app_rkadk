@@ -421,6 +421,14 @@ RKADK_S32 RKADK_PLAYER_SendAudioPacket(RKADK_MW_PTR pPlayer,
 RKADK_S32 RKADK_PLAYER_SendVideoPacket(RKADK_MW_PTR pPlayer,
                               RKADK_PLAYER_PACKET *pstPacket);
 
+/**
+ * @brief set vdec cache frames waterline
+ * @param[in] pPlayer : RKADK_MW_PTR: handle of the player
+ * @param[in] u32VdecWaterline : Rvdec cache frames waterline, must be less than vdec (u32FrameBufCnt + u32StreamBufCnt)
+ * @retval  0 success, others failed
+ */
+RKADK_S32 RKADK_PLAYER_SetVdecWaterline(RKADK_MW_PTR pPlayer, RKADK_U32 u32VdecWaterline);
+
 #ifdef __cplusplus
 }
 #endif

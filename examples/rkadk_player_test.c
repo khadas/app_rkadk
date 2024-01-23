@@ -37,7 +37,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:O:mfvbDh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:p:a:s:P:I:t:F:T:l:c:d:O:S:w:mfvbDh";
 
 static RKADK_VOID *mDemuxerCfg = NULL;
 static void print_usage(const RKADK_CHAR *name) {
@@ -67,6 +67,8 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-c: loop play count, Default: 0\n");
   printf("\t-d: loop play once duration(second), Default: file duration\n");
   printf("\t-O: Vdec output buffer count, Default: 3\n");
+  printf("\t-S: Vdec stream(input) buffer count, Default: 3\n");
+  printf("\t-w: Vdec waterline(frames), Default: 0\n");
   printf("\t-D: enable third-party demuxer, Default: disable\n");
   printf("\t-h: help\n");
 }
@@ -350,6 +352,7 @@ int main(int argc, char *argv[]) {
   RKADK_PLAYER_CFG_S stPlayCfg;
   int loop_count = -1, loop_duration = 0;
   RKADK_PLAYER_STATE_E enState = RKADK_PLAYER_STATE_BUTT;
+  RKADK_U32 u32Waterline = 0;
 
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
@@ -391,6 +394,12 @@ int main(int argc, char *argv[]) {
       break;
     case 'O':
       stPlayCfg.stVdecCfg.u32FrameBufCnt = atoi(optarg);
+      break;
+    case 'S':
+      stPlayCfg.stVdecCfg.u32StreamBufCnt = atoi(optarg);
+      break;
+    case 'w':
+      u32Waterline = atoi(optarg);
       break;
     case 'v':
       bVideoEnable = true;
@@ -443,6 +452,8 @@ int main(int argc, char *argv[]) {
               stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
               u32SpliceMode, u32VoFormat, transport, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate,
               stPlayCfg.stRtspCfg.u32IoTimeout);
+  RKADK_LOGD("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
+              u32Waterline, stPlayCfg.stVdecCfg.u32FrameBufCnt, stPlayCfg.stVdecCfg.u32StreamBufCnt);
 
   if (u32SpliceMode == 1)
     stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_GPU;
@@ -507,6 +518,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
+  if (u32Waterline > 0)
+    RKADK_PLAYER_SetVdecWaterline(pPlayer, u32Waterline);
+
   if (stPlayCfg.bEnableThirdDemuxer) {
     ret = DemuxerSetDataParam(pPlayer, file, stPlayCfg);
     if (ret) {
@@ -528,6 +542,7 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
+  RKADK_LOGD("file duration: %d ms", duration);
 
   if (loop_duration <= 0 || loop_duration > duration / 1000)
     loop_duration = duration / 1000 + 1; //ms to m

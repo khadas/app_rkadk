@@ -224,6 +224,8 @@ typedef struct {
   RKADK_PLAYER_EVENT_FN pfnPlayerCallback;
 
   RKADK_PLAYER_SNAPSHOT_PARAM_S stSnapshotParam;
+
+  RKADK_U32 u32VdecWaterline; /* frames = left frames waiting for decode + pics waiting for output */
 } RKADK_PLAYER_HANDLE_S;
 
 static void RKADK_PLAYER_ProcessEvent(RKADK_PLAYER_HANDLE_S *pstPlayer,
@@ -997,6 +999,8 @@ static void SendVideoData(RKADK_VOID *ptr) {
   RKADK_S32 ret = 0;
   RKADK_S32 flagGetTframe = 0;
   RKADK_S32 voSendTime = 0, frameTime = 0, costtime = 0;
+  VDEC_CHN_STATUS_S stStatus;
+  bool bWaterline = true;
 
   if (pstPlayer->stDemuxerParam.videoAvgFrameRate <= 0) {
     RKADK_LOGE("Invalid video framerate[%d]", pstPlayer->stDemuxerParam.videoAvgFrameRate);
@@ -1008,7 +1012,17 @@ static void SendVideoData(RKADK_VOID *ptr) {
   memset(&tFrame, 0, sizeof(VIDEO_FRAME_INFO_S));
 
   while (!pstPlayer->bStopSendStream) {
-    if (pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
+    ret = RK_MPI_VDEC_QueryStatus(pstPlayer->stVdecCtx.chnIndex, &stStatus);
+    if (ret == RK_SUCCESS) {
+      if ((stStatus.u32LeftStreamFrames + stStatus.u32LeftPics) < pstPlayer->u32VdecWaterline)
+        bWaterline = false;
+      else
+        bWaterline = true;
+    } else {
+      RKADK_LOGE("Query vdec status failed[%x]", ret);
+    }
+
+    if ((pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE && bWaterline) || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
       if (pstPlayer->stVdecCtx.chnFd > 0) {
         ret = VdecPollEvent(MAX_TIME_OUT_MS, pstPlayer->stVdecCtx.chnFd);
         if (ret < 0)
@@ -1250,6 +1264,8 @@ static void SendData(RKADK_VOID *ptr) {
   RK_U32 bufferOffset = 0, originOffset = 0;
   RK_U64 firstAudioTimeStamp = -1;
   RK_U8 *cacheFrame = RK_NULL, *originFrame = RK_NULL;
+  VDEC_CHN_STATUS_S stStatus;
+  bool bWaterline = true;
 
   memset(&stFrmInfo, 0, sizeof(AUDIO_FRAME_INFO_S));
   memset(&stFrmInfoCache, 0, sizeof(AUDIO_FRAME_INFO_S));
@@ -1369,7 +1385,17 @@ static void SendData(RKADK_VOID *ptr) {
       }
     }
 
-    if (pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
+    ret = RK_MPI_VDEC_QueryStatus(pstPlayer->stVdecCtx.chnIndex, &stStatus);
+    if (ret == RK_SUCCESS) {
+      if ((stStatus.u32LeftStreamFrames + stStatus.u32LeftPics) < pstPlayer->u32VdecWaterline)
+        bWaterline = false;
+      else
+        bWaterline = true;
+    } else {
+      RKADK_LOGE("Query vdec status failed[%x]", ret);
+    }
+
+    if ((pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE && bWaterline) || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
       if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
         if (pstPlayer->enStatus == RKADK_PLAYER_STATE_PAUSE) {
           //send sFrame to vo
@@ -3210,5 +3236,23 @@ RKADK_S32 RKADK_PLAYER_Snapshot(RKADK_MW_PTR pPlayer) {
     RKADK_LOGD("Have been in snapshot");
   }
 
+  return 0;
+}
+
+RKADK_S32 RKADK_PLAYER_SetVdecWaterline(RKADK_MW_PTR pPlayer, RKADK_U32 u32VdecWaterline) {
+  RKADK_PLAYER_HANDLE_S *pstPlayer;
+  RKADK_U32 u32VdecTotalLeftFrames = 0;
+
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+
+  u32VdecTotalLeftFrames = pstPlayer->stVdecCtx.frameBufferCnt + pstPlayer->stVdecCtx.streamBufferCnt;
+  if (u32VdecWaterline > u32VdecTotalLeftFrames) {
+    RKADK_LOGE("Invalid vdec waterline: %d, frameBufferCnt: %d, streamBufferCnt: %d",
+      u32VdecWaterline, pstPlayer->stVdecCtx.frameBufferCnt, pstPlayer->stVdecCtx.streamBufferCnt);
+    return -1;
+  }
+
+  pstPlayer->u32VdecWaterline = u32VdecWaterline;
   return 0;
 }
