@@ -32,10 +32,8 @@ extern "C" {
 /* version */
 #define RKADK_PARAM_VERSION "1.4"
 
-#define RKADK_BUFFER_LEN 64
 #define RKADK_VOLUME_LEN 3
 #define RKADK_RC_MODE_LEN 5
-#define RKADK_PATH_LEN 128
 
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
@@ -89,9 +87,6 @@ extern "C" {
 
 #define LIVE_AI_CHN RECORD_AI_CHN
 #define LIVE_AENC_CHN RECORD_AENC_CHN
-
-#define PLAYER_AO_CHN 0
-#define PLAYER_ADEC_CHN 0
 
 /* vo default parameters */
 #define VO_DEVICE 0
@@ -149,6 +144,9 @@ extern "C" {
 #define RKADK_WIDTH_4320P 7680
 #define RKADK_HEIGHT_4320P 4320
 
+#define RKADK_WIDTH_3672P 6528
+#define RKADK_HEIGHT_3672P 3672
+
 /* Resolution type */
 typedef enum {
   RKADK_RES_720P = 0, /* 1280*720 */
@@ -165,6 +163,7 @@ typedef enum {
   RKADK_RES_4480P,    /* 6720*4480 */
   RKADK_RES_4275P,    /* 7600*4275 */
   RKADK_RES_4320P,    /* 7680*4320 */
+  RKADK_RES_3672P,    /* 6528*3672 */
   RKADK_RES_BUTT,
 } RKADK_PARAM_RES_E;
 
@@ -268,7 +267,6 @@ typedef struct tagRKADK_PARAM_SENSOR_CFG_S {
 
 typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   char ai_audio_node[RKADK_BUFFER_LEN];
-  char ao_audio_node[RKADK_BUFFER_LEN];
   RKADK_U32 ai_depth;
   AUDIO_BIT_WIDTH_E bit_width;
   RKADK_U32 channels;

@@ -253,8 +253,13 @@ typedef struct {
 } RKADK_PLAYER_VDEC_CFG_S;
 
 typedef struct {
+  RKADK_U32 u32AdecChnId;
   RKADK_U32 u32AoDevId;
   RKADK_U32 u32AoChnId;
+  RKADK_S32 u32AoChannle;     /* AO device channel, default: 2 */
+  RKADK_S32 u32AoSampleRate;  /* If the device has only one sound card, the AI and AO samplerate must be consistent, default: 16000 */
+  RKADK_U32 u32SpeakerVolume; /* speaker volume, [0,100], default: 0 */
+  const RKADK_CHAR *pSoundCard; /* Playback sound card, default: hw:0,0 */
 } RKADK_PLAYER_AUDIO_CFG_S;
 
 typedef struct {

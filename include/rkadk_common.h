@@ -45,6 +45,9 @@ extern "C" {
 #define JPEG_SLICE_WIDTH_MAX 8192
 #define JPEG_SLICE_HEIGHT_MAX 8192
 
+#define RKADK_BUFFER_LEN 64
+#define RKADK_PATH_LEN 128
+
 typedef unsigned char RKADK_U8;
 typedef unsigned short RKADK_U16;
 typedef unsigned int RKADK_U32;
