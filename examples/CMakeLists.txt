@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+# gdb debug
+# add_definitions(-Wall -g -O0 -ggdb -gdwarf -funwind-tables)
 
-project(rkadk_examples)
-
-add_definitions(-Wall -g -O0 -ggdb -gdwarf -funwind-tables -rdynamic -Wno-unused-parameter -D_GNU_SOURCE)
+# delete -rdynamic from LINK_FLAGS
+string(REGEX REPLACE "-rdynamic" "" CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
+string(REGEX REPLACE "-rdynamic" "" CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS}")
 
 aux_source_directory(common/mp3_header MP3_SRC)
 
@@ -85,6 +86,31 @@ endif()
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
+
+#--------------------------
+# rkadk_player_once_test
+#--------------------------
+if(${RKADK_CHIP} STREQUAL "rv1106")
+	set(ROCKIT_SO librockit_full.a)
+else()
+	set(ROCKIT_SO librockit.a)
+endif()
+
+set(RKADK_STATIC_LIB ${CMAKE_BINARY_DIR}/src/librkadk_static.a)
+add_executable(rkadk_player_once_test rkadk_player_once_test.c)
+add_dependencies(rkadk_player_once_test rkadk_static)
+target_link_libraries(rkadk_player_once_test rkdemuxer ${RKADK_STATIC_LIB} ${ROCKIT_SO} librockchip_mpp.a librga.a libdrm.a libpthread.a librkaudio.a libstdc++.a)
+if(NOT (${RKADK_CHIP} STREQUAL "rv1106") AND NOT (${RKADK_CHIP} STREQUAL "rv1126") AND NOT (${RKADK_CHIP} STREQUAL "rv1103b"))
+        target_link_libraries(rkadk_player_once_test asound libm.a)
+endif()
+target_include_directories(rkadk_player_once_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+message("strip tool = ${CMAKE_STRIP}")
+add_custom_command(TARGET rkadk_player_once_test POST_BUILD
+	COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:rkadk_player_once_test>"
+	COMMENT "Strip debug symbols done.")
+
+install(TARGETS rkadk_player_once_test DESTINATION "bin")
 
 #--------------------------
 # rkadk_player_test

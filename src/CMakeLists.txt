@@ -66,6 +66,10 @@ target_include_directories(rkadk_static PUBLIC "${CMAKE_SOURCE_DIR}/src/third-pa
 target_include_directories(rkadk_static PUBLIC "${CMAKE_SOURCE_DIR}/src/common")
 target_link_libraries(rkadk_static rtsp rkmuxer rkdemuxer libpthread.a librkaudio.a libstdc++.a librockchip_mpp.a librga.a libdrm.a)
 
+if(NOT (${RKADK_CHIP} STREQUAL "rv1106") AND NOT (${RKADK_CHIP} STREQUAL "rv1126") AND NOT (${RKADK_CHIP} STREQUAL "rv1103b"))
+	target_link_libraries(rkadk_static asound libm.a)
+endif()
+
 if(${RKADK_CHIP} STREQUAL "rv1106")
 	target_link_libraries(rkadk rockit_full)
 	target_link_libraries(rkadk_static librockit_full.a)
@@ -88,4 +92,4 @@ endif()
 # install target
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(TARGETS rkadk_static DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-SET_TARGET_PROPERTIES(rkadk_static PROPERTIES  OUTPUT_NAME "rkadk")
+#SET_TARGET_PROPERTIES(rkadk_static PROPERTIES  OUTPUT_NAME "rkadk")
