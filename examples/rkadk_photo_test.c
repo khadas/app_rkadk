@@ -99,6 +99,8 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
 
 static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
   int ret = 0;
+
+#ifdef RKAIQ
   RKADK_U32 u32CamId = (RKADK_U32)pPrivateData;
   rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
 
@@ -115,6 +117,10 @@ static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
   }
 
   RKADK_LOGD("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+#else
+  RKADK_LOGW("Don't enable aiq");
+#endif
+
   return ret;
 }
 

@@ -163,6 +163,8 @@ static void sigterm_handler(int sig) {
 
 static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
   int ret = 0;
+
+#ifdef RKAIQ
   RKADK_S32 s32CamId = (RKADK_S32)pPrivateData;
   rk_ainr_param *pAinrParam = (rk_ainr_param *)pParam;
 
@@ -179,6 +181,10 @@ static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
   }
 
   RKADK_LOGD("aiisp cam %d enable %d", s32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+#else
+  RKADK_LOGW("Don't enable aiq");
+#endif
+
   return ret;
 }
 
