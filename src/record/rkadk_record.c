@@ -356,7 +356,6 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
   bool bUseVpss = false;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
-  RKADK_U32 u32ThumbVencChn;
   RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
   RKADK_STREAM_TYPE_E enStrmType;
   RKADK_U32 u32VpssBufCnt = 0;
@@ -403,6 +402,14 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
       return ret;
     }
     RKADK_BUFINFO("create vi[%d]", pstRecCfg->vi_attr[i].u32ViChn);
+
+    if (i == 0) {
+      enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      enThumbModule = RKADK_THUMB_MODULE_MAIN_RECORD;
+    } else {
+      enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      enThumbModule = RKADK_THUMB_MODULE_SUB_RECORD;
+    }
 
     // Create VPSS
     bUseVpss = RKADK_RECORD_IsUseVpss(pstRecAttr->s32CamID, i, pstRecCfg, &u32VpssBufCnt);
@@ -467,13 +474,8 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
         }
       }
 
-      if (pstRecCfg->attribute[i].post_aiisp) {
-        if (i == 0)
-          enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-        else
-          enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      if (pstRecCfg->attribute[i].post_aiisp)
         RKADK_MEDIA_EnablePostIsp(pstRecAttr->s32CamID, enStrmType, pstRecAttr->pstPostIspAttr);
-      }
     }
 
     // Create VENC
@@ -493,28 +495,22 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
     if (pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE)
       RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[i].venc_chn, RKADK_ENCODE_SENSE_CVR);
 
-    if (i == 0) {
-      enThumbModule = RKADK_THUMB_MODULE_MAIN_RECORD;
-      u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
-    }
-    else {
-      enThumbModule = RKADK_THUMB_MODULE_SUB_RECORD;
-      u32ThumbVencChn = ptsThumbCfg->record_sub_venc_chn;
-    }
-
     ThumbnailInit(pstRecAttr->s32CamID, enThumbModule, ptsThumbCfg);
 #ifndef THUMB_NORMAL
+    RKADK_U32 u32ThumbVencChn;
+
+    if (i == 0)
+      u32ThumbVencChn = ptsThumbCfg->record_main_venc_chn;
+    else
+      u32ThumbVencChn = ptsThumbCfg->record_sub_venc_chn;
     ThumbnailChnBind(pstRecCfg->attribute[i].venc_chn, u32ThumbVencChn);
 #endif
 
     //if use isp, set mirror/flip using aiq
     if (!pstSensorCfg->used_isp) {
-      enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-      if (i != 0)
-        enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
-
       if (pstSensorCfg->mirror)
         RKADK_MEDIA_ToggleVencMirror(pstRecAttr->s32CamID, enStrmType, pstSensorCfg->mirror);
+
       if (pstSensorCfg->flip)
         RKADK_MEDIA_ToggleVencFlip(pstRecAttr->s32CamID, enStrmType, pstSensorCfg->flip);
     }

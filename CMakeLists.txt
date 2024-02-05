@@ -10,6 +10,9 @@ include(${PROJECT_SOURCE_DIR}/version/Version.cmake)
 install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdata-sections -ffunction-sections -Wl,--gc-sections")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -fdata-sections -ffunction-sections -Wl,--gc-sections")
+
 if(${RKADK_CHIP} STREQUAL "rk3506")
 	add_definitions(-DRK3506)
 endif()
@@ -41,14 +44,7 @@ if(ENABLE_EIS)
 	add_definitions(-DENABLE_EIS)
 endif()
 
-#-Wextra
-add_definitions(-Wall
-		-Wshadow
-		-ffast-math
-		-Wignored-qualifiers
-		-Werror-implicit-function-declaration
-		-fPIC
-		-Wl,-Bsymbolic)
+add_definitions(-Wall -Wshadow -ffast-math -Wignored-qualifiers -Werror-implicit-function-declaration -D_GNU_SOURCE)
 
 add_subdirectory(src)
 

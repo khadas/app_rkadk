@@ -292,8 +292,8 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   RKADK_STREAM_TYPE_E enType;
   STREAM_VIDEO_HANDLE_S *pVideoHandle = NULL;
   VENC_CHN_ATTR_S stVencChnAttr;
-  bool bUseVpss;
   RKADK_U32 u32VpssBufCnt = 0;
+  bool bUseVpss = false;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
 

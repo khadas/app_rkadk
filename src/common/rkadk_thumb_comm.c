@@ -492,7 +492,7 @@ RKADK_S32 ThumbnailPhotoData(RKADK_U8 *pu8JpegData, RKADK_U32 u32JpegLen,
   int userdata_len;
   time_t timep;
   struct tm *p;
-  char local_time[33];
+  char local_time[100];
 
   time(&timep);
   p = gmtime(&timep);

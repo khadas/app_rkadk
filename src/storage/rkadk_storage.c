@@ -841,9 +841,15 @@ static RKADK_MW_PTR RKADK_STORAGE_FileScanThread(RKADK_MW_PTR arg) {
   memset(pHandle->stDevSta.pstFolder, 0,
           sizeof(RKADK_STR_FOLDER) * devAttr.s32FolderNum);
   for (i = 0; i < pHandle->stDevSta.s32FolderNum; i++) {
-    sprintf(pHandle->stDevSta.pstFolder[i].cpath, "%s%s", devAttr.cMountPath,
-            devAttr.pstFolderAttr[i].cFolderPath);
-    RKADK_LOGI("%s", pHandle->stDevSta.pstFolder[i].cpath);
+    if (RKADK_MAX_FILE_PATH_LEN > strlen(devAttr.cMountPath) + strlen(devAttr.pstFolderAttr[i].cFolderPath)) {
+      snprintf(pHandle->stDevSta.pstFolder[i].cpath, RKADK_MAX_FILE_PATH_LEN, "%s%s",
+              devAttr.cMountPath, devAttr.pstFolderAttr[i].cFolderPath);
+      RKADK_LOGI("%s", pHandle->stDevSta.pstFolder[i].cpath);
+    } else {
+      RKADK_LOGE("cpath len: %d, cMountPath len: %d, cFolderPath len: %d",
+                  RKADK_MAX_FILE_PATH_LEN, strlen(devAttr.cMountPath), strlen(devAttr.pstFolderAttr[i].cFolderPath));
+      goto file_scan_out;
+    }
 
     pthread_mutex_init(&(pHandle->stDevSta.pstFolder[i].mutex), NULL);
     if (pHandle->stDevSta.s32MountStatus != DISK_UNMOUNTED) {

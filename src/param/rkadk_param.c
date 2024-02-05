@@ -350,13 +350,10 @@ static bool RKADK_PARAM_CheckCfgU32(RKADK_U32 *u32Value, RKADK_U32 u32Min,
 }
 
 static bool RKADK_PARAM_CheckCfgStr(char *value, const char *defValue,
-                                    RKADK_U32 S32ValueLen, const char *tag) {
-  RKADK_U32 len;
-
-  len = S32ValueLen > strlen(defValue) ? strlen(defValue) : S32ValueLen;
+                                    RKADK_U32 s32ValueLen, const char *tag) {
   if (!strlen(value)) {
     RKADK_LOGW("%s: invalid value(%s), use default(%s)", tag, value, defValue);
-    strncpy(value, defValue, len);
+    snprintf(value, s32ValueLen, "%s", defValue);
     return true;
   } else {
     return false;
@@ -548,9 +545,24 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
     RKADK_PARAM_SaveRecCfg(path, u32CamId);
 
   for (int i = 0; i < (int)pstRecCfg->file_num; i++) {
-    RKADK_STREAM_TYPE_E enStrmType;
+    RKADK_STREAM_TYPE_E enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+    RKADK_U32 u32DefWidth, u32DefHeight, u32DefChn, u32DefBitrate;
     RKADK_PARAM_VENC_ATTR_S *pstAttribute = &pstRecCfg->attribute[i];
     RKADK_PARAM_REC_TIME_CFG_S *pstRecTimeCfg = &pstRecCfg->record_time_cfg[i];
+
+    if (i == 0) {
+      enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
+      u32DefWidth = RECORD_VIDEO_WIDTH;
+      u32DefHeight = RECORD_VIDEO_HEIGHT;
+      u32DefChn = 0;
+      u32DefBitrate = 30 * 1024 * 1024;
+    } else {
+      enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      u32DefWidth = RECORD_VIDEO_WIDTH_S;
+      u32DefHeight = RECORD_VIDEO_HEIGHT_S;
+      u32DefChn = 1;
+      u32DefBitrate = 4 * 1024 * 1024;
+    }
 
     // check record time
     change =
@@ -570,21 +582,6 @@ static void RKADK_PARAM_CheckRecCfg(char *path, RKADK_U32 u32CamId) {
         strcmp(pstAttribute->rc_mode, "AVBR")) {
       memcpy(pstAttribute->rc_mode, "CBR", strlen("CBR"));
       change = true;
-    }
-
-    RKADK_U32 u32DefWidth, u32DefHeight, u32DefChn, u32DefBitrate;
-    if (i == 0) {
-      enStrmType = RKADK_STREAM_TYPE_VIDEO_MAIN;
-      u32DefWidth = RECORD_VIDEO_WIDTH;
-      u32DefHeight = RECORD_VIDEO_HEIGHT;
-      u32DefChn = 0;
-      u32DefBitrate = 30 * 1024 * 1024;
-    } else {
-      enStrmType = RKADK_STREAM_TYPE_VIDEO_SUB;
-      u32DefWidth = RECORD_VIDEO_WIDTH_S;
-      u32DefHeight = RECORD_VIDEO_HEIGHT_S;
-      u32DefChn = 1;
-      u32DefBitrate = 4 * 1024 * 1024;
     }
 
     change |=
@@ -749,8 +746,7 @@ static bool RKADK_PARAM_CheckVersion(char *path) {
     RKADK_LOGE("load default ini version failed");
     return false;
   }
-  strncpy(version, pstCfg->stVersion.version,
-          strlen(pstCfg->stVersion.version));
+  strncpy(version, pstCfg->stVersion.version, RKADK_BUFFER_LEN);
 
   memset(&pstCfg->stVersion, 0, sizeof(RKADK_PARAM_VERSION_S));
   ret = RKADK_Ini2Struct(path, &pstCfg->stVersion, g_stVersionMapTable,
@@ -2160,8 +2156,6 @@ PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt,
 static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
                                              RKADK_STREAM_TYPE_E enStrmType) {
   int index;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
 
@@ -2187,6 +2181,7 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
 #ifndef RV1106_1103
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
     pstStreamCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
@@ -2373,8 +2368,6 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
 
 static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   int index;
-  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg =
-      &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   RKADK_PARAM_THUMB_CFG_S *pstThumbCfg =
       &g_stPARAMCtx.stCfg.stMediaCfg[s32CamId].stThumbCfg;
   RKADK_PARAM_VI_CFG_S *pstViCfg = NULL;
@@ -2396,6 +2389,7 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
 #ifndef RV1106_1103
+  RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
     pstThumbCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;

@@ -15,11 +15,7 @@
  */
 
 #include "rkadk_demuxer.h"
-#include "linux_list.h"
 #include "rkadk_log.h"
-#include "rkadk_param.h"
-#include "rkadk_signal.h"
-#include "rkadk_thread.h"
 #include "rkdemuxer.h"
 
 RKADK_S32 RKADK_DEMUXER_Create(RKADK_MW_PTR *demuxerCfg, RKADK_DEMUXER_INPUT_S *demuxerInput) {
