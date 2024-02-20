@@ -58,8 +58,8 @@ RKADK_S32 RKAduioMp3EncoderOpen(RK_VOID *pEncoderAttr, RK_VOID **ppEncoder) {
   }
 
   memset(ctx, 0, sizeof(RKADK_AENC_MP3_CTX_S));
-  if (attr->u32Resv[0] > 1152) {
-    RKADK_LOGE("error: MP3 FrameLength is too large, FrameLength = %d", attr->u32Resv[0]);
+  if (attr->u32Resv[0] <= 0) {
+    RKADK_LOGE("Invalid frame length[%d]", attr->u32Resv[0]);
     goto __FAILED;
   }
 
