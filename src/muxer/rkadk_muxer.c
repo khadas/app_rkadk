@@ -842,6 +842,11 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
   stFrame.pstPack = &stPack;
 
+  if (strcmp(pstMuxerHandle->cOutputFmt, "mp4")) {
+    RKADK_LOGI("Format[%s] don't support built-in thumbnails", pstMuxerHandle->cOutputFmt);
+    return false;
+  }
+
   position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
   if (pstMuxerHandle->bIOError || position > 0)
     bGetThumb = true;
