@@ -1106,11 +1106,34 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   return ret;
 }
 
-void SAMPLE_ISP_WakeUpPause(RKADK_U32 u32CamId, bool isSingleMode) {
-  printf("aiq uapi1 unsupport pause");
+void SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    printf("Invalid u32CamId[%d]", u32CamId);
+    return;
+  }
+
+  if (!gstIspHandle[u32CamId].pstAiqCtx) {
+    printf("pstAiqCtx not init");
+    return;
+  }
+
+  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_pause");
+  rk_aiq_uapi_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx, true);
 }
-void SAMPLE_ISP_WakeUpResume(RKADK_U32 u32CamId) {
-  printf("aiq uapi1 unsupport resume");
+
+void SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
+  if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
+    printf("Invalid u32CamId[%d]", u32CamId);
+    return;
+  }
+
+  if (!gstIspHandle[u32CamId].pstAiqCtx) {
+    printf("pstAiqCtx not init");
+    return;
+  }
+
+  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
+  rk_aiq_uapi_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
 }
 
 int SAMPLE_ISP_GetAINrParams(RKADK_U32 u32CamId, rk_ainr_param *param) {

@@ -17,8 +17,6 @@
 #include "rkadk_common.h"
 
 typedef enum {
-  RKADK_CMD_RESUME = 0,
-  RKADK_CMD_PAUSE,
   RKADK_CMD_SLEEP,
   RKADK_CMD_EXIT,
 } RKADK_COMMAND_E;

@@ -30,13 +30,12 @@
 
 #ifdef ENABLE_AOV
 #include "rkadk_aov.h"
-#include "sensor_iq_info.h"
 #endif
 
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:m:P:M:S:l:d:r:kh";
+static RKADK_CHAR optstr[] = "a:I:p:m:S:l:d:kh";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -53,10 +52,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
   printf("\t-l: loop switch normal record and aov lapse record count, Default: 0\n");
   printf("\t-d: loop switch once duration(second), Default: 30s\n");
-  printf("\t-P: path of meta.img, Deafult: /oem/usr/share/meta_sc200ai.img\n");
-  printf("\t-M: aov ae wakeup mode, 0: MD wakupe: 1: always wakeup, 2: no wakeup, Default: 0\n");
   printf("\t-S: aov suspend time, Default: 1000ms\n");
-  printf("\t-r: path of rtthread_wakeup.bin, Deafult: /oem/usr/share/rtthread_wakeup.bin\n");
 }
 
 static RKADK_S32
@@ -66,7 +62,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
 
   RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
-  if (u32FileIdx >= 4)
+  if (u32FileIdx >= 100)
     u32FileIdx = 0;
 
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
@@ -181,16 +177,11 @@ int main(int argc, char *argv[]) {
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_S32 s32CamId = 0;
-  FILE_CACHE_ATTR_S stFileCacheAttr;
+  FILE_CACHE_ARG stFileCacheAttr;
   int loopCount = -1, loopDuration = 30;
 
 #ifdef ENABLE_AOV
   RKADK_S32 s32SuspendTime = 1000;
-  RKADK_META_PARA_VIR *pstMetaVir = NULL;
-  RKADK_CHAR *pMetaPath = "/oem/usr/share/meta_sc200ai.img";
-  RKADK_CHAR *rttWakeupBinPath = "/oem/usr/share/rtthread_wakeup.bin";
-  struct wakeup_param_info *wakeupParam;
-  RKADK_S32 s32AeMode = 0;
 #endif
 
 #ifdef RKAIQ
@@ -202,7 +193,6 @@ int main(int argc, char *argv[]) {
   memset(&stIspParam, 0, sizeof(SAMPLE_ISP_PARAM));
   stIspParam.iqFileDir = IQ_FILE_PATH;
 #endif
-
 
   system("mount -t vfat /dev/mmcblk1p1 /mnt/sdcard/");
 
@@ -242,15 +232,6 @@ int main(int argc, char *argv[]) {
     case 'S':
       s32SuspendTime = atoi(optarg);
       break;
-    case 'P':
-      pMetaPath = optarg;
-      break;
-    case 'M':
-      s32AeMode = atoi(optarg);
-      break;
-    case 'r':
-      rttWakeupBinPath = optarg;
-      break;
 #endif
     case 'l':
       loopCount = atoi(optarg);
@@ -268,15 +249,9 @@ int main(int argc, char *argv[]) {
   optind = 0;
 
 #ifdef ENABLE_AOV
-  RKADK_LOGD("s32SuspendTime: %d, s32AeMode: %d", s32SuspendTime, s32AeMode);
-  RKADK_LOGD("pMetaPath: %s", pMetaPath);
-  RKADK_LOGD("#Rtt Wakeup Bin Path: %s", rttWakeupBinPath);
+  RKADK_AOV_Init();
 
-  if (RKADK_AOV_WakeupBinMmap(rttWakeupBinPath)) {
-    RKADK_LOGE("rtthread wakeup bin load fail");
-    return -1;
-  }
-
+  RKADK_LOGD("s32SuspendTime: %d", s32SuspendTime);
   RKADK_AOV_SetSuspendTime(s32SuspendTime);
 #endif
 
@@ -313,24 +288,6 @@ record:
     return -1;
   }
 
-#ifdef ENABLE_AOV
-  ret = RKADK_AOV_MetaMmap(&pstMetaVir, pMetaPath);
-  if (ret || pstMetaVir == NULL) {
-    RKADK_LOGE("RKADK_AOV_MetaMmap failed[%d]", ret);
-    return -1;
-  }
-
-  wakeupParam = (struct wakeup_param_info *)pstMetaVir->wakeupParamOffset;
-  wakeupParam->ae_wakeup_mode = s32AeMode;
-  wakeupParam->arm_max_run_count = -1;
-  wakeupParam->mcu_max_run_count = -1;
-
-  struct sensor_iq_info *sensor_iq = (struct sensor_iq_info *)pstMetaVir->sensorIqBinOffset;
-  stIspParam.iqAddr = (uint8_t *)((void *)sensor_iq + sizeof(struct sensor_iq_info));
-  stIspParam.iqLen = sensor_iq->main_sensor_iq_size;
-  stIspParam.aiqRttShare = pstMetaVir->wakeupAovParamOffset;
-#endif
-
   stIspParam.WDRMode = RK_AIQ_WORKING_MODE_NORMAL;
   stIspParam.bMultiCam = bMultiCam;
   stIspParam.fps = stFps.u32Framerate;
@@ -350,9 +307,11 @@ record:
   }
 #endif
 
-  stFileCacheAttr.pSdcardPath = "/dev/mmcblk1p1";
-  stFileCacheAttr.u32TotalCache = 7 * 1024 * 1024; // 7M
-  stFileCacheAttr.u32WriteCache = 1024 * 1024; // 1M
+  stFileCacheAttr.sdcard_path = "/dev/mmcblk1p1";
+  stFileCacheAttr.total_cache = 7 * 1024 * 1024; // 7M
+  stFileCacheAttr.write_cache = 1024 * 1024; // 1M
+  stFileCacheAttr.write_thread_arg.sched_policy = FILE_SCHED_FIFO;
+  stFileCacheAttr.write_thread_arg.priority = 99;
   RKADK_RECORD_FileCacheInit(&stFileCacheAttr);
 
   stRecAttr.s32CamID = s32CamId;
@@ -360,10 +319,8 @@ record:
   stRecAttr.pfnEventCallback = RecordEventCallback;
 
 #ifdef ENABLE_AOV
-  stRecAttr.stAovAttr.pMetaVir = pstMetaVir;
-  stRecAttr.stAovAttr.pfnWakeUpPause = SAMPLE_ISP_WakeUpPause;
-  stRecAttr.stAovAttr.pfnWakeUpResume = SAMPLE_ISP_WakeUpResume;
-  stRecAttr.stAovAttr.pfnSetFrameRate = SAMPLE_ISP_SET_FrameRate;
+  stRecAttr.stAovAttr.pfnSingleFrame = SAMPLE_ISP_SingleFrame;
+  stRecAttr.stAovAttr.pfnMultiFrame = SAMPLE_ISP_MultiFrame;
 #endif
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
@@ -535,12 +492,13 @@ __EXIT:
 #endif
   }
 
-#ifdef ENABLE_AOV
-  RKADK_AOV_MetaMunmap(pstMetaVir);
-#endif
-
   RKADK_RECORD_FileCacheDeInit();
   RKADK_MPI_SYS_Exit();
+
+#ifdef ENABLE_AOV
+    RKADK_AOV_DeInit();
+#endif
+
   RKADK_LOGD("exit!");
   return 0;
 }

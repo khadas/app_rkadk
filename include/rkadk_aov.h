@@ -21,64 +21,16 @@
 extern "C" {
 #endif
 
-#include <fcntl.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include "rkadk_common.h"
+#include <stdbool.h>
 
-#ifdef ENABLE_AOV
-#include "rk_meta.h"
-#include "rk_meta_wakeup_param.h"
-#endif
-
-// Memory region definitions
-#define RKADK_MEAT_PHY_ADDR 0x800000
-
-// Meta region
-#define RKADK_META_SIZE (384 * 1024)
-
-typedef struct {
-  int memFd;
-  void *mappedBase;
-  void *metaHead;
-  int metaHeadSize;
-  void *paramShare2kernelOffset;
-  int paramShare2kernelOffsetSize;
-  void *sensorInitOffset;
-  int sensorInitOffsetSize;
-  void *cmdlineOffset;
-  int cmdlineOffsetSize;
-  void *aeTableOffset;
-  int aeTableOffsetSize;
-  void *appParamOffset;
-  int appParamOffsetSize;
-  void *secondarySensorInitOffset;
-  int secondarySensorInitOffsetSize;
-  void *wakeupParamOffset;
-  int wakeupParamOffsetSize;
-  void *reserve;
-  int reserveSize;
-  void *backup;
-  int backupSize;
-  void *sensorIqBinOffset;
-  int sensorIqBinOffsetSize;
-  void *secondarySensorIqBinOffset;
-  int secondarySensorIqBinOffsetSize;
-  void *wakeupAovParamOffset;
-  int wakeupAovParamMaxSize;
-} RKADK_META_PARA_VIR;
-
-// meta
-int RKADK_AOV_MetaMmap(RKADK_META_PARA_VIR **pMetaVir, char *pMetaFilePath);
-int RKADK_AOV_MetaMunmap(RKADK_META_PARA_VIR *pMetaVir);
-int RKADK_AOV_WakeupBinMmap(char *rtthreadWakeupBinPath);
-void RKADK_AOV_EnterSleep();
-int RKADK_AOV_IsExitAOV(RKADK_META_PARA_VIR *pMetaVir);
-void RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime);
+int RKADK_AOV_Init();
+int RKADK_AOV_DeInit();
+int RKADK_AOV_EnterSleep();
+int RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime);
+int RKADK_AOV_DisableNonBootCPUs();
+int RKADK_AOV_EnableNonBootCPUs();
+//void RKADK_AOV_DumpPtsToTMP(uint32_t seq, uint64_t pts, int max_dump_pts_count);
 
 #ifdef __cplusplus
 }

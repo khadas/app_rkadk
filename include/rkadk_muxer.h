@@ -171,15 +171,13 @@ typedef enum {
   RKADK_REC_TYPE_BUTT,
 } RKADK_MUXER_REC_TYPE_E;
 
-typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId, bool isSingleMode);
+typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId);
 typedef void (*RKADK_ISP_WAKE_UP_RESUME)(RKADK_U32 u32CamId);
 typedef int (*RKADK_ISP_SET_FRAME_RATE)(RKADK_U32 u32CamId, unsigned int uFps);
 
 typedef struct {
-  RKADK_META_PARA_VIR *pMetaVir;
-  RKADK_ISP_WAKE_UP_PAUSE pfnWakeUpPause;
-  RKADK_ISP_WAKE_UP_RESUME pfnWakeUpResume;
-  RKADK_ISP_SET_FRAME_RATE pfnSetFrameRate;
+  RKADK_ISP_WAKE_UP_PAUSE pfnSingleFrame;
+  RKADK_ISP_WAKE_UP_RESUME pfnMultiFrame;
 } RKADK_AOV_ATTR_S;
 
 /* muxer attribute param */
@@ -196,6 +194,11 @@ typedef struct {
   RKADK_AOV_ATTR_S stAovAttr;
 } RKADK_MUXER_ATTR_S;
 
+typedef enum {
+  MULTI_FRAME_MODE,
+  SINGLE_FRAME_MODE,
+} RKADK_ISP_FRAME_MODE;
+
 typedef struct {
   RKADK_U32 u32CamId;
   RKADK_MUXER_REC_TYPE_E enRecType;
@@ -204,6 +207,7 @@ typedef struct {
   RKADK_U64 u64AudioPts;
   RKADK_U32 u32FragKeyFrame;
   RKADK_AOV_ATTR_S stAovAttr;
+  RKADK_ISP_FRAME_MODE enFrameMode;
 } RKADK_MUXER_HANDLE_S;
 
 /**
