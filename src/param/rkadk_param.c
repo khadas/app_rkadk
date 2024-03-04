@@ -2149,8 +2149,6 @@ PIXEL_FORMAT_E RKADK_PARAM_GetPixFmt(char *pixFmt,
     enPixelFormat = RK_FMT_RGB_BAYER_SGRBG_12BPP;
   else if (!strcmp(pixFmt, "RGB_BAYER_SRGGB_12BPP"))
     enPixelFormat = RK_FMT_RGB_BAYER_SRGGB_12BPP;
-  else if (!strcmp(pixFmt, "RGB_BAYER_14BPP"))
-    enPixelFormat = RK_FMT_RGB_BAYER_14BPP;
   else if (!strcmp(pixFmt, "RGB_BAYER_SBGGR_16BPP"))
     enPixelFormat = RK_FMT_RGB_BAYER_SBGGR_16BPP;
   else
