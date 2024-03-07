@@ -23,13 +23,28 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <pthread.h>
 
-int RKADK_AOV_Init();
+typedef enum {
+  RKADK_AOV_ENTER_SLEEP = 0,
+  RKADK_AOV_EVENT_BUTT
+} RKADK_AOV_EVENT_E;
+
+typedef void (*RKADK_AOV_NOTIFY_CALLBACK)(RKADK_AOV_EVENT_E enEvent, void *msg);
+
+typedef struct {
+  RKADK_AOV_NOTIFY_CALLBACK pfnNotifyCallback;
+} RKADK_AOV_ARG_S;
+
+void RKADK_AOV_WakeupLock();
+void RKADK_AOV_WakeupUnlock();
+int RKADK_AOV_Init(RKADK_AOV_ARG_S *pstAovAttr);
 int RKADK_AOV_DeInit();
 int RKADK_AOV_EnterSleep();
 int RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime);
 int RKADK_AOV_DisableNonBootCPUs();
 int RKADK_AOV_EnableNonBootCPUs();
+void RKADK_AOV_Notify(RKADK_AOV_EVENT_E enEvent, void *msg);
 //void RKADK_AOV_DumpPtsToTMP(uint32_t seq, uint64_t pts, int max_dump_pts_count);
 
 #ifdef __cplusplus

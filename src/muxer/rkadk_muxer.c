@@ -142,8 +142,6 @@ typedef struct {
   MANUAL_SPLIT_ATTR stManualSplit;
   MUXER_PRE_RECORD_PARAM stPreRecParam;
 
-  int enableFileCache;
-
 #ifdef ENABLE_AOV
   AOV_PARAM_S stAovParam;
 #endif
@@ -233,9 +231,7 @@ static void *RKADK_MUXER_AovProc(void *arg) {
 
     if (stAovMsg.command == RKADK_CMD_SLEEP) {
       if (bIsSleep) {
-        if(RKADK_AOV_EnterSleep())
-          RKADK_LOGE("Enter sleep failed");
-
+        RKADK_AOV_Notify(RKADK_AOV_ENTER_SLEEP, NULL);
         for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
           if (!g_pRecorder[i])
             continue;
@@ -255,7 +251,7 @@ static void *RKADK_MUXER_AovProc(void *arg) {
 }
 
 static int RKADK_MUXER_AovInit(RKADK_AOV_ATTR_S *pstAovAttr) {
-  int ret;
+  int ret = 0;
   AOV_HANDLE_S *pstAovHandle = &stAovHandle;
 
   if (pstAovHandle->initCnt == 0) {
@@ -375,9 +371,7 @@ static int RKADK_MUXER_EnterSleep(RKADK_MW_PTR pHandle, RKADK_S32 s32VencChnId) 
   }
 
   if (bIsSleep) {
-    if(RKADK_AOV_EnterSleep())
-      RKADK_LOGE("Enter sleep failed");
-
+    RKADK_AOV_Notify(RKADK_AOV_ENTER_SLEEP, NULL);
     for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
       if (!g_pRecorder[i])
         continue;
@@ -397,6 +391,7 @@ static void RKADK_MUXER_AovDropFrame(RKADK_MUXER_HANDLE_S *pstMuxer) {
   VENC_STREAM_S stFrame;
   VENC_PACK_S stPack;
   RKADK_U32 u32LoopCount = 0;
+  int ret;
 
   stFrame.pstPack = &stPack;
   for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
@@ -405,21 +400,23 @@ static void RKADK_MUXER_AovDropFrame(RKADK_MUXER_HANDLE_S *pstMuxer) {
       continue;
 
     u32LoopCount = 0;
-    while (RK_MPI_VENC_GetStream(pstMuxerHandle->u32VencChn, &stFrame, 1000) == RK_SUCCESS) {
-      RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32VencChn, &stFrame);
-      u32LoopCount++;
-      if (u32LoopCount > 30)
-        RKADK_LOGW("CamId[%d] venc[%d] drop too much frame[%d]!!!", pstMuxer->u32CamId, pstMuxerHandle->u32VencChn, u32LoopCount);
+    while (1) {
+      ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32VencChn, &stFrame, 1000);
+      if (ret == RK_SUCCESS) {
+        RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32VencChn, &stFrame);
+        u32LoopCount++;
+        if (u32LoopCount > 30)
+          RKADK_LOGW("CamId[%d] venc[%d] drop too much frame[%d]!!!", pstMuxer->u32CamId, pstMuxerHandle->u32VencChn, u32LoopCount);
+      } else {
+        break;
+      }
     }
+
+    RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
   }
 }
 
 static int RKADK_MUXER_AovSwichMode(RKADK_MUXER_HANDLE_S *pstMuxer) {
-  MUXER_HANDLE_S *pstMuxerHandle = NULL;
-  VENC_STREAM_S stFrame;
-  VENC_PACK_S stPack;
-  RKADK_U32 u32LoopCount = 0;
-
   if (pstMuxer->enFrameMode == MULTI_FRAME_MODE && pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
     if (!pstMuxer->stAovAttr.pfnSingleFrame) {
       RKADK_LOGE("CamId[%d] unregistered pfnSingleFrame", pstMuxer->u32CamId);
@@ -428,9 +425,7 @@ static int RKADK_MUXER_AovSwichMode(RKADK_MUXER_HANDLE_S *pstMuxer) {
 
     pstMuxer->stAovAttr.pfnSingleFrame(pstMuxer->u32CamId);
     pstMuxer->enFrameMode = SINGLE_FRAME_MODE;
-
     RKADK_MUXER_AovDropFrame(pstMuxer);
-
     RKADK_MUXER_EnterSleep((RKADK_MW_PTR)pstMuxer, -1);
     return 0;
   }
@@ -700,8 +695,9 @@ static void RKADK_MUXER_CheckWriteSpeed(MUXER_HANDLE_S *pstMuxerHandle) {
   struct timeval curTime;
   float diff = 0;
   long diffMs = 0;
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
 
-  if (pstMuxerHandle->enableFileCache)
+  if (pstMuxer->enableFileCache)
     return;
 
   gettimeofday(&curTime, NULL);
@@ -828,15 +824,6 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   RKADK_MUXER_CellPush(pstMuxerHandle, &pstMuxerHandle->stProcList, pstCell);
   RKADK_SIGNAL_Give(pstMuxerHandle->pSignal);
 
-#ifdef ENABLE_AOV
-  if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
-    RKADK_MUTEX_LOCK(stAovHandle.mutex);
-    if (!pstMuxerHandle->stAovParam.bIsSleep)
-      RKADK_MUXER_EnterSleep(pstMuxer, pstMuxerHandle->u32VencChn);
-    RKADK_MUTEX_UNLOCK(stAovHandle.mutex);
-  }
-#endif
-
   return 0;
 }
 
@@ -884,7 +871,7 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
     while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
       if (cnt % 100 == 0) {
         RKADK_LOGI("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->u32VencChn, cnt);
-        if (!pstMuxerHandle->enableFileCache && cnt != 0)
+        if (!pstMuxer->enableFileCache && cnt != 0)
           RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
       }
       cnt++;
@@ -1246,10 +1233,10 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_MUTEX_UNLOCK(pstMuxerHandle->paramMutex);
           if (ret) {
             RKADK_LOGE("rkmuxer_init[%d] failed[%d]", pstMuxerHandle->muxerId, ret);
-            if (!pstMuxerHandle->enableFileCache)
+            if (!pstMuxer->enableFileCache)
               RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL, 0);
           } else {
-            if (!pstMuxerHandle->enableFileCache)
+            if (!pstMuxer->enableFileCache)
               RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_BEGIN, u32Duration);
             if (RKADK_MUXER_PreRecProc(pstMuxerHandle)) {
               MUXER_BUF_CELL_S *firstCell = RKADK_MUXER_CellPop(pstMuxerHandle, &pstMuxerHandle->stProcList);
@@ -1306,7 +1293,7 @@ static bool RKADK_MUXER_Proc(void *params) {
           RKADK_MUXER_RequestThumb(pstMuxerHandle, cell);
 
           if (pstMuxerHandle->stThumbParam.bGetThumb) {
-            if (pstMuxerHandle->enableFileCache) {
+            if (pstMuxer->enableFileCache) {
               if (pstMuxerHandle->realDuration >= 5000)
                 pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
             } else {
@@ -1325,6 +1312,16 @@ static bool RKADK_MUXER_Proc(void *params) {
         } else {
           RKADK_LOGE("unknow pool");
         }
+
+#ifdef ENABLE_AOV
+        if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+          RKADK_MUTEX_LOCK(stAovHandle.mutex);
+          if (!pstMuxerHandle->stAovParam.bIsSleep)
+            RKADK_MUXER_EnterSleep(pstMuxer, pstMuxerHandle->u32VencChn);
+          RKADK_MUTEX_UNLOCK(stAovHandle.mutex);
+        }
+#endif
+
       }
     }
 
@@ -1467,8 +1464,7 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
     memset(pMuxerHandle, 0, sizeof(MUXER_HANDLE_S));
 
 #ifdef FILE_CACHE
-    pMuxerHandle->enableFileCache = getenv("file_cache_env") && atoi(getenv("file_cache_env"));
-    if (pMuxerHandle->enableFileCache && pstMuxer->u32FragKeyFrame) {
+    if (pstMuxer->enableFileCache && pstMuxer->u32FragKeyFrame) {
       RKADK_LOGW("file cache don't support key frame fragment");
       pstMuxer->u32FragKeyFrame = 0;
     }
@@ -1608,6 +1604,16 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
 #ifdef ENABLE_AOV
   if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
     RKADK_MUXER_AovInit(&pstMuxerAttr->stAovAttr);
+#endif
+
+#ifdef FILE_CACHE
+  pstMuxer->enableFileCache = getenv("file_cache_env") && atoi(getenv("file_cache_env"));
+  if (pstMuxer->enableFileCache) {
+    if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
+      file_cache_set_mode(AOV_MODE);
+    else
+      file_cache_set_mode(NORMAL_MODE);
+  }
 #endif
 
 #if defined(FILE_CACHE) || defined(ENABLE_AOV)

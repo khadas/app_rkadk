@@ -62,6 +62,8 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ARG *pstFileCacheAttr);
  */
 RKADK_S32 RKADK_RECORD_FileCacheDeInit();
 
+void RKADK_RECORD_FileCacheSetMode(RKADK_REC_TYPE_E enRecType);
+
 /**
  * @brief create a new recorder
  * @param[in]pstRecAttr : the attribute of recorder

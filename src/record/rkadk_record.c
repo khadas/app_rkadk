@@ -1773,3 +1773,17 @@ RKADK_S32 RKADK_RECORD_FileCacheDeInit() {
   return -1;
 #endif
 }
+
+void RKADK_RECORD_FileCacheSetMode(RKADK_REC_TYPE_E enRecType) {
+#ifdef FILE_CACHE
+  FILE_WRITE_MODE enWriteMode;
+
+  if (enRecType == RKADK_REC_TYPE_AOV_LAPSE)
+    enWriteMode = AOV_MODE;
+  else
+    enWriteMode = NORMAL_MODE;
+  file_cache_set_mode(enWriteMode);
+#else
+  RKADK_LOGE("Not define FILE_CACHE");
+#endif
+}

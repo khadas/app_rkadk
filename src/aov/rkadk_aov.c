@@ -19,7 +19,6 @@
 #include "rkadk_aov.h"
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -27,11 +26,20 @@
 
 #define SOC_SLEEP_STR "mem"
 #define SOC_SLEEP_PATH "/sys/power/state"
-
 static pthread_mutex_t gWakeupRunMutex = PTHREAD_MUTEX_INITIALIZER;
+static RKADK_AOV_NOTIFY_CALLBACK gpfnNotifyCallback = NULL;
 
-int RKADK_AOV_Init() {
+void RKADK_AOV_WakeupLock() {
+  pthread_mutex_lock(&gWakeupRunMutex);
+}
+
+void RKADK_AOV_WakeupUnlock() {
+  pthread_mutex_unlock(&gWakeupRunMutex);
+}
+
+int RKADK_AOV_Init(RKADK_AOV_ARG_S *pstAovAttr) {
   pthread_mutex_init(&gWakeupRunMutex, NULL);
+  gpfnNotifyCallback = pstAovAttr->pfnNotifyCallback;
   return 0;
 }
 
@@ -44,7 +52,7 @@ int RKADK_AOV_EnterSleep() {
   int fd = -1;
   ssize_t ret = -1;
 
-  pthread_mutex_lock(&gWakeupRunMutex);
+  //pthread_mutex_lock(&gWakeupRunMutex);
   fd = open(SOC_SLEEP_PATH, O_WRONLY | O_TRUNC);
   if (fd == -1) {
     RKADK_LOGE("Failed to open %s, errno=%d, %s", SOC_SLEEP_PATH, errno, strerror(errno));
@@ -64,8 +72,15 @@ EXIT:
   if (fd >= 0)
     close(fd);
 
-  pthread_mutex_unlock(&gWakeupRunMutex);
+  //pthread_mutex_unlock(&gWakeupRunMutex);
   return ret;
+}
+
+void RKADK_AOV_Notify(RKADK_AOV_EVENT_E enEvent, void *msg) {
+  if (gpfnNotifyCallback)
+    gpfnNotifyCallback(enEvent, msg);
+  else
+    RKADK_LOGW("Unregistered notify callback");
 }
 
 int RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime) {

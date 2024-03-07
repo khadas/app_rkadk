@@ -206,6 +206,7 @@ typedef struct {
   RKADK_MW_PTR pMuxerHandle[RKADK_MUXER_STREAM_MAX_CNT];
   RKADK_U64 u64AudioPts;
   RKADK_U32 u32FragKeyFrame;
+  int enableFileCache;
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_ISP_FRAME_MODE enFrameMode;
 } RKADK_MUXER_HANDLE_S;

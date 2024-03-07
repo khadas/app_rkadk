@@ -354,6 +354,7 @@ record:
   stPostIspAttr.stAiIspCallback.pfUpdateCallback = PostIspCallback;
   stPostIspAttr.u32FrameBufCnt = 2;
 
+  memset(&stFileCacheAttr, 0, sizeof(FILE_CACHE_ARG));
   stFileCacheAttr.sdcard_path = "/dev/mmcblk1p1";
   stFileCacheAttr.total_cache = 7 * 1024 * 1024; // 7M
   stFileCacheAttr.write_cache = 1024 * 1024; // 1M
