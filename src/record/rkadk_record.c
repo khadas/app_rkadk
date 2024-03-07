@@ -478,8 +478,9 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
     }
     RKADK_BUFINFO("create venc[%d]", pstRecCfg->attribute[i].venc_chn);
 
-    RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[i].venc_chn, RKADK_ENCODE_SENSE_CVR);
     RKADK_PARAM_SetVAdvancedParam(pstRecCfg->attribute[i]);
+    if (pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE)
+      RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[i].venc_chn, RKADK_ENCODE_SENSE_CVR);
 
     if (i == 0) {
       enThumbModule = RKADK_THUMB_MODULE_MAIN_RECORD;
@@ -1213,6 +1214,11 @@ static RKADK_S32 RKADK_RECORD_ResetVideo(RKADK_U32 u32CamId,
     memset(&stVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
     memset(&stViAttr, 0, sizeof(VI_CHN_ATTR_S));
     memset(&stVpssAttr, 0, sizeof(VPSS_CHN_ATTR_S));
+
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_AOV_LAPSE)
+      RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[index].venc_chn, RKADK_ENCODE_SENSE_IPC);
+    else
+      RK_MPI_VENC_SetSceneMode(pstRecCfg->attribute[index].venc_chn, RKADK_ENCODE_SENSE_CVR);
 
     u32VpssGrp = pstRecCfg->attribute[index].vpss_grp;
     u32VpssChn = pstRecCfg->attribute[index].vpss_chn;
