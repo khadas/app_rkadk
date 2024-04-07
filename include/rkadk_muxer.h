@@ -65,6 +65,17 @@ typedef struct {
   } unEventInfo;
 } RKADK_MUXER_EVENT_INFO_S;
 
+typedef struct {
+  RKADK_U32 u32CamId;
+  RKADK_U32 u32ChnId;
+  RKADK_U64 u64PTS;
+  RKADK_U32 u32Seq;
+  const char *pFileName;
+} RKADK_MUXER_PTS_INFO_S;
+
+/* muxer pts callback function */
+typedef RKADK_VOID (*RKADK_MUXER_PTS_CALLBACK_FN)(const RKADK_MUXER_PTS_INFO_S *pstPtsInfo);
+
 /* muxer event callback function */
 typedef RKADK_VOID (*RKADK_MUXER_EVENT_CALLBACK_FN)(
     RKADK_MW_PTR pHandle, const RKADK_MUXER_EVENT_INFO_S *pstEventInfo);
@@ -191,6 +202,7 @@ typedef struct {
   RKADK_MUXER_PRE_RECORD_ATTR_S stPreRecordAttr;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
+  RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
   RKADK_AOV_ATTR_S stAovAttr;
 } RKADK_MUXER_ATTR_S;
 
@@ -209,6 +221,7 @@ typedef struct {
   int enableFileCache;
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_ISP_FRAME_MODE enFrameMode;
+  RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
 } RKADK_MUXER_HANDLE_S;
 
 /**

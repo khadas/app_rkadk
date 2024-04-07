@@ -56,6 +56,7 @@ typedef struct {
   int64_t pts;
   bool bIsPool;
   struct list_head *pool;
+  RKADK_U32 seq;
 } MUXER_BUF_CELL_S;
 
 typedef struct {
@@ -120,6 +121,7 @@ typedef struct {
   RKADK_MUXER_REC_TYPE_E enRecType;
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
+  RKADK_U32 u32FirstSeq;
   bool bIOError;
   pthread_mutex_t paramMutex;
   RKADK_MUXER_REQUEST_FILE_NAME_CB pcbRequestFileNames;
@@ -147,8 +149,10 @@ typedef struct {
 #endif
 
 #ifdef RKADK_MUXER_TEST
-  RKADK_S64 diff_pts;
-  RKADK_U64 pre_pts;
+  RKADK_S64 S64DiffPts;
+  RKADK_U64 u32PrePts;
+  RKADK_U32 u32PreSeq;
+  RKADK_U32 u32DiffSeq;
 #endif
 } MUXER_HANDLE_S;
 
@@ -782,6 +786,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   cell.bIsPool = true;
   cell.pool = &pstMuxerHandle->stVFree;
   cell.pMbBlk = stData.stFrame.pstPack->pMbBlk;
+  cell.seq = stData.stFrame.u32Seq;
   cell.pfnCellReleaseBuf = RKADK_MUXER_CellReleaseBuf;
   RKADK_MUXER_PreRecPush(pstMuxerHandle, &pstMuxerHandle->stPreRecParam.stVList, &cell);
 
@@ -790,13 +795,19 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
 
 #ifdef RKADK_MUXER_TEST
   if (pstMuxer->enRecType != RKADK_REC_TYPE_NORMAL) {
-    pstMuxerHandle->diff_pts = pts - pstMuxerHandle->pre_pts;
-    pstMuxerHandle->pre_pts = pts;
+    pstMuxerHandle->S64DiffPts = pts - pstMuxerHandle->u32PrePts;
+    pstMuxerHandle->u32PrePts = pts;
     printf("\n\n");
-    printf("----- muxerId[%d]: pts: %lld, frameCnt: %d, diff_pts: %lld -----", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->diff_pts);
+    printf("muxerId[%d]: pts: %lld, frameCnt: %d, S64DiffPts: %lld\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->S64DiffPts);
     system("cat proc/rkisp-vir0 | grep frame");
     printf("\n\n");
   }
+
+  pstMuxerHandle->S64DiffPts = pts - pstMuxerHandle->u32PrePts;
+  pstMuxerHandle->u32PrePts = pts;
+  pstMuxerHandle->u32DiffSeq = cell.seq - pstMuxerHandle->u32PreSeq;
+  pstMuxerHandle->u32PreSeq = cell.seq;
+  printf("muxerId[%d]: S64DiffPts: %lld, seq: %d, u32DiffSeq: %d\n", pstMuxerHandle->muxerId, pstMuxerHandle->S64DiffPts, cell.seq, pstMuxerHandle->u32DiffSeq);
 #endif
 
   RKADK_MUXER_CheckWriteSpeed(pstMuxerHandle);
@@ -819,6 +830,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
   pstCell->size = cell.size;
   pstCell->bIsPool = true;
   pstCell->pMbBlk = cell.pMbBlk;
+  pstCell->seq = cell.seq;
   pstCell->pfnCellReleaseBuf = RKADK_MUXER_CellReleaseBuf;
   RK_MPI_MB_AddUserCnt(stData.stFrame.pstPack->pMbBlk);
   RKADK_MUXER_CellPush(pstMuxerHandle, &pstMuxerHandle->stProcList, pstCell);
@@ -1185,6 +1197,8 @@ static bool RKADK_MUXER_Proc(void *params) {
   RKADK_U32 u32Duration;
   MUXER_BUF_CELL_S *cell = NULL;
   RKADK_U32 u32LapseFrameInterval = 0;
+  int64_t pts;
+  RKADK_MUXER_PTS_INFO_S stPtsInfo;
 
   if (!params) {
     RKADK_LOGE("Invalid param");
@@ -1204,6 +1218,7 @@ static bool RKADK_MUXER_Proc(void *params) {
       else
         u32Duration = pstMuxerHandle->duration;
 
+      pts = cell->pts;
       if (pstMuxer->enRecType == RKADK_REC_TYPE_LAPSE) {
         cell->pts = cell->pts / pstMuxerHandle->stVideo.frame_rate_num;
       } else if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
@@ -1254,6 +1269,8 @@ static bool RKADK_MUXER_Proc(void *params) {
             pstMuxerHandle->lapseTimeStamp = pstMuxerHandle->startTime;
             pstMuxerHandle->stThumbParam.bGetThumb = true;
             pstMuxerHandle->stThumbParam.bRequestThumb = true;
+            pstMuxerHandle->u32FirstSeq = cell->seq;
+            pts = cell->pts;
           }
         }
       } else if (!pstMuxerHandle->bMuxering) {
@@ -1269,12 +1286,21 @@ static bool RKADK_MUXER_Proc(void *params) {
         if (cell->pool == &pstMuxerHandle->stVFree) {
           ret = rkmuxer_write_video_frame(pstMuxerHandle->muxerId, cell->buf,
                                     cell->size, cell->pts, cell->isKeyFrame);
-           if (ret) {
-              RKADK_LOGE("Muxer[%d] write video frame failed", pstMuxerHandle->muxerId);
-              RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL, 0);
-              pstMuxerHandle->bIOError = true;
-              continue;
-           }
+          if (ret) {
+            RKADK_LOGE("Muxer[%d] write video frame failed", pstMuxerHandle->muxerId);
+            RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL, 0);
+            pstMuxerHandle->bIOError = true;
+            continue;
+          } else {
+            if (pstMuxer->pfnPtsCallback) {
+              stPtsInfo.u32CamId = pstMuxer->u32CamId;
+              stPtsInfo.u32ChnId = pstMuxerHandle->u32VencChn;
+              stPtsInfo.u64PTS = pts;
+              stPtsInfo.u32Seq = cell->seq - pstMuxerHandle->u32FirstSeq;
+              stPtsInfo.pFileName = pstMuxerHandle->cFileName;
+              pstMuxer->pfnPtsCallback(&stPtsInfo);
+            }
+          }
 
           if (pstMuxerHandle->bWriteFirstFrame) {
             RKADK_KLOG("Muxer[%d] Stream[%d] write first frame pts: %lld",
@@ -1599,6 +1625,7 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   pstMuxer->enRecType = pstMuxerAttr->enRecType;
   pstMuxer->u32FragKeyFrame = pstMuxerAttr->u32FragKeyFrame;
   pstMuxer->enFrameMode = MULTI_FRAME_MODE;
+  pstMuxer->pfnPtsCallback = pstMuxerAttr->pfnPtsCallback;
   memcpy(&pstMuxer->stAovAttr, &pstMuxerAttr->stAovAttr, sizeof(RKADK_AOV_ATTR_S));
 
 #ifdef ENABLE_AOV

@@ -1414,6 +1414,7 @@ RKADK_S32 RKADK_RECORD_Create(RKADK_RECORD_ATTR_S *pstRecAttr,
   }
   stMuxerAttr.pfnEventCallback = pstRecAttr->pfnEventCallback;
   stMuxerAttr.u32FragKeyFrame = pstRecAttr->u32FragKeyFrame;
+  stMuxerAttr.pfnPtsCallback = pstRecAttr->pfnPtsCallback;
   memcpy(&stMuxerAttr.stAovAttr, &pstRecAttr->stAovAttr, sizeof(RKADK_AOV_ATTR_S));
 
   if (RKADK_MUXER_Create(&stMuxerAttr, ppRecorder))

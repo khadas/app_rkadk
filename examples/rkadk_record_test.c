@@ -70,6 +70,14 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
   return 0;
 }
 
+static RKADK_VOID RecordPtsCallback(const RKADK_MUXER_PTS_INFO_S *pstPtsInfo) {
+  if (!pstPtsInfo)
+    return;
+
+  printf("u32CamId: %d, u32ChnId: %d, pFileName: %s, u64PTS: %lld, u32Seq: %d\n",
+            pstPtsInfo->u32CamId, pstPtsInfo->u32ChnId, pstPtsInfo->pFileName, pstPtsInfo->u64PTS, pstPtsInfo->u32Seq);
+}
+
 static RKADK_VOID
 RecordEventCallback(RKADK_MW_PTR pRecorder,
                     const RKADK_MUXER_EVENT_INFO_S *pstEventInfo) {
@@ -366,6 +374,7 @@ record:
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
   stRecAttr.pfnEventCallback = RecordEventCallback;
   stRecAttr.pstPostIspAttr = &stPostIspAttr;
+  stRecAttr.pfnPtsCallback = RecordPtsCallback;
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("s32CamId[%d] Create recorder failed", s32CamId);
