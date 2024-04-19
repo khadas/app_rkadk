@@ -303,7 +303,7 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
 }
 
 static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
-                                RKADK_PARAM_REC_CFG_S *pstRecCfg) {
+                                RKADK_PARAM_REC_CFG_S *pstRecCfg, RKADK_U32 *u32VpssBufCnt) {
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -321,19 +321,27 @@ static bool RKADK_RECORD_IsUseVpss(RKADK_U32 u32CamId, int index,
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = pstRecCfg->vi_attr[index].stChnAttr.stIspOpt.u32BufCount + 2;
     return true;
   }
 
 #ifdef RV1106_1103
   //main record use vpss switch resolution
   if (!pstSensorCfg->used_isp) {
-    if (pstRecCfg->switch_res && index == 0)
+    if (pstRecCfg->switch_res && index == 0) {
+      if (u32VpssBufCnt)
+        *u32VpssBufCnt = pstRecCfg->vi_attr[index].stChnAttr.stIspOpt.u32BufCount + 2;
       return true;
+    }
   }
 #endif
 
-  if (pstRecCfg->attribute[index].post_aiisp)
+  if (pstRecCfg->attribute[index].post_aiisp) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 0;
     return true;
+  }
 
   return false;
 }
@@ -352,6 +360,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
   RKADK_U32 u32ThumbVencChn;
   RKADK_THUMB_MODULE_E enThumbModule = RKADK_THUMB_MODULE_BUTT;
   RKADK_STREAM_TYPE_E enStrmType;
+  RKADK_U32 u32VpssBufCnt = 0;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(pstRecAttr->s32CamID);
   if (!pstRecCfg) {
@@ -397,7 +406,7 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
     RKADK_BUFINFO("create vi[%d]", pstRecCfg->vi_attr[i].u32ViChn);
 
     // Create VPSS
-    bUseVpss = RKADK_RECORD_IsUseVpss(pstRecAttr->s32CamID, i, pstRecCfg);
+    bUseVpss = RKADK_RECORD_IsUseVpss(pstRecAttr->s32CamID, i, pstRecCfg, &u32VpssBufCnt);
     if (bUseVpss) {
       memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
       memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
@@ -408,14 +417,17 @@ static int RKADK_RECORD_CreateVideoChn(RKADK_RECORD_ATTR_S *pstRecAttr) {
       stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
       stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
       stGrpAttr.stFrameRate.s32DstFrameRate = -1;
-      stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
       stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
       stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
       stChnAttr.enPixelFormat = pstRecCfg->vi_attr[i].stChnAttr.enPixelFormat;
       stChnAttr.stFrameRate.s32SrcFrameRate = -1;
       stChnAttr.stFrameRate.s32DstFrameRate = -1;
       stChnAttr.u32Depth = 0;
-      stChnAttr.u32FrameBufCnt = pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount + 2;
+      stChnAttr.u32FrameBufCnt = u32VpssBufCnt;
+      if (u32VpssBufCnt)
+        stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+      else
+        stChnAttr.enChnMode = VPSS_CHN_MODE_PASSTHROUGH;
 
       if (i == 0) {
         stChnAttr.u32Width = pstSensorCfg->max_width;
@@ -550,7 +562,7 @@ static int RKADK_RECORD_DestoryVideoChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecord
     if (pRecorder)
       bUseVpss = RKADK_MUXER_IsUseVpss(pRecorder, pstRecCfg->attribute[i].venc_chn);
     else
-      bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
+      bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg, NULL);
     if (bUseVpss) {
       ret = RKADK_MPI_VPSS_DeInit(pstRecCfg->attribute[i].vpss_grp, pstRecCfg->attribute[i].vpss_chn);
       if (ret) {
@@ -808,7 +820,7 @@ static int RKADK_RECORD_BindChn(RKADK_U32 u32CamId, RKADK_MW_PTR pRecorder) {
     if (RKADK_RECORD_VencGetData(u32CamId, &stDestChn, pRecorder))
       return -1;
 
-    bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
+    bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg, NULL);
     if (bUseVpss) {
       // VPSS Bind VENC
       ret = RKADK_MPI_SYS_Bind(&stSrcVpssChn, &stDestChn);
@@ -952,7 +964,7 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId,
 
     pstMuxerAttr->astStreamAttr[i].u32ViChn = pstRecCfg->vi_attr[i].u32ViChn;
     pstMuxerAttr->astStreamAttr[i].u32VencChn = pstRecCfg->attribute[i].venc_chn;
-    pstMuxerAttr->astStreamAttr[i].bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg);
+    pstMuxerAttr->astStreamAttr[i].bUseVpss = RKADK_RECORD_IsUseVpss(u32CamId, i, pstRecCfg, NULL);
     pstMuxerAttr->astStreamAttr[i].enType = pstRecCfg->file_type;
     if (pstRecCfg->record_type != RKADK_REC_TYPE_NORMAL) {
       pstMuxerAttr->astStreamAttr[i].u32TimeLenSec = pstRecCfg->record_time_cfg[i].lapse_interval;

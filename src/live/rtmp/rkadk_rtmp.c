@@ -239,8 +239,7 @@ static int RKADK_RTMP_SetMuxerAttr(RKADK_U32 u32CamId,
   return 0;
 }
 
-static bool RKADK_RTMP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstLiveCfg) {
-  bool bUseVpss = false;
+static bool RKADK_RTMP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstLiveCfg, RKADK_U32 *u32VpssBufCnt) {
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -259,19 +258,24 @@ static bool RKADK_RTMP_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *p
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
-    bUseVpss = true;
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
+    return true;
   }
 
-  if (pstLiveCfg->attribute.post_aiisp)
-    bUseVpss = true;
+  if (pstLiveCfg->attribute.post_aiisp) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
+   return true;
+  }
 
-  return bUseVpss;
+  return false;
 }
 
 static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
                                         MPP_CHN_S stVencChn, MPP_CHN_S stSrcVpssChn,
                                         RKADK_PARAM_STREAM_CFG_S *pstLiveCfg,
-                                        bool bUseVpss) {
+                                        bool bUseVpss, RKADK_U32 u32VpssBufCnt) {
   int ret = 0;
   VENC_CHN_ATTR_S stVencChnAttr;
   VPSS_GRP_ATTR_S stGrpAttr;
@@ -303,7 +307,6 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
     stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
     stGrpAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
     stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
     stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
     stChnAttr.enPixelFormat = pstLiveCfg->vi_attr.stChnAttr.enPixelFormat;
@@ -312,7 +315,11 @@ static RKADK_S32 RKADK_RTMP_EnableVideo(RKADK_U32 u32CamId, MPP_CHN_S stViChn,
     stChnAttr.u32Width = pstLiveCfg->attribute.width;
     stChnAttr.u32Height = pstLiveCfg->attribute.height;
     stChnAttr.u32Depth = 0;
-    stChnAttr.u32FrameBufCnt = pstLiveCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
+    stChnAttr.u32FrameBufCnt = u32VpssBufCnt;
+    if (u32VpssBufCnt)
+      stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+    else
+      stChnAttr.enChnMode = VPSS_CHN_MODE_PASSTHROUGH;
 
     ret = RKADK_MPI_VPSS_Init(pstLiveCfg->attribute.vpss_grp, pstLiveCfg->attribute.vpss_chn,
                               &stGrpAttr, &stChnAttr);
@@ -580,6 +587,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   RKADK_RTMP_HANDLE_S *pHandle;
   RKADK_STREAM_TYPE_E enType;
+  RKADK_U32 u32VpssBufCnt = 0;
 
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
@@ -605,7 +613,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     return -1;
   }
 
-  bUseVpss = RKADK_RTMP_IsUseVpss(u32CamId, pstLiveCfg);
+  bUseVpss = RKADK_RTMP_IsUseVpss(u32CamId, pstLiveCfg, &u32VpssBufCnt);
 
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
@@ -653,7 +661,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     pHandle->bVencChnMux = true;
   }
   ret = RKADK_RTMP_EnableVideo(u32CamId, stViChn, stVencChn, stSrcVpssChn,
-                               pstLiveCfg, bUseVpss);
+                               pstLiveCfg, bUseVpss, u32VpssBufCnt);
   if (ret) {
     RKADK_LOGE("RKADK_RTMP_EnableVideo failed[%d]", ret);
     free(pHandle);
@@ -785,7 +793,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
     RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTMP_AencOutCb, pstHandle);
   }
 
-  bUseVpss = RKADK_RTMP_IsUseVpss(pstHandle->u32CamId, pstLiveCfg);
+  bUseVpss = RKADK_RTMP_IsUseVpss(pstHandle->u32CamId, pstLiveCfg, NULL);
   if (bUseVpss) {
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);

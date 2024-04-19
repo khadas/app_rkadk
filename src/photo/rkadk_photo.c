@@ -876,7 +876,7 @@ static bool RKADK_PHOTO_EnableJpegSlice(RKADK_U32 u32CamId,
 }
 
 static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
-                                 RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg) {
+                                 RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg, RKADK_U32 *u32VpssBufCnt) {
   RKADK_U32 u32ViWidth = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Width;
   RKADK_U32 u32ViHeight = pstPhotoCfg->vi_attr.stChnAttr.stSize.u32Height;
 
@@ -893,24 +893,35 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
       pstPhotoCfg->image_height != u32ViHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32ViWidth, u32ViHeight,
                pstPhotoCfg->image_width, pstPhotoCfg->image_height);
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 1;
     return true;
   }
 
 #ifdef RV1106_1103
   //use vpss switch resolution
   if (!pstSensorCfg->used_isp) {
-    if (pstPhotoCfg->switch_res)
+    if (pstPhotoCfg->switch_res) {
+      if (u32VpssBufCnt)
+        *u32VpssBufCnt = 1;
       return true;
+    }
   }
 #endif
 
 #ifndef RV1106_1103
-  if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP)
+  if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 1;
     return true;
+  }
 #endif
 
-  if (pstPhotoCfg->post_aiisp)
+  if (pstPhotoCfg->post_aiisp) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 0;
     return true;
+  }
 
   return false;
 }
@@ -938,6 +949,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   int ret;
   bool bSysInit = false;
   char name[RKADK_THREAD_NAME_LEN];
+  RKADK_U32 u32VpssBufCnt = 0;
   MPP_CHN_S stViChn, stVencChn, stSrcVpssChn, stDstVpssChn;
   VENC_CHN_ATTR_S stVencAttr;
   RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg = NULL;
@@ -1011,7 +1023,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
   RKADK_BUFINFO("create vi[%d]", pHandle->u32ViChn);
 
   pHandle->stSliceParam.bJpegSlice = RKADK_PHOTO_EnableJpegSlice(pstPhotoAttr->u32CamId, pstPhotoCfg);
-  pHandle->bUseVpss = RKADK_PHOTO_IsUseVpss(pstPhotoAttr->u32CamId, pstPhotoCfg);
+  pHandle->bUseVpss = RKADK_PHOTO_IsUseVpss(pstPhotoAttr->u32CamId, pstPhotoCfg, &u32VpssBufCnt);
   // Create VPSS
   if (pHandle->bUseVpss) {
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
@@ -1023,7 +1035,6 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
     stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
     stGrpAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
     stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
     stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
     stChnAttr.enPixelFormat = RK_FMT_YUV420SP;
@@ -1032,7 +1043,11 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.u32Width = pstSensorCfg->max_width;
     stChnAttr.u32Height = pstSensorCfg->max_height;
     stChnAttr.u32Depth = 0;
-    stChnAttr.u32FrameBufCnt = 1;
+    stChnAttr.u32FrameBufCnt = u32VpssBufCnt;
+    if (u32VpssBufCnt)
+      stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+    else
+      stChnAttr.enChnMode = VPSS_CHN_MODE_PASSTHROUGH;
     ret = RKADK_MPI_VPSS_Init(pstPhotoCfg->vpss_grp, pstPhotoCfg->vpss_chn,
                               &stGrpAttr, &stChnAttr);
     if (ret) {

@@ -173,7 +173,7 @@ static void RKADK_STREAM_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstStreamCfg,
   pstVencChn->s32ChnId = pstStreamCfg->attribute.venc_chn;
 }
 
-static bool RKADK_STREAM_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstStreamCfg) {
+static bool RKADK_STREAM_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S *pstStreamCfg, RKADK_U32 *u32VpssBufCnt) {
   RKADK_U32 u32SrcWidth, u32SrcHeight;
   RKADK_U32 u32DstWidth, u32DstHeight;
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg;
@@ -192,11 +192,16 @@ static bool RKADK_STREAM_IsUseVpss(RKADK_U32 u32CamId, RKADK_PARAM_STREAM_CFG_S 
   if (u32DstWidth != u32SrcWidth || u32DstHeight != u32SrcHeight) {
     RKADK_LOGD("In[%d, %d], Out[%d, %d]", u32SrcWidth, u32SrcHeight,
                u32DstWidth, u32DstHeight);
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
     return true;
   }
 
-  if (pstStreamCfg->attribute.post_aiisp)
+  if (pstStreamCfg->attribute.post_aiisp) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 0;
     return true;
+  }
 
   return false;
 }
@@ -288,6 +293,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   STREAM_VIDEO_HANDLE_S *pVideoHandle = NULL;
   VENC_CHN_ATTR_S stVencChnAttr;
   bool bUseVpss;
+  RKADK_U32 u32VpssBufCnt = 0;
   VPSS_GRP_ATTR_S stGrpAttr;
   VPSS_CHN_ATTR_S stChnAttr;
 
@@ -371,7 +377,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
   }
   RKADK_BUFINFO("create vi[%d]", stViChn.s32ChnId);
 
-  bUseVpss = RKADK_STREAM_IsUseVpss(pVideoHandle->u32CamId, pstStreamCfg);
+  bUseVpss = RKADK_STREAM_IsUseVpss(pVideoHandle->u32CamId, pstStreamCfg, &u32VpssBufCnt);
   // Cteate VPSS
   if (bUseVpss) {
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
@@ -383,7 +389,6 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     stGrpAttr.enCompressMode = COMPRESS_MODE_NONE;
     stGrpAttr.stFrameRate.s32SrcFrameRate = -1;
     stGrpAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
     stChnAttr.enCompressMode = COMPRESS_MODE_NONE;
     stChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
     stChnAttr.enPixelFormat = pstStreamCfg->vi_attr.stChnAttr.enPixelFormat;
@@ -392,7 +397,11 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     stChnAttr.u32Width = pstStreamCfg->attribute.width;
     stChnAttr.u32Height = pstStreamCfg->attribute.height;
     stChnAttr.u32Depth = 0;
-    stChnAttr.u32FrameBufCnt = pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount + 2;
+    stChnAttr.u32FrameBufCnt = u32VpssBufCnt;
+    if (u32VpssBufCnt)
+      stChnAttr.enChnMode = VPSS_CHN_MODE_USER;
+    else
+      stChnAttr.enChnMode = VPSS_CHN_MODE_PASSTHROUGH;
 
     ret = RKADK_MPI_VPSS_Init(pstStreamCfg->attribute.vpss_grp, pstStreamCfg->attribute.vpss_chn,
                               &stGrpAttr, &stChnAttr);
@@ -503,7 +512,7 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
                            &stVencChn, &stSrcVpssChn, &stDstVpssChn);
   RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_STREAM_VencOutCb, pstHandle);
 
-  bUseVpss = RKADK_STREAM_IsUseVpss(pstHandle->u32CamId, pstStreamCfg);
+  bUseVpss = RKADK_STREAM_IsUseVpss(pstHandle->u32CamId, pstStreamCfg, NULL);
   if (bUseVpss) {
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);
