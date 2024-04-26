@@ -257,7 +257,6 @@ static int RKADK_RECORD_SetVideoAttr(int index, RKADK_U32 u32CamId,
   if (u32DstFrameRateNum > pstSensorCfg->framerate) {
     RKADK_LOGW("CamId[%d] record[%d] fps[%d] > sensor fps[%d], use sensor fps",
                 u32CamId, index, u32DstFrameRateNum, pstSensorCfg->framerate);
-    u32DstFrameRateNum = pstSensorCfg->framerate;
 
     if (index == 0)
       stFps.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
