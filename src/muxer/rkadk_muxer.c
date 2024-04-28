@@ -428,6 +428,7 @@ static int RKADK_MUXER_AovSwichMode(RKADK_MUXER_HANDLE_S *pstMuxer) {
     }
 
     pstMuxer->stAovAttr.pfnSingleFrame(pstMuxer->u32CamId);
+    RKADK_AOV_DisableNonBootCPUs();
     pstMuxer->enFrameMode = SINGLE_FRAME_MODE;
     RKADK_MUXER_AovDropFrame(pstMuxer);
     RKADK_MUXER_EnterSleep((RKADK_MW_PTR)pstMuxer, -1);
@@ -799,7 +800,13 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
     pstMuxerHandle->u32PrePts = pts;
     printf("\n\n");
     printf("muxerId[%d]: pts: %lld, frameCnt: %d, S64DiffPts: %lld\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->S64DiffPts);
-    system("cat proc/rkisp-vir0 | grep frame");
+
+#ifdef RV1106_1103
+    system("cat /proc/rkisp-vir0 | grep frame");
+#else
+    system("cat /proc/rkispp0 | grep frame");
+#endif
+
     printf("\n\n");
   }
 
@@ -1700,8 +1707,10 @@ RKADK_S32 RKADK_MUXER_Disable(RKADK_MW_PTR pHandle) {
 
 #ifdef ENABLE_AOV
   RKADK_MUTEX_LOCK(stAovHandle.mutex);
-  if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE && pstMuxer->stAovAttr.pfnMultiFrame)
+  if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE && pstMuxer->stAovAttr.pfnMultiFrame) {
     pstMuxer->stAovAttr.pfnMultiFrame(pstMuxer->u32CamId);
+    RKADK_AOV_EnableNonBootCPUs();
+  }
   RKADK_MUTEX_UNLOCK(stAovHandle.mutex);
 #endif
 
@@ -2041,6 +2050,7 @@ RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle) {
   if (pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE && pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
     if (pstMuxer->stAovAttr.pfnMultiFrame) {
       pstMuxer->stAovAttr.pfnMultiFrame(pstMuxer->u32CamId);
+      RKADK_AOV_EnableNonBootCPUs();
       pstMuxer->enFrameMode = MULTI_FRAME_MODE;
     } else {
       RKADK_LOGE("CamId[%d] unregistered pfnMultiFrame", pstMuxer->u32CamId);

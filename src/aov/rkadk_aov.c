@@ -23,6 +23,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/mman.h>
+
+#ifdef RV1106_1103
+#define SUSPEND_TIME_REG 0xff300048
+#else
+#define SUSPEND_TIME_REG 0xff3e0048
+#endif
 
 #define SOC_SLEEP_STR "mem"
 #define SOC_SLEEP_PATH "/sys/power/state"
@@ -45,6 +52,7 @@ int RKADK_AOV_Init(RKADK_AOV_ARG_S *pstAovAttr) {
 
 int RKADK_AOV_DeInit() {
   pthread_mutex_destroy(&gWakeupRunMutex);
+  gpfnNotifyCallback = NULL;
   return 0;
 }
 
@@ -83,46 +91,134 @@ void RKADK_AOV_Notify(RKADK_AOV_EVENT_E enEvent, void *msg) {
     RKADK_LOGW("Unregistered notify callback");
 }
 
-int RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime) {
-  char wakeupCmd[256];
+static int RKADK_AOV_WriteReg(int addr, int value) {
+  int memFd = open("/dev/mem", O_RDWR | O_SYNC);
+  if (memFd < 0) {
+    perror("Error opening /dev/mem");
+    return -1;
+  }
 
-  memset(wakeupCmd, 0, 256);
-  sprintf(wakeupCmd, "io -4 0xff300048 %d", u32WakeupSuspendTime * 32);
-  system(wakeupCmd);
-  RKADK_LOGD("wakeup suspend time = %d", u32WakeupSuspendTime);
+  //get page size
+  size_t pageSize = getpagesize();
+
+  //calculates the address and offset of the page alignment
+  off_t pageBase = (addr & ~(pageSize - 1));
+  off_t pageOffset = addr - pageBase;
+
+  //mapped memory
+  void *memMap = mmap(NULL, pageSize, PROT_READ | PROT_WRITE, MAP_SHARED, memFd, pageBase);
+  if (memMap == MAP_FAILED) {
+    RKADK_LOGE("Error mapping memory");
+    close(memFd);
+    return -1;
+  }
+
+  //compute register address
+  int *targetReg = (int *)((char *)memMap + pageOffset);
+
+  //write data
+  *targetReg = value;
+
+  //unmap memory
+  munmap(memMap, pageSize);
+  close(memFd);
   return 0;
 }
 
-#if 0
-void RKADK_AOV_DumpPtsToTMP(uint32_t seq, uint64_t pts, int max_dump_pts_count) {
-  static int line_count = 0;
-  static FILE *file;
-  const char *file_path = "/tmp/pts.txt";
 
-  if (line_count >= max_dump_pts_count) {
-    return;
-  }
+int RKADK_AOV_SetSuspendTime(int u32WakeupSuspendTime) {
+  int ret;
 
-  if (line_count == 0) {
-    file = fopen(file_path, "w");
-    if (file == NULL) {
-      perror("Error opening file");
-      return;
-    }
-  }
-
-  if (file != NULL)
-    fprintf(file, "seq: %u, pts: %llums\n", seq, (unsigned long long)pts / 1000);
-
-  line_count++;
-
-  if (line_count >= max_dump_pts_count) {
-    printf("Closed file after writing %d lines.\n", max_dump_pts_count);
-    fclose(file);
-    file = NULL;
-  }
-}
+#ifdef RV1106_1103
+  ret = RKADK_AOV_WriteReg(SUSPEND_TIME_REG, u32WakeupSuspendTime * 32.768);
+#else
+  ret = RKADK_AOV_WriteReg(SUSPEND_TIME_REG, u32WakeupSuspendTime * 91);
 #endif
+  if (ret != 0) {
+    RKADK_LOGD("Failed to set suspend time!");
+    return -1;
+  }
 
+  RKADK_LOGD("wakeup susoend time = %d", u32WakeupSuspendTime);
+  return 0;
+}
+
+#ifdef RV1106_1103
 int RKADK_AOV_DisableNonBootCPUs() { return RKADK_SUCCESS; }
 int RKADK_AOV_EnableNonBootCPUs() { return RKADK_SUCCESS; }
+#else
+int RKADK_AOV_DisableNonBootCPUs() {
+  int ret, fd;
+  const char *off = "0";
+
+  fd = open("/sys/devices/system/cpu/cpu1/online", O_WRONLY);
+  if (fd >= 0) {
+    ret = write(fd, off, strlen(off));
+    if (ret >= 0)
+      RKADK_LOGD("disable cpu 1 success");
+    else
+      RKADK_LOGE("disable cpu 1 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  fd = open("/sys/devices/system/cpu/cpu2/online", O_WRONLY);
+  if (fd >= 0) {
+    ret = write(fd, off, strlen(off));
+    if (ret >= 0)
+      RKADK_LOGD("disable cpu 2 success");
+    else
+      RKADK_LOGE("disable cpu 2 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  fd = open("/sys/devices/system/cpu/cpu3/online", O_WRONLY);
+  if (fd >= 0) {
+    ret = write(fd, off, strlen(off));
+    if (ret >= 0)
+      RKADK_LOGD("disable cpu 3 success");
+    else
+      RKADK_LOGE("disable cpu 3 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  return RKADK_SUCCESS;
+}
+
+int RKADK_AOV_EnableNonBootCPUs() {
+  int fd;
+  const char *on = "1";
+  int ret;
+
+  fd = open("/sys/devices/system/cpu/cpu1/online", O_WRONLY);
+    if (fd >= 0) {
+      ret = write(fd, on, strlen(on));
+      if (ret > 0)
+        RKADK_LOGD("enable cpu 1 success");
+      else
+        RKADK_LOGE("enable cpu 1 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  fd = open("/sys/devices/system/cpu/cpu2/online", O_WRONLY);
+  if (fd >= 0) {
+    ret = write(fd, on, strlen(on));
+    if (ret > 0)
+      RKADK_LOGD("enable cpu 2 success");
+    else
+      RKADK_LOGE("enable cpu 2 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  fd = open("/sys/devices/system/cpu/cpu3/online", O_WRONLY);
+  if (fd >= 0) {
+    ret = write(fd, on, strlen(on));
+    if (ret > 0)
+      RKADK_LOGD("enable cpu 3 success");
+    else
+      RKADK_LOGE("enable cpu 3 failed because %s", strerror(errno));
+    close(fd);
+  }
+
+  return RKADK_SUCCESS;
+}
+#endif

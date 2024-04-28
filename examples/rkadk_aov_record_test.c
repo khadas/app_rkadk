@@ -45,7 +45,9 @@ static RKADK_CHAR optstr[] = "a:I:p:m:S:c:t:o:x:y:W:H:kdh";
 #define MAX_LINE_SIZE 256
 #define MAX_NL_BUF_SIZE (1024 * 16)
 #define MAX_SELECT_TIMEOUT (2 * 1000 * 1000)
+#define MOUNT_PATH "/mnt/sdcard"
 
+#ifdef RV1106_1103
 #define MOUNT_DEV_1 "/dev/mmcblk1p1"
 #define MOUNT_DEV_2 "/dev/mmcblk1"
 
@@ -53,6 +55,15 @@ static RKADK_CHAR optstr[] = "a:I:p:m:S:c:t:o:x:y:W:H:kdh";
 #define SDCARD_BIND_DONE "bind@/devices/platform/ffaa0000.mmc/mmc_host/mmc1/mmc1"
 #define SDCARD_UNBIND_DONE "unbind@/devices/platform/ffaa0000.mmc"
 #define SDCARD_DRIVER "/sys/bus/platform/drivers/dwmmc_rockchip"
+#else
+#define MOUNT_DEV_1 "/dev/mmcblk2p1"
+#define MOUNT_DEV_2 "/dev/mmcblk2"
+
+#define SDCARD_DEVICE "ffc60000.dwmmc"
+#define SDCARD_BIND_DONE "bind@/devices/platform/ffc60000.dwmmc/mmc_host/mmc2/mmc2:b368"
+#define SDCARD_UNBIND_DONE "unbind@/devices/platform/ffc60000.dwmmc"
+#define SDCARD_DRIVER "/sys/bus/platform/drivers/dwmmc_rockchip"
+#endif
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -368,6 +379,7 @@ __FAILED:
   return RKADK_FAILURE;
 }
 
+#ifdef RV1106_1103
 static int CheckSDcardMount(void) {
   int fd = -1, ret = -1, pos = 0;
   char line[MAX_LINE_SIZE];
@@ -401,6 +413,29 @@ static int CheckSDcardMount(void) {
   return ret;
 }
 
+#else
+static int CheckSDcardMount(void) {
+  char line[256];
+  FILE *file = fopen("/proc/mounts", "r");
+  int ret = RKADK_FAILURE;
+
+  if (file == NULL) {
+    printf("Failed to open file\n");
+    return ret;
+  }
+
+  while (fgets(line, sizeof(line), file)) {
+    if (strstr(line, "/mnt/sdcard")) {
+      printf("Found '/mnt/sdcard' in line: %s", line);
+      ret = RKADK_SUCCESS;
+    }
+  }
+
+  fclose(file);
+  return ret;
+}
+#endif
+
 static int MountSdcard() {
   RKADK_LOGD("Enter mount");
 
@@ -414,26 +449,19 @@ static int MountSdcard() {
   }
 
   // mount sd
-  if (access("/mnt/sdcard", F_OK) == 0) {
-#if 0
-    system("mount -t vfat /dev/mmcblk1p1 /mnt/sdcard/");
-#else
+  if (access(MOUNT_DEV_1, F_OK) == 0) {
     ret = mount(MOUNT_DEV_1, "/mnt/sdcard", "vfat", 0, NULL);
     if (ret != 0)
       RKADK_LOGE("mount failed, errno = %s", strerror(errno));
     else
       RKADK_LOGD("mount success");
-#endif
+
   } else if (access(MOUNT_DEV_2, F_OK) == 0) {
-#if 0
-    system("mount -t vfat /dev/mmcblk1 /mnt/sdcard/");
-#else
     ret = mount(MOUNT_DEV_2, "/mnt/sdcard", "vfat", 0, NULL);
     if (ret != 0)
       RKADK_LOGE("mount failed, errno = %s", strerror(errno));
     else
       RKADK_LOGD("mount success");
-#endif
   } else {
     RKADK_LOGE("bad mount path!");
   }
@@ -452,8 +480,24 @@ static int UmountSdcard() {
   int ret = 0;
 
   RKADK_LOGD("Enter umount");
-  umount2("/mnt/sdcard", MNT_DETACH);
+
+  if (CheckSDcardMount() != 0) {
+    RKADK_LOGD("sdcard already umount");
+    return 0;
+  }
+
+  ret = umount2(MOUNT_PATH, MNT_DETACH);
+  if (ret == 0)
+    RKADK_LOGE("unmount success");
+  else
+    RKADK_LOGE("unmount failed because %s", strerror(errno));
+
   ret = UnbindSdcard();
+  if (ret == 0)
+    RKADK_LOGE("UnbindSdcard success");
+  else
+    RKADK_LOGE("UnbindSdcard failed because %s", strerror(errno));
+
   RKADK_LOGD("Exit umount");
   return ret;
 }
@@ -586,6 +630,10 @@ int main(int argc, char *argv[]) {
     }
   }
   optind = 0;
+
+  RKADK_LOGD("loopCount: %d, loopDuration: %d", loopCount, loopDuration);
+
+  MountSdcard();
 
 #ifdef ENABLE_AOV
   memset(&stAovArg, 0, sizeof(RKADK_AOV_ARG_S));

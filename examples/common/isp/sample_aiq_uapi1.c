@@ -1106,7 +1106,9 @@ int SAMPLE_ISP_SET_Crop(RKADK_U32 u32CamId, rk_aiq_rect_t rect) {
   return ret;
 }
 
-void SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
+int SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
+  int ret;
+
   if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
     printf("Invalid u32CamId[%d]", u32CamId);
     return;
@@ -1117,11 +1119,17 @@ void SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
     return;
   }
 
-  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_pause");
-  rk_aiq_uapi_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx, true);
+  //If motion detection is enabled, it needs to be stopped
+  //ret = rk_aiq_uapi_sysctl_stopMotionDetect(gstIspHandle[u32CamId].pstAiqCtx);
+  //printf("Cam[%d] rk_aiq_uapi_sysctl_stopMotionDetect ret = %d\n", u32CamId, ret);
+
+  ret = rk_aiq_uapi_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx, true);
+  printf("Cam[%d] rk_aiq_uapi2_sysctl_pause ret = %d\n", u32CamId, ret);
 }
 
-void SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
+int SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
+  int ret;
+
   if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
     printf("Invalid u32CamId[%d]", u32CamId);
     return;
@@ -1132,8 +1140,12 @@ void SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
     return;
   }
 
-  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
-  rk_aiq_uapi_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
+  ret = rk_aiq_uapi_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
+  printf("Cam[%d] rk_aiq_uapi2_sysctl_resume ret = %d\n", u32CamId, ret);
+
+  //If motion detection is enabled, it needs to be started
+  //ret = rk_aiq_uapi_sysctl_startMotionDetect(gstIspHandle[u32CamId].pstAiqCtx);
+  //printf("Cam[%d] rk_aiq_uapi_sysctl_startMotionDetect ret = %d\n", u32CamId, ret);
 }
 
 int SAMPLE_ISP_GetAINrParams(RKADK_U32 u32CamId, rk_ainr_param *param) {

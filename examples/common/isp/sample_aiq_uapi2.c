@@ -1104,7 +1104,7 @@ int SAMPLE_ISP_Get_AiqHandle(RKADK_U32 u32CamId, RKADK_MW_PTR *ppAiqCtx) {
   return ret;
 }
 
-void SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
+int SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
   if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
     printf("Invalid u32CamId[%d]", u32CamId);
     return;
@@ -1117,9 +1117,10 @@ void SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
 
   RKADK_LOGD("enter rk_aiq_uapi2_sysctl_pause");
   rk_aiq_uapi2_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx, true);
+  return 0;
 }
 
-void SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
+int SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
   if (u32CamId >= RKADK_MAX_SENSOR_CNT) {
     printf("Invalid u32CamId[%d]", u32CamId);
     return;
@@ -1132,6 +1133,7 @@ void SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
 
   RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
   rk_aiq_uapi2_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
+  return 0;
 }
 
 int SAMPLE_ISP_GetAINrParams(RKADK_U32 u32CamId, rk_ainr_param *param) {
