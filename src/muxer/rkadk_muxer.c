@@ -95,6 +95,13 @@ typedef struct {
 static AOV_HANDLE_S stAovHandle = {.initCnt = 0, .msgid = -1, .tid = 0};
 #endif
 
+#ifdef FILE_CACHE
+typedef struct {
+  int32_t realDuration;
+  bool bSplitRecord;
+} FILE_CACHE_HANDLE_S;
+#endif
+
 typedef struct {
   RKADK_MW_PTR ptr;
   RKADK_U32 u32CamId;
@@ -146,6 +153,10 @@ typedef struct {
 
 #ifdef ENABLE_AOV
   AOV_PARAM_S stAovParam;
+#endif
+
+#ifdef FILE_CACHE
+  FILE_CACHE_HANDLE_S stFileCachehandle;
 #endif
 
 #ifdef RKADK_MUXER_TEST
@@ -913,15 +924,14 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
 }
 
 static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
+
   if (!pstMuxerHandle->bMuxering)
     return;
 
   RKADK_LOGI("File end: chn = %d, duration: %d, frameCnt = %d, keyFrameCnt: %d",
       pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration,
       pstMuxerHandle->frameCnt, pstMuxerHandle->keyFrameCnt);
-
-  // Stop muxer
-  rkmuxer_deinit(pstMuxerHandle->muxerId);
 
   if (pstMuxerHandle->realDuration <= 0) {
     pstMuxerHandle->realDuration =
@@ -930,12 +940,22 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
       pstMuxerHandle->realDuration, pstMuxerHandle->frameCnt);
   }
 
-  if (pstMuxerHandle->stManualSplit.bSplitRecord)
-    RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_MANUAL_SPLIT_END,
-                             pstMuxerHandle->realDuration);
-  else
-    RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
-                             pstMuxerHandle->realDuration);
+#ifdef FILE_CACHE
+  pstMuxerHandle->stFileCachehandle.bSplitRecord = pstMuxerHandle->stManualSplit.bSplitRecord;
+  pstMuxerHandle->stFileCachehandle.realDuration = pstMuxerHandle->realDuration;
+#endif
+
+  // Stop muxer
+  rkmuxer_deinit(pstMuxerHandle->muxerId);
+
+  if (!pstMuxer->enableFileCache) {
+    if (pstMuxerHandle->stManualSplit.bSplitRecord)
+      RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_MANUAL_SPLIT_END,
+                               pstMuxerHandle->realDuration);
+    else
+      RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
+                               pstMuxerHandle->realDuration);
+  }
 
   // Reset muxer
   pstMuxerHandle->realDuration = 0;
@@ -2188,15 +2208,13 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
       else
         value = pstMuxerHandle->duration;
       break;
-#if 0
     case FILE_END:
-      if (pstMuxerHandle->stManualSplit.bSplitRecord)
+      if (pstMuxerHandle->stFileCachehandle.bSplitRecord)
         enEventType = RKADK_MUXER_EVENT_MANUAL_SPLIT_END;
       else
         enEventType = RKADK_MUXER_EVENT_FILE_END;
-      value = pstMuxerHandle->realDuration;
+      value = pstMuxerHandle->stFileCachehandle.realDuration;
       break;
-#endif
     case OPEN_FAILED:
       enEventType = RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL;
       value = *(int *)msg1;
