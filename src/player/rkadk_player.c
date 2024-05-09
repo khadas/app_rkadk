@@ -991,6 +991,7 @@ static void AoVolumeControl(RKADK_PLAYER_HANDLE_S *pstPlayer) {
   aFade.enFadeOutRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
   aFade.enFadeInRate = (AUDIO_FADE_RATE_E)pstPlayer->stAoCtx.setFadeRate;
   mute = (pstPlayer->stAoCtx.setMute == 0) ? RK_FALSE : RK_TRUE;
+  RKADK_LOGI("AO volume = %d, mute = %d", pstPlayer->stAoCtx.u32SpeakerVolume, mute);
   RK_MPI_AO_SetMute(pstPlayer->stAoCtx.devId, mute, &aFade);
   RK_MPI_AO_SetVolume(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.u32SpeakerVolume);
 }
@@ -3255,5 +3256,17 @@ RKADK_S32 RKADK_PLAYER_SetVdecWaterline(RKADK_MW_PTR pPlayer, RKADK_U32 u32VdecW
   }
 
   pstPlayer->u32VdecWaterline = u32VdecWaterline;
+  return 0;
+}
+
+RKADK_S32 RKADK_PLAYER_SetAoVolume(RKADK_MW_PTR pPlayer, RKADK_S32 s32Volume) {
+  RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
+  RKADK_PLAYER_HANDLE_S *pstPlayer = (RKADK_PLAYER_HANDLE_S *)pPlayer;
+  if (s32Volume < 0) {
+    RKADK_LOGE("Invalid volume: %d", s32Volume);
+    return -1;
+  }
+
+  pstPlayer->stAoCtx.u32SpeakerVolume = s32Volume;
   return 0;
 }

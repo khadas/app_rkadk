@@ -17,6 +17,7 @@
 #include "rkadk_common.h"
 #include "rkadk_media_comm.h"
 #include "rkadk_log.h"
+#include "rkadk_param.h"
 #include "rkadk_player.h"
 #include "rkadk_demuxer.h"
 #include "rkdemuxer.h"
@@ -494,7 +495,8 @@ int main(int argc, char *argv[]) {
 
   stPlayCfg.stSnapshotCfg.u32VencChn = 15;
   stPlayCfg.stSnapshotCfg.pfnDataCallback = SnapshotDataRecv;
-  stPlayCfg.stAudioCfg.u32SpeakerVolume = 70;
+  if (RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_VOLUME, &stPlayCfg.stAudioCfg.u32SpeakerVolume))
+    stPlayCfg.stAudioCfg.u32SpeakerVolume = 70;
 
   if (RKADK_PLAYER_Create(&pPlayer, &stPlayCfg)) {
     RKADK_LOGE("RKADK_PLAYER_Create failed");
