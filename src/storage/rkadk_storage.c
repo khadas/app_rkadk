@@ -787,8 +787,8 @@ static RKADK_MW_PTR RKADK_STORAGE_FileMonitorThread(RKADK_MW_PTR arg) {
                 RKADK_LOGE("lstat[%s](IN_CLOSE_WRITE) failed", d_name);
               } else {
                 if (statbuf.st_size == 0) {
-                  if (remove(d_name))
-                    RKADK_LOGE("Delete %s file error.", d_name);
+                  //if (remove(d_name))
+                    //RKADK_LOGE("Delete %s file error.", d_name);
                 } else if ((RKADK_STORAGE_FileListCheck(&pHandle->stDevSta.pstFolder[j],
                                               event->name, &statbuf) == 0) &&
                             RKADK_STORAGE_FileListAdd(&pHandle->stDevSta.pstFolder[j],
