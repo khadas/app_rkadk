@@ -64,6 +64,7 @@ typedef struct {
 } RKADK_MEDIA_INFO_S;
 
 typedef struct {
+  int dumpDebugInfo;
   pthread_mutex_t aiMutex;
   pthread_mutex_t aencMutex;
   pthread_mutex_t viMutex;
@@ -141,6 +142,8 @@ static int RKADK_MEDIA_CtxInit() {
   memset((void *)&g_stMediaCtx, 0, sizeof(RKADK_MEDIA_CONTEXT_S));
   memset(g_bVpssGrpInitCnt, 0, VPSS_MAX_GRP_NUM * sizeof(int));
   memset(g_bVoLayerDevInitCnt, 0, VO_MAX_LAYER_NUM * VO_MAX_DEV_NUM * sizeof(int));
+
+  g_stMediaCtx.dumpDebugInfo = getenv("rkadk_dump_debug_info") && atoi(getenv("rkadk_dump_debug_info"));
 
   ret = pthread_mutex_init(&g_stMediaCtx.aiMutex, NULL);
   ret |= pthread_mutex_init(&g_stMediaCtx.aencMutex, NULL);
@@ -1526,19 +1529,20 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
         pstMediaInfo->stGetVencMBAttr.u64TimeoutCnt++;
 
         //dump video info
+        if (g_stMediaCtx.dumpDebugInfo) {
 #ifdef RV1106_1103
-        system("cat proc/rkisp-vir0 | grep frame");
-        system("cat /dev/mpi/vsys");
+          system("cat proc/rkisp-vir0 | grep frame");
+          system("cat /dev/mpi/vsys");
+          system("cat /proc/vcodec/enc/venc_info");
 
-#ifndef ENABLE_AOV
-        system("cat /proc/vcodec/enc/venc_info");
-#endif
 #else
-        system("dumpsys sys");
-        system("dumpsys vi");
-        system("dumpsys vpss");
-        system("dumpsys venc");
+          system("cat proc/rkispp0 | grep frame");
+          system("dumpsys sys");
+          system("dumpsys vi");
+          system("dumpsys vpss");
+          system("dumpsys venc");
 #endif
+        }
       }
     }
   }
