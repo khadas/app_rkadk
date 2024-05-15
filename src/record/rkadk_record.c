@@ -1624,6 +1624,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = NULL;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
   RKADK_MUXER_HANDLE_S *pstRecorder = NULL;
+  RKADK_MUXER_REC_TYPE_E enPreRecType;
 
   RKADK_CHECK_POINTER(*pRecorder, RKADK_FAILURE);
   pstRecorder = (RKADK_MUXER_HANDLE_S *)*pRecorder;
@@ -1634,6 +1635,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
 
   RKADK_LOGI("Record[%d] reset start...", pstRecorder->u32CamId);
 
+  enPreRecType = pstRecorder->enRecType;
   u32CamId = pstRecorder->u32CamId;
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
@@ -1679,6 +1681,10 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
 
   RKADK_MUXER_SetResetState(*pRecorder, false);
   RKADK_LOGI("Record[%d] reset end...", u32CamId);
+
+  if (enPreRecType != pstRecCfg->record_type && enPreRecType == RKADK_REC_TYPE_AOV_LAPSE)
+    RKADK_AOV_EnterSleep();
+
   return 0;
 
 failed:

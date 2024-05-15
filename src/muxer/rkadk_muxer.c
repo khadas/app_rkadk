@@ -125,7 +125,6 @@ typedef struct {
   bool bReseting;
   bool bMuxering;
   bool bFirstFile;
-  RKADK_MUXER_REC_TYPE_E enRecType;
   bool bFirstKeyFrame;
   bool bWriteFirstFrame;
   RKADK_U32 u32FirstSeq;
@@ -420,9 +419,9 @@ static void RKADK_MUXER_AovDropFrame(RKADK_MUXER_HANDLE_S *pstMuxer) {
       if (ret == RK_SUCCESS) {
         RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32VencChn, &stFrame);
         u32LoopCount++;
-        if (u32LoopCount > 30)
-          RKADK_LOGW("CamId[%d] venc[%d] drop too much frame[%d]!!!", pstMuxer->u32CamId, pstMuxerHandle->u32VencChn, u32LoopCount);
       } else {
+        RKADK_LOGD("CamId[%d] venc[%d] mode[%d, %d], drop frame[%d]!!!", pstMuxer->u32CamId,
+                    pstMuxerHandle->u32VencChn, pstMuxer->enFrameMode, pstMuxer->enRecType, u32LoopCount);
         break;
       }
     }
@@ -440,9 +439,20 @@ static int RKADK_MUXER_AovSwichMode(RKADK_MUXER_HANDLE_S *pstMuxer) {
 
     pstMuxer->stAovAttr.pfnSingleFrame(pstMuxer->u32CamId);
     RKADK_AOV_DisableNonBootCPUs();
-    pstMuxer->enFrameMode = SINGLE_FRAME_MODE;
     RKADK_MUXER_AovDropFrame(pstMuxer);
+    pstMuxer->enFrameMode = SINGLE_FRAME_MODE;
     RKADK_MUXER_EnterSleep((RKADK_MW_PTR)pstMuxer, -1);
+    return 0;
+  } else if (pstMuxer->enFrameMode == SINGLE_FRAME_MODE && pstMuxer->enRecType != RKADK_REC_TYPE_AOV_LAPSE) {
+    if (!pstMuxer->stAovAttr.pfnMultiFrame) {
+      RKADK_LOGE("CamId[%d] unregistered pfnMultiFrame", pstMuxer->u32CamId);
+      return -1;
+    }
+
+    RKADK_MUXER_AovDropFrame(pstMuxer);
+    pstMuxer->stAovAttr.pfnMultiFrame(pstMuxer->u32CamId);
+    RKADK_AOV_EnableNonBootCPUs();
+    pstMuxer->enFrameMode = MULTI_FRAME_MODE;
     return 0;
   }
 
@@ -616,9 +626,10 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
   MUXER_BUF_CELL_S *cell = NULL, *cell_n = NULL;
   MUXER_BUF_CELL_S *pstPreRecCell = NULL;
   MUXER_PRE_RECORD_PARAM *pstPreRecParam;
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
 
   //lapse record unsupport prerecord
-  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL) {
+  if (pstMuxer->enRecType != RKADK_REC_TYPE_NORMAL) {
     if (RKADK_MUXER_GetListSize(pstList) > 0)
       RKADK_MUXER_ListRelease(pstMuxerHandle, pstList);
 
@@ -768,7 +779,8 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
 
   if ((enFrameMode == MULTI_FRAME_MODE && pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
       || ((enFrameMode == SINGLE_FRAME_MODE && pstMuxer->enRecType != RKADK_REC_TYPE_AOV_LAPSE))) {
-    RKADK_LOGD("CamId[%d] venc[%d] aov lapse, but MULTI_FRAME_MODE", pstMuxer->u32CamId, pstMuxerHandle->u32VencChn);
+    RKADK_LOGD("CamId[%d] venc[%d] mode[%d, %d] no match, drop frame", pstMuxer->u32CamId,
+                pstMuxerHandle->u32VencChn, enFrameMode, pstMuxer->enRecType);
     return 0;
   }
 #endif
@@ -1150,8 +1162,9 @@ static int RKADK_MUXER_PreRecProc(MUXER_HANDLE_S *pstMuxerHandle) {
   bool bPreRecord = false, bFindKeyFrame = false;
   MUXER_BUF_CELL_S *cell = NULL;
   RKADK_MUXER_PRE_RECORD_ATTR_S *pstAttr;
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
 
-  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL)
+  if (pstMuxer->enRecType != RKADK_REC_TYPE_NORMAL)
     return 0;
 
   size = RKADK_MUXER_GetListSize(&pstMuxerHandle->stPreRecParam.stVList);
@@ -1528,7 +1541,6 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
         i + (pstMuxerAttr->u32CamId * RKADK_MUXER_STREAM_MAX_CNT);
     pMuxerHandle->pcbRequestFileNames = pstMuxerAttr->pcbRequestFileNames;
     pMuxerHandle->pfnEventCallback = pstMuxerAttr->pfnEventCallback;
-    pMuxerHandle->enRecType = pstMuxer->enRecType;
     pMuxerHandle->bReseting = false;
 
     pstSrcStreamAttr = &(pstMuxerAttr->astStreamAttr[i]);
@@ -1996,9 +2008,8 @@ RKADK_S32 RKADK_MUXER_ResetParam(RKADK_U32 chnId, RKADK_MW_PTR pHandle,
   }
 
   pstMuxer->enRecType = pstMuxerAttr->enRecType;
-  pstMuxerHandle->enRecType = pstMuxerAttr->enRecType;
   pstMuxerHandle->duration = pstMuxerAttr->astStreamAttr[index].u32TimeLenSec;
-  if (pstMuxerHandle->enRecType != RKADK_REC_TYPE_NORMAL)
+  if (pstMuxer->enRecType != RKADK_REC_TYPE_NORMAL)
     memset(&pstMuxerHandle->stAudio, 0, sizeof(AudioParam));
 
   ret = RKADK_MUXER_SetAVParam(pstMuxerHandle, &pstMuxerAttr->astStreamAttr[index],
@@ -2065,18 +2076,6 @@ RKADK_S32 RKADK_MUXER_Reset(RKADK_MW_PTR pHandle) {
 #ifdef ENABLE_AOV
   if (stAovHandle.initCnt == 0)
     RKADK_MUXER_AovInit(&pstMuxer->stAovAttr);
-
-  RKADK_MUTEX_LOCK(stAovHandle.mutex);
-  if (pstRecCfg->record_type != RKADK_REC_TYPE_AOV_LAPSE && pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
-    if (pstMuxer->stAovAttr.pfnMultiFrame) {
-      pstMuxer->stAovAttr.pfnMultiFrame(pstMuxer->u32CamId);
-      RKADK_AOV_EnableNonBootCPUs();
-      pstMuxer->enFrameMode = MULTI_FRAME_MODE;
-    } else {
-      RKADK_LOGE("CamId[%d] unregistered pfnMultiFrame", pstMuxer->u32CamId);
-    }
-  }
-  RKADK_MUTEX_UNLOCK(stAovHandle.mutex);
 #endif
 
   return 0;
