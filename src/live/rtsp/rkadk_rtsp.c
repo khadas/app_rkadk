@@ -33,6 +33,7 @@ typedef struct {
   RKADK_U32 u32CamId;
   rtsp_demo_handle stRtspHandle;
   rtsp_session_handle stRtspSession;
+  pthread_mutex_t mutex;
 } RKADK_RTSP_HANDLE_S;
 
 static void RKADK_RTSP_SetVideoChn(RKADK_PARAM_STREAM_CFG_S *pstLiveCfg, RKADK_U32 u32CamId,
@@ -262,9 +263,11 @@ static void RKADK_RTSP_VencOutCb(RKADK_MEDIA_VENC_DATA_S mb, RKADK_VOID *handle)
 
   data = RK_MPI_MB_Handle2VirAddr(stData.stFrame.pstPack->pMbBlk);
   if (pHandle->stRtspHandle && pHandle->stRtspSession) {
+    RKADK_MUTEX_LOCK(pHandle->mutex);
     rtsp_tx_video(pHandle->stRtspSession, (uint8_t *)data,
                   stData.stFrame.pstPack->u32Len, stData.stFrame.pstPack->u64PTS);
     rtsp_do_event(pHandle->stRtspHandle);
+    RKADK_MUTEX_UNLOCK(pHandle->mutex);
   }
 }
 
@@ -283,9 +286,11 @@ static void RKADK_RTSP_AencOutCb(AUDIO_STREAM_S stFrame,
 
   data = (RKADK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrame.pMbBlk);
   if (pstHandle->stRtspHandle && pstHandle->stRtspSession) {
+    RKADK_MUTEX_LOCK(pstHandle->mutex);
     rtsp_tx_audio(pstHandle->stRtspSession, (uint8_t *)data,
                   stFrame.u32Len, stFrame.u64TimeStamp);
     rtsp_do_event(pstHandle->stRtspHandle);
+    RKADK_MUTEX_UNLOCK(pstHandle->mutex);
   }
 }
 
@@ -547,6 +552,12 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
     goto failed;
   }
 
+  ret = pthread_mutex_init(&pHandle->mutex, NULL);
+  if (ret) {
+    RKADK_LOGE("mutex init failed[%d]", ret);
+    goto failed;
+  }
+
   RKADK_RTSP_SetVideoChn(pstLiveCfg, u32CamId, &stViChn, &stVencChn, &stSrcVpssChn, &stDstVpssChn);
   enType = RKADK_PARAM_VencChnMux(u32CamId, stVencChn.s32ChnId);
   if (enType != RKADK_STREAM_TYPE_BUTT && enType != RKADK_STREAM_TYPE_LIVE) {
@@ -702,6 +713,8 @@ failed:
 
   RKADK_RTSP_DisableAudio(stAiChn, stAencChn, pstAudioCfg);
 
+  pthread_mutex_destroy(&pHandle->mutex);
+
   if (pHandle) {
     RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
     free(pHandle);
@@ -809,6 +822,8 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   }
 
   RKADK_RTSP_DeInitService((RKADK_RTSP_HANDLE_S *)pHandle);
+
+  pthread_mutex_destroy(&pstHandle->mutex);
 
   RKADK_LOGI("Rtsp[%d] DeInit End...", pstHandle->u32CamId);
   free(pHandle);
