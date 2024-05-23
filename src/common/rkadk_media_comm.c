@@ -554,9 +554,6 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
       goto exit;
     }
 
-    if (enMode != RKADK_VQE_MODE_BUTT)
-      RKADK_MPI_AI_EnableVqe(aiDevId, s32AiChnId, pstAiAttr->enSamplerate, enMode, pVqeCfgPath);
-
     ret = RK_MPI_AI_Enable(aiDevId);
     if (ret != 0) {
       RKADK_LOGE("AI[%d] enable failed[%x]", aiDevId, ret);
@@ -568,6 +565,9 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
       RKADK_LOGE("AI[%d] enable chn param failed[%x]", aiDevId, ret);
       goto exit;
     }
+
+    if (enMode != RKADK_VQE_MODE_BUTT)
+      RKADK_MPI_AI_EnableVqe(aiDevId, s32AiChnId, pstAiAttr->enSamplerate, enMode, pVqeCfgPath);
 
     ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
     if (ret) {
