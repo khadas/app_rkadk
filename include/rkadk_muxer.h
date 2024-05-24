@@ -337,6 +337,7 @@ RKADK_S32 RKADK_MUXER_UpdateRes(RKADK_MW_PTR pHandle, RKADK_U32 chnId,
 
 #ifdef FILE_CACHE
 void RKADK_MUXER_FsCacheNotify();
+void RKADK_MUXER_FileCacheInit();
 #endif
 
 #ifdef __cplusplus

@@ -97,9 +97,12 @@ static AOV_HANDLE_S stAovHandle = {.initCnt = 0, .msgid = -1, .tid = 0};
 
 #ifdef FILE_CACHE
 typedef struct {
+  bool bUsed;
+  RKADK_MW_PTR ptr;
   int32_t realDuration;
   bool bSplitRecord;
   char cFileName[RKADK_MAX_FILE_PATH_LEN];
+  RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
 } FILE_CACHE_HANDLE_S;
 #endif
 
@@ -155,10 +158,6 @@ typedef struct {
   AOV_PARAM_S stAovParam;
 #endif
 
-#ifdef FILE_CACHE
-  FILE_CACHE_HANDLE_S stFileCachehandle;
-#endif
-
 #ifdef RKADK_MUXER_TEST
   RKADK_S64 S64DiffPts;
   RKADK_U64 u32PrePts;
@@ -169,6 +168,10 @@ typedef struct {
 
 #if defined(FILE_CACHE) || defined(ENABLE_AOV)
 static RKADK_MW_PTR g_pRecorder[RKADK_MAX_SENSOR_CNT] = {NULL};
+#endif
+
+#ifdef FILE_CACHE
+FILE_CACHE_HANDLE_S g_stFileCachehandle[RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT];
 #endif
 
 static MUXER_HANDLE_S *RKADK_MUXER_FindHandle(RKADK_MUXER_HANDLE_S *pstMuxer,
@@ -693,8 +696,6 @@ static void RKADK_MUXER_PreRecPush(MUXER_HANDLE_S *pstMuxerHandle,
 void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
                               RKADK_MUXER_EVENT_E enEventType, int64_t value) {
   RKADK_MUXER_EVENT_INFO_S stEventInfo;
-  char *cFileName = NULL;
-  RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   memset(&stEventInfo, 0, sizeof(RKADK_MUXER_EVENT_INFO_S));
 
   if (!pstMuxerHandle->pfnEventCallback) {
@@ -702,26 +703,19 @@ void RKADK_MUXER_ProcessEvent(MUXER_HANDLE_S *pstMuxerHandle,
     return;
   }
 
-  pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
   stEventInfo.enEvent = enEventType;
-  cFileName = pstMuxerHandle->cFileName;
-
-#ifdef FILE_CACHE
-  if ((enEventType == RKADK_MUXER_EVENT_MANUAL_SPLIT_END || enEventType == RKADK_MUXER_EVENT_FILE_END)
-      && pstMuxer->enableFileCache)
-    cFileName = pstMuxerHandle->stFileCachehandle.cFileName;
-#endif
-
   switch (enEventType) {
     case RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL:
     case RKADK_MUXER_EVENT_ERR_WRITE_FILE_FAIL:
     case RKADK_MUXER_EVENT_ERR_CARD_NONEXIST:
       stEventInfo.unEventInfo.stErrorInfo.s32ErrorCode = value;
-      strncpy(stEventInfo.unEventInfo.stErrorInfo.asFileName, cFileName, strlen(cFileName));
+      strncpy(stEventInfo.unEventInfo.stErrorInfo.asFileName,
+              pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
       break;
     default:
       stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
-      strncpy(stEventInfo.unEventInfo.stFileInfo.asFileName, cFileName, strlen(cFileName));
+      strncpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
+              pstMuxerHandle->cFileName, strlen(pstMuxerHandle->cFileName));
       break;
   }
 
@@ -964,9 +958,10 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   }
 
 #ifdef FILE_CACHE
-  pstMuxerHandle->stFileCachehandle.bSplitRecord = pstMuxerHandle->stManualSplit.bSplitRecord;
-  pstMuxerHandle->stFileCachehandle.realDuration = pstMuxerHandle->realDuration;
-  strncpy(pstMuxerHandle->stFileCachehandle.cFileName, pstMuxerHandle->cFileName, RKADK_MAX_FILE_PATH_LEN);
+  FILE_CACHE_HANDLE_S *pstFileCachehandle = &g_stFileCachehandle[pstMuxerHandle->muxerId];
+  pstFileCachehandle->bSplitRecord = pstMuxerHandle->stManualSplit.bSplitRecord;
+  pstFileCachehandle->realDuration = pstMuxerHandle->realDuration;
+  strncpy(pstFileCachehandle->cFileName, pstMuxerHandle->cFileName, RKADK_MAX_FILE_PATH_LEN);
 #endif
 
   // Stop muxer
@@ -1023,6 +1018,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
     if (ret == RK_SUCCESS) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
 
+#ifdef ENABLE_AOV
       if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
         RKADK_AOV_WakeupLock();
         if (pstMuxer->pfnMountSdcard) {
@@ -1032,12 +1028,14 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
             RKADK_LOGD("Unregistered pfnMountSdcard");
         }
       }
+#endif
 
       fp = fopen(pstMuxerHandle->cFileName, "r+");
       if (!fp) {
+#ifdef ENABLE_AOV
         if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
           RKADK_AOV_WakeupUnlock();
-
+#endif
         RKADK_LOGE("Open %s file failed, errno = %d", pstMuxerHandle->cFileName, errno);
         RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
         return false;
@@ -1056,8 +1054,10 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
 
       fclose(fp);
 
+#ifdef ENABLE_AOV
       if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
         RKADK_AOV_WakeupUnlock();
+#endif
 
       ret = RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS) {
@@ -1662,6 +1662,12 @@ RKADK_S32 RKADK_MUXER_Enable(RKADK_MUXER_ATTR_S *pstMuxerAttr,
       return -1;
     }
 
+#ifdef FILE_CACHE
+    g_stFileCachehandle[pMuxerHandle->muxerId].bUsed = true;
+    g_stFileCachehandle[pMuxerHandle->muxerId].ptr = (RKADK_MW_PTR)pstMuxer;
+    g_stFileCachehandle[pMuxerHandle->muxerId].pfnEventCallback = pstMuxerAttr->pfnEventCallback;
+#endif
+
     pstMuxer->pMuxerHandle[i] = (RKADK_MW_PTR)pMuxerHandle;
   }
 
@@ -2201,42 +2207,62 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
   RKADK_U32 value = 0;
   FILE_NOTIFY enNotify = cmd;
   char *filename = (char *)msg0;
-  char *cFileName = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_EVENT_E enEventType = RKADK_MUXER_EVENT_BUTT;
+  FILE_CACHE_HANDLE_S *pstFileCachehandle = NULL;
 
   if (!filename) {
     RKADK_LOGW("filename is null");
     return;
   }
 
+  if (enNotify != FILE_END) {
+    for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
+      if (g_pRecorder[i]) {
+        pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
+        for (j = 0; j < (int)pstMuxer->u32StreamCnt; j++) {
+          pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[j];
+          if (!pstMuxerHandle) {
+            RKADK_LOGD("Muxer Handle[%d] is NULL", j);
+            continue;
+          }
 
-  for (i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
-    if (g_pRecorder[i]) {
-      pstMuxer = (RKADK_MUXER_HANDLE_S *)g_pRecorder[i];
-      for (j = 0; j < (int)pstMuxer->u32StreamCnt; j++) {
-        pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[j];
-        if (!pstMuxerHandle) {
-          RKADK_LOGD("Muxer Handle[%d] is NULL", j);
-          continue;
+          if (!strcmp(pstMuxerHandle->cFileName, filename))
+            break;
+
+          pstMuxerHandle = NULL;
         }
+      }
+    }
 
-        if (enNotify == FILE_END)
-          cFileName = pstMuxerHandle->stFileCachehandle.cFileName;
-        else
-          cFileName = pstMuxerHandle->cFileName;
+    if (!pstMuxerHandle) {
+      RKADK_LOGE("file[%s] not find pstMuxerHandle", filename);
+      return;
+    }
+  } else {
+    for(i == 0; i < (RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT); i++) {
+      pstFileCachehandle = &g_stFileCachehandle[i];
 
-        if (!strcmp(cFileName, filename))
-          break;
+      if (!pstFileCachehandle->bUsed)
+        continue;
 
-        pstMuxerHandle = NULL;
+      if (!strcmp(pstFileCachehandle->cFileName, filename))
+        break;
+
+      pstFileCachehandle = NULL;
+    }
+
+    if (!pstFileCachehandle) {
+      RKADK_LOGE("file[%s] not find pstFileCachehandle", filename);
+      return;
+    } else {
+      if (!pstFileCachehandle->pfnEventCallback) {
+        RKADK_LOGE("Unregistered event callback");
+        return;
       }
     }
   }
-
-  if (!pstMuxerHandle)
-    return;
 
   switch (enNotify) {
     case FILE_NEW:
@@ -2247,11 +2273,11 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
         value = pstMuxerHandle->duration;
       break;
     case FILE_END:
-      if (pstMuxerHandle->stFileCachehandle.bSplitRecord)
+      if (pstFileCachehandle->bSplitRecord)
         enEventType = RKADK_MUXER_EVENT_MANUAL_SPLIT_END;
       else
         enEventType = RKADK_MUXER_EVENT_FILE_END;
-      value = pstMuxerHandle->stFileCachehandle.realDuration;
+      value = pstFileCachehandle->realDuration;
       break;
     case OPEN_FAILED:
       enEventType = RKADK_MUXER_EVENT_ERR_CREATE_FILE_FAIL;
@@ -2275,10 +2301,25 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
   if (enEventType == RKADK_MUXER_EVENT_BUTT)
     return;
 
-  RKADK_MUXER_ProcessEvent(pstMuxerHandle, enEventType, value);
+  if (enNotify != FILE_END) {
+    RKADK_MUXER_ProcessEvent(pstMuxerHandle, enEventType, value);
+  } else {
+    RKADK_MUXER_EVENT_INFO_S stEventInfo;
+
+    memset(&stEventInfo, 0, sizeof(RKADK_MUXER_EVENT_INFO_S));
+    stEventInfo.enEvent = enEventType;
+    stEventInfo.unEventInfo.stFileInfo.u32Duration = value;
+    strncpy(stEventInfo.unEventInfo.stFileInfo.asFileName,
+            pstFileCachehandle->cFileName, strlen(pstFileCachehandle->cFileName));
+    pstFileCachehandle->pfnEventCallback(pstFileCachehandle->ptr, &stEventInfo);
+  }
 }
 
 void RKADK_MUXER_FsCacheNotify() {
   file_msg_reg_callback(RKADK_MUXER_NotifyCallback);
+}
+
+void RKADK_MUXER_FileCacheInit() {
+  memset(g_stFileCachehandle, 0, sizeof(FILE_CACHE_HANDLE_S) * RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT);
 }
 #endif

@@ -1683,8 +1683,10 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   RKADK_MUXER_SetResetState(*pRecorder, false);
   RKADK_LOGI("Record[%d] reset end...", u32CamId);
 
+#ifdef ENABLE_AOV
   if (enPreRecType != pstRecCfg->record_type && enPreRecType == RKADK_REC_TYPE_AOV_LAPSE)
     RKADK_AOV_EnterSleep();
+#endif
 
   return 0;
 
@@ -1782,6 +1784,7 @@ RKADK_S32 RKADK_RECORD_FileCacheInit(FILE_CACHE_ARG *pstFileCacheAttr) {
 
   RKADK_CHECK_POINTER(pstFileCacheAttr, RKADK_FAILURE);
   ret = file_cache_init(pstFileCacheAttr);
+  RKADK_MUXER_FileCacheInit();
   RKADK_MUXER_FsCacheNotify();
   return ret;
 #else
