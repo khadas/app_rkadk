@@ -182,13 +182,15 @@ typedef enum {
   RKADK_REC_TYPE_BUTT,
 } RKADK_MUXER_REC_TYPE_E;
 
-typedef void (*RKADK_ISP_WAKE_UP_PAUSE)(RKADK_U32 u32CamId);
-typedef void (*RKADK_ISP_WAKE_UP_RESUME)(RKADK_U32 u32CamId);
-typedef int (*RKADK_ISP_SET_FRAME_RATE)(RKADK_U32 u32CamId, unsigned int uFps);
+typedef void (*RKADK_ISP_WAKE_UP_PAUSE_FN)(RKADK_U32 u32CamId);
+typedef void (*RKADK_ISP_WAKE_UP_RESUME_FN)(RKADK_U32 u32CamId);
+typedef int (*RKADK_ISP_SET_FRAME_RATE_FN)(RKADK_U32 u32CamId, unsigned int uFps);
+typedef int (*RKADK_MOUMNT_SDCARD_FN)(void);
+
 
 typedef struct {
-  RKADK_ISP_WAKE_UP_PAUSE pfnSingleFrame;
-  RKADK_ISP_WAKE_UP_RESUME pfnMultiFrame;
+  RKADK_ISP_WAKE_UP_PAUSE_FN pfnSingleFrame;
+  RKADK_ISP_WAKE_UP_RESUME_FN pfnMultiFrame;
 } RKADK_AOV_ATTR_S;
 
 /* muxer attribute param */
@@ -204,6 +206,7 @@ typedef struct {
   RKADK_MUXER_EVENT_CALLBACK_FN pfnEventCallback;
   RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
   RKADK_AOV_ATTR_S stAovAttr;
+  RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
 } RKADK_MUXER_ATTR_S;
 
 typedef enum {
@@ -222,6 +225,7 @@ typedef struct {
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_ISP_FRAME_MODE enFrameMode;
   RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
+  RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
 } RKADK_MUXER_HANDLE_S;
 
 /**

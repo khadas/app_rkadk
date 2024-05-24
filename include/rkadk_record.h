@@ -45,6 +45,7 @@ typedef struct {
   RKADK_REC_PTS_CALLBACK_FN pfnPtsCallback;      /* pts callbak */
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
+  RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
 } RKADK_RECORD_ATTR_S;
 
 /****************************************************************************/

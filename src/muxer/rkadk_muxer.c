@@ -833,7 +833,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
     pstMuxerHandle->S64DiffPts = pts - pstMuxerHandle->u32PrePts;
     pstMuxerHandle->u32PrePts = pts;
     printf("\n\n");
-    printf("muxerId[%d]: pts: %lld, frameCnt: %d, S64DiffPts: %lld\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->S64DiffPts);
+    printf("muxerId[%d]: pts: %lld, frameCnt: %d, S64DiffPts: %lld\n\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->S64DiffPts);
 
 #ifdef RV1106_1103
     system("cat /proc/rkisp-vir0 | grep frame");
@@ -1005,6 +1005,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   VENC_STREAM_S stFrame;
   FILE *fp = NULL;
   bool bGetThumb = false;
+  RKADK_MUXER_HANDLE_S *pstMuxer = (RKADK_MUXER_HANDLE_S *)pstMuxerHandle->ptr;
 
   stFrame.pstPack = &stPack;
 
@@ -1021,8 +1022,22 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
     ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1);
     if (ret == RK_SUCCESS) {
       pData = (RKADK_CHAR *)RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
+
+      if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE) {
+        RKADK_AOV_WakeupLock();
+        if (pstMuxer->pfnMountSdcard) {
+          if (pstMuxer->pfnMountSdcard())
+            RKADK_LOGE("sdcard mount failed");
+        } else {
+            RKADK_LOGD("Unregistered pfnMountSdcard");
+        }
+      }
+
       fp = fopen(pstMuxerHandle->cFileName, "r+");
       if (!fp) {
+        if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
+          RKADK_AOV_WakeupUnlock();
+
         RKADK_LOGE("Open %s file failed, errno = %d", pstMuxerHandle->cFileName, errno);
         RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
         return false;
@@ -1040,6 +1055,10 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       }
 
       fclose(fp);
+
+      if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
+        RKADK_AOV_WakeupUnlock();
+
       ret = RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
@@ -1677,6 +1696,7 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   pstMuxer->u32FragKeyFrame = pstMuxerAttr->u32FragKeyFrame;
   pstMuxer->enFrameMode = MULTI_FRAME_MODE;
   pstMuxer->pfnPtsCallback = pstMuxerAttr->pfnPtsCallback;
+  pstMuxer->pfnMountSdcard = pstMuxerAttr->pfnMountSdcard;
   memcpy(&pstMuxer->stAovAttr, &pstMuxerAttr->stAovAttr, sizeof(RKADK_AOV_ATTR_S));
 
 #ifdef ENABLE_AOV

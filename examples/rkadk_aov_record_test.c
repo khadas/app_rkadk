@@ -728,6 +728,7 @@ record:
 #ifdef ENABLE_AOV
   stRecAttr.stAovAttr.pfnSingleFrame = SAMPLE_ISP_SingleFrame;
   stRecAttr.stAovAttr.pfnMultiFrame = SAMPLE_ISP_MultiFrame;
+  stRecAttr.pfnMountSdcard = MountSdcard;
 #endif
 
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
