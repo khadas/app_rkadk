@@ -124,7 +124,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
   pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
   pstFrmInfo->u32VoFormat = VO_FORMAT_RGB888;
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_DEFAULT;
 #else
   pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_MIPI;
@@ -354,7 +354,7 @@ int main(int argc, char *argv[]) {
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
 
-#if defined(RK3506) || defined(RV1106_1103)
+#if defined(RK3506) || defined(RV1106_1103) || defined(RV1103B)
   stPlayCfg.stAudioCfg.pSoundCard = "hw:0,0";
 #else
   stPlayCfg.stAudioCfg.pSoundCard = "default";

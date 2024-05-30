@@ -161,7 +161,7 @@ rtmp:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
       ret = RKADK_RTMP_VideoReset(pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_RTMP_DeInit(pHandle);
         pHandle = NULL;
 #ifdef RKAIQ
@@ -176,7 +176,7 @@ rtmp:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
       ret = RKADK_RTMP_VideoReset(pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_RTMP_DeInit(pHandle);
         pHandle = NULL;
 #ifdef RKAIQ

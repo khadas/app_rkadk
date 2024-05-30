@@ -714,7 +714,7 @@ static void RKADK_PARAM_CheckDispCfg(char *path, RKADK_U32 u32CamId) {
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->splice_mode, "RGA",
                                     RKADK_SPLICE_MODE_LEN, "display splice_mode");
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   change |= RKADK_PARAM_CheckCfgStr(pstDispCfg->intf_type, "default",
                                     RKADK_INTF_FMT_LEN, "display intf_type");
 #else
@@ -1036,7 +1036,7 @@ static void RKADK_PARAM_DefDispCfg(RKADK_U32 u32CamId, char *path) {
     pstDispCfg->vo_device = VO_DEVICE;
     pstDispCfg->vo_layer = VOP_LAYER;
     pstDispCfg->vo_chn = 0;
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
     memcpy(pstDispCfg->intf_type, "default", strlen("default"));
 #else
     memcpy(pstDispCfg->intf_type, "MIPI", strlen("MIPI"));
@@ -1976,7 +1976,7 @@ static RKADK_S32 RKADK_PARAM_MatchViIndex(RKADK_STREAM_TYPE_E enStrmType,
   } else {
     if (width >= pstSensorCfg->max_width || height >= pstSensorCfg->max_height) {
       index = matchViIndex[0];
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
       //1126/1109 nonsupport isp enlarge
       bSaveViCfg = false;
 #endif
@@ -2209,7 +2209,8 @@ static RKADK_S32 RKADK_PARAM_SetStreamViAttr(RKADK_S32 s32CamId,
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstStreamCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-#ifndef RV1106_1103
+
+#if !defined(RV1106_1103) && !defined(RV1103B)
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
@@ -2262,7 +2263,7 @@ static RKADK_S32 RKADK_PARAM_SetPhotoViAttr(RKADK_S32 s32CamId) {
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
     pstPhotoCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
@@ -2321,7 +2322,7 @@ static RKADK_S32 RKADK_PARAM_SetRecViAttr(RKADK_S32 s32CamId) {
            pstViCfg->device_name, sizeof(pstViCfg->device_name));
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
     pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
     if (!pstSensorCfg->used_isp) {
       //only support MPLANE&&MMAP if not use libv4l2
       pstRecCfg->vi_attr[i].stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
@@ -2387,7 +2388,7 @@ static RKADK_S32 RKADK_PARAM_SetDispViAttr(RKADK_S32 s32CamId) {
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstDispCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
     pstDispCfg->vi_attr.stChnAttr.stIspOpt.bNoUseLibV4L2 = RK_TRUE;
@@ -2431,7 +2432,8 @@ static RKADK_S32 RKADK_PARAM_SetThumbViAttr(RKADK_S32 s32CamId) {
          pstViCfg->device_name, sizeof(pstViCfg->device_name));
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.u32BufCount = pstViCfg->buf_cnt;
   pstThumbCfg->vi_attr.stChnAttr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
-#ifndef RV1106_1103
+
+#if !defined(RV1106_1103) && !defined(RV1103B)
   RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg = &g_stPARAMCtx.stCfg.stSensorCfg[s32CamId];
   if (!pstSensorCfg->used_isp) {
     //only support MPLANE&&MMAP if not use libv4l2
@@ -2522,7 +2524,7 @@ static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
   if (mute) {
     RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
   } else {
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
     RK_MPI_AMIX_SetControl(0, "ADC Digital Left Volume", buffer);
     RK_MPI_AMIX_SetControl(0, "ADC Digital Right Volume", buffer);
 #endif

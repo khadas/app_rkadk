@@ -78,6 +78,8 @@ endif()
 
 if(${RKADK_CHIP} STREQUAL "rv1106")
 	target_link_libraries(rkadk rockit_full)
+elseif(${RKADK_CHIP} STREQUAL "rv1103b")
+	target_link_libraries(rkadk rockit_full)
 else()
 	target_link_libraries(rkadk rockit)
 endif()

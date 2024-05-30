@@ -43,7 +43,7 @@ extern "C" {
 #define AUDIO_FRAME_COUNT 1152
 #define AUDIO_BIT_WIDTH AUDIO_BIT_WIDTH_16
 #define AI_DEPTH 1
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
 #define AUDIO_DEVICE_NAME "hw:0,0"
 #elif RK3506
 #define AUDIO_DEVICE_NAME "hw:0,0"

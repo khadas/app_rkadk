@@ -83,8 +83,8 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
     if (g_output_file) {
       fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
              g_output_file);
-      //RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
-      //           pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
     }
   }
 
@@ -269,7 +269,7 @@ stream:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
       ret = RKADK_STREAM_VideoReset(pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_STREAM_VencStop(pHandle);
         RKADK_STREAM_VideoDeInit(pHandle);
         pHandle = NULL;
@@ -286,7 +286,7 @@ stream:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
       ret = RKADK_STREAM_VideoReset(pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_STREAM_VencStop(pHandle);
         RKADK_STREAM_VideoDeInit(pHandle);
         pHandle = NULL;
@@ -381,8 +381,8 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
-  //RKADK_LOGD("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-  //           pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+  RKADK_LOGD("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
 }
@@ -398,8 +398,8 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
-  //RKADK_LOGD("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-  //           pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+  RKADK_LOGD("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
 }

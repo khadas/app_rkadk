@@ -2443,7 +2443,7 @@ RKADK_S32 RKADK_PLAYER_SetDataParam(RKADK_MW_PTR pPlayer,
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
   RKADK_CHECK_POINTER(pstDataParam, RKADK_FAILURE);
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   if (pstDataParam->enVCodecType == RKADK_CODEC_TYPE_H265) {
     RKADK_LOGE("rv1106 nonsupport h265");
     return -1;
@@ -2594,7 +2594,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
         if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h264")) {
           pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H264;
         } else if (!strcmp(pstPlayer->stDemuxerParam.pVideoCodec, "h265")) {
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
           RKADK_LOGE("rv1106 nonsupport h265");
           goto __FAILED;
 #else
@@ -2671,7 +2671,7 @@ RKADK_S32 RKADK_PLAYER_SetDataSource(RKADK_MW_PTR pPlayer,
     if (!strcmp(suffix, ".h264")) {
       pstPlayer->stVdecCtx.eCodecType = RKADK_CODEC_TYPE_H264;
     } else if (!strcmp(suffix, ".h265")) {
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
       RKADK_LOGE("1106 nonsupport h265");
       goto __FAILED;
 #else

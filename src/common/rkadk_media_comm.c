@@ -131,7 +131,7 @@ void RKADK_MEDIA_DumpBufinfo(const char *fmt, const char *fname, const int row, 
   vfprintf(stdout, line, args);
   va_end(args);
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   system("cat /proc/rk_dma_heap/dma_heap_info");
 #else
   system("cat /sys/kernel/debug/dma_buf/bufinfo");
@@ -243,7 +243,7 @@ static RKADK_U32 RKADK_MPI_VO_CreateLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoDe
       enSpliceMode = VO_SPLICE_MODE_GPU;
     else if (enVoSpliceMode == SPLICE_MODE_RGA)
       enSpliceMode = VO_SPLICE_MODE_RGA;
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
     else if (enVoSpliceMode == SPLICE_MODE_BYPASS)
       pstLayerAttr->bBypassFrame = RK_TRUE;
 #endif
@@ -481,7 +481,7 @@ static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId
   RK_S32 s32VqeGapMs = 16; //just supports 16ms or 10ms for AI VQE
   AI_VQE_CONFIG_S stAiVqeConfig;
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   ret = RK_MPI_AMIX_SetControl(s32DevId, "I2STDM Digital Loopback Mode", (char *)"Mode2");
   if (ret) {
     RKADK_LOGE("AI[%d,%d] set I2STDM Digital Loopback Mode failed: %x", s32DevId, s32AiChnId, ret);
@@ -573,12 +573,6 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     if (enMode != RKADK_VQE_MODE_BUTT)
       RKADK_MPI_AI_EnableVqe(aiDevId, s32AiChnId, pstAiAttr->enSamplerate, enMode, pVqeCfgPath);
 
-    ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
-    if (ret) {
-      RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
-      goto exit;
-    }
-
     if (pstAiAttr->u32ChnCnt == 2) {
       if (micType == RKADK_MIC_TYPE_LEFT) {
         s32SetTrackMode = AUDIO_TRACK_BOTH_LEFT;
@@ -604,6 +598,12 @@ RKADK_S32  RKADK_MPI_AI_Init(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     ret = RK_MPI_AI_SetTrackMode(aiDevId, (AUDIO_TRACK_MODE_E)s32SetTrackMode);
     if (ret) {
       RKADK_LOGE("AI[%d, %d] mic type[%d] enable failed[%x]", aiDevId, s32AiChnId, micType, ret);
+    }
+
+    ret = RK_MPI_AI_EnableChn(aiDevId, s32AiChnId);
+    if (ret) {
+      RKADK_LOGE("AI[%d, %d] enable chn failed[%x]", aiDevId, s32AiChnId, ret);
+      goto exit;
     }
 
     ret = RK_MPI_AI_SetVolume(aiDevId, pstCommCfg->mic_volume);
@@ -665,7 +665,7 @@ RKADK_S32 RKADK_MPI_AI_DeInit(AUDIO_DEV aiDevId, RKADK_S32 s32AiChnId,
     return 0;
   } else if (1 == s32InitCnt) {
     if (enMode != RKADK_VQE_MODE_BUTT) {
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
       ret = RK_MPI_AMIX_SetControl(aiDevId, "I2STDM Digital Loopback Mode", (char *)"Disabled");
       if (ret)
         RKADK_LOGE("AI[%d, %d] set I2STDM Digital Loopback Mode failed: %x", aiDevId, s32AiChnId, ret);
@@ -1534,7 +1534,7 @@ static void *RKADK_MEDIA_GetVencMb(void *params) {
 
         //dump video info
         if (g_stMediaCtx.dumpDebugInfo) {
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
           system("cat proc/rkisp-vir0 | grep frame");
           system("cat /dev/mpi/vsys");
           system("cat /proc/vcodec/enc/venc_info");
@@ -2686,7 +2686,7 @@ int RKADK_MEDIA_VencResetCheck(RKADK_U32 u32CamId, RKADK_PARAM_VENC_ATTR_S attri
 
   bReset = RKADK_MEDIA_CompareResolution(&stVencAttr, attribute.width, attribute.height);
   if (bReset) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
     RKADK_LOGD("rv1126/1109 nonsupport dynamic setting resolution");
     return -1;
 #endif
@@ -2694,7 +2694,7 @@ int RKADK_MEDIA_VencResetCheck(RKADK_U32 u32CamId, RKADK_PARAM_VENC_ATTR_S attri
 
   enType = RKADK_MEDIA_GetRkCodecType(attribute.codec_type);
   if (stVencAttr.stVencAttr.enType != enType) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
     RKADK_LOGD("rv1126/1109 nonsupport dynamic setting code type, Old type [%d], new type [%d]",
               stVencAttr.stVencAttr.enType, enType);
     return -1;

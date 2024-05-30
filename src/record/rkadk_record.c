@@ -1516,7 +1516,7 @@ static int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
 
     bReset = RKADK_MEDIA_CompareResolution(&stVencAttr, u32Width, u32Height);
     if (bReset) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
       RKADK_LOGD("rv1126/1109 nonsupport dynamic setting resolution");
       return -1;
 #endif
@@ -1524,7 +1524,7 @@ static int RKADK_RECORD_ResetCheck(RKADK_U32 u32CamId,
 
     enType = RKADK_MEDIA_GetRkCodecType(pstRecCfg->attribute[index].codec_type);
     if (stVencAttr.stVencAttr.enType != enType) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
       RKADK_LOGD("rv1126/1109 nonsupport dynamic setting code type, Old type [%d], new type [%d]",
                 stVencAttr.stVencAttr.enType, enType);
       return -1;

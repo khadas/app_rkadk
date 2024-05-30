@@ -157,7 +157,7 @@ static RKADK_S32 RKADK_DISP_Enable(RKADK_U32 u32CamId, RKADK_PARAM_DISP_CFG_S *p
     stChnAttr.bFlip = (RK_BOOL)pstSensorCfg->flip;
   }
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   //unbind mode
   stChnAttr.u32Depth = 3;
 #else
@@ -305,7 +305,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   }
 
   stDispHandle.u32CamId = u32CamId;
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   char name[RKADK_THREAD_NAME_LEN];
   stDispHandle.bSendBuffer = true;
   ret = pthread_create(&stDispHandle.tid, NULL,
@@ -374,7 +374,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   RKADK_DISP_SetChn(u32CamId, pstDispCfg, &stViChn,
                     &stVoChn, &stSrcVpssChn, &stDstVpssChn);
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   stDispHandle.bSendBuffer = false;
   if (stDispHandle.tid) {
     RKADK_LOGD("Request to cancel get mb thread...");

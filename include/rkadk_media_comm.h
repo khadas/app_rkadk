@@ -37,7 +37,7 @@ extern "C" {
 #include "rk_mpi_vo.h"
 #include "rk_mpi_vdec.h"
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
 #include "rk_mpi_amix.h"
 #endif
 

@@ -373,7 +373,7 @@ photo:
     OsdAttr.Height = u32OsdHeight;
     OsdAttr.pData = malloc(OsdAttr.Height * OsdAttr.Width * 4);
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
     OsdAttr.enOsdType = RKADK_OSD_TYPE_NORMAL;
 #else
     OsdAttr.enOsdType = RKADK_OSD_TYPE_EXTRA;
@@ -415,7 +415,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
@@ -429,7 +429,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
@@ -443,7 +443,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
@@ -457,7 +457,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
@@ -474,7 +474,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);
@@ -491,7 +491,7 @@ photo:
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_PHOTO_RES, &type);
       ret = RKADK_PHOTO_Reset(&pHandle);
       if (ret < 0) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
         RKADK_PHOTO_DeInit(pHandle);
 #ifdef RKAIQ
         SAMPLE_ISP_Stop(u32CamId);

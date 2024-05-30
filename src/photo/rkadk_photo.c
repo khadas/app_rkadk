@@ -908,7 +908,7 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
     return true;
   }
 
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP) {
     if (u32VpssBufCnt)
       *u32VpssBufCnt = 1;
@@ -1430,7 +1430,7 @@ RKADK_S32 RKADK_PHOTO_Reset(RKADK_MW_PTR *pHandle) {
   pstHandle = (RKADK_PHOTO_HANDLE_S *)*pHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
   RKADK_LOGE("rv1126/1109 nonsupport dynamic setting resolution, please recreate!");
   return -1;
 #endif

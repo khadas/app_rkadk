@@ -829,7 +829,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
     printf("\n\n");
     printf("muxerId[%d]: pts: %lld, frameCnt: %d, S64DiffPts: %lld\n\n", pstMuxerHandle->muxerId, pts, pstMuxerHandle->frameCnt, pstMuxerHandle->S64DiffPts);
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
     system("cat /proc/rkisp-vir0 | grep frame");
 #else
     system("cat /proc/rkispp0 | grep frame");

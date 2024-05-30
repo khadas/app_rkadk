@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
   stUiAttr.u32ImgWidth = u32Width;
   stUiAttr.u32ImgHeight = u32Height;
   stUiAttr.enVoSpliceMode = SPLICE_MODE_RGA;
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_DEFAULT;
 #else
   stUiAttr.enUiVoIntfTye = DISPLAY_TYPE_MIPI;

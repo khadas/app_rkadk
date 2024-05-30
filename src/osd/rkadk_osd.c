@@ -35,7 +35,7 @@ RKADK_S32 RKADK_OSD_Init(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAttr) {
       break;
     case RKADK_OSD_TYPE_EXTRA:
       stRgnAttr.enType = OVERLAY_EX_RGN;
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
       stRgnAttr.unAttr.stOverlay.enVProcDev = VIDEO_PROC_DEV_RGA;
 #endif
       break;

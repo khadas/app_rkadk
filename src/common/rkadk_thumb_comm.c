@@ -634,7 +634,7 @@ RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
   MPP_CHN_S stVdecChn, stVpssChn;
   bool bIsEnableVpss = false;
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   VIDEO_FRAME_INFO_S sFrameIn = {0};
 #endif
 
@@ -663,7 +663,7 @@ RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
   stAttr.u32PicHeight = pstSrcThmAttr->u32Height;
   stAttr.u32FrameBufCnt = 1;
   stAttr.u32StreamBufCnt = 1;
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   stAttr.u32FrameBufDepth = 1;
 #endif
   ret = RK_MPI_VDEC_CreateChn(stVdecChn.s32ChnId, &stAttr);
@@ -682,7 +682,7 @@ RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
     goto exit;
   }
 
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
   //create vpss
   ret = ThumbVpssInit(stVpssChn, pstSrcThmAttr, pstDstThmAttr);
   if (ret) {
@@ -734,7 +734,7 @@ RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
     goto exit;
   }
 
-#ifdef RV1106_1103
+#if defined(RV1106_1103) || defined(RV1103B)
   //get decode frame
   memset(&sFrameIn, 0, sizeof(VIDEO_FRAME_INFO_S));
   ret = RK_MPI_VDEC_GetFrame(stVdecChn.s32ChnId, &sFrameIn, -1);
@@ -800,7 +800,7 @@ RKADK_S32 ThumbnailJpgDecode(RKADK_THUMB_ATTR_S *pstSrcThmAttr,
 
 exit:
   if (bIsEnableVpss) {
-#ifndef RV1106_1103
+#if !defined(RV1106_1103) && !defined(RV1103B)
     deinitRet = RK_MPI_SYS_UnBind(&stVdecChn, &stVpssChn);
     if (deinitRet)
       RKADK_LOGE("UnBind VDEC[%d] to VPSS[%d, %d] failed[%x]", stVdecChn.s32ChnId,
