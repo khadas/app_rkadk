@@ -500,7 +500,7 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
 
   RKADK_STREAM_SetVideoChn(pstStreamCfg, pstHandle->u32CamId, &stViChn,
                            &stVencChn, &stSrcVpssChn, &stDstVpssChn);
-  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_STREAM_VencOutCb, pstHandle);
+  RKADK_MEDIA_StopGetVencBuffer(pstHandle->u32CamId, &stVencChn, false, RKADK_STREAM_VencOutCb, pstHandle);
 
   bUseVpss = RKADK_MEDIA_VideoIsUseVpss(pstHandle->u32CamId, NULL, pstStreamCfg->vi_attr, pstStreamCfg->attribute);
   if (bUseVpss) {

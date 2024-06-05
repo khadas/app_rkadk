@@ -169,7 +169,7 @@ RKADK_S32 RKADK_MEDIA_GetVencBuffer(MPP_CHN_S *pstChn,
                                     RKADK_VOID *pHandle);
 
 RKADK_S32
-RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
+RKADK_MEDIA_StopGetVencBuffer(RKADK_U32 u32CamId, MPP_CHN_S *pstChn, bool bIsAovMode,
                               RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
                               RKADK_VOID *pHandle);
 

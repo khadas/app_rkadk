@@ -743,7 +743,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
 
   // exit get media buffer
   if (pstHandle->bVencChnMux)
-    RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTSP_VencOutCb, pstHandle);
+    RKADK_MEDIA_StopGetVencBuffer(pstHandle->u32CamId, &stVencChn, false, RKADK_RTSP_VencOutCb, pstHandle);
 
    // Stop get aenc data
   RKADK_RTSP_AudioSetChn(&stAiChn, &stAencChn);

@@ -1642,7 +1642,7 @@ exit:
 }
 
 RKADK_S32
-RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
+RKADK_MEDIA_StopGetVencBuffer(RKADK_U32 u32CamId, MPP_CHN_S *pstChn, bool bIsAovMode,
                               RKADK_MEDIA_VENC_DATA_PROC_FUNC pfnDataCB,
                               RKADK_VOID *pHandle) {
   int i, ret = 0;
@@ -1681,6 +1681,9 @@ RKADK_MEDIA_StopGetVencBuffer(MPP_CHN_S *pstChn,
   if (!pstMediaInfo->stGetVencMBAttr.s32GetCnt) {
     pstMediaInfo->stGetVencMBAttr.bGetBuffer = false;
     if (pstMediaInfo->stGetVencMBAttr.tid) {
+      if (bIsAovMode)
+        RK_MPI_VI_DevEnableSinglelFrame(u32CamId, 1);
+
       RKADK_LOGD("Request to cancel venc mb thread...");
       ret = pthread_join(pstMediaInfo->stGetVencMBAttr.tid, NULL);
       if (ret)

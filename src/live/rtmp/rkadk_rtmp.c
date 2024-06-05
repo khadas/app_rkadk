@@ -775,7 +775,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
                          &stSrcVpssChn, &stDstVpssChn);
 
   // Stop get venc data
-  RKADK_MEDIA_StopGetVencBuffer(&stVencChn, RKADK_RTMP_VencOutCb, pstHandle);
+  RKADK_MEDIA_StopGetVencBuffer(pstHandle->u32CamId, &stVencChn, false, RKADK_RTMP_VencOutCb, pstHandle);
 
    // Stop get aenc data
   if (bDisableAudio) {

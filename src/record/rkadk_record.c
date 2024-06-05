@@ -796,7 +796,7 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId,
   int ret;
   MPP_CHN_S stSrcChn, stDestChn, stSrcVpssChn, pstDstVpssChn;
   RKADK_PARAM_REC_CFG_S *pstRecCfg = NULL;
-  bool bUseVpss = false;
+  bool bUseVpss = false, bIsAovMode = false;
 
   pstRecCfg = RKADK_PARAM_GetRecCfg(u32CamId);
   if (!pstRecCfg) {
@@ -824,7 +824,11 @@ static int RKADK_RECORD_UnBindChn(RKADK_U32 u32CamId,
                              &stSrcVpssChn, &pstDstVpssChn, (RKADK_MW_PTR)pstRecorder);
 
     // Stop get venc data
-    RKADK_MEDIA_StopGetVencBuffer(&stDestChn, RKADK_RECORD_VencOutCb, pstRecorder);
+    if (pstRecCfg->record_type == RKADK_REC_TYPE_AOV_LAPSE)
+      bIsAovMode = true;
+    else
+      bIsAovMode = false;
+    RKADK_MEDIA_StopGetVencBuffer(u32CamId, &stDestChn, bIsAovMode, RKADK_RECORD_VencOutCb, pstRecorder);
 
     bUseVpss = RKADK_MUXER_IsUseVpss((RKADK_MW_PTR)pstRecorder, stDestChn.s32ChnId);
     if (bUseVpss) {
