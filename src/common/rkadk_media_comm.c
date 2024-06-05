@@ -103,6 +103,7 @@ static const struct RKADK_FORMAT_MAP fromat[] = {
     {RKADK_FMT_RGBA8888, RK_FMT_RGBA8888},
     {RKADK_FMT_BGRA8888, RK_FMT_BGRA8888},
     {RKADK_FMT_YUV420SP, RK_FMT_YUV420SP},
+    {RKADK_FMT_YUV420SP_VU, RK_FMT_YUV420SP_VU},
     {RKADK_FMT_YUV420SP_10BIT, RK_FMT_YUV420SP_10BIT},
     {RKADK_FMT_YUV422SP, RK_FMT_YUV422SP},
     {RKADK_FMT_YUV422_UYVY, RK_FMT_YUV422_UYVY},
@@ -2288,6 +2289,9 @@ int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat,
     break;
   case RK_FMT_YUV422SP:
     memcpy(cPixFmt, "NV16", strlen("NV16"));
+    break;
+  case RK_FMT_YUV420SP_VU:
+    memcpy(cPixFmt, "NV21", strlen("NV21"));
     break;
   case RK_FMT_YUV422_UYVY:
     memcpy(cPixFmt, "UYVY", strlen("UYVY"));
