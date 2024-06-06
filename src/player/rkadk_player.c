@@ -464,9 +464,7 @@ static RKADK_S32 CreateAdec(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx) {
   pstChnAttr.enType = RKADK_MEDIA_GetRkCodecType(pstAdecCtx->eCodecType);
   pstChnAttr.enMode = (ADEC_MODE_E)pstAdecCtx->decMode;
   pstChnAttr.u32BufCount = 4;
-#ifndef RV1106_1103
   pstChnAttr.u32Depth = 4;
-#endif
   pstChnAttr.u32BufSize = 50 * 1024;
 
   ret = RK_MPI_ADEC_CreateChn(pstAdecCtx->chnIndex, &pstChnAttr);
@@ -1448,9 +1446,7 @@ static void SendData(RKADK_VOID *ptr) {
           stFrmInfoCache.pstFrame->u64TimeStamp += frameTime;
           stFrmInfoCache.pstFrame->enBitWidth = FindBitWidth(pstPlayer->stAoCtx.bitWidth);
           stFrmInfoCache.pstFrame->enSoundMode = FindSoundMode(pstPlayer->stDemuxerParam.audioChannels);
-#ifndef RV1106_1103
           stFrmInfoCache.pstFrame->s32SampleRate = pstPlayer->stDemuxerParam.audioSampleRate;
-#endif
           stFrmInfoCache.pstFrame->u32Seq++;
           stFrmInfoCache.pstFrame->bBypassMbBlk = false;
           clock_gettime(CLOCK_MONOTONIC, &t_begin);
@@ -1474,9 +1470,7 @@ static void SendData(RKADK_VOID *ptr) {
         if (size > 0) {
           stFrmInfoCache.pstFrame->enBitWidth = stFrmInfo.pstFrame->enBitWidth;
           stFrmInfoCache.pstFrame->enSoundMode = stFrmInfo.pstFrame->enSoundMode;
-#ifndef RV1106_1103
           stFrmInfoCache.pstFrame->s32SampleRate = stFrmInfo.pstFrame->s32SampleRate;
-#endif
           stFrmInfoCache.pstFrame->bBypassMbBlk = false;
 
           originFrame = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(stFrmInfo.pstFrame->pMbBlk);
