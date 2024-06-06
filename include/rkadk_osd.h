@@ -46,6 +46,7 @@ typedef struct {
 
 typedef struct {
   RKADK_BOOL bEnableShow;
+  RKADK_U32 u32Layer;
   RKADK_U32 Origin_X;
   RKADK_U32 Origin_Y;
   RKADK_OSD_TYPE_E enOsdType;

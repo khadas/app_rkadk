@@ -156,6 +156,7 @@ RKADK_S32 RKADK_OSD_AttachToStream(RKADK_U32 u32OsdId, RKADK_U32 u32CamId,
 
   stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32X = pstOsdStreamAttr->Origin_X;
   stRgnChnAttr.unChnAttr.stOverlayChn.stPoint.s32Y = pstOsdStreamAttr->Origin_Y;
+  stRgnChnAttr.unChnAttr.stOverlayChn.u32Layer = pstOsdStreamAttr->u32Layer;
 
   ret = RK_MPI_RGN_AttachToChn(RgnHandle, &stMppChn, &stRgnChnAttr);
   if (RK_SUCCESS != ret) {
