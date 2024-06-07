@@ -51,7 +51,10 @@ add_definitions(-Wall
 		-Wl,-Bsymbolic)
 
 add_subdirectory(src)
-add_subdirectory(examples)
+
+if(BUILD_EXAMPLES)
+	add_subdirectory(examples)
+endif()
 
 #Install rkadk default configuration file
 if(${RKADK_CHIP} STREQUAL "rv1106")
