@@ -17,6 +17,7 @@ if(ENABLE_EIS)
 	file(GLOB_RECURSE IIO_SRC "common/isp/sample_iio_aiq.c")
 endif()
 
+if(ENABLE_COMMON_FUNCTIONS)
 #--------------------------
 # rkadk_photo_test
 #--------------------------
@@ -87,40 +88,6 @@ target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_rtsp_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_rtsp_test DESTINATION "bin")
 
-#--------------------------
-# rkadk_player_once_test
-#--------------------------
-if(${RKADK_CHIP} STREQUAL "rv1106")
-	set(ROCKIT_SO librockit_full.a)
-else()
-	set(ROCKIT_SO librockit.a)
-endif()
-
-set(RKADK_STATIC_LIB ${CMAKE_BINARY_DIR}/src/librkadk_static.a)
-add_executable(rkadk_player_once_test rkadk_player_once_test.c)
-add_dependencies(rkadk_player_once_test rkadk_static)
-target_link_libraries(rkadk_player_once_test rkdemuxer ${RKADK_STATIC_LIB} ${ROCKIT_SO} librockchip_mpp.a librga.a libdrm.a libpthread.a librkaudio.a libstdc++.a)
-if(NOT (${RKADK_CHIP} STREQUAL "rv1106") AND NOT (${RKADK_CHIP} STREQUAL "rv1126") AND NOT (${RKADK_CHIP} STREQUAL "rv1103b"))
-        target_link_libraries(rkadk_player_once_test asound libm.a)
-endif()
-target_include_directories(rkadk_player_once_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-
-message("strip tool = ${CMAKE_STRIP}")
-add_custom_command(TARGET rkadk_player_once_test POST_BUILD
-	COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:rkadk_player_once_test>"
-	COMMENT "Strip debug symbols done.")
-
-install(TARGETS rkadk_player_once_test DESTINATION "bin")
-
-#--------------------------
-# rkadk_player_test
-#--------------------------
-add_executable(rkadk_player_test rkadk_player_test.c)
-add_dependencies(rkadk_player_test rkadk)
-target_link_libraries(rkadk_player_test rkadk pthread)
-target_include_directories(rkadk_player_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-install(TARGETS rkadk_player_test DESTINATION "bin")
-
 #-----------------------------------
 # rkadk_setting_test
 #-----------------------------------
@@ -144,17 +111,6 @@ endif()
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_stream_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_stream_test DESTINATION "bin")
-
-if(ENABLE_STORAGE)
-#--------------------------
-# rkadk_storage_test
-#--------------------------
-add_executable(rkadk_storage_test rkadk_storage_test.c)
-add_dependencies(rkadk_storage_test rkadk)
-target_link_libraries(rkadk_storage_test rkadk pthread)
-target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-install(TARGETS rkadk_storage_test DESTINATION "bin")
-endif()
 
 #--------------------------
 # rkadk_thumb_test
@@ -194,7 +150,58 @@ endif()
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_media_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_media_test DESTINATION "bin")
+endif()
 
+if(ENABLE_PLAYER)
+if(BUILD_STATIC_LIBRARY)
+#--------------------------
+# rkadk_player_once_test
+#--------------------------
+if(${RKADK_CHIP} STREQUAL "rv1106")
+	set(ROCKIT_SO librockit_full.a)
+else()
+	set(ROCKIT_SO librockit.a)
+endif()
+
+set(RKADK_STATIC_LIB ${CMAKE_BINARY_DIR}/src/librkadk_static.a)
+add_executable(rkadk_player_once_test rkadk_player_once_test.c)
+add_dependencies(rkadk_player_once_test rkadk_static)
+target_link_libraries(rkadk_player_once_test rkdemuxer ${RKADK_STATIC_LIB} ${ROCKIT_SO} librockchip_mpp.a librga.a libdrm.a libpthread.a librkaudio.a libstdc++.a)
+if(NOT (${RKADK_CHIP} STREQUAL "rv1106") AND NOT (${RKADK_CHIP} STREQUAL "rv1126") AND NOT (${RKADK_CHIP} STREQUAL "rv1103b"))
+        target_link_libraries(rkadk_player_once_test asound libm.a)
+endif()
+target_include_directories(rkadk_player_once_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+message("strip tool = ${CMAKE_STRIP}")
+add_custom_command(TARGET rkadk_player_once_test POST_BUILD
+	COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:rkadk_player_once_test>"
+	COMMENT "Strip debug symbols done.")
+
+install(TARGETS rkadk_player_once_test DESTINATION "bin")
+endif()
+
+#--------------------------
+# rkadk_player_test
+#--------------------------
+add_executable(rkadk_player_test rkadk_player_test.c)
+add_dependencies(rkadk_player_test rkadk)
+target_link_libraries(rkadk_player_test rkadk pthread)
+target_include_directories(rkadk_player_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkadk_player_test DESTINATION "bin")
+endif()
+
+if(ENABLE_STORAGE)
+#--------------------------
+# rkadk_storage_test
+#--------------------------
+add_executable(rkadk_storage_test rkadk_storage_test.c)
+add_dependencies(rkadk_storage_test rkadk)
+target_link_libraries(rkadk_storage_test rkadk pthread)
+target_include_directories(rkadk_storage_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+install(TARGETS rkadk_storage_test DESTINATION "bin")
+endif()
+
+if(ENABLE_DISPLAY)
 #--------------------------
 # rkadk_disp_test
 #--------------------------
@@ -224,3 +231,4 @@ endif()
 target_include_directories(rkadk_ui_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(rkadk_ui_test PRIVATE ${CMAKE_SOURCE_DIR}/examples/common)
 install(TARGETS rkadk_ui_test DESTINATION "bin")
+endif()

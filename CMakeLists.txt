@@ -10,8 +10,10 @@ include(${PROJECT_SOURCE_DIR}/version/Version.cmake)
 install(DIRECTORY include/ DESTINATION include/rkadk FILES_MATCHING PATTERN "*.h")
 include_directories(include)
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdata-sections -ffunction-sections -Wl,--gc-sections")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -fdata-sections -ffunction-sections -Wl,--gc-sections")
+if(BUILD_STATIC_LIBRARY)
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdata-sections -ffunction-sections -Wl,--gc-sections")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -fdata-sections -ffunction-sections -Wl,--gc-sections")
+endif()
 
 if(${RKADK_CHIP} STREQUAL "rk3506")
 	add_definitions(-DRK3506)
