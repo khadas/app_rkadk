@@ -270,7 +270,7 @@ static int RKADK_THUMB_SetVideoChn(RKADK_PARAM_THUMB_CFG_S *ptsThumbCfg,
     pstVencChn->s32ChnId = ptsThumbCfg->record_sub_venc_chn;
     break;
   default:
-    RKADK_LOGE("Not support other module thumbnail!");
+    RKADK_LOGE("Not support other module[%d] thumbnail!", enThumbModule);
     return -1;
   }
 
@@ -1124,9 +1124,6 @@ exit:
     fclose(fd);
 
   munmap(pFile, s64FileSize);
-
-  if (ret)
-    RKADK_ThmBufFree(pstThumbAttr);
 
   if (stTimebuf.actime != 0 && stTimebuf.modtime != 0) {
     result = utime(pszFileName, &stTimebuf);

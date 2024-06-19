@@ -2036,9 +2036,6 @@ exit:
   if (fd)
     fclose(fd);
 
-  if (ret)
-    RKADK_PHOTO_ThumbBufFree(pstThumbAttr);
-
   if (bFree)
     RKADK_PHOTO_ThumbBufFree(&stTmpThmAttr);
 

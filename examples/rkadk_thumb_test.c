@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 #ifdef THUMB_ONLY_TEST_JPG
   int buf_size = 1024 * 1024;
   RKADK_U32 size = buf_size;
-  RKADK_U8 buffer[size];
+  RKADK_U8 *buffer = NULL;;
 #else
   RKADK_THUMB_ATTR_S stThumbAttr;
   memset(&stThumbAttr, 0, sizeof(RKADK_THUMB_ATTR_S));
@@ -145,16 +145,22 @@ int main(int argc, char *argv[]) {
   while (!is_quit) {
 #ifdef THUMB_ONLY_TEST_JPG
     size = buf_size;
+    buffer = (RKADK_U8 *)malloc(buf_size);
+    RKADK_LOGD("malloc thumb buffer: %p", buffer);
 
     if (bIsMp4) {
       if (RKADK_GetThmInMp4(u32CamId, pInuptPath, buffer, &size)) {
         RKADK_LOGE("RKADK_GetThmInMp4 failed");
+        RKADK_LOGD("free thumb buffer: %p", buffer);
+        free(buffer);
         return -1;
       }
     } else {
       RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpg(u32CamId, pInuptPath, eJpgThumbType, buffer, &size)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
+        RKADK_LOGD("free thumb buffer: %p", buffer);
+        free(buffer);
         return -1;
       }
     }
@@ -167,6 +173,8 @@ int main(int argc, char *argv[]) {
       file = fopen(filePath, "w");
       if (!file) {
         RKADK_LOGE("Create file(%s) failed", filePath);
+        RKADK_LOGD("free thumb buffer: %p", buffer);
+        free(buffer);
         return -1;
       }
 
@@ -176,6 +184,8 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
+    RKADK_LOGD("sfree thumb buffer: %p", buffer);
+    free(buffer);
 #else
     if (bIsMp4) {
       if (RKADK_GetThmInMp4Ex(u32CamId, pInuptPath, &stThumbAttr)) {
