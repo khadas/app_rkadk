@@ -21,7 +21,6 @@
 #include "rkadk_media_comm.h"
 #include "rkadk_record.h"
 #include "rkadk_platform_param.h"
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -33,7 +32,6 @@ extern "C" {
 #define RKADK_PARAM_VERSION "1.4"
 
 #define RKADK_VOLUME_LEN 3
-#define RKADK_RC_MODE_LEN 5
 
 /* audio default parameters */
 /* g711u must be 16K, g711a can be either 8K or 16K */
@@ -149,7 +147,8 @@ extern "C" {
 
 /* Resolution type */
 typedef enum {
-  RKADK_RES_720P = 0, /* 1280*720 */
+  RKADK_RES_480P = 0, /* 848*480 */
+  RKADK_RES_720P,     /* 1280*720 */
   RKADK_RES_1080P,    /* 1920*1080 */
   RKADK_RES_1296P,    /* 2304*1296 */
   RKADK_RES_1440P,    /* 2560*1440 */
@@ -172,8 +171,9 @@ typedef enum {
   // CAM Dependent Param
   RKADK_PARAM_TYPE_FPS,             /* framerate */
   RKADK_PARAM_TYPE_GOP,             /* gop */
-  RKADK_PARAM_TYPE_RES,             /* specify RKADK_PARAM_RES_E(record) */
+  RKADK_PARAM_TYPE_RES,             /* specify RKADK_PARAM_RES_E(record_main) */
   RKADK_PARAM_TYPE_PHOTO_RES,       /* specify RKADK_PARAM_RES_E(photo) */
+  RKADK_PARAM_TYPE_STREAM_RES,      /* specify RKADK_PARAM_RES_CFG_S(record_main, record_sub, photo, stream, live) */
   RKADK_PARAM_TYPE_CODEC_TYPE,      /* specify RKADK_PARAM_CODEC_CFG_S */
   RKADK_PARAM_TYPE_BITRATE,         /* specify RKADK_PARAM_BITRATE_S */
   RKADK_PARAM_TYPE_FLIP,            /* bool */
@@ -199,6 +199,11 @@ typedef enum {
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
   RKADK_PARAM_TYPE_BUTT
 } RKADK_PARAM_TYPE_E;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  RKADK_PARAM_RES_E enResType;
+} RKADK_PARAM_RES_CFG_S;
 
 typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
@@ -279,46 +284,6 @@ typedef struct tagRKADK_PARAM_AUDIO_CFG_S {
   RKADK_CODEC_TYPE_E codec_type;
 } RKADK_PARAM_AUDIO_CFG_S;
 
-typedef struct tagRKADK_PARAM_VENC_PARAM_S {
-  /* rc param */
-  RKADK_S32 first_frame_qp; /* start QP value of the first frame */
-  RKADK_S32 qp_step;
-  RKADK_S32 max_qp; /* max QP: [8, 51] */
-  RKADK_S32 min_qp; /* min QP: [0, 48], can't be larger than max_qp */
-  RKADK_S32 frame_min_qp; /* range:[0, 51]; the frame min QP value, recommended larger than min_qp */
-  RKADK_S32 i_min_qp; /* min qp for i frame */
-  RKADK_S32 i_frame_min_qp; /* range:[0, 51]; the I frame min QP value, recommended larger than i_min_qp */
-
-  bool hier_qp_en;
-  char hier_qp_delta[RKADK_BUFFER_LEN];
-  char hier_frame_num[RKADK_BUFFER_LEN];
-
-  bool full_range;
-  bool scaling_list;
-} RKADK_PARAM_VENC_PARAM_S;
-
-typedef struct tagRKADK_PARAM_VENC_ATTR_S {
-  RKADK_U32 width;
-  RKADK_U32 height;
-  RKADK_U32 bufsize;
-  RKADK_U32 bitrate;
-  RKADK_U32 framerate;
-  RKADK_U32 gop;
-  RKADK_U32 profile;
-  RKADK_CODEC_TYPE_E codec_type;
-  RKADK_U32 venc_chn;
-  RKADK_U32 vpss_grp;
-  RKADK_U32 vpss_chn;
-  bool post_aiisp;
-  char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
-  RKADK_PARAM_VENC_PARAM_S venc_param;
-} RKADK_PARAM_VENC_ATTR_S;
-
-typedef struct {
-  RKADK_U32 u32ViChn;
-  VI_CHN_ATTR_S stChnAttr;
-} RKADK_PRAAM_VI_ATTR_S;
-
 typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
   RKADK_U32 record_time;
   RKADK_U32 splite_time;
@@ -326,7 +291,6 @@ typedef struct tagRKADK_PARAM_REC_TIME_CFG_S {
 } RKADK_PARAM_REC_TIME_CFG_S;
 
 typedef struct tagRKADK_PARAM_REC_CFG_S {
-  bool switch_res;
   bool enable_audio;
   RKADK_REC_TYPE_E record_type;
   RKADK_MUXER_FILE_TYPE_E file_type;
@@ -345,16 +309,18 @@ typedef struct tagRKADK_PARAM_STREAM_CFG_S {
 } RKADK_PARAM_STREAM_CFG_S;
 
 typedef struct tagRKADK_PARAM_PHOTO_CFG_S {
+  RKADK_U32 max_width;
+  RKADK_U32 max_height;
   RKADK_U32 image_width;
   RKADK_U32 image_height;
   RKADK_U32 venc_chn;
+  bool enable_vpss;
   RKADK_U32 vpss_grp;
   RKADK_U32 vpss_chn;
   bool post_aiisp;
   bool enable_combo;
   RKADK_U32 combo_venc_chn;
   RKADK_U32 qfactor;
-  bool switch_res;
   bool jpeg_slice;
   RKADK_U32 slice_height;
   RKADK_U32 max_slice_width;

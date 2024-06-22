@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
   //aiisp
   bool bAiispEnable = false;
   RKADK_POST_ISP_ATTR_S stPostIspAttr;
+  RKADK_PARAM_RES_CFG_S stResCfg;
 
 #ifdef ENABLE_EIS
   bool bEnableEis = false;
@@ -177,6 +178,9 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+#ifdef RKAIQ
+  RKADK_PARAM_FPS_S stFps;
+
 #ifdef ENABLE_EIS
   memset(&eis_api, 0, sizeof(rk_aiq_mems_sensor_intf_t));
   eis_api.createContext             = rkiio_aiq_sensor_ctx_create;
@@ -194,8 +198,7 @@ int main(int argc, char *argv[]) {
   eis_api.releaseSamplesData        = rkiio_aiq_sensor_data_release;
 #endif
 
-#ifdef RKAIQ
-  RKADK_PARAM_FPS_S stFps;
+rtsp:
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
   if (ret) {
@@ -287,6 +290,40 @@ int main(int argc, char *argv[]) {
       ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_LIVE, bAiispEnable, &stPostIspAttr);
       if (ret)
         RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
+    } else if (strstr(cmd, "720")) {
+      stResCfg.enResType = RKADK_RES_720P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_LIVE;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_RTSP_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_RTSP_Stop(pHandle);
+        RKADK_RTSP_DeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto rtsp;
+#endif
+      }
+      RKADK_RTSP_Start(pHandle);
+    } else if (strstr(cmd, "480")) {
+      stResCfg.enResType = RKADK_RES_480P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_LIVE;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_RTSP_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_RTSP_Stop(pHandle);
+        RKADK_RTSP_DeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto rtsp;
+#endif
+      }
+      RKADK_RTSP_Start(pHandle);
     }
 
     usleep(500000);

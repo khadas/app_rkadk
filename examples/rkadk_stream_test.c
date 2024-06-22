@@ -83,8 +83,8 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
     if (g_output_file) {
       fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
              g_output_file);
-      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
-                 pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
+      //RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+      //           pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
     }
   }
 
@@ -125,6 +125,7 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
   RKADK_VIDEO_INFO_S stVideoInfo;
   bool bAiispEnable = false;
   RKADK_POST_ISP_ATTR_S stPostIspAttr;
+  RKADK_PARAM_RES_CFG_S stResCfg;
 
   g_output_file = fopen(g_output_path, "w");
   if (!g_output_file) {
@@ -156,6 +157,8 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
   stIspParam.fps = stFps.u32Framerate;
   stIspParam.bMultiCam = bMultiCam;
   stIspParam.iqFileDir = pIqfilesPath;
+
+stream:
   SAMPLE_ISP_Start(u32CamId, stIspParam);
   RKADK_BUFINFO("isp[%d] init", u32CamId);
 
@@ -260,6 +263,40 @@ static int VideoTest(RKADK_U32 u32CamId, RKADK_CHAR *pIqfilesPath, RKADK_BOOL bM
       ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_PREVIEW, bAiispEnable, &stPostIspAttr);
       if (ret)
         RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
+    } else if (strstr(cmd, "720")) {
+      stResCfg.enResType = RKADK_RES_720P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_PREVIEW;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_STREAM_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_STREAM_VencStop(pHandle);
+        RKADK_STREAM_VideoDeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto stream;
+#endif
+      }
+      RKADK_STREAM_VencStart(pHandle, -1);
+    } else if (strstr(cmd, "480")) {
+      stResCfg.enResType = RKADK_RES_480P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_PREVIEW;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_STREAM_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_STREAM_VencStop(pHandle);
+        RKADK_STREAM_VideoDeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto stream;
+#endif
+      }
+      RKADK_STREAM_VencStart(pHandle, -1);
     }
 
 #if 0
@@ -344,8 +381,8 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
-  RKADK_LOGD("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+  //RKADK_LOGD("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+  //           pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
 }
@@ -361,8 +398,8 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
-  RKADK_LOGD("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
-             pAStreamData->u64TimeStamp, pAStreamData->u32Len);
+  //RKADK_LOGD("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+  //           pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
 }

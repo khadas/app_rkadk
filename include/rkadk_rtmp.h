@@ -28,6 +28,8 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
 
 RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle);
 
+RKADK_S32 RKADK_RTMP_VideoReset(RKADK_MW_PTR pHandle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -32,6 +32,8 @@ RKADK_S32 RKADK_RTSP_Start(RKADK_MW_PTR pHandle);
 
 RKADK_S32 RKADK_RTSP_Stop(RKADK_MW_PTR pHandle);
 
+RKADK_S32 RKADK_RTSP_VideoReset(RKADK_MW_PTR pHandle);
+
 #ifdef __cplusplus
 }
 #endif

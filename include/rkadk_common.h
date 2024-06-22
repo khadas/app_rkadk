@@ -21,8 +21,10 @@
 extern "C" {
 #endif
 
+#include "rk_mpi_vi.h"
 #include "rkadk_log.h"
 #include <pthread.h>
+#include <stdbool.h>
 
 // dump config info for debug
  #define RKADK_DUMP_CONFIG
@@ -47,6 +49,7 @@ extern "C" {
 
 #define RKADK_BUFFER_LEN 64
 #define RKADK_PATH_LEN 128
+#define RKADK_RC_MODE_LEN 5
 
 typedef unsigned char RKADK_U8;
 typedef unsigned short RKADK_U16;
@@ -211,6 +214,49 @@ typedef enum {
   DISPLAY_TYPE_LCD,
   DISPLAY_TYPE_DEFAULT,
 } RKADK_VO_INTF_TYPE_E;
+
+typedef struct tagRKADK_PARAM_VENC_PARAM_S {
+  /* rc param */
+  RKADK_S32 first_frame_qp; /* start QP value of the first frame */
+  RKADK_S32 qp_step;
+  RKADK_S32 max_qp; /* max QP: [8, 51] */
+  RKADK_S32 min_qp; /* min QP: [0, 48], can't be larger than max_qp */
+  RKADK_S32 frame_min_qp; /* range:[0, 51]; the frame min QP value, recommended larger than min_qp */
+  RKADK_S32 i_min_qp; /* min qp for i frame */
+  RKADK_S32 i_frame_min_qp; /* range:[0, 51]; the I frame min QP value, recommended larger than i_min_qp */
+
+  bool hier_qp_en;
+  char hier_qp_delta[RKADK_BUFFER_LEN];
+  char hier_frame_num[RKADK_BUFFER_LEN];
+
+  bool full_range;
+  bool scaling_list;
+} RKADK_PARAM_VENC_PARAM_S;
+
+typedef struct tagRKADK_PARAM_VENC_ATTR_S {
+  RKADK_U32 max_width;
+  RKADK_U32 max_height;
+  RKADK_U32 width;
+  RKADK_U32 height;
+  RKADK_U32 bufsize;
+  RKADK_U32 bitrate;
+  RKADK_U32 framerate;
+  RKADK_U32 gop;
+  RKADK_U32 profile;
+  RKADK_CODEC_TYPE_E codec_type;
+  RKADK_U32 venc_chn;
+  bool enable_vpss;
+  RKADK_U32 vpss_grp;
+  RKADK_U32 vpss_chn;
+  bool post_aiisp;
+  char rc_mode[RKADK_RC_MODE_LEN]; /* options: CBR/VBR/AVBR */
+  RKADK_PARAM_VENC_PARAM_S venc_param;
+} RKADK_PARAM_VENC_ATTR_S;
+
+typedef struct {
+  RKADK_U32 u32ViChn;
+  VI_CHN_ATTR_S stChnAttr;
+} RKADK_PRAAM_VI_ATTR_S;
 
 #ifndef NULL
 #define NULL 0L

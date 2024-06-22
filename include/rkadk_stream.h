@@ -107,6 +107,8 @@ RKADK_S32 RKADK_STREAM_VencStart(RKADK_MW_PTR pHandle, RKADK_S32 s32FrameCnt);
 
 RKADK_S32 RKADK_STREAM_VencStop(RKADK_MW_PTR pHandle);
 
+RKADK_S32 RKADK_STREAM_VideoReset(RKADK_MW_PTR pHandle);
+
 RKADK_S32 RKADK_STREAM_GetVideoInfo(RKADK_U32 u32CamId,
                                     RKADK_VIDEO_INFO_S *pstVideoInfo);
 

@@ -74,8 +74,8 @@ static RKADK_VOID RecordPtsCallback(const RKADK_MUXER_PTS_INFO_S *pstPtsInfo) {
   if (!pstPtsInfo)
     return;
 
-  printf("u32CamId: %d, u32ChnId: %d, pFileName: %s, u64PTS: %lld, u32Seq: %d\n",
-            pstPtsInfo->u32CamId, pstPtsInfo->u32ChnId, pstPtsInfo->pFileName, pstPtsInfo->u64PTS, pstPtsInfo->u32Seq);
+  //printf("u32CamId: %d, u32ChnId: %d, pFileName: %s, u64PTS: %lld, u32Seq: %d\n",
+  //          pstPtsInfo->u32CamId, pstPtsInfo->u32ChnId, pstPtsInfo->pFileName, pstPtsInfo->u64PTS, pstPtsInfo->u32Seq);
 }
 
 static RKADK_VOID
@@ -212,6 +212,7 @@ int main(int argc, char *argv[]) {
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
   RKADK_S32 s32CamId = 0;
   FILE_CACHE_ARG stFileCacheAttr;
+  RKADK_PARAM_RES_CFG_S stRecCfg;
 
 #ifdef ENABLE_EIS
   bool bEnableEis = false;
@@ -436,6 +437,11 @@ record:
     } else if (strstr(cmd, "720")) {
       type = RKADK_RES_720P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
+
+      stRecCfg.enResType = RKADK_RES_480P;
+      stRecCfg.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stRecCfg);
+
       ret = RKADK_RECORD_Reset(&pRecorder);
       if (ret < 0) {
 #ifndef RV1106_1103
@@ -452,6 +458,11 @@ record:
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RES, &type);
+
+      stRecCfg.enResType = RKADK_RES_720P;
+      stRecCfg.enStreamType = RKADK_STREAM_TYPE_VIDEO_SUB;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stRecCfg);
+
       ret = RKADK_RECORD_Reset(&pRecorder);
       if (ret < 0) {
 #ifndef RV1106_1103

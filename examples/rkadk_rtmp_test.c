@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
   const char *iniPath = NULL;
   char path[RKADK_PATH_LEN];
   char sensorPath[RKADK_MAX_SENSOR_CNT][RKADK_PATH_LEN];
+  RKADK_PARAM_RES_CFG_S stResCfg;
 
 #ifdef RKAIQ
   RKADK_PARAM_FPS_S stFps;
@@ -119,6 +120,7 @@ int main(int argc, char *argv[]) {
     RKADK_PARAM_Init(NULL, NULL);
   }
 
+rtmp:
 #ifdef RKAIQ
   stFps.enStreamType = RKADK_STREAM_TYPE_SENSOR;
   ret = RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &stFps);
@@ -153,6 +155,36 @@ int main(int argc, char *argv[]) {
     if (strstr(cmd, "quit") || is_quit) {
       RKADK_LOGD("#Get 'quit' cmd!");
       break;
+    } else if (strstr(cmd, "720")) {
+      stResCfg.enResType = RKADK_RES_720P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_LIVE;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_RTMP_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_RTMP_DeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto rtmp;
+#endif
+      }
+    } else if (strstr(cmd, "480")) {
+      stResCfg.enResType = RKADK_RES_480P;
+      stResCfg.enStreamType = RKADK_STREAM_TYPE_LIVE;
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_STREAM_RES, &stResCfg);
+      ret = RKADK_RTMP_VideoReset(pHandle);
+      if (ret < 0) {
+#ifndef RV1106_1103
+        RKADK_RTMP_DeInit(pHandle);
+        pHandle = NULL;
+#ifdef RKAIQ
+        SAMPLE_ISP_Stop(u32CamId);
+#endif
+        goto rtmp;
+#endif
+      }
     }
 
     usleep(500000);

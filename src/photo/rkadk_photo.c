@@ -642,7 +642,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
 
   stFrame.pstPack = &stPack;
   stThumbFrame.pstPack = &stThumbPack;
-  u32PhotoLen = pstSensorCfg->max_width * pstSensorCfg->max_height
+  u32PhotoLen = pstPhotoCfg->max_width * pstPhotoCfg->max_height
                 + ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
   pu8Photo = RKADK_PHOTO_Mmap((RKADK_CHAR *)JPG_MMAP_FILE_PATH, u32PhotoLen);
@@ -751,8 +751,8 @@ static int RKADK_PHOTO_SetVencAttr(RKADK_PHOTO_HANDLE_S *pHandle,
     u32MaxWidth = pstPhotoCfg->max_slice_width;
     u32MaxHeight = pstPhotoCfg->max_slice_height;
   } else {
-    u32MaxWidth = pstSensorCfg->max_width;
-    u32MaxHeight = pstSensorCfg->max_height;
+    u32MaxWidth = pstPhotoCfg->max_width;
+    u32MaxHeight = pstPhotoCfg->max_height;
   }
 
   memset(pstVencAttr, 0, sizeof(VENC_CHN_ATTR_S));
@@ -898,16 +898,11 @@ static bool RKADK_PHOTO_IsUseVpss(RKADK_U32 u32CamId,
     return true;
   }
 
-#ifdef RV1106_1103
-  //use vpss switch resolution
-  if (!pstSensorCfg->used_isp) {
-    if (pstPhotoCfg->switch_res) {
-      if (u32VpssBufCnt)
-        *u32VpssBufCnt = 1;
-      return true;
-    }
+  if (pstPhotoCfg->enable_vpss) {
+    if (u32VpssBufCnt)
+      *u32VpssBufCnt = 1;
+    return true;
   }
-#endif
 
 #ifndef RV1106_1103
   if (pstPhotoCfg->vi_attr.stChnAttr.enPixelFormat == RK_FMT_YUV422SP) {
@@ -936,8 +931,6 @@ static void RKADK_PHOTO_ResetAttr(RKADK_PARAM_SENSOR_CFG_S *pstSensorCfg,
   pstVencAttr->stVencAttr.u32VirWidth = pstPhotoCfg->image_width;
   pstVencAttr->stVencAttr.u32VirHeight = pstPhotoCfg->image_height;
 
-  pstViAttr->stIspOpt.stMaxSize.u32Width = pstSensorCfg->max_width;
-  pstViAttr->stIspOpt.stMaxSize.u32Height = pstSensorCfg->max_height;
   pstViAttr->stSize.u32Width = pstPhotoCfg->image_width;
   pstViAttr->stSize.u32Height = pstPhotoCfg->image_height;
 
@@ -1040,8 +1033,8 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     stChnAttr.enPixelFormat = RK_FMT_YUV420SP;
     stChnAttr.stFrameRate.s32SrcFrameRate = -1;
     stChnAttr.stFrameRate.s32DstFrameRate = -1;
-    stChnAttr.u32Width = pstSensorCfg->max_width;
-    stChnAttr.u32Height = pstSensorCfg->max_height;
+    stChnAttr.u32Width = pstPhotoCfg->max_width;
+    stChnAttr.u32Height = pstPhotoCfg->max_height;
     stChnAttr.u32Depth = 0;
     stChnAttr.u32FrameBufCnt = u32VpssBufCnt;
     if (u32VpssBufCnt)

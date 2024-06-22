@@ -2241,7 +2241,7 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
       return;
     }
   } else {
-    for(i == 0; i < (RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT); i++) {
+    for(i = 0; i < (RKADK_MUXER_STREAM_MAX_CNT * RKADK_MAX_SENSOR_CNT); i++) {
       pstFileCachehandle = &g_stFileCachehandle[i];
 
       if (!pstFileCachehandle->bUsed)

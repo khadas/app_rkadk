@@ -212,6 +212,13 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_MEDIA_SetVencState(RKADK_U32 u32CamId, RKADK_S32 s32ChnId, bool state);
 
+bool RKADK_MEDIA_VideoIsUseVpss(RKADK_U32 u32CamId, RKADK_U32 *u32VpssBufCnt,
+                                RKADK_PRAAM_VI_ATTR_S vi_attr, RKADK_PARAM_VENC_ATTR_S attribute);
+
+int RKADK_MEDIA_VencResetCheck(RKADK_U32 u32CamId, RKADK_PARAM_VENC_ATTR_S attribute);
+
+int RKADK_MEDIA_VideoReset(RKADK_U32 u32CamId, RKADK_PRAAM_VI_ATTR_S vi_attr, RKADK_PARAM_VENC_ATTR_S attribute);
+
 #ifdef __cplusplus
 }
 #endif
