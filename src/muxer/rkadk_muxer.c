@@ -1064,6 +1064,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", ret);
       }
 
+      RK_MPI_VENC_StopRecvFrame(pstMuxerHandle->u32ThumbVencChn);
       RK_MPI_VENC_ResetChn(pstMuxerHandle->u32ThumbVencChn);
       return bBuildInOk;
     } else {
@@ -1833,6 +1834,9 @@ RKADK_S32 RKADK_MUXER_Destroy(RKADK_MW_PTR pHandle) {
 }
 
 RKADK_S32 RKADK_MUXER_Start(RKADK_MW_PTR pHandle) {
+  int ret;
+  VENC_PACK_S stPack;
+  VENC_STREAM_S stFrame;
   MUXER_HANDLE_S *pstMuxerHandle = NULL;
   RKADK_MUXER_HANDLE_S *pstMuxer = NULL;
 
@@ -1841,11 +1845,21 @@ RKADK_S32 RKADK_MUXER_Start(RKADK_MW_PTR pHandle) {
   pstMuxer = (RKADK_MUXER_HANDLE_S *)pHandle;
   RKADK_CHECK_STREAM_CNT(pstMuxer->u32StreamCnt);
 
+  stFrame.pstPack = &stPack;
   for (int i = 0; i < (int)pstMuxer->u32StreamCnt; i++) {
     pstMuxerHandle = (MUXER_HANDLE_S *)pstMuxer->pMuxerHandle[i];
     if (!pstMuxerHandle) {
       RKADK_LOGD("Muxer Handle[%d] is NULL", i);
       continue;
+    }
+
+    ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1000);
+    if (ret == RK_SUCCESS) {
+      ret = RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
+      if (ret != RK_SUCCESS)
+        RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
+    } else {
+      RKADK_LOGE("RK_MPI_VENC_GetStream[%d] failed[%x]", pstMuxerHandle->u32ThumbVencChn, ret);
     }
 
     RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
