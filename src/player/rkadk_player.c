@@ -951,28 +951,44 @@ static int SnapshotDisable(RKADK_PLAYER_HANDLE_S *pstPlayer) {
   return 0;
 }
 
-static void SendBlackBackground(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_INFO_S *tFrame, VIDEO_FRAME_INFO_S *sFrame) {
+static void SendBlackBackground(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_INFO_S *tFrame) {
   RKADK_S32 ret = 0;
+  RKADK_BOOL bEnableSendVo = RKADK_FALSE;
   RK_U8 *lastFrame = RK_NULL;
 
   if (pstPlayer->bEnableBlackBackground) {
-    sFrame->stVFrame.u32Width = tFrame->stVFrame.u32Width;
-    sFrame->stVFrame.u32Height = tFrame->stVFrame.u32Height;
-    sFrame->stVFrame.u32VirWidth = tFrame->stVFrame.u32VirWidth;
-    sFrame->stVFrame.u32VirHeight = tFrame->stVFrame.u32VirHeight;
-    sFrame->stVFrame.enPixelFormat = tFrame->stVFrame.enPixelFormat;
-    sFrame->stVFrame.enCompressMode = tFrame->stVFrame.enCompressMode;
-    lastFrame = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(sFrame->stVFrame.pMbBlk);
+    lastFrame = (RK_U8 *)RK_MPI_MB_Handle2VirAddr(tFrame->stVFrame.pMbBlk);
+    if (!lastFrame) {
+      RKADK_LOGE("Last frame is NULL, it is not support send black background!");
+      return;
+    }
 
-    if (sFrame->stVFrame.enPixelFormat == RK_FMT_YUV420SP) {
-      memset(lastFrame, 0, sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight);
-      lastFrame += sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight;
-      memset(lastFrame, 128, sFrame->stVFrame.u32VirWidth * sFrame->stVFrame.u32VirHeight / 2);
-      ret = RK_MPI_SYS_MmzFlushCache(sFrame->stVFrame.pMbBlk, false);
+    if (tFrame->stVFrame.enPixelFormat != RK_FMT_YUV420SP) {
+      RKADK_LOGE("Pixel format %d does not support send black background!", tFrame->stVFrame.enPixelFormat);
+      return;
+    }
+
+    ret = RK_MPI_VO_PauseChn(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn);
+    if (ret != 0)
+      RKADK_LOGE("vo pause chn failed[%x]", ret);
+
+    if (tFrame->stVFrame.enPixelFormat == RK_FMT_YUV420SP) {
+      memset(lastFrame, 0, tFrame->stVFrame.u32VirWidth * tFrame->stVFrame.u32VirHeight);
+      lastFrame += tFrame->stVFrame.u32VirWidth * tFrame->stVFrame.u32VirHeight;
+      memset(lastFrame, 128, tFrame->stVFrame.u32VirWidth * tFrame->stVFrame.u32VirHeight / 2);
+      bEnableSendVo = RKADK_TRUE;
+    }
+
+    ret = RK_MPI_VO_ResumeChn(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn);
+    if (ret != 0)
+      RKADK_LOGE("vo resume chn failed[%x]", ret);
+
+    if (bEnableSendVo) {
+      ret = RK_MPI_SYS_MmzFlushCache(tFrame->stVFrame.pMbBlk, false);
       if (ret != 0)
         RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
 
-      ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, sFrame, MAX_TIME_OUT_MS);
+      ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, tFrame, MAX_TIME_OUT_MS);
       if (ret != 0)
         RKADK_LOGE("black backgound send fail[%x]", ret);
     }
@@ -1051,7 +1067,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
         }
 
         if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
-          SendBlackBackground(pstPlayer, &tFrame, &sFrame);
+          SendBlackBackground(pstPlayer, &tFrame);
           RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
 
           RKADK_LOGI("chn %d reach eos frame", pstPlayer->stVdecCtx.chnIndex);
@@ -1090,6 +1106,9 @@ static void SendVideoData(RKADK_VOID *ptr) {
         pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
         pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
         pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
+        if (pstPlayer->bEnableBlackBackground)
+          tFrame.stVFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
 
         ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
         if (ret != RK_SUCCESS)
@@ -1525,7 +1544,7 @@ __GETVDEC:
                     }
 
                     if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
-                      SendBlackBackground(pstPlayer, &tFrame, &sFrame);
+                      SendBlackBackground(pstPlayer, &tFrame);
                       RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
                       RKADK_LOGI("chn %d reach eos frame", pstPlayer->stVdecCtx.chnIndex);
                       flagVideoEnd = 1;
@@ -1559,6 +1578,9 @@ __GETVDEC:
                             pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
                             pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
                             pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
+                            if (pstPlayer->bEnableBlackBackground)
+                              tFrame.stVFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
 
                             if (enableSendDataDebug != 2) {
                               ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
@@ -1635,13 +1657,13 @@ __GETVDEC:
           ret = RK_MPI_VDEC_GetFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame, MAX_TIME_OUT_MS);
           if (ret == 0) {
             if ((sFrame.stVFrame.u32FrameFlag & (RKADK_U32)FRAME_FLAG_SNAP_END) == (RKADK_U32)FRAME_FLAG_SNAP_END) {
-              SendBlackBackground(pstPlayer, &tFrame, &sFrame);
+              SendBlackBackground(pstPlayer, &tFrame);
               RKADK_LOGI("chn %d reach eos frame", pstPlayer->stVdecCtx.chnIndex);
               flagVideoEnd = 1;
             }
 
             if (pstPlayer->enStatus == RKADK_PLAYER_STATE_STOP && flagSendBlackFrameEnd == 0) {
-              SendBlackBackground(pstPlayer, &tFrame, &sFrame);
+              SendBlackBackground(pstPlayer, &tFrame);
               flagSendBlackFrameEnd = 1;
             }
             RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
