@@ -54,7 +54,7 @@
 #define GET_DATA_VPSS_GRP (VPSS_MAX_GRP_NUM - 3)
 #define GET_DATA_VPSS_CHN 0
 
-#define JPG_MMAP_FILE_PATH "/tmp/.mmap.jpeg"
+#define JPG_MMAP_FILE_PATH "/tmp/.mmap"
 
 typedef enum {
   RKADK_JPG_LITTLE_ENDIAN, // II
@@ -245,6 +245,7 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg = NULL;
   MB_BLK pMbBlk = NULL;
   MB_POOL_CONFIG_S stMbPoolCfg;
+  RKADK_CHAR mapPath[RKADK_MAX_FILE_PATH_LEN];
 
   VENC_STREAM_S stStream;
   VENC_PACK_S stPack;
@@ -295,7 +296,8 @@ static void *RKADK_PHOTO_SliceProc(void *params) {
   u32PhotoLen = pHandle->stSliceParam.stVencSlice.s32Witdh * pHandle->stSliceParam.stVencSlice.s32Height
                 + ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
-  pu8Photo = RKADK_PHOTO_Mmap((RKADK_CHAR *)JPG_MMAP_FILE_PATH, u32PhotoLen);
+  snprintf(mapPath, RKADK_MAX_FILE_PATH_LEN, "%s_%d.jpeg", JPG_MMAP_FILE_PATH, pstPhotoCfg->venc_chn);
+  pu8Photo = RKADK_PHOTO_Mmap(mapPath, u32PhotoLen);
   if (!pu8Photo)
     return NULL;
 
@@ -610,6 +612,7 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   RKADK_U8 *pu8JpgData;
   RKADK_U32 u32PhotoLen;
   RKADK_U8 *pu8Photo = NULL;
+  RKADK_CHAR mapPath[RKADK_MAX_FILE_PATH_LEN];
 
   RKADK_PHOTO_HANDLE_S *pHandle = (RKADK_PHOTO_HANDLE_S *)params;
   if (!pHandle) {
@@ -645,7 +648,8 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   u32PhotoLen = pstPhotoCfg->max_width * pstPhotoCfg->max_height
                 + ptsThumbCfg->thumb_width * ptsThumbCfg->thumb_height;
 
-  pu8Photo = RKADK_PHOTO_Mmap((RKADK_CHAR *)JPG_MMAP_FILE_PATH, u32PhotoLen);
+  snprintf(mapPath, RKADK_MAX_FILE_PATH_LEN, "%s_%d.jpeg", JPG_MMAP_FILE_PATH, pstPhotoCfg->venc_chn);
+  pu8Photo = RKADK_PHOTO_Mmap(mapPath, u32PhotoLen);
   if (!pu8Photo)
     return NULL;
 
