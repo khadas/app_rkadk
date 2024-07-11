@@ -175,6 +175,8 @@ typedef enum {
   RKADK_FMT_ABGR8888,                                   /* 32-bit RGB               */
   RKADK_FMT_RGBA8888,                                   /* 32-bit RGB               */
   RKADK_FMT_BGRA8888,                                   /* 32-bit RGB               */
+  RKADK_FMT_RGB565,                                     /* 16-bit RGB               */
+  RKADK_FMT_BGR565,                                     /* 16-bit RGB               */
   RKADK_FMT_2BPP,
   RKADK_FMT_YUV420SP,
   RKADK_FMT_YUV420SP_10BIT,
