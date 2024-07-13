@@ -109,6 +109,7 @@ static const struct RKADK_FORMAT_MAP fromat[] = {
     {RKADK_FMT_YUV420SP_10BIT, RK_FMT_YUV420SP_10BIT},
     {RKADK_FMT_YUV422SP, RK_FMT_YUV422SP},
     {RKADK_FMT_YUV422_UYVY, RK_FMT_YUV422_UYVY},
+    {RKADK_FMT_YUV422_VYUY, RK_FMT_YUV422_VYUY},
     {RKADK_FMT_2BPP, RK_FMT_2BPP}
 };
 
@@ -2297,6 +2298,9 @@ int RKADK_MEDIA_GetPixelFormat(PIXEL_FORMAT_E enPixelFormat,
     break;
   case RK_FMT_YUV422_UYVY:
     memcpy(cPixFmt, "UYVY", strlen("UYVY"));
+    break;
+  case RK_FMT_YUV422_VYUY:
+    memcpy(cPixFmt, "VYUY", strlen("VYUY"));
     break;
   default:
     RKADK_LOGE("Unsupport pixel format: %d", enPixelFormat);
