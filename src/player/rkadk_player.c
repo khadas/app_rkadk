@@ -1342,8 +1342,10 @@ static void SendData(RKADK_VOID *ptr) {
     pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
 
   if (sampleNum != 1024) {
+    pthread_mutex_lock(&pstPlayer->mutex);
     DestoryDeviceAo(&pstPlayer->stAoCtx);
     ret = CreateDeviceAo(&pstPlayer->stAoCtx);
+    pthread_mutex_unlock(&pstPlayer->mutex);
     if (ret) {
       RKADK_LOGE("Create AO failed");
       return;
@@ -1550,13 +1552,10 @@ __GETVDEC:
                       flagVideoEnd = 1;
                     } else {
                       if (pstPlayer->bIsRtsp) {
-                        pthread_mutex_lock(&pstPlayer->mutex);
                         if ((pstPlayer->videoStreamCount - pstPlayer->frameCount) >= (pstPlayer->stVdecCtx.streamBufferCnt + pstPlayer->stVdecCtx.frameBufferCnt - 1)) {
                           RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
-                          pthread_mutex_unlock(&pstPlayer->mutex);
                           goto __GETVDEC;
                         }
-                        pthread_mutex_unlock(&pstPlayer->mutex);
                       }
 
                       if (enableSendDataDebug == 3) {
@@ -1631,9 +1630,18 @@ __GETVDEC:
             if (result != 0)
               RKADK_LOGE("send frame to ao fail , %x.", ret);
           }
-          result = RK_MPI_AO_SendFrame(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.chnIndex, stFrmInfo.pstFrame, s32MilliSec);
+
+          stFrmInfoCache.pstFrame->enBitWidth = stFrmInfo.pstFrame->enBitWidth;
+          stFrmInfoCache.pstFrame->enSoundMode = stFrmInfo.pstFrame->enSoundMode;
+          stFrmInfoCache.pstFrame->s32SampleRate = stFrmInfo.pstFrame->s32SampleRate;
+          stFrmInfoCache.pstFrame->u32Seq++;
+          stFrmInfoCache.pstFrame->bBypassMbBlk = false;
+          stFrmInfoCache.pstFrame->u32Len = 0;
+          result = RK_MPI_AO_SendFrame(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.chnIndex, stFrmInfoCache.pstFrame, s32MilliSec);
           if (result != 0)
-            RKADK_LOGE("send frame to ao fail , %x.", ret);
+            RKADK_LOGE("send eof frame to ao fail , %x.", ret);
+          else
+            RKADK_LOGI("send eof frame to ao success");
 
           if(pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP)
             RKADK_LOGI("audio data send eof");
