@@ -255,6 +255,7 @@ typedef struct {
 
 typedef struct {
   RKADK_U32 u32AdecChnId;
+  RKADK_U32 u32AdecBufCnt;
   RKADK_U32 u32AoDevId;
   RKADK_U32 u32AoChnId;
   RKADK_S32 u32AoChannle;     /* AO device channel, default: 2 */

@@ -37,7 +37,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:w:C:mfvbDh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:w:C:A:mfvbDh";
 
 static RKADK_VOID *mDemuxerCfg = NULL;
 static void print_usage(const RKADK_CHAR *name) {
@@ -69,6 +69,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-S: Vdec stream(input) buffer count, Default: 3\n");
   printf("\t-w: Vdec waterline(frames), Default: 0\n");
   printf("\t-D: enable third-party demuxer, Default: disable\n");
+  printf("\t-A: adec buffer len, Default: 4\n");
   printf("\t-C: Ao sound card name, Default: RV1106/RV1103/RK3506 = hw:0,0, other chip = default\n");
   printf("\t-h: help\n");
 }
@@ -434,6 +435,9 @@ int main(int argc, char *argv[]) {
     case 'D':
       stPlayCfg.bEnableThirdDemuxer = true;
       RKADK_LOGD("Enable third-party demuxer");
+      break;
+    case 'A':
+      stPlayCfg.stAudioCfg.u32AdecBufCnt= atoi(optarg);
       break;
     case 'C':
       stPlayCfg.stAudioCfg.pSoundCard = optarg;

@@ -135,6 +135,7 @@ typedef struct {
   RK_BOOL        bBlock;
   RKADK_S32      chnIndex;
   RKADK_S32      clrChnBuf;
+  RKADK_S32      adecBufCnt;
 } RKADK_PLAYER_ADEC_CTX_S;
 
 typedef struct {
@@ -449,6 +450,7 @@ static RKADK_S32 AdecCtxInit(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx, RKADK_PLAYER_A
   pstAdecCtx->decMode = ADEC_MODE_STREAM;
   pstAdecCtx->eCodecType = RKADK_CODEC_TYPE_MP3;
   pstAdecCtx->bBlock = RK_TRUE;
+  pstAdecCtx->adecBufCnt = pstAudioCfg->u32AdecBufCnt;
   return RKADK_SUCCESS;
 }
 
@@ -463,8 +465,13 @@ static RKADK_S32 CreateAdec(RKADK_PLAYER_ADEC_CTX_S *pstAdecCtx) {
   pstChnAttr.stCodecAttr.u32BitPerCodedSample = 4;
   pstChnAttr.enType = RKADK_MEDIA_GetRkCodecType(pstAdecCtx->eCodecType);
   pstChnAttr.enMode = (ADEC_MODE_E)pstAdecCtx->decMode;
-  pstChnAttr.u32BufCount = 4;
-  pstChnAttr.u32Depth = 4;
+  if (pstAdecCtx->adecBufCnt) {
+    pstChnAttr.u32BufCount = pstAdecCtx->adecBufCnt;
+    pstChnAttr.u32Depth = pstAdecCtx->adecBufCnt;
+  } else {
+    pstChnAttr.u32BufCount = 4;
+    pstChnAttr.u32Depth = 4;
+  }
   pstChnAttr.u32BufSize = 50 * 1024;
 
   ret = RK_MPI_ADEC_CreateChn(pstAdecCtx->chnIndex, &pstChnAttr);
