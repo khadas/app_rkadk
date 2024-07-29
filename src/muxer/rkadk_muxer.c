@@ -2248,6 +2248,9 @@ static void RKADK_MUXER_NotifyCallback(int cmd, void *msg0, void *msg1) {
           pstMuxerHandle = NULL;
         }
       }
+
+      if (pstMuxerHandle)
+        break;
     }
 
     if (!pstMuxerHandle) {
