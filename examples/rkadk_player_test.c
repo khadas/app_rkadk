@@ -529,8 +529,10 @@ int main(int argc, char *argv[]) {
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
   RKADK_LOGD("file duration: %d ms", duration);
 
-  if (loop_duration <= 0 || loop_duration > duration / 1000)
-    loop_duration = duration / 1000 + 1; //ms to m
+  if (duration > 0) {
+    if (loop_duration <= 0 || loop_duration > duration / 1000)
+      loop_duration = duration / 1000 + 1; //ms to m
+  }
 
   RKADK_LOGD("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
 
@@ -557,7 +559,14 @@ int main(int argc, char *argv[]) {
          "peress any other key to capture one picture to file\n");
   while (!is_quit) {
     if (loop_count >= 0 && !stPlayCfg.bEnableThirdDemuxer) {
-      sleep(loop_duration);
+      RKADK_PLAYER_GetPlayStatus(pPlayer, &enState);
+      if (loop_duration > 0) {
+        sleep(loop_duration);
+      } else if (enState != RKADK_PLAYER_STATE_EOF) {
+        sleep(1);
+        continue;
+      }
+
       RKADK_LOGD("replay, loop_count: %d", loop_count);
       if (loop_count == 0) {
         RKADK_LOGD("loop play end!");

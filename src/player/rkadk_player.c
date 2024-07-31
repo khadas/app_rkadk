@@ -1726,6 +1726,7 @@ static RKADK_VOID* SendDataThread(RKADK_VOID *ptr) {
 
     if (pstPlayer->pfnPlayerCallback != NULL)
       pstPlayer->pfnPlayerCallback(ptr, RKADK_PLAYER_EVENT_EOF, NULL);
+    pstPlayer->enStatus = RKADK_PLAYER_STATE_EOF;
   }
 
   RKADK_LOGI("Exit send data thread");
@@ -2921,9 +2922,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     return RKADK_SUCCESS;
   }
 
-  if (pstPlayer->enStatus != RKADK_PLAYER_STATE_PREPARED
-      && pstPlayer->enStatus != RKADK_PLAYER_STATE_PLAY
-      && pstPlayer->enStatus != RKADK_PLAYER_STATE_PAUSE) {
+  if (pstPlayer->enStatus < RKADK_PLAYER_EVENT_PREPARED
+      || pstPlayer->enStatus > RKADK_PLAYER_STATE_PAUSE) {
     RKADK_LOGW("Err state[%d]", pstPlayer->enStatus);
     pthread_mutex_unlock(&pstPlayer->mutex);
     return RKADK_STATE_ERR;
