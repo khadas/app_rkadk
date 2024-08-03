@@ -980,6 +980,9 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
     pstMuxerHandle->stManualSplit.bSplitRecord = false;
   }
 
+  if (pstMuxerHandle->stThumbParam.bGetThumb)
+    RKADK_LOGD("muxerId[%d] cFileName[%s] not get thumb", pstMuxerHandle->muxerId, pstMuxerHandle->cFileName);
+
   // Reset muxer
   pstMuxerHandle->realDuration = 0;
   pstMuxerHandle->startTime = 0;
@@ -1148,31 +1151,22 @@ static bool RKADK_MUXER_CheckEnd(MUXER_HANDLE_S *pstMuxerHandle,
   int position = 0;
   RKADK_U32 u32Duration;
 
-  if (!cell->isKeyFrame || pstMuxerHandle->duration <= 0 || !pstMuxerHandle->startTime)
+  if (!cell->isKeyFrame || !pstMuxerHandle->startTime)
     return false;
+
+  if (pstMuxerHandle->duration <= 0) {
+    RKADK_LOGE("muxerId[%d] cFileName[%s] duration[%d]", pstMuxerHandle->muxerId,
+        pstMuxerHandle->cFileName, pstMuxerHandle->duration);
+
+    return false;
+  }
 
   if (pstMuxerHandle->stManualSplit.bSplitRecord)
     u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
   else
     u32Duration = pstMuxerHandle->duration;
 
-  if (pstMuxerHandle->bIOError) {
-    RKADK_LOGW("Muxer[%d]: io_error: record end", pstMuxerHandle->muxerId);
-    //drop current thumb, if there is
-    RKADK_MUXER_GetThumb(pstMuxerHandle);
-
-    RKADK_MUXER_Close(pstMuxerHandle);
-
-    //request thumb for next file
-    RKADK_MUXER_ForceRequestThumb(pstMuxerHandle);
-    return true;
-  }
-
   if (pstMuxerHandle->stManualSplit.bEnableSplit) {
-    position = rkmuxer_get_thumb_pos(pstMuxerHandle->muxerId);
-    if(position <= 0)
-      return false;
-
     RKADK_LOGI("File switch: manual_split[%d], duration: %d",
         pstMuxerHandle->u32VencChn, pstMuxerHandle->realDuration);
     pstMuxerHandle->stManualSplit.bEnableSplit = false;
@@ -1395,7 +1389,7 @@ static bool RKADK_MUXER_Proc(void *params) {
 
           if (pstMuxerHandle->stThumbParam.bGetThumb) {
             if (pstMuxer->enableFileCache) {
-              if (pstMuxerHandle->realDuration >= 5000)
+              if (pstMuxerHandle->realDuration >= 3000)
                 pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
             } else {
               pstMuxerHandle->stThumbParam.bGetThumb = RKADK_MUXER_GetThumb(pstMuxerHandle);
