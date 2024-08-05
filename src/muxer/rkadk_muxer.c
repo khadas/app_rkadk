@@ -968,12 +968,16 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   rkmuxer_deinit(pstMuxerHandle->muxerId);
 
   if (!pstMuxer->enableFileCache) {
-    if (pstMuxerHandle->stManualSplit.bSplitRecord)
+    if (pstMuxerHandle->stManualSplit.bSplitRecord) {
       RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_MANUAL_SPLIT_END,
                                pstMuxerHandle->realDuration);
-    else
+      pstMuxerHandle->stManualSplit.bSplitRecord = false;
+    } else {
       RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_END,
                                pstMuxerHandle->realDuration);
+    }
+  } else {
+    pstMuxerHandle->stManualSplit.bSplitRecord = false;
   }
 
   // Reset muxer
@@ -987,7 +991,6 @@ static void RKADK_MUXER_Close(MUXER_HANDLE_S *pstMuxerHandle) {
   pstMuxerHandle->stThumbParam.bGetThumb = false;
   pstMuxerHandle->stThumbParam.bRequestThumb = false;
   pstMuxerHandle->stManualSplit.bEnableSplit = false;
-  pstMuxerHandle->stManualSplit.bSplitRecord = false;
   pstMuxerHandle->keyFrameCnt = 0;
 }
 
@@ -1285,11 +1288,6 @@ static bool RKADK_MUXER_Proc(void *params) {
   while (cell) {
     // Create muxer
     if (pstMuxerHandle->bEnableStream) {
-      if (pstMuxerHandle->stManualSplit.bSplitRecord)
-        u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
-      else
-        u32Duration = pstMuxerHandle->duration;
-
       pts = cell->pts;
       if (pstMuxer->enRecType == RKADK_REC_TYPE_LAPSE) {
         cell->pts = cell->pts / pstMuxerHandle->stVideo.frame_rate_num;
@@ -1302,6 +1300,11 @@ static bool RKADK_MUXER_Proc(void *params) {
       }
 
       RKADK_MUXER_CheckEnd(pstMuxerHandle, cell);
+
+      if (pstMuxerHandle->stManualSplit.bSplitRecord)
+        u32Duration = pstMuxerHandle->stManualSplit.u32SplitDurationSec;
+      else
+        u32Duration = pstMuxerHandle->duration;
 
       if (!pstMuxerHandle->bMuxering && cell->isKeyFrame) {
         ret = pstMuxerHandle->pcbRequestFileNames(pstMuxerHandle->ptr,
