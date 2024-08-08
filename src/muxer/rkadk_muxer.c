@@ -1702,6 +1702,7 @@ RKADK_S32 RKADK_MUXER_Create(RKADK_MUXER_ATTR_S *pstMuxerAttr,
   pstMuxer->pfnPtsCallback = pstMuxerAttr->pfnPtsCallback;
   pstMuxer->pfnMountSdcard = pstMuxerAttr->pfnMountSdcard;
   memcpy(&pstMuxer->stAovAttr, &pstMuxerAttr->stAovAttr, sizeof(RKADK_AOV_ATTR_S));
+  memcpy(&pstMuxer->stPipAttr, &pstMuxerAttr->stPipAttr, sizeof(RKADK_PIP_ATTR_S) * RECORD_FILE_NUM_MAX);
 
 #ifdef ENABLE_AOV
   if (pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)

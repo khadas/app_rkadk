@@ -32,7 +32,7 @@
 extern int optind;
 extern char *optarg;
 
-static RKADK_CHAR optstr[] = "a:I:p:m:keh";
+static RKADK_CHAR optstr[] = "a:I:p:m:c:kPeh";
 
 static bool is_quit = false;
 #define IQ_FILE_PATH "/etc/iqfiles"
@@ -47,6 +47,8 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-p: param ini directory path, Default:/data/rkadk\n");
   printf("\t-k: key frame fragment, Default: disable\n");
   printf("\t-m: multiple sensors, Default:0, options: 1(all isp sensors), 2(isp+ahd sensors)\n");
+  printf("\t-P: enable pip, Default:disble\n");
+  printf("\t-c: pip avs buffer count, Default:2\n");
 #ifdef ENABLE_EIS
   printf("\t-e: enable eis, Default: disable\n");
 #endif
@@ -213,6 +215,8 @@ int main(int argc, char *argv[]) {
   RKADK_S32 s32CamId = 0;
   FILE_CACHE_ARG stFileCacheAttr;
   RKADK_PARAM_RES_CFG_S stRecCfg;
+  bool bEnablePip = false;
+  RKADK_U32 u32AvsBufCnt = 2;
 
 #ifdef ENABLE_EIS
   bool bEnableEis = false;
@@ -270,6 +274,12 @@ int main(int argc, char *argv[]) {
       bEnableEis = true;
       break;
 #endif
+    case 'P':
+      bEnablePip = true;
+      break;
+    case 'c':
+      u32AvsBufCnt = atoi(optarg);
+      break;
     case 'h':
     default:
       print_usage(argv[0]);
@@ -377,6 +387,19 @@ record:
   stRecAttr.pstPostIspAttr = &stPostIspAttr;
   stRecAttr.pfnPtsCallback = RecordPtsCallback;
 
+  if (bEnablePip) {
+    //set main record pip attr
+    stRecAttr.stPipAttr[0].bEnablePip = true;
+    stRecAttr.stPipAttr[0].u32AvsBufCnt = u32AvsBufCnt;
+    stRecAttr.stPipAttr[0].u32AvsGrpId = 0;
+    stRecAttr.stPipAttr[0].u32SubCamId = s32CamId;
+    stRecAttr.stPipAttr[0].enSubStreamType = RKADK_STREAM_TYPE_PREVIEW;
+    stRecAttr.stPipAttr[0].stSubRect.u32X = 0;
+    stRecAttr.stPipAttr[0].stSubRect.u32Y = 0;
+    stRecAttr.stPipAttr[0].stSubRect.u32Width = 640;
+    stRecAttr.stPipAttr[0].stSubRect.u32Height = 360;
+  }
+
   if (RKADK_RECORD_Create(&stRecAttr, &pRecorder)) {
     RKADK_LOGE("s32CamId[%d] Create recorder failed", s32CamId);
 #ifdef RKAIQ
@@ -424,7 +447,33 @@ record:
       stSplitAttr.enManualType = MUXER_PRE_MANUAL_SPLIT;
       stSplitAttr.u32DurationSec = stRecTime.time;
       RKADK_RECORD_ManualSplit(pRecorder, &stSplitAttr);
-    } else if (strstr(cmd, "LR")) { //Lapse Record
+    } else if (strstr(cmd, "pip-720")) {
+      stRecAttr.stPipAttr[0].stSubRect.u32X = 0;
+      stRecAttr.stPipAttr[0].stSubRect.u32Y = 0;
+      stRecAttr.stPipAttr[0].stSubRect.u32Width = 1280;
+      stRecAttr.stPipAttr[0].stSubRect.u32Height = 720;
+      ret = RKADK_RECORD_SetPipAttr(pRecorder, stRecAttr.stPipAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_RECORD_SetPipAttr failed");
+    } else if (strstr(cmd, "pip-mv-100")) {
+      stRecAttr.stPipAttr[0].stSubRect.u32X = 100;
+      stRecAttr.stPipAttr[0].stSubRect.u32Y = 100;
+      stRecAttr.stPipAttr[0].stSubRect.u32Width = 640;
+      stRecAttr.stPipAttr[0].stSubRect.u32Height = 360;
+      ret = RKADK_RECORD_SetPipAttr(pRecorder, stRecAttr.stPipAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_RECORD_SetPipAttr failed");
+    } else if (strstr(cmd, "pip-disable")) {
+      stRecAttr.stPipAttr[0].bEnablePip = false;
+      ret = RKADK_RECORD_SetPipAttr(pRecorder, stRecAttr.stPipAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_RECORD_SetPipAttr failed");
+    } else if (strstr(cmd, "pip-enable")) {
+      stRecAttr.stPipAttr[0].bEnablePip = true;
+      ret = RKADK_RECORD_SetPipAttr(pRecorder, stRecAttr.stPipAttr);
+      if (ret)
+        RKADK_LOGE("RKADK_RECORD_SetPipAttr failed");
+    }  else if (strstr(cmd, "LR")) { //Lapse Record
       enRecType = RKADK_REC_TYPE_LAPSE;
       RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_RECORD_TYPE, &enRecType);
       RKADK_RECORD_Reset(&pRecorder);

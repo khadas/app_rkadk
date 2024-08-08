@@ -193,6 +193,15 @@ typedef struct {
   RKADK_ISP_WAKE_UP_RESUME_FN pfnMultiFrame;
 } RKADK_AOV_ATTR_S;
 
+typedef struct {
+  RKADK_BOOL bEnablePip;                      /* enable picture-in-picture */
+  RKADK_U32 u32AvsGrpId;                      /* avs group id [0, AVS_MAX_GRP_NUM)] */
+  RKADK_U32 u32AvsBufCnt;                     /* default 2, min value 2 */
+  RKADK_U32 u32SubCamId;                      /* subwindow camera id */
+  RKADK_STREAM_TYPE_E enSubStreamType;        /* subwindow stream type */
+  RKADK_RECT_S stSubRect;                     /* The subwindow is based on the display area of the main window */
+} RKADK_PIP_ATTR_S;
+
 /* muxer attribute param */
 typedef struct {
   RKADK_U32 u32CamId;
@@ -207,6 +216,7 @@ typedef struct {
   RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
+  RKADK_PIP_ATTR_S stPipAttr[RECORD_FILE_NUM_MAX];
 } RKADK_MUXER_ATTR_S;
 
 typedef enum {
@@ -226,6 +236,7 @@ typedef struct {
   RKADK_ISP_FRAME_MODE enFrameMode;
   RKADK_MUXER_PTS_CALLBACK_FN pfnPtsCallback;
   RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
+  RKADK_PIP_ATTR_S stPipAttr[RECORD_FILE_NUM_MAX];
 } RKADK_MUXER_HANDLE_S;
 
 /**

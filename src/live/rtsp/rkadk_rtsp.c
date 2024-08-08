@@ -555,7 +555,7 @@ RKADK_S32 RKADK_RTSP_Init(RKADK_U32 u32CamId, RKADK_U32 port, const char *path,
   }
   RKADK_BUFINFO("create vi[%d]", stViChn.s32ChnId);
 
-  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(u32CamId, &u32VpssBufCnt, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
+  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(u32CamId, false, &u32VpssBufCnt, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
   if (bUseVpss) {
     memset(&stGrpAttr, 0, sizeof(VPSS_GRP_ATTR_S));
     memset(&stChnAttr, 0, sizeof(VPSS_CHN_ATTR_S));
@@ -749,7 +749,7 @@ RKADK_S32 RKADK_RTSP_DeInit(RKADK_MW_PTR pHandle) {
   RKADK_RTSP_AudioSetChn(&stAiChn, &stAencChn);
   RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTSP_AencOutCb, pstHandle);
 
-  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(pstHandle->u32CamId, NULL, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
+  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(pstHandle->u32CamId, false, NULL, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
   if (bUseVpss){
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);

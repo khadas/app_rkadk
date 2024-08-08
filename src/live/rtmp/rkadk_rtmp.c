@@ -603,7 +603,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
     return -1;
   }
 
-  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(u32CamId, &u32VpssBufCnt, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
+  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(u32CamId, false, &u32VpssBufCnt, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
 
   RKADK_PARAM_AUDIO_CFG_S *pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {
@@ -783,7 +783,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
     RKADK_MEDIA_StopGetAencBuffer(&stAencChn, RKADK_RTMP_AencOutCb, pstHandle);
   }
 
-  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(pstHandle->u32CamId, NULL, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
+  bUseVpss = RKADK_MEDIA_VideoIsUseVpss(pstHandle->u32CamId, false, NULL, pstLiveCfg->vi_attr, pstLiveCfg->attribute);
   if (bUseVpss) {
     // VPSS UnBind VENC
     ret = RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVencChn);

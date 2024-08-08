@@ -38,14 +38,15 @@ typedef RKADK_S32 (*RKADK_REC_REQUEST_FILE_NAMES_FN)(
 
 /** record task's attribute */
 typedef struct {
-  RKADK_S32 s32CamID;                                  /* camera id */
+  RKADK_S32 s32CamID;                                   /* camera id */
   RKADK_U32 u32FragKeyFrame;
-  RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames; /* rec callbak */
-  RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;      /* event callbak */
-  RKADK_REC_PTS_CALLBACK_FN pfnPtsCallback;      /* pts callbak */
+  RKADK_REC_REQUEST_FILE_NAMES_FN pfnRequestFileNames;  /* rec callbak */
+  RKADK_REC_EVENT_CALLBACK_FN pfnEventCallback;         /* event callbak */
+  RKADK_REC_PTS_CALLBACK_FN pfnPtsCallback;             /* pts callbak */
   RKADK_AOV_ATTR_S stAovAttr;
   RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
   RKADK_MOUMNT_SDCARD_FN pfnMountSdcard;
+  RKADK_PIP_ATTR_S stPipAttr[RECORD_FILE_NUM_MAX];
 } RKADK_RECORD_ATTR_S;
 
 /****************************************************************************/
@@ -165,6 +166,8 @@ RKADK_S32 RKADK_RECORD_ToggleFlip(RKADK_MW_PTR pRecorder,
 RKADK_S32 RKADK_RECORD_SetRotation(RKADK_MW_PTR pRecorder,
                                   ROTATION_E enRotation,
                                   RKADK_STREAM_TYPE_E enStreamType);
+
+RKADK_S32 RKADK_RECORD_SetPipAttr(RKADK_MW_PTR pRecorder, RKADK_PIP_ATTR_S *pstPipAttr);
 
 #ifdef __cplusplus
 }
