@@ -68,7 +68,7 @@ typedef struct {
   RKADK_U32   srcHeight;
   RKADK_U32   chnIndex;
   RKADK_U32   chNum;
-  RKADK_U32   inputMode;
+  RKADK_VDEC_DECODE_MODE_E   inputMode;
   RKADK_CODEC_TYPE_E eCodecType;
   RKADK_U32   compressMode;
   RKADK_U32   frameBufferCnt;
@@ -246,10 +246,46 @@ static void RKADK_PLAYER_ProcessEvent(RKADK_PLAYER_HANDLE_S *pstPlayer,
     pstPlayer->pfnPlayerCallback((RKADK_MW_PTR)pstPlayer, enEvent, pData);
 }
 
+VIDEO_MODE_E RKADK_PLAYER_GetRkDecodeMode(RKADK_VDEC_DECODE_MODE_E enMode) {
+  VIDEO_MODE_E enDecodeMode;
+
+  switch (enMode) {
+  case RKADK_DECODE_MODE_FRAME:
+    enDecodeMode = VIDEO_MODE_FRAME;
+    break;
+
+  case RKADK_DECODE_MODE_STREAM:
+    enDecodeMode = VIDEO_MODE_STREAM;
+    break;
+
+  case RKADK_DECODE_MODE_FRAME_SLICE:
+    enDecodeMode = VIDEO_MODE_FRAME_SLICE;
+    break;
+
+  case RKADK_DECODE_MODE_SLICE:
+    enDecodeMode = VIDEO_MODE_SLICE;
+    break;
+
+  case RKADK_DECODE_MODE_COMPAT:
+    enDecodeMode = VIDEO_MODE_COMPAT;
+    break;
+
+  case RKADK_DECODE_MODE_BUTT:
+    enDecodeMode = VIDEO_MODE_BUTT;
+    break;
+
+  default:
+    enDecodeMode = VIDEO_MODE_FRAME;
+    break;
+  }
+
+  return enDecodeMode;
+}
+
 static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx, RKADK_PLAYER_VDEC_CFG_S stVdecCfg) {
   memset(pstVdecCtx, 0, sizeof(RKADK_PLAYER_VDEC_CTX_S));
 
-  pstVdecCtx->inputMode = VIDEO_MODE_FRAME;
+  pstVdecCtx->inputMode = stVdecCfg.u32DecodeMode;
   pstVdecCtx->compressMode = COMPRESS_MODE_NONE;
 
   pstVdecCtx->frameBufferCnt = stVdecCfg.u32FrameBufCnt;
@@ -300,7 +336,7 @@ static RKADK_S32 CreateVdec(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx) {
     return ret;
   }
 
-  stAttr.enMode = VIDEO_MODE_FRAME;
+  stAttr.enMode = RKADK_PLAYER_GetRkDecodeMode(pstVdecCtx->inputMode);
   stAttr.enType = RKADK_MEDIA_GetRkCodecType(pstVdecCtx->eCodecType);
   stAttr.u32PicWidth = pstVdecCtx->srcWidth;
   stAttr.u32PicHeight = pstVdecCtx->srcHeight;

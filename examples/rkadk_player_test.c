@@ -37,7 +37,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:w:C:A:mfvbDh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:w:C:A:M:mfvbDh";
 
 static RKADK_VOID *mDemuxerCfg = NULL;
 static void print_usage(const RKADK_CHAR *name) {
@@ -70,6 +70,7 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-w: Vdec waterline(frames), Default: 0\n");
   printf("\t-D: enable third-party demuxer, Default: disable\n");
   printf("\t-A: adec buffer len, Default: 4\n");
+  printf("\t-M: vdec decode mode, option: 0(frame mode), 1(stream mode), 2(send frame decode slice), 3(send slice decode slice), Default: 0\n");
   printf("\t-C: Ao sound card name, Default: RV1106/RV1103/RK3506 = hw:0,0, other chip = default\n");
   printf("\t-h: help\n");
 }
@@ -351,6 +352,7 @@ int main(int argc, char *argv[]) {
   int loop_count = -1, loop_duration = 0;
   RKADK_PLAYER_STATE_E enState = RKADK_PLAYER_STATE_BUTT;
   RKADK_U32 u32Waterline = 0;
+  RKADK_U32 u32DecodeMode = 0;
 
   memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
   param_init(&stPlayCfg.stFrmInfo);
@@ -439,6 +441,9 @@ int main(int argc, char *argv[]) {
     case 'A':
       stPlayCfg.stAudioCfg.u32AdecBufCnt= atoi(optarg);
       break;
+    case 'M':
+      u32DecodeMode= atoi(optarg);
+      break;
     case 'C':
       stPlayCfg.stAudioCfg.pSoundCard = optarg;
       break;
@@ -477,6 +482,15 @@ int main(int argc, char *argv[]) {
     stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_MIPI;
   else if (u32IntfType == 2)
     stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_LCD;
+
+  if (u32DecodeMode == 1)
+    stPlayCfg.stVdecCfg.u32DecodeMode = RKADK_DECODE_MODE_STREAM;
+  else if (u32DecodeMode == 2)
+    stPlayCfg.stVdecCfg.u32DecodeMode = RKADK_DECODE_MODE_FRAME_SLICE;
+  else if (u32DecodeMode == 3)
+    stPlayCfg.stVdecCfg.u32DecodeMode = RKADK_DECODE_MODE_SLICE;
+  else if (u32DecodeMode == 4)
+    stPlayCfg.stVdecCfg.u32DecodeMode = RKADK_DECODE_MODE_COMPAT;
 
   signal(SIGINT, sigterm_handler);
 

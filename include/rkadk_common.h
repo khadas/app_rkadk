@@ -215,6 +215,15 @@ typedef enum {
   DISPLAY_TYPE_DEFAULT,
 } RKADK_VO_INTF_TYPE_E;
 
+typedef enum {
+  RKADK_DECODE_MODE_FRAME = 0,
+  RKADK_DECODE_MODE_STREAM,
+  RKADK_DECODE_MODE_FRAME_SLICE,
+  RKADK_DECODE_MODE_SLICE,
+  RKADK_DECODE_MODE_COMPAT,
+  RKADK_DECODE_MODE_BUTT,
+} RKADK_VDEC_DECODE_MODE_E;
+
 typedef struct tagRKADK_PARAM_VENC_PARAM_S {
   /* rc param */
   RKADK_S32 first_frame_qp; /* start QP value of the first frame */
