@@ -1300,6 +1300,7 @@ RKADK_S32 RKADK_MPI_VO_Init(RKADK_S32 s32VoLay, RKADK_S32 s32VoDev, RKADK_S32 s3
 
     RKADK_MEDIA_CheckVoParam(pstLayerAttr, pstChnAttr);
 
+    pstChnAttr->u32Priority = s32VoChn;
     ret = RK_MPI_VO_SetChnAttr(s32VoLay, s32VoChn, pstChnAttr);
     if (ret) {
       RKADK_LOGE("RK_MPI_VO_SetChnAttr failed, ret = %x", ret);

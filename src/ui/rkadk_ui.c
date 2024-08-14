@@ -91,7 +91,6 @@ RKADK_S32 RKADK_UI_Create(RKADK_UI_ATTR_S *pstUiAttr, RKADK_MW_PTR *ppUi) {
   stChnAttr.u32FgAlpha = 255;
   stChnAttr.u32BgAlpha = 0;
   stChnAttr.enRotation = (ROTATION_E)pstUiAttr->u32Rotation;
-  stChnAttr.u32Priority = 1;
 
   if (!pstUiAttr->bMirror && !pstUiAttr->bFlip)
       stChnAttr.enMirror = MIRROR_NONE;

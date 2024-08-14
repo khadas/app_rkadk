@@ -2252,7 +2252,6 @@ static RKADK_S32 CreateDeviceVo(RKADK_PLAYER_HANDLE_S *pstPlayer, RKADK_PLAYER_F
   stChnAttr.u32BgAlpha = 0;
   stChnAttr.enMirror = pstPlayer->stVoCtx.enMirror;
   stChnAttr.enRotation = pstPlayer->stVoCtx.enRotation;
-  stChnAttr.u32Priority = 1;
   RKADK_LOGE("rect: [%d %d %d %d]",
             stChnAttr.stRect.s32X, stChnAttr.stRect.s32Y = pstPlayer->stVoCtx.y,
             stChnAttr.stRect.u32Width, stChnAttr.stRect.u32Height);

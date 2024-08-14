@@ -69,7 +69,6 @@ static int RKADK_DISP_CreateVo(RKADK_U32 VoLayer, RKADK_U32 VoDev,
   stChnAttr.u32BgAlpha = 0;
   stChnAttr.enMirror = MIRROR_NONE;
   stChnAttr.enRotation = (ROTATION_E)pstDispCfg->rotation;
-  stChnAttr.u32Priority = 1;
 
   ret = RKADK_MPI_VO_Init(VoLayer, VoDev, pstDispCfg->vo_chn,
                           &stVoPubAttr, &stLayerAttr, &stChnAttr, enVoSpliceMode);
