@@ -385,7 +385,7 @@ int SAMPLE_ISP_EnableLdch(RKADK_U32 u32CamId, bool on, RKADK_U32 level) {
 int SAMPLE_ISP_GET_LdchAttrib(RKADK_U32 u32CamId,
                                 rk_aiq_ldch_attrib_t *attr) {
   int ret = 0;
-
+/*
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(attr, RKADK_FAILURE);
   RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
@@ -396,6 +396,7 @@ int SAMPLE_ISP_GET_LdchAttrib(RKADK_U32 u32CamId,
   ret = rk_aiq_user_api2_aldch_GetAttrib(gstIspHandle[u32CamId].pstAiqCtx, attr);
 
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
+*/
   return ret;
 }
 
