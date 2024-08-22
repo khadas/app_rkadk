@@ -1843,6 +1843,9 @@ static RKADK_VOID DoPullDemuxerVideoPacket(RKADK_VOID* pHandle) {
       pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_VIDEO_DONE;
     }
 
+    if (!pstPlayer->bAudioExist && pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE) {
+      pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
+    }
     memset(&stMbExtConfig, 0, sizeof(MB_EXT_CONFIG_S));
     stMbExtConfig.pFreeCB = BufferFree;
     stMbExtConfig.pOpaque = (RKADK_VOID *)pstDemuxerPacket->s8PacketData;
