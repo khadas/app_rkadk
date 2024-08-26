@@ -1851,13 +1851,15 @@ RKADK_S32 RKADK_MUXER_Start(RKADK_MW_PTR pHandle) {
       continue;
     }
 
-    ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1000);
+    ret = RK_MPI_VENC_GetStream(pstMuxerHandle->u32ThumbVencChn, &stFrame, 1);
     if (ret == RK_SUCCESS) {
       ret = RK_MPI_VENC_ReleaseStream(pstMuxerHandle->u32ThumbVencChn, &stFrame);
       if (ret != RK_SUCCESS)
         RKADK_LOGE("RK_MPI_VENC_ReleaseStream failed[%x]", ret);
     } else {
       RKADK_LOGE("RK_MPI_VENC_GetStream[%d] failed[%x]", pstMuxerHandle->u32ThumbVencChn, ret);
+      RK_MPI_VENC_StopRecvFrame(pstMuxerHandle->u32ThumbVencChn);
+      RK_MPI_VENC_ResetChn(pstMuxerHandle->u32ThumbVencChn);
     }
 
     RK_MPI_VENC_RequestIDR(pstMuxerHandle->u32VencChn, RK_FALSE);
