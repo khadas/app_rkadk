@@ -1004,6 +1004,33 @@ static void SendBlackBackground(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_IN
   return;
 }
 
+static RKADK_S32 RKADK_PLAYER_SendVoFrame(RKADK_PLAYER_HANDLE_S *pstPlayer, VIDEO_FRAME_INFO_S *sFrame, RKADK_S32 s32MilliSec) {
+  RKADK_S32 ret = 0;
+
+  RKADK_CHECK_POINTER(pstPlayer, RKADK_FAILURE);
+  RKADK_CHECK_POINTER(sFrame, RKADK_FAILURE);
+
+  ret = RK_MPI_SYS_MmzFlushCache(sFrame->stVFrame.pMbBlk, false);
+  if (ret != RK_SUCCESS)
+    RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
+
+  // save snapshot frame info
+  pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
+  pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame->stVFrame.u32Width;
+  pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame->stVFrame.u32Height;
+  pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame->stVFrame.u32VirWidth;
+  pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame->stVFrame.u32VirHeight;
+  pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame->stVFrame.pMbBlk;
+  pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame->stVFrame.enPixelFormat;
+  pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
+
+  ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, sFrame, s32MilliSec);
+  if (ret != RK_SUCCESS)
+    RKADK_LOGE("send vo failed[%x]", ret);
+
+  return ret;
+}
+
 static void AoVolumeControl(RKADK_PLAYER_HANDLE_S *pstPlayer) {
   AUDIO_FADE_S aFade;
   aFade.bFade = RK_FALSE;
@@ -1100,24 +1127,10 @@ static void SendVideoData(RKADK_VOID *ptr) {
         }
         pstPlayer->videoTimeStamp = sFrame.stVFrame.u64PTS;
 
-        ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
-        if (ret != RK_SUCCESS)
-          RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
-
-        // save snapshot frame info
-        pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
-        pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
-        pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
-        pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
-        pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
-        pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
-        pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
-        pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
-
         if (pstPlayer->bEnableBlackBackground)
           tFrame.stVFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
 
-        ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, -1);
+        ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, -1);
         if (ret != RK_SUCCESS)
           RKADK_LOGE("send vo failed[%x]", ret);
 
@@ -1285,9 +1298,10 @@ static void SendData(RKADK_VOID *ptr) {
   struct timespec t_begin, t_end;
   struct timespec t_begin_1, t_end_1;
   RKADK_S32 flagGetFirstframe = 0, flagVideoEnd = 0, flagAudioEnd = 0, flagsSendNullFrame = 0;
-  RKADK_S32 frameTime = 0, costtime = 0, maxNullFrameCount = 0, flagSendBlackFrameEnd = 0;
+  RKADK_S32 frameTime = 0, costtime = 0, maxNullFrameCount = 0;
   RKADK_S32 audioBytes = 0, sampleNum = 0, tmpNUm = 0;
   RKADK_S32 enableSendDataDebug = 0;
+  RKADK_S32 voSendTime = 0;
   RK_U64 debugCount = 0;
   RK_U32 cacheBufferLen = 0, copySize = 0, secondPartLen = 0;
   RK_U32 bufferOffset = 0, originOffset = 0;
@@ -1430,21 +1444,7 @@ static void SendData(RKADK_VOID *ptr) {
       if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
         if (pstPlayer->enStatus == RKADK_PLAYER_STATE_PAUSE) {
           //send sFrame to vo
-          ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
-          if (ret != 0)
-            RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
-
-          // save snapshot frame info
-          pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
-          pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
-          pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
-          pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
-          pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
-          pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
-          pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
-          pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
-
-          ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+          ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, 0);
           if (ret != 0)
             RKADK_LOGE("send frame to vo failed[%x]", ret);
 
@@ -1460,7 +1460,7 @@ static void SendData(RKADK_VOID *ptr) {
       // Send first video frames
       if (flagGetFirstframe == 1) {
         if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
-          ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+          ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, 0);
           if (ret != 0)
             RKADK_LOGE("first video frame failed[%x]", ret);
         }
@@ -1570,26 +1570,12 @@ __GETVDEC:
                       } else {
                         if (abs(pstPlayer->positionTimeStamp - pstPlayer->videoTimeStamp) <= 0.5 * frameTime) {
                           // normal video send
-                          ret = RK_MPI_SYS_MmzFlushCache(sFrame.stVFrame.pMbBlk, false);
-                          if (ret != 0)
-                            RKADK_LOGE("sys mmz flush cache failed[%x]", ret);
-
                           if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP) {
-                            // save snapshot frame info
-                            pthread_mutex_lock(&pstPlayer->stSnapshotParam.mutex);
-                            pstPlayer->stSnapshotParam.stFrame.u32Width = sFrame.stVFrame.u32Width;
-                            pstPlayer->stSnapshotParam.stFrame.u32Height = sFrame.stVFrame.u32Height;
-                            pstPlayer->stSnapshotParam.stFrame.u32VirWidth = sFrame.stVFrame.u32VirWidth;
-                            pstPlayer->stSnapshotParam.stFrame.u32VirHeight = sFrame.stVFrame.u32VirHeight;
-                            pstPlayer->stSnapshotParam.stFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
-                            pstPlayer->stSnapshotParam.stFrame.enPixelFormat = sFrame.stVFrame.enPixelFormat;
-                            pthread_mutex_unlock(&pstPlayer->stSnapshotParam.mutex);
-
                             if (pstPlayer->bEnableBlackBackground)
                               tFrame.stVFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
 
                             if (enableSendDataDebug != 2) {
-                              ret = RK_MPI_VO_SendFrame(pstPlayer->stVoCtx.u32VoLay, pstPlayer->stVoCtx.u32VoChn, &sFrame, 0);
+                              ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, 0);
                               if (ret != 0)
                                 RKADK_LOGE("send frame to vo failed[%x]", ret);
                             } else {
@@ -1677,10 +1663,38 @@ __GETVDEC:
               flagVideoEnd = 1;
             }
 
-            if (pstPlayer->enStatus == RKADK_PLAYER_STATE_STOP && flagSendBlackFrameEnd == 0) {
-              SendBlackBackground(pstPlayer, &tFrame);
-              flagSendBlackFrameEnd = 1;
+            if (pstPlayer->bEnableBlackBackground)
+              tFrame.stVFrame.pMbBlk = sFrame.stVFrame.pMbBlk;
+
+            if (pstPlayer->duration * 1000 - pstPlayer->positionTimeStamp > frameTime && flagAudioEnd && !flagVideoEnd) {
+              clock_gettime(CLOCK_MONOTONIC, &t_end);
+              if (pstPlayer->videoTimeStamp >= 0) {
+                costtime = (t_end.tv_sec - t_begin.tv_sec) * 1000000 + (t_end.tv_nsec - t_begin.tv_nsec) / 1000;
+                if ((RKADK_S64)sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp > (RKADK_S64)costtime) {
+                  voSendTime = sFrame.stVFrame.u64PTS - pstPlayer->videoTimeStamp - costtime;
+
+                  if (!pstPlayer->bIsRtsp)
+                    usleep(voSendTime);
+                }
+                voSendTime = frameTime;
+              } else {
+                voSendTime = frameTime;
+              }
+              pstPlayer->videoTimeStamp = sFrame.stVFrame.u64PTS;
+
+              ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, 0);
+              if (ret != 0)
+                RKADK_LOGE("send frame to vo failed[%x]", ret);
+              else {
+                if (sFrame.stVFrame.u64PTS > pstPlayer->positionTimeStamp)
+                  pstPlayer->positionTimeStamp = sFrame.stVFrame.u64PTS;
+              }
+
+              clock_gettime(CLOCK_MONOTONIC, &t_begin);
+              if (!pstPlayer->bIsRtsp)
+                usleep(voSendTime);
             }
+
             RK_MPI_VDEC_ReleaseFrame(pstPlayer->stVdecCtx.chnIndex, &sFrame);
           }
 
@@ -3177,6 +3191,7 @@ RKADK_S32 RKADK_PLAYER_GetSendFrameNum(RKADK_MW_PTR pPlayer) {
 }
 
 RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
+  RKADK_S32 ret = 0;
   void *demuxerCfg;
   RKADK_DEMUXER_INPUT_S demuxerInput;
   RKADK_DEMUXER_PARAM_S demuxerParam;
@@ -3213,21 +3228,31 @@ RKADK_S32 RKADK_PLAYER_GetDuration(RKADK_MW_PTR pPlayer, RKADK_U32 *pDuration) {
     goto __FAILED;
   }
 
-  if (pstPlayer->bAudioExist) {
-    if (RKADK_DEMUXER_ReadAudioDuration(demuxerCfg, &aDuration))
-      goto __FAILED;
-
-    *pDuration = aDuration / 1000;
-  } else if (pstPlayer->bVideoExist) {
-    if (RKADK_DEMUXER_ReadVideoDuration(demuxerCfg, &vDuration))
-      goto __FAILED;
-
-    *pDuration = vDuration / 1000;
-  } else {
+  if (!pstPlayer->bVideoExist && !pstPlayer->bAudioExist) {
     RKADK_LOGE("get duration failed, bAudioExist: %d, bVideoExist: %d", pstPlayer->bAudioExist, pstPlayer->bVideoExist);
     goto __FAILED;
   }
 
+  if (pstPlayer->bAudioExist) {
+    ret = RKADK_DEMUXER_ReadAudioDuration(demuxerCfg, &aDuration);
+    if (ret)
+      RKADK_LOGE("get audio duration failed");
+    else
+      aDuration = aDuration / 1000;
+  }
+
+  if (pstPlayer->bVideoExist) {
+    ret = RKADK_DEMUXER_ReadVideoDuration(demuxerCfg, &vDuration);
+    if (ret)
+      RKADK_LOGE("get video duration failed");
+    else
+      vDuration = vDuration / 1000;
+  }
+
+  if (!aDuration && !vDuration)
+    goto __FAILED;
+
+  *pDuration = fmax(aDuration, vDuration);
   pstPlayer->duration = *pDuration;
   RKADK_DEMUXER_Destroy(&demuxerCfg);
   return RKADK_SUCCESS;
