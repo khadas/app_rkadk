@@ -141,6 +141,7 @@ int main(int argc, char *argv[]) {
   RKADK_OSD_STREAM_ATTR_S OsdStreamAttr;
   RKADK_U32 u32OsdId = 0;
   RKADK_U32 u32SliceHeight;
+  RKADK_PARAM_INPUT_FMT_S stInputFmt;
 
   //aiisp
   bool bAiispEnable = true;
@@ -509,6 +510,39 @@ photo:
       ret = RKADK_MEDIA_SetPostIspAttr(u32CamId, RKADK_STREAM_TYPE_SNAP, bAiispEnable, &stPostIspAttr);
       if (ret)
         RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
+    } else if (strstr(cmd, "fbc0")) {
+      RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(u32CamId);
+#endif
+      pHandle = NULL;
+
+      stInputFmt.enStreamType = RKADK_STREAM_TYPE_SNAP;
+      stInputFmt.format = "FBC0";
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_INPUT_FMT, &stInputFmt);
+      goto photo;
+    } else if (strstr(cmd, "nv16")) {
+      RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(u32CamId);
+#endif
+      pHandle = NULL;
+
+      stInputFmt.enStreamType = RKADK_STREAM_TYPE_SNAP;
+      stInputFmt.format = "NV16";
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_INPUT_FMT, &stInputFmt);
+      goto photo;
+    } else if (strstr(cmd, "nv12")) {
+      RKADK_PHOTO_DeInit(pHandle);
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(u32CamId);
+#endif
+      pHandle = NULL;
+
+      stInputFmt.enStreamType = RKADK_STREAM_TYPE_SNAP;
+      stInputFmt.format = "NV12";
+      RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_INPUT_FMT, &stInputFmt);
+      goto photo;
     }
 
     if (RKADK_PHOTO_TakePhoto(pHandle, &stTakePhotoAttr)) {

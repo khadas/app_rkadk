@@ -186,15 +186,16 @@ typedef enum {
   RKADK_PARAM_TYPE_RECORD_TIME,     /* specify RKADK_PARAM_REC_TIME_S, record time(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_TIME, /* pre record time, unit in second(s) */
   RKADK_PARAM_TYPE_PRE_RECORD_MODE, /* pre record mode, specify MUXER_PRE_RECORD_MODE_E */
-  RKADK_PARAM_TYPE_SPLITTIME, /* specify RKADK_PARAM_REC_TIME_S, manual splite time(s) */
-  RKADK_PARAM_TYPE_FILE_CNT,  /* record file count, maximum RECORD_FILE_NUM_MAX */
-  RKADK_PARAM_TYPE_LAPSE_INTERVAL, /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
-  RKADK_PARAM_TYPE_LAPSE_MULTIPLE, /* lapse multiple */
-  RKADK_PARAM_TYPE_JPEG_SLICE,     /* enable/disable jpeg slice */
-  RKADK_PARAM_TYPE_SLICE_HEIGHT,     /* set jpeg slice height */
+  RKADK_PARAM_TYPE_SPLITTIME,       /* specify RKADK_PARAM_REC_TIME_S, manual splite time(s) */
+  RKADK_PARAM_TYPE_FILE_CNT,        /* record file count, maximum RECORD_FILE_NUM_MAX */
+  RKADK_PARAM_TYPE_LAPSE_INTERVAL,  /* specify RKADK_PARAM_REC_TIME_S, lapse interval(s) */
+  RKADK_PARAM_TYPE_LAPSE_MULTIPLE,  /* lapse multiple */
+  RKADK_PARAM_TYPE_JPEG_SLICE,      /* enable/disable jpeg slice */
+  RKADK_PARAM_TYPE_SLICE_HEIGHT,    /* set jpeg slice height */
+  RKADK_PARAM_TYPE_INPUT_FMT,       /* set vi input format */
 
   // COMM Dependent Param
-  RKADK_PARAM_TYPE_REC_MUTE,      /* record audio mute, bool */
+  RKADK_PARAM_TYPE_REC_MUTE,        /* record audio mute, bool */
   RKADK_PARAM_TYPE_VOLUME,          /* speaker volume, [0,100] */
   RKADK_PARAM_TYPE_MIC_VOLUME,      /* mic volume, [0,100] */
   RKADK_PARAM_TYPE_BUTT
@@ -229,6 +230,11 @@ typedef struct {
   RKADK_STREAM_TYPE_E enStreamType;
   RKADK_U32 u32Gop;
 } RKADK_PARAM_GOP_S;
+
+typedef struct {
+  RKADK_STREAM_TYPE_E enStreamType;
+  const char *format;
+} RKADK_PARAM_INPUT_FMT_S;
 
 typedef struct tagRKADK_PARAM_VERSION_S {
   char version[RKADK_BUFFER_LEN];

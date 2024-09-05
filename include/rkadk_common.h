@@ -257,6 +257,7 @@ typedef struct tagRKADK_PARAM_VENC_ATTR_S {
 } RKADK_PARAM_VENC_ATTR_S;
 
 typedef struct {
+  RKADK_U32 index;
   RKADK_U32 u32ViChn;
   VI_CHN_ATTR_S stChnAttr;
 } RKADK_PRAAM_VI_ATTR_S;
