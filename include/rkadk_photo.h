@@ -111,11 +111,21 @@ typedef struct {
 } RKADK_TAKE_PHOTO_ATTR_S;
 
 typedef struct {
+  RKADK_U32 u32VencChn;
+  RKADK_U32 u32VdecChn;
+
+  //format change venc parameter
+  RKADK_U32 u32BitRate;   //default 4M
+  RKADK_U32 u32Profile;   //default 77
+} RKADK_PHOTO_FMT_CHANGE_S;
+
+typedef struct {
   RKADK_U32 u32CamId; /** cam id, 0--front 1--rear */
   RKADK_PHOTO_THUMB_ATTR_S stThumbAttr;
   RKADK_PHOTO_DATA_RECV_FN_PTR pfnPhotoDataProc;
   void *userdata;
   RKADK_POST_ISP_ATTR_S *pstPostIspAttr;
+  RKADK_PHOTO_FMT_CHANGE_S stFmtChange;
 } RKADK_PHOTO_ATTR_S;
 
 /****************************************************************************/

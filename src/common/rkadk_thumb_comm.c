@@ -1153,6 +1153,8 @@ RKADK_S32 RKADK_GetThmInMp4(RKADK_U32 u32CamId, RKADK_CHAR *pszFileName,
   stThumbAttr.pu8Buf = pu8Buf;
   stThumbAttr.u32BufSize = *pu32Size;
   stThumbAttr.s32VdecChn = THM_VDEC_CHN;
+  if (stThumbAttr.s32VdecChn < 0)
+    stThumbAttr.s32VdecChn = 0;
   stThumbAttr.s32VpssGrp = THM_VPSS_GRP;
   stThumbAttr.s32VpssChn = THM_VPSS_CHN;
 

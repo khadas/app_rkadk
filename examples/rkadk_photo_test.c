@@ -339,6 +339,10 @@ photo:
   stPhotoAttr.stThumbAttr.stMPFAttr.sCfg.astLargeThumbSize[0].u32Height = 180;
   stPhotoAttr.pstPostIspAttr = &stPostIspAttr;
 
+  //fbc0 format change
+  stPhotoAttr.stFmtChange.u32VencChn = 12;
+  stPhotoAttr.stFmtChange.u32VdecChn = 2;
+
   ret = RKADK_PHOTO_Init(&stPhotoAttr, &pHandle);
   if (ret) {
     RKADK_LOGE("RKADK_PHOTO_Init u32CamId[%d] failed[%d]", u32CamId, ret);
