@@ -182,7 +182,7 @@ RKADK_S32 RKADK_Struct2Ini(char *iniFile, void *structAddr,
   }
 
   if (iniparser_find_entry(ini, mapTable[0].structName) == 0) {
-    RKADK_LOGI("section name[%s] no exist, so create", mapTable[0].structName);
+    RKADK_LOGW("section name[%s] no exist, so create", mapTable[0].structName);
     iniparser_set(ini, mapTable[0].structName, NULL);
   }
 

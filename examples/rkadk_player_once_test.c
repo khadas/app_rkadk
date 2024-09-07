@@ -252,13 +252,13 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
-  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, fps: %d, pSoundCard: %s",
+  RKADK_LOGP("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
+  RKADK_LOGP("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, fps: %d, pSoundCard: %s",
               stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
               stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
               u32SpliceMode, u32VoFormat, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate,
               stPlayCfg.stAudioCfg.pSoundCard);
-  RKADK_LOGD("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
+  RKADK_LOGP("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
               u32Waterline, stPlayCfg.stVdecCfg.u32FrameBufCnt, stPlayCfg.stVdecCfg.u32StreamBufCnt);
 
   if (u32SpliceMode == 1)

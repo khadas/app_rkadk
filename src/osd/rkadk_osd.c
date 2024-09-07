@@ -66,7 +66,7 @@ RKADK_S32 RKADK_OSD_Deinit(RKADK_U32 u32OsdId) {
 
   ret = RK_MPI_RGN_Destroy(RgnHandle);
   if (RK_SUCCESS != ret) {
-    RK_LOGE("OSD [%d] destroy failed with %#x", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] destroy failed with %#x", RgnHandle, ret);
     return ret;
   }
 
@@ -254,7 +254,7 @@ RKADK_S32 RKADK_OSD_UpdateBitMap(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAtt
 
   ret = RK_MPI_RGN_SetBitMap(RgnHandle, &stBitmap);
   if (RK_SUCCESS != ret) {
-    RK_LOGE("OSD [%d] update failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] update failed with %#x!", RgnHandle, ret);
     return ret;
   }
 
@@ -361,13 +361,13 @@ RKADK_S32 RKADK_OSD_UpdateOsdSize(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAt
 
   ret = RK_MPI_RGN_GetAttr(RgnHandle, &stRgnAttr);
   if (RK_SUCCESS != ret) {
-    RK_LOGE("OSD [%d] get attr failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] get attr failed with %#x!", RgnHandle, ret);
     return ret;
   }
 
   if (stRgnAttr.unAttr.stOverlay.stSize.u32Width  == pstOsdAttr->Width &&
       stRgnAttr.unAttr.stOverlay.stSize.u32Height == pstOsdAttr->Height) {
-    RKADK_LOGI("OSD size has not change old [%d %d] new [%d, %d]!",
+    RKADK_LOGW("OSD size has not change old [%d %d] new [%d, %d]!",
     stRgnAttr.unAttr.stOverlay.stSize.u32Width,
     stRgnAttr.unAttr.stOverlay.stSize.u32Height,
     pstOsdAttr->Width, pstOsdAttr->Height);
@@ -378,7 +378,7 @@ RKADK_S32 RKADK_OSD_UpdateOsdSize(RKADK_U32 u32OsdId, RKADK_OSD_ATTR_S *pstOsdAt
   stRgnAttr.unAttr.stOverlay.stSize.u32Height = pstOsdAttr->Height;
   ret = RK_MPI_RGN_SetAttr(RgnHandle, &stRgnAttr);
   if (RK_SUCCESS != ret) {
-    RK_LOGE("OSD [%d] set attr failed with %#x!", RgnHandle, ret);
+    RKADK_LOGE("OSD [%d] set attr failed with %#x!", RgnHandle, ret);
     return ret;
   }
 

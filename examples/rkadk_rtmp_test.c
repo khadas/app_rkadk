@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'h':
     default:
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#camera id: %d", u32CamId);
+  RKADK_LOGP("#camera id: %d", u32CamId);
 
   RKADK_MPI_SYS_Init();
 
@@ -153,7 +153,7 @@ rtmp:
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "720")) {
       stResCfg.enResType = RKADK_RES_720P;

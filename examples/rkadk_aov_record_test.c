@@ -94,7 +94,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
                   RKADK_CHAR (*paszFilename)[RKADK_MAX_FILE_PATH_LEN]) {
   static RKADK_U32 u32FileIdx = 0;
 
-  RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
+  RKADK_LOGP("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
   if (u32FileIdx >= 50)
     u32FileIdx = 0;
@@ -186,7 +186,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
   if (ret)
     RKADK_LOGE("SAMPLE_ISP_GET_MirrorFlip failed");
   else
-    RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
+    RKADK_LOGP("GET mirror = %d, flip = %d", mirror, flip);
 #endif
 
   return 0;
@@ -215,7 +215,7 @@ static int DeviceAttachDriver(const char *device, const char *driver) {
     RKADK_LOGE("can't open %s, errno = %s", driver, strerror(errno));
     return RKADK_FAILURE;
   }
-  RKADK_LOGD("start bind %s to %s", device, driver);
+  RKADK_LOGP("start bind %s to %s", device, driver);
 
   ret = write(fd, device, strlen(device));
   if (ret < 0) {
@@ -236,11 +236,11 @@ static int DeviceDetachDriver(const char *device, const char *driver) {
   snprintf(path, sizeof(path), "%s/unbind", driver);
   fd = open(path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
   if (fd < 0) {
-    RKADK_LOGD("can't open %s, errno = %s", path, strerror(errno));
+    RKADK_LOGP("can't open %s, errno = %s", path, strerror(errno));
     return RKADK_FAILURE;
   }
 
-  RKADK_LOGD("start unbind %s from %s", device, driver);
+  RKADK_LOGP("start unbind %s from %s", device, driver);
   ret = write(fd, device, strlen(device));
   if (ret < 0) {
     RKADK_LOGE("unbind %s from %s failed, errno = %s", device, driver, strerror(errno));
@@ -297,7 +297,7 @@ __RETRY:
     buf[MAX_NL_BUF_SIZE - 1] = '\0';
     // printf("[%s()] bind msg: %s\n", __func__, buf);
     if (strncmp(buf, SDCARD_BIND_DONE, strlen(SDCARD_BIND_DONE)) == 0) {
-      RKADK_LOGD("Bind success: %s", buf);
+      RKADK_LOGP("Bind success: %s", buf);
       goto __SUCCESS;
     }
     goto __RETRY; // drop all message
@@ -361,7 +361,7 @@ __RETRY:
     buf[MAX_NL_BUF_SIZE - 1] = '\0';
     // printf("[%s()] unbind msg: %s\n", __func__, buf);
     if (strcmp(buf, SDCARD_UNBIND_DONE) == 0) {
-      RKADK_LOGD("Unbind success: %s", buf);
+      RKADK_LOGP("Unbind success: %s", buf);
       goto __SUCCESS;
     }
     goto __RETRY; // drop all message
@@ -395,7 +395,7 @@ static int CheckSDcardMount(void) {
     if (line[pos] == '\n') {
       line[pos] = '\0'; // Null-terminate the string
       if (strstr(line, "/mnt/sdcard")) {
-        RKADK_LOGD("Found '/mnt/sdcard' in line: %s", line);
+        RKADK_LOGP("Found '/mnt/sdcard' in line: %s", line);
         ret = 0;
         break; // No need to continue searching
       }
@@ -437,14 +437,14 @@ static int CheckSDcardMount(void) {
 #endif
 
 static int MountSdcard() {
-  RKADK_LOGD("Enter mount");
+  RKADK_LOGP("Enter mount");
 
   int ret = 0;
 
   BindSdcard();
 
   if (CheckSDcardMount() == 0) {
-    RKADK_LOGD("sdcard already mount");
+    RKADK_LOGP("sdcard already mount");
     return 0;
   }
 
@@ -454,14 +454,14 @@ static int MountSdcard() {
     if (ret != 0)
       RKADK_LOGE("mount failed, errno = %s", strerror(errno));
     else
-      RKADK_LOGD("mount success");
+      RKADK_LOGP("mount success");
 
   } else if (access(MOUNT_DEV_2, F_OK) == 0) {
     ret = mount(MOUNT_DEV_2, "/mnt/sdcard", "vfat", 0, NULL);
     if (ret != 0)
       RKADK_LOGE("mount failed, errno = %s", strerror(errno));
     else
-      RKADK_LOGD("mount success");
+      RKADK_LOGP("mount success");
   } else {
     RKADK_LOGE("bad mount path!");
   }
@@ -472,17 +472,17 @@ static int MountSdcard() {
     ret = -1;
   }
 
-  RKADK_LOGD("Exit mount");
+  RKADK_LOGP("Exit mount");
   return ret;
 }
 
 static int UmountSdcard() {
   int ret = 0;
 
-  RKADK_LOGD("Enter umount");
+  RKADK_LOGP("Enter umount");
 
   if (CheckSDcardMount() != 0) {
-    RKADK_LOGD("sdcard already umount");
+    RKADK_LOGP("sdcard already umount");
     return 0;
   }
 
@@ -498,25 +498,25 @@ static int UmountSdcard() {
   else
     RKADK_LOGE("UnbindSdcard failed because %s", strerror(errno));
 
-  RKADK_LOGD("Exit umount");
+  RKADK_LOGP("Exit umount");
   return ret;
 }
 
 static void AovNotifyCallback(RKADK_AOV_EVENT_E enEvent, void *msg) {
   switch(enEvent) {
   case RKADK_AOV_ENTER_SLEEP:
-    RKADK_LOGD("+++++ RKADK_AOV_ENTER_SLEEP +++++");
+    RKADK_LOGP("+++++ RKADK_AOV_ENTER_SLEEP +++++");
 
     RKADK_AOV_WakeupLock();
-    RKADK_LOGD("fs sdcard lock");
+    RKADK_LOGP("fs sdcard lock");
     UmountSdcard();
     RKADK_AOV_EnterSleep();
     RKADK_AOV_WakeupUnlock();
-    RKADK_LOGD("fs sdcard unlock");
+    RKADK_LOGP("fs sdcard unlock");
     break;
 
   default:
-    RKADK_LOGD("Unknown event: %d", enEvent);
+    RKADK_LOGP("Unknown event: %d", enEvent);
     break;
   }
 }
@@ -588,7 +588,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'k':
       stRecAttr.u32FragKeyFrame = 1;
@@ -631,7 +631,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("loopCount: %d, loopDuration: %d", loopCount, loopDuration);
+  RKADK_LOGP("loopCount: %d, loopDuration: %d", loopCount, loopDuration);
 
   MountSdcard();
 
@@ -640,7 +640,7 @@ int main(int argc, char *argv[]) {
   stAovArg.pfnNotifyCallback = AovNotifyCallback;
   RKADK_AOV_Init(&stAovArg);
 
-  RKADK_LOGD("s32SuspendTime: %d", s32SuspendTime);
+  RKADK_LOGP("s32SuspendTime: %d", s32SuspendTime);
   RKADK_AOV_SetSuspendTime(s32SuspendTime);
 #endif
 
@@ -765,9 +765,9 @@ record:
 
     FILE *fp = fopen(osdfile, "rw");
     if (!fp) {
-      RKADK_LOGD("open osd file fail");
+      RKADK_LOGP("open osd file fail");
     } else {
-      RKADK_LOGD("open osd file success");
+      RKADK_LOGP("open osd file success");
       fread((RKADK_U8 *)OsdAttr.pData, OsdAttr.Width * OsdAttr.Height * 4, 1, fp);
       fclose(fp);
       RKADK_OSD_UpdateBitMap(u32OsdId, &OsdAttr);
@@ -791,7 +791,7 @@ record:
     RKADK_RECORD_Start(pRecorder1);
   }
 
-  RKADK_LOGD("initial finish\n");
+  RKADK_LOGP("initial finish\n");
 
   signal(SIGINT, sigterm_handler);
   char cmd[64];
@@ -802,7 +802,7 @@ record:
     if (loopCount >= 0) {
       sleep(loopDuration);
       if (loopCount == 0) {
-        RKADK_LOGD("loop switch end!");
+        RKADK_LOGP("loop switch end!");
         is_quit = true;
         goto __EXIT;
       }
@@ -825,7 +825,7 @@ record:
     } else {
       fgets(cmd, sizeof(cmd), stdin);
       if (strstr(cmd, "quit") || is_quit) {
-        RKADK_LOGD("#Get 'quit' cmd!");
+        RKADK_LOGP("#Get 'quit' cmd!");
         break;
       } else if (strstr(cmd, "LR")) { //Lapse Record
         enRecType = RKADK_REC_TYPE_LAPSE;
@@ -952,6 +952,6 @@ __EXIT:
     RKADK_AOV_DeInit();
 #endif
 
-  RKADK_LOGD("exit!");
+  RKADK_LOGP("exit!");
   return 0;
 }

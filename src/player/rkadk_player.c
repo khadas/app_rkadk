@@ -663,7 +663,7 @@ static RKADK_S32 CreateDeviceAo(RKADK_PLAYER_AO_CTX_S *ctx) {
 
   ret = RK_MPI_AO_SetTrackMode(ctx->devId, (AUDIO_TRACK_MODE_E)ctx->setTrackMode);
   if (ret != 0) {
-    RK_LOGE("RK_MPI_AO_SetTrackMode failed[%x] aoChn[%d]", ret, ctx->chnIndex);
+    RKADK_LOGE("RK_MPI_AO_SetTrackMode failed[%x] aoChn[%d]", ret, ctx->chnIndex);
     goto __FAILED;
   }
 
@@ -2012,7 +2012,7 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
 __RETRY:
       ret = RK_MPI_AO_SendFrame(pstPlayer->stAoCtx.devId, pstPlayer->stAoCtx.chnIndex, &frame, s32MilliSec);
       if (ret < 0) {
-        RK_LOGE("RK_MPI_AO_SendFrame failed[%x], TimeStamp[%lld], s32MilliSec[%d]",
+        RKADK_LOGE("RK_MPI_AO_SendFrame failed[%x], TimeStamp[%lld], s32MilliSec[%d]",
                   ret, frame.u64TimeStamp, s32MilliSec);
         goto __RETRY;
       }
@@ -2093,7 +2093,7 @@ __RETRY:
       return 0;
     }
 
-    RK_LOGE("RK_MPI_AO_SendFrame failed[%x], TimeStamp[%lld], s32MilliSec[%d]",
+    RKADK_LOGE("RK_MPI_AO_SendFrame failed[%x], TimeStamp[%lld], s32MilliSec[%d]",
               ret, frame.u64TimeStamp, s32MilliSec);
     goto __RETRY;
   }

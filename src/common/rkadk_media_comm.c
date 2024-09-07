@@ -2607,7 +2607,7 @@ RKADK_S32 RKADK_MEDIA_EnablePostIsp(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enSt
   stPostIspAttr.u32FrameBufCnt = pstPostIspAttr->u32FrameBufCnt;
   ret = RK_MPI_VPSS_SetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
   if (RK_SUCCESS != ret)
-    RK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+    RKADK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
 
   return ret;
 }
@@ -2630,7 +2630,7 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
   memset(&stPostIspAttr, 0, sizeof(AIISP_ATTR_S));
   ret = RK_MPI_VPSS_GetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_VPSS_GetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+    RKADK_LOGE("RK_MPI_VPSS_GetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
     return ret;
   }
 
@@ -2648,7 +2648,7 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
 
   ret = RK_MPI_VPSS_SetGrpAIISPAttr(s32VpssGrp, &stPostIspAttr);
   if (RK_SUCCESS != ret)
-    RK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
+    RKADK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
 
   return ret;
 }

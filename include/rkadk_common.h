@@ -26,9 +26,6 @@ extern "C" {
 #include <pthread.h>
 #include <stdbool.h>
 
-// dump config info for debug
- #define RKADK_DUMP_CONFIG
-
 // dump isp process result
 //#define RKADK_DUMP_ISP_RESULT
 

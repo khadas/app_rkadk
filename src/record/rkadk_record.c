@@ -505,7 +505,7 @@ static int RKADK_RECORD_CreateAvsChn(RKADK_RECORD_ATTR_S *pstRecAttr, RKADK_PARA
 
   ret = RK_MPI_AVS_CreateGrp(pstRecAttr->stPipAttr[index].u32AvsGrpId, &stAvsGrpAttr);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_AVS_CreateGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
+    RKADK_LOGE("RK_MPI_AVS_CreateGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
     RKADK_MPI_VI_DeInit(pstRecAttr->stPipAttr[index].u32SubCamId, pAvsViChnAttr->u32ViChn);
     return ret;
   }
@@ -520,25 +520,25 @@ static int RKADK_RECORD_CreateAvsChn(RKADK_RECORD_ATTR_S *pstRecAttr, RKADK_PARA
 
   ret = RK_MPI_AVS_SetChnAttr(pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn, &stAvsChnAttr);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_AVS_SetChnAttr[%d, %d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn, ret);
+    RKADK_LOGE("RK_MPI_AVS_SetChnAttr[%d, %d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn, ret);
     goto failed;
   }
 
   ret = RK_MPI_AVS_EnableChn(pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_AVS_EnableChn[%d, %d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn, ret);
+    RKADK_LOGE("RK_MPI_AVS_EnableChn[%d, %d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn, ret);
     goto failed;
   }
 
   ret = RK_MPI_AVS_StartGrp(pstRecAttr->stPipAttr[index].u32AvsGrpId);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_AVS_StartGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
+    RKADK_LOGE("RK_MPI_AVS_StartGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
     goto failed;
   }
 
   ret = RK_MPI_AVS_ResetGrp(pstRecAttr->stPipAttr[index].u32AvsGrpId);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("RK_MPI_AVS_ResetGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
+    RKADK_LOGE("RK_MPI_AVS_ResetGrp[%d] failed[%x]", pstRecAttr->stPipAttr[index].u32AvsGrpId, ret);
     goto failed;
   }
   RKADK_LOGD("AVS[%d, %d] create success", pstRecAttr->stPipAttr[index].u32AvsGrpId, u32AvsChn);
@@ -1344,7 +1344,7 @@ static RKADK_S32 RKADK_RECORD_SetMuxerAttr(RKADK_U32 u32CamId, bool *pbUseVpss,
   for (int i = 0; i < (int)pstMuxerAttr->u32StreamCnt; i++) {
     ret = RK_MPI_VENC_GetChnRotation(pstRecCfg->attribute[i].venc_chn, &enRotation);
     if (ret != RK_SUCCESS)
-      RKADK_LOGE("Get venc[%d] rotation failed[%x]", pstRecCfg->attribute[i].venc_chn, ret);
+      RKADK_LOGW("Get venc[%d] rotation failed[%x]", pstRecCfg->attribute[i].venc_chn, ret);
 
     pstMuxerAttr->astStreamAttr[i].u32ViChn = pstRecCfg->vi_attr[i].u32ViChn;
     pstMuxerAttr->astStreamAttr[i].u32VencChn = pstRecCfg->attribute[i].venc_chn;
@@ -2044,7 +2044,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
 
   ret = RKADK_RECORD_ResetCheck(u32CamId, pstRecCfg, pstSensorCfg, pstRecorder);
   if (ret == 0) {
-    RKADK_LOGI("Record param is not changed");
+    RKADK_LOGD("Record param is not changed");
     return 0;
   } else if (ret < 0) {
     return -1;
@@ -2081,7 +2081,7 @@ RKADK_S32 RKADK_RECORD_Reset(RKADK_MW_PTR *pRecorder) {
   return 0;
 
 failed:
-  RKADK_LOGI("Record[%d] reset failed...", u32CamId);
+  RKADK_LOGE("Record[%d] reset failed...", u32CamId);
   return -1;
 }
 

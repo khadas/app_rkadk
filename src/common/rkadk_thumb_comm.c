@@ -528,7 +528,7 @@ RKADK_S32 ThumbnailChnBind(RKADK_U32 u32VencChn, RKADK_U32 u32VencChnTb) {
 
   ret = RK_MPI_VENC_ThumbnailBind(u32VencChn, u32VencChnTb);
   if (ret != RK_SUCCESS) {
-    RK_LOGE("thumbnail bind %d ch venc failed", u32VencChn);
+    RKADK_LOGE("thumbnail bind %d ch venc failed", u32VencChn);
     return ret;
   }
 

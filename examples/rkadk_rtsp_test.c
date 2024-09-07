@@ -77,7 +77,7 @@ static int PostIspCallback(RK_VOID *pParam, RK_VOID *pPrivateData) {
     return ret;
   }
 
-  RKADK_LOGD("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
+  RKADK_LOGP("aiisp cam %d enable %d", u32CamId, ((rk_ainr_param *)pAinrParam)->enable);
 #else
   RKADK_LOGW("Don't enable aiq");
 #endif
@@ -132,11 +132,11 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'o':
       osdfile = optarg;
-      RKADK_LOGD("osdfile: %s", osdfile);
+      RKADK_LOGP("osdfile: %s", osdfile);
       break;
     case 'A':
       bAiispEnable = true;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#camera id: %d", u32CamId);
+  RKADK_LOGP("#camera id: %d", u32CamId);
 
   RKADK_MPI_SYS_Init();
 
@@ -235,7 +235,7 @@ rtsp:
   if (bAiispEnable) {
     ret = RKADK_MEDIA_EnablePostIsp(u32CamId, RKADK_STREAM_TYPE_LIVE, &stPostIspAttr);
     if (!ret)
-      RKADK_LOGD("Display enable aiisp success!");
+      RKADK_LOGP("Display enable aiisp success!");
   }
 
   RKADK_RTSP_Start(pHandle);
@@ -259,9 +259,9 @@ rtsp:
 
   FILE *fp = fopen(osdfile, "rw");
   if (!fp) {
-    RKADK_LOGD("open osd file fail");
+    RKADK_LOGP("open osd file fail");
   } else {
-    RKADK_LOGD("open osd file success");
+    RKADK_LOGP("open osd file success");
     fread((RKADK_U8 *)OsdAttr.pData, OsdAttr.Width * OsdAttr.Height * 4, 1, fp);
     fclose(fp);
     RKADK_OSD_UpdateBitMap(u32OsdId, &OsdAttr);
@@ -275,7 +275,7 @@ rtsp:
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "start")) {
       RKADK_RTSP_Start(pHandle);

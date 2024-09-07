@@ -71,19 +71,19 @@ static RKADK_S32 VencDataCb(RKADK_VIDEO_STREAM_S *pVStreamData) {
     if (pVStreamData->u32CamId == 0 && g_output_file) {
       fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
              g_output_file);
-      RKADK_LOGD("#Write u32CamId[0] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+      RKADK_LOGP("#Write u32CamId[0] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
                  pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
     } else if (pVStreamData->u32CamId == 1) {
       fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
              g_output1_file);
-      RKADK_LOGD("#Write u32CamId[1] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+      RKADK_LOGP("#Write u32CamId[1] seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
                  pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
     }
   } else {
     if (g_output_file) {
       fwrite(pVStreamData->astPack.apu8Addr, 1, pVStreamData->astPack.au32Len,
              g_output_file);
-      RKADK_LOGD("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
+      RKADK_LOGP("#Write seq: %d, pts: %lld, size: %zu", pVStreamData->u32Seq,
                  pVStreamData->astPack.u64PTS, pVStreamData->astPack.au32Len);
     }
   }
@@ -188,12 +188,12 @@ stream:
   stVideoAttr.pstPostIspAttr = &stPostIspAttr;
 
   RKADK_STREAM_GetVideoInfo(u32CamId, &stVideoInfo);
-  RKADK_LOGD("stVideoInfo.enCodecType: %d", stVideoInfo.enCodecType);
-  RKADK_LOGD("stVideoInfo.u32BitRate: %d", stVideoInfo.u32BitRate);
-  RKADK_LOGD("stVideoInfo.u32FrameRate: %d", stVideoInfo.u32FrameRate);
-  RKADK_LOGD("stVideoInfo.u32Gop: %d", stVideoInfo.u32Gop);
-  RKADK_LOGD("stVideoInfo.u32Height: %d", stVideoInfo.u32Height);
-  RKADK_LOGD("stVideoInfo.u32Width: %d", stVideoInfo.u32Width);
+  RKADK_LOGP("stVideoInfo.enCodecType: %d", stVideoInfo.enCodecType);
+  RKADK_LOGP("stVideoInfo.u32BitRate: %d", stVideoInfo.u32BitRate);
+  RKADK_LOGP("stVideoInfo.u32FrameRate: %d", stVideoInfo.u32FrameRate);
+  RKADK_LOGP("stVideoInfo.u32Gop: %d", stVideoInfo.u32Gop);
+  RKADK_LOGP("stVideoInfo.u32Height: %d", stVideoInfo.u32Height);
+  RKADK_LOGP("stVideoInfo.u32Width: %d", stVideoInfo.u32Width);
 
   ret = RKADK_STREAM_VideoInit(&stVideoAttr, &pHandle);
   if (ret) {
@@ -242,7 +242,7 @@ stream:
     }
   }
 
-  RKADK_LOGD("u32CamId[%d] bMultiCam[%d] bMultiSensor[%d] initial finish\n", u32CamId, bMultiCam, bMultiSensor);
+  RKADK_LOGP("u32CamId[%d] bMultiCam[%d] bMultiSensor[%d] initial finish\n", u32CamId, bMultiCam, bMultiSensor);
   signal(SIGINT, sigterm_handler);
 
   char cmd[64];
@@ -252,7 +252,7 @@ stream:
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "aiisp")) {
       if (bAiispEnable)
@@ -324,15 +324,15 @@ stream:
 
       // get ini fps and gop
       RKADK_PARAM_GetCamParam(u32CamId, RKADK_PARAM_TYPE_FPS, &fpsTest);
-      RKADK_LOGD("fps: %d", fpsTest);
+      RKADK_LOGP("fps: %d", fpsTest);
       RKADK_PARAM_SetCamParam(u32CamId, RKADK_PARAM_TYPE_GOP, &stGopCfg);
-      RKADK_LOGD("gop: %d", stGopCfg.u32Gop);
+      RKADK_LOGP("gop: %d", stGopCfg.u32Gop);
     }
 #endif
     usleep(500000);
   }
 
-  RKADK_LOGD("exit!");
+  RKADK_LOGP("exit!");
 
   ret = RKADK_STREAM_VencStop(pHandle);
   if (ret)
@@ -381,7 +381,7 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_output_file);
-  RKADK_LOGD("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+  RKADK_LOGP("#Write Aenc seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
              pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
@@ -398,7 +398,7 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
-  RKADK_LOGD("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
+  RKADK_LOGP("#Write pcm seq: %d, pts: %lld, size: %zu", pAStreamData->u32Seq,
              pAStreamData->u64TimeStamp, pAStreamData->u32Len);
 
   return 0;
@@ -422,12 +422,12 @@ static int AudioTest(RKADK_U32 u32CamId) {
   }
 
   RKADK_STREAM_GetAudioInfo(pHandle, &stAudioInfo);
-  RKADK_LOGD("stAudioInfo.enCodecType: %d", stAudioInfo.enCodecType);
-  RKADK_LOGD("stAudioInfo.u16SampleBitWidth: %d", stAudioInfo.u16SampleBitWidth);
-  RKADK_LOGD("stAudioInfo.u32AvgBytesPerSec: %d", stAudioInfo.u32AvgBytesPerSec);
-  RKADK_LOGD("stAudioInfo.u32ChnCnt: %d", stAudioInfo.u32ChnCnt);
-  RKADK_LOGD("stAudioInfo.u32SampleRate: %d", stAudioInfo.u32SampleRate);
-  RKADK_LOGD("stAudioInfo.u32SamplesPerFrame: %d", stAudioInfo.u32SamplesPerFrame);
+  RKADK_LOGP("stAudioInfo.enCodecType: %d", stAudioInfo.enCodecType);
+  RKADK_LOGP("stAudioInfo.u16SampleBitWidth: %d", stAudioInfo.u16SampleBitWidth);
+  RKADK_LOGP("stAudioInfo.u32AvgBytesPerSec: %d", stAudioInfo.u32AvgBytesPerSec);
+  RKADK_LOGP("stAudioInfo.u32ChnCnt: %d", stAudioInfo.u32ChnCnt);
+  RKADK_LOGP("stAudioInfo.u32SampleRate: %d", stAudioInfo.u32SampleRate);
+  RKADK_LOGP("stAudioInfo.u32SamplesPerFrame: %d", stAudioInfo.u32SamplesPerFrame);
 
   ret = RKADK_STREAM_AencStart(pHandle);
   if (ret) {
@@ -435,14 +435,14 @@ static int AudioTest(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  RKADK_LOGD("initial finish");
+  RKADK_LOGP("initial finish");
   signal(SIGINT, sigterm_handler);
 
   char cmd[64];
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit")) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "start")) {
       RKADK_STREAM_AencStart(pHandle);
@@ -520,15 +520,15 @@ int main(int argc, char *argv[]) {
         RKADK_LOGE("unknow encode type: %s", optarg);
         return 0;
       }
-      RKADK_LOGD("Encode type: %d", g_enCodecType);
+      RKADK_LOGP("Encode type: %d", g_enCodecType);
       break;
     case 'o':
       g_output_path = optarg;
-      RKADK_LOGD("g_output_path = %s", g_output_path);
+      RKADK_LOGP("g_output_path = %s", g_output_path);
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'm':
       inCmd = atoi(optarg);
@@ -547,8 +547,8 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#Test mode: %s", pMode);
-  RKADK_LOGD("#Out path: %s", g_output_path);
+  RKADK_LOGP("#Test mode: %s", pMode);
+  RKADK_LOGP("#Out path: %s", g_output_path);
 
   RKADK_MPI_SYS_Init();
 

@@ -59,7 +59,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
                   RKADK_CHAR (*paszFilename)[RKADK_MAX_FILE_PATH_LEN]) {
   static RKADK_U32 u32FileIdx = 0;
 
-  RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
+  RKADK_LOGP("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
   if (u32FileIdx >= 10)
     u32FileIdx = 0;
@@ -159,7 +159,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
   if (ret)
     RKADK_LOGE("SAMPLE_ISP_GET_MirrorFlip failed");
   else
-    RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
+    RKADK_LOGP("GET mirror = %d, flip = %d", mirror, flip);
 #endif
 
   return 0;
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'k':
       stRecAttr.u32FragKeyFrame = 1;
@@ -426,7 +426,7 @@ record:
     RKADK_RECORD_Start(pRecorder1);
   }
 
-  RKADK_LOGD("initial finish\n");
+  RKADK_LOGP("initial finish\n");
 
   signal(SIGINT, sigterm_handler);
   char cmd[64];
@@ -436,7 +436,7 @@ record:
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "MS")) { //Manual Split
       RKADK_PARAM_REC_TIME_S stRecTime;
@@ -689,6 +689,6 @@ record:
   RKADK_RECORD_FileCacheDeInit();
 
   RKADK_MPI_SYS_Exit();
-  RKADK_LOGD("exit!");
+  RKADK_LOGP("exit!");
   return 0;
 }

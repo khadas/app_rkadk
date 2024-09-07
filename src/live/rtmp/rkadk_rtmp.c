@@ -582,7 +582,7 @@ RKADK_S32 RKADK_RTMP_Init(RKADK_U32 u32CamId, const char *path,
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_POINTER(path, RKADK_FAILURE);
 
-  RKADK_LOGI("Rtmp[%d, %s] Init...", u32CamId, path);
+  RKADK_LOGI("Rtmp[%d, %s] Init Start...", u32CamId, path);
   RKADK_BUFINFO("enter rtmp[%d]", u32CamId);
 
   if (*ppHandle) {
@@ -753,7 +753,7 @@ RKADK_S32 RKADK_RTMP_DeInit(RKADK_MW_PTR pHandle) {
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   RKADK_RTMP_HANDLE_S *pstHandle = (RKADK_RTMP_HANDLE_S *)pHandle;
 
-  RKADK_LOGI("Rtmp[%d] DeInit...", pstHandle->u32CamId);
+  RKADK_LOGI("Rtmp[%d] DeInit Start...", pstHandle->u32CamId);
 
   RKADK_PARAM_STREAM_CFG_S *pstLiveCfg =
       RKADK_PARAM_GetStreamCfg(pstHandle->u32CamId, RKADK_STREAM_TYPE_LIVE);
@@ -862,7 +862,7 @@ RKADK_S32 RKADK_RTMP_VideoReset(RKADK_MW_PTR pHandle) {
 
   ret = RKADK_MEDIA_VencResetCheck(pstHandle->u32CamId, pstLiveCfg->attribute);
   if (ret == 0) {
-    RKADK_LOGI("Preview param is not changed");
+    RKADK_LOGW("Preview param is not changed");
     return 0;
   } else if (ret < 0) {
     return -1;

@@ -78,14 +78,14 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
       return;
     }
 
-    RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
+    RKADK_LOGP("%s: save u32CamId[%d] jpeg to %s", __func__, pstData->u32CamId, jpegPath);
   }
 
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
   write_len += pstData->u32DataLen;
 
   if (pstData->bStreamEnd) {
-    RKADK_LOGD("Close file(%s), write len: %lld", jpegPath, write_len);
+    RKADK_LOGP("%s: Close file(%s), write len: %lld", __func__, jpegPath, write_len);
     fflush(file);
     fclose(file);
     file = NULL;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'm':
       inCmd = atoi(optarg);
@@ -241,8 +241,8 @@ int main(int argc, char *argv[]) {
   if (bMultiSensor)
     u32CamId = 0;
 
-  RKADK_LOGD("#camera id: %d, bMultiCam: %d, bMultiSensor: %d", u32CamId, bMultiCam, bMultiSensor);
-  RKADK_LOGD("osdfile: %s, width: %d, height: %d", osdfile, u32OsdWidth, u32OsdHeight);
+  RKADK_LOGP("#camera id: %d, bMultiCam: %d, bMultiSensor: %d", u32CamId, bMultiCam, bMultiSensor);
+  RKADK_LOGP("osdfile: %s, width: %d, height: %d", osdfile, u32OsdWidth, u32OsdHeight);
 
   RKADK_MPI_SYS_Init();
 
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
     sprintf(filePath, "/tmp/photo_data.%s", postfix);
 
     if (!RKADK_PHOTO_GetData(pInuptPath, &stDataAttr)) {
-      RKADK_LOGD("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
+      RKADK_LOGP("[%d, %d, %d, %d], u32BufSize: %d", stDataAttr.u32Width,
                  stDataAttr.u32Height, stDataAttr.u32VirWidth,
                  stDataAttr.u32VirHeight, stDataAttr.u32BufSize);
 
@@ -280,7 +280,7 @@ int main(int argc, char *argv[]) {
       } else {
         fwrite(stDataAttr.pu8Buf, 1, stDataAttr.u32BufSize, file);
         fclose(file);
-        RKADK_LOGD("Save %s done", filePath);
+        RKADK_LOGP("Save %s done", filePath);
       }
 
       RKADK_PHOTO_FreeData(&stDataAttr);
@@ -394,9 +394,9 @@ photo:
 
     FILE *fp = fopen(osdfile, "rw");
     if (!fp) {
-      RKADK_LOGD("open osd file fail");
+      RKADK_LOGP("open osd file fail");
     } else {
-      RKADK_LOGD("open osd file success");
+      RKADK_LOGP("open osd file success");
       fread((RKADK_U8 *)OsdAttr.pData, OsdAttr.Width * OsdAttr.Height * 4, 1, fp);
       fclose(fp);
       RKADK_OSD_UpdateBitMap(u32OsdId, &OsdAttr);
@@ -413,7 +413,7 @@ photo:
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "1080")) {
       type = RKADK_RES_1080P;

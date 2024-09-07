@@ -54,7 +54,7 @@ mems_sensor_ctx_t rkiio_aiq_sensor_ctx_create() {
   rkiio_sensor_ctx_t* ctx = (rkiio_sensor_ctx_t*)malloc(sizeof(rkiio_sensor_ctx_t));
   memset(ctx, 0, sizeof(rkiio_sensor_ctx_t));
 
-  RKADK_LOGD("create ctx done: %p", ctx);
+  RKADK_LOGP("create ctx done: %p", ctx);
   return (mems_sensor_ctx_t)ctx;
 }
 
@@ -71,7 +71,7 @@ mems_sensor_return_t rkiio_aiq_sensor_ctx_destroy(mems_sensor_ctx_t ctx) {
     g_init_flag = false;
   }
   pthread_mutex_unlock(&g_mutex);
-  RKADK_LOGD("destroy ctx done");
+  RKADK_LOGP("destroy ctx done");
   return SENSOR_NO_ERR;
 }
 
@@ -107,7 +107,7 @@ mems_sensor_return_t rkiio_aiq_sensors_list_get(mems_sensor_ctx_t ctx,
   }
 
   if (sensors_list->count) {
-    RKADK_LOGD("get sensor list success, count: %d", sensors_list->count);
+    RKADK_LOGP("get sensor list success, count: %d", sensors_list->count);
     return SENSOR_NO_ERR;
   }
 
@@ -330,7 +330,7 @@ mems_sensor_handle_t rkiio_aiq_sensor_handle_create(mems_sensor_ctx_t ctx,
   g_handle_cnt++;
   pthread_mutex_unlock(&g_mutex);
 
-  RKADK_LOGD("create handle done, g_handle_cnt: %d", g_handle_cnt);
+  RKADK_LOGP("create handle done, g_handle_cnt: %d", g_handle_cnt);
   return (mems_sensor_handle_t)sensor_handle;
 }
 
@@ -359,7 +359,7 @@ mems_sensor_return_t rkiio_aiq_sensor_handle_destroy(mems_sensor_handle_t handle
   pthread_mutex_lock(&g_mutex);
   g_handle_cnt--;
   pthread_mutex_unlock(&g_mutex);
-  RKADK_LOGD("destroy handle done, g_handle_cnt: %d", g_handle_cnt);
+  RKADK_LOGP("destroy handle done, g_handle_cnt: %d", g_handle_cnt);
   return SENSOR_NO_ERR;
 }
 

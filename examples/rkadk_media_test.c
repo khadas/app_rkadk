@@ -76,7 +76,7 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
                   RKADK_CHAR (*paszFilename)[RKADK_MAX_FILE_PATH_LEN]) {
   static RKADK_U32 u32FileIdx = 0;
 
-  RKADK_LOGD("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
+  RKADK_LOGP("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
   if (u32FileIdx >= 100)
     u32FileIdx = 0;
@@ -204,7 +204,7 @@ static int IspProcess(RKADK_S32 u32CamId) {
   if (ret)
     RKADK_LOGE("SAMPLE_ISP_GET_MirrorFlip failed");
   else
-    RKADK_LOGD("GET mirror = %d, flip = %d", mirror, flip);
+    RKADK_LOGP("GET mirror = %d, flip = %d", mirror, flip);
 #endif
 
   return 0;
@@ -276,7 +276,7 @@ static void PhotoDataRecv(RKADK_PHOTO_RECV_DATA_S *pstData) {
     return;
   }
 
-  RKADK_LOGD("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
+  RKADK_LOGP("save u32CamId[%d] jpeg to %s", pstData->u32CamId, jpegPath);
 
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
   fclose(file);
@@ -369,10 +369,10 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
     case 'P':
       file = optarg;
-      RKADK_LOGD("player audio file: %s", file);
+      RKADK_LOGP("player audio file: %s", file);
       break;
     case 'm':
       inCmd = atoi(optarg);
@@ -381,7 +381,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
         bMultiSensor = RKADK_TRUE;
       } else if (inCmd == 2)
         bMultiSensor = RKADK_TRUE;
-      RKADK_LOGD("enable bMultiCam: %d, bMultiSensor: %d", bMultiCam, bMultiSensor);
+      RKADK_LOGP("enable bMultiCam: %d, bMultiSensor: %d", bMultiCam, bMultiSensor);
       break;
     default:
       print_usage(argv[0]);
@@ -562,7 +562,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 #ifdef ENABLE_RESET
     change = rand() % 4;
     if (change == 0) {
-      RKADK_LOGI("===================Rand type [%d] switch resolution enter", change);
+      RKADK_LOGP("===================Rand type [%d] switch resolution enter", change);
       stResType++;
       if (stResType >= RKADK_RES_1944P)
         stResType = RKADK_RES_1080P;
@@ -583,9 +583,9 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
 #endif
-      RKADK_LOGI("===================Reset resolution = %d", stResType);
+      RKADK_LOGP("===================Reset resolution = %d", stResType);
     } else if (change == 1) {
-      RKADK_LOGI("===================Rand type [%d] switch encode types enter", change);
+      RKADK_LOGP("===================Rand type [%d] switch encode types enter", change);
       stCodecType.enCodecType++;
       if (stCodecType.enCodecType >= RKADK_CODEC_TYPE_MJPEG)
         stCodecType.enCodecType = RKADK_CODEC_TYPE_H264;
@@ -605,9 +605,9 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
 #endif
-      RKADK_LOGI("===================Reset encode type = %d", stCodecType.enCodecType);
+      RKADK_LOGP("===================Reset encode type = %d", stCodecType.enCodecType);
     } else if (change == 2) {
-      RKADK_LOGI("Rand type [%d] switch recrd types enter", change);
+      RKADK_LOGP("Rand type [%d] switch recrd types enter", change);
       stRecType++;
       if (stRecType >= RKADK_REC_TYPE_BUTT)
         stRecType = RKADK_REC_TYPE_NORMAL;
@@ -625,9 +625,9 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
 #endif
-      RKADK_LOGI("===================Reset record type = %d", stRecType);
+      RKADK_LOGP("===================Reset record type = %d", stRecType);
     } else {
-      RKADK_LOGI("===================Rand type [%d] switch manual types enter", change);
+      RKADK_LOGP("===================Rand type [%d] switch manual types enter", change);
       stRecTime.enStreamType++;
       if (stRecTime.enStreamType >= RKADK_STREAM_TYPE_SNAP)
         stRecTime.enStreamType = RKADK_STREAM_TYPE_VIDEO_MAIN;
@@ -649,7 +649,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       usleep(50000);
       RKADK_PLAYER_Stop(pPlayerHandle);
 #endif
-      RKADK_LOGI("===================Manual record stream = %d", stRecTime.enStreamType);
+      RKADK_LOGP("===================Manual record stream = %d", stRecTime.enStreamType);
     }
 #else
     RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
@@ -662,7 +662,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   }
 
 _FAILURE:
-  RKADK_LOGD("exit!");
+  RKADK_LOGP("exit!");
 
 #ifdef ENABLE_RTSP
   RKADK_RTSP_Stop(pRtsHandle);

@@ -41,19 +41,19 @@ static RKADK_VOID MountStatusCallback(RKADK_MW_PTR pHandle,
               RKADK_MOUNT_STATUS status) {
   switch(status) {
   case DISK_UNMOUNTED:
-    RKADK_LOGD("+++++ DISK_UNMOUNTED +++++");
+    RKADK_LOGP("+++++ DISK_UNMOUNTED +++++");
     break;
   case DISK_NOT_FORMATTED:
-    RKADK_LOGD("+++++ DISK_NOT_FORMATTED +++++");
+    RKADK_LOGP("+++++ DISK_NOT_FORMATTED +++++");
     break;
   case DISK_FORMAT_ERR:
-    RKADK_LOGD("+++++ DISK_FORMAT_ERR +++++");
+    RKADK_LOGP("+++++ DISK_FORMAT_ERR +++++");
     break;
   case DISK_SCANNING:
-    RKADK_LOGD("+++++ DISK_SCANNING +++++");
+    RKADK_LOGP("+++++ DISK_SCANNING +++++");
     break;
   case DISK_MOUNTED:
-    RKADK_LOGD("+++++ DISK_MOUNTED +++++");
+    RKADK_LOGP("+++++ DISK_MOUNTED +++++");
     break;
   default:
     RKADK_LOGE("Unsupport status: %d", status);
@@ -72,7 +72,7 @@ RKADK_S32 CreatFile(char *name, long size) {
   unsigned char buf[bufLen];
 
   RKADK_CHECK_POINTER(name, RKADK_FAILURE);
-  RKADK_LOGI("Create file:%s size:%ld", name, size);
+  RKADK_LOGP("Create file:%s size:%ld", name, size);
   gettimeofday(&tvAllBegin, NULL);
 
   fd = open(name, O_CREAT | O_RDWR);
@@ -84,7 +84,7 @@ RKADK_S32 CreatFile(char *name, long size) {
   gettimeofday(&tvAllEnd, NULL);
   timeCons = 1000 * (tvAllEnd.tv_sec - tvAllBegin.tv_sec) +
              ((tvAllEnd.tv_usec - tvAllBegin.tv_usec) / 1000.0);
-  RKADK_LOGD("Open name:%s, timeCons = %fms", name, timeCons);
+  RKADK_LOGP("Open name:%s, timeCons = %fms", name, timeCons);
 
   if (fd) {
     while (size > 0 && !quit) {
@@ -150,11 +150,11 @@ RKADK_S32 CreatFileTest(RKADK_MW_PTR *ppHandle) {
 
   while (!quit) {
     usleep(5000);
-    RKADK_LOGD("sync start");
+    RKADK_LOGP("sync start");
     sync();
-    RKADK_LOGD("sync end");
+    RKADK_LOGP("sync end");
     RKADK_STORAGE_GetCapacity(ppHandle, &totalSize, &freeSize);
-    RKADK_LOGI("sdcard totalSize: %d, freeSize: %d", totalSize, freeSize);
+    RKADK_LOGP("sdcard totalSize: %d, freeSize: %d", totalSize, freeSize);
 
     if (RKADK_STORAGE_GetMountStatus(*ppHandle) == DISK_UNMOUNTED)
       quit = true;
@@ -175,7 +175,7 @@ RKADK_S32 CreatFileTest(RKADK_MW_PTR *ppHandle) {
 
 RKADK_S32 SetDevAttr(RKADK_STR_DEV_ATTR *pstDevAttr) {
   RKADK_CHECK_POINTER(pstDevAttr, RKADK_FAILURE);
-  RKADK_LOGD("The DevAttr will be user-defined.");
+  RKADK_LOGP("The DevAttr will be user-defined.");
 
   memset(pstDevAttr, 0, sizeof(RKADK_STR_DEV_ATTR));
   sprintf(pstDevAttr->cMountPath, "/mnt/sdcard");
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
   sprintf(list.path, "/mnt/sdcard/video_front/");
 
   if (argc > 0)
-    RKADK_LOGI("%s run", argv[0]);
+    RKADK_LOGP("%s run", argv[0]);
 
   if (SetDevAttr(&stDevAttr)) {
     RKADK_LOGE("Set devAttr failed.");
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
 
   RKADK_STORAGE_RegisterFileFilterCB(pHandle, FileFilterCb);
 
-  RKADK_LOGI("Dev path: %s", RKADK_STORAGE_GetDevPath(pHandle));
+  RKADK_LOGP("Dev path: %s", RKADK_STORAGE_GetDevPath(pHandle));
   signal(SIGINT, SigtermHandler);
   sleep(10);
   if (CreatFileTest(&pHandle))
@@ -272,23 +272,23 @@ int main(int argc, char *argv[]) {
   }
 
   if (!RKADK_STORAGE_GetFileList(&list, pHandle, LIST_DESCENDING)) {
-    RKADK_LOGD("LIST_DESCENDING: %d", list.s32FileNum);
+    RKADK_LOGP("LIST_DESCENDING: %d", list.s32FileNum);
     for (i = 0; i < list.s32FileNum; i++)
-      RKADK_LOGI("%s  %lld", list.file[i].filename, list.file[i].stSize);
+      RKADK_LOGP("%s  %lld", list.file[i].filename, list.file[i].stSize);
   }
   RKADK_STORAGE_FreeFileList(&list);
 
   if (!RKADK_STORAGE_GetFileList(&list, pHandle, LIST_ASCENDING)) {
-    RKADK_LOGD("LIST_ASCENDING: %d", list.s32FileNum);
+    RKADK_LOGP("LIST_ASCENDING: %d", list.s32FileNum);
     for (i = 0; i < list.s32FileNum; i++)
-      RKADK_LOGI("%s  %lld", list.file[i].filename, list.file[i].stSize);
+      RKADK_LOGP("%s  %lld", list.file[i].filename, list.file[i].stSize);
   }
   RKADK_STORAGE_FreeFileList(&list);
 
   FreeDevAttr(stDevAttr);
   RKADK_STORAGE_UnRegisterFileFilterCB(pHandle);
   RKADK_STORAGE_Deinit(pHandle);
-  RKADK_LOGD("%s out", argv[0]);
+  RKADK_LOGP("%s out", argv[0]);
 
   return 0;
 }

@@ -387,7 +387,7 @@ static void SetThumbCfg() {
 
 int main(int argc, char *argv[]) {
 
-  RKADK_LOGD("this is demo for struct2ini");
+  RKADK_LOGP("this is demo for struct2ini");
 
   signal(SIGINT, sigterm_handler);
 
@@ -398,49 +398,49 @@ int main(int argc, char *argv[]) {
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     }
 
     if (strstr(cmd, "set")) {
-      RKADK_LOGD("#Set version");
+      RKADK_LOGP("#Set version");
       SetVersion();
-      RKADK_LOGD("SetVersion done");
+      RKADK_LOGP("SetVersion done");
 
-      RKADK_LOGD("#Set config param");
+      RKADK_LOGP("#Set config param");
       SetCommCfg();
-      RKADK_LOGD("SetCommCfg done");
+      RKADK_LOGP("SetCommCfg done");
 
       SetAudioCfg();
-      RKADK_LOGD("SetAudioCfg done");
+      RKADK_LOGP("SetAudioCfg done");
 
       SetSensorCfg();
-      RKADK_LOGD("SetSensorCfg done");
+      RKADK_LOGP("SetSensorCfg done");
 
       SetViCfg();
-      RKADK_LOGD("SetViCfg done");
+      RKADK_LOGP("SetViCfg done");
 
       SetRecCfg();
-      RKADK_LOGD("SetRecCfg done");
+      RKADK_LOGP("SetRecCfg done");
 
       SetPhotoCfg();
-      RKADK_LOGD("SetPhotoCfg done");
+      RKADK_LOGP("SetPhotoCfg done");
 
       SetStreamCfg();
-      RKADK_LOGD("SetStreamCfg done");
+      RKADK_LOGP("SetStreamCfg done");
 
       SetLiveCfg();
-      RKADK_LOGD("SetLiveCfg done");
+      RKADK_LOGP("SetLiveCfg done");
 
       SetDispCfg();
-      RKADK_LOGD("SetDispCfg done");
+      RKADK_LOGP("SetDispCfg done");
 
       SetThumbCfg();
-      RKADK_LOGD("SetThumbCfg done");
+      RKADK_LOGP("SetThumbCfg done");
     }
 
     if (strstr(cmd, "get")) {
-      RKADK_LOGD("#Get config param");
+      RKADK_LOGP("#Get config param");
       RKADK_PARAM_Init(NULL, NULL);
     }
 

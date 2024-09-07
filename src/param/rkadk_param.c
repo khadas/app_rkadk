@@ -1066,6 +1066,9 @@ static void RKADK_PARAM_Dump() {
   int i, j;
   RKADK_PARAM_CFG_S *pstCfg = &g_stPARAMCtx.stCfg;
 
+  if (get_log_level() < RKADK_LOG_LEVEL_DEBUG)
+    return;
+
   printf("Version: %s\n", pstCfg->stVersion.version);
 
   printf("Common Config\n");
@@ -1399,6 +1402,9 @@ static void RKADK_PARAM_Dump() {
 static void RKADK_PARAM_DumpViAttr() {
   int i, j;
   RKADK_PARAM_CFG_S *pstCfg = &g_stPARAMCtx.stCfg;
+
+  if (get_log_level() < RKADK_LOG_LEVEL_DEBUG)
+    return;
 
   for (i = 0; i < (int)pstCfg->stCommCfg.sensor_count; i++) {
     for (j = 0; j < (int)pstCfg->stMediaCfg[i].stRecCfg.file_num; j++) {
@@ -2491,10 +2497,7 @@ static RKADK_S32 RKADK_PARAM_SetMediaViAttr() {
       break;
   }
 
-#ifdef RKADK_DUMP_CONFIG
   RKADK_PARAM_DumpViAttr();
-#endif
-
   return ret;
 }
 
@@ -4138,10 +4141,7 @@ RKADK_S32 RKADK_PARAM_SetDefault() {
       RKADK_LOGE("set media vi attribute failed");
 
     RKADK_PARAM_SetVolume();
-
-#ifdef RKADK_DUMP_CONFIG
     RKADK_PARAM_Dump();
-#endif
   }
 
   RKADK_MUTEX_UNLOCK(g_stPARAMCtx.mutexLock);
@@ -4290,11 +4290,7 @@ RKADK_S32 RKADK_PARAM_Init(char *globalSetting, char **sesnorSettingArrary) {
   }
 
   RKADK_PARAM_SetVolume();
-
-#ifdef RKADK_DUMP_CONFIG
   RKADK_PARAM_Dump();
-#endif
-
   g_stPARAMCtx.bInit = true;
 
 end:

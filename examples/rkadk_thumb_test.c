@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  RKADK_LOGD("#get thm file: %s", pInuptPath);
+  RKADK_LOGP("#get thm file: %s", pInuptPath);
 
   signal(SIGINT, sigterm_handler);
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     } else {
-      RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
+      RKADK_LOGP("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpg(u32CamId, pInuptPath, eJpgThumbType, buffer, &size)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpg failed");
         RKADK_LOGD("free thumb buffer: %p", buffer);
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     }
-    RKADK_LOGD("%s: size: %d, count: %d", postfix, size, count);
+    RKADK_LOGP("%s: size: %d, count: %d", postfix, size, count);
 
 #ifdef THUMB_TEST_SAVE_FILE
     if (size > 0) {
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
 
       fwrite(buffer, 1, size, file);
       fclose(file);
-      RKADK_LOGD("save %s done", filePath);
+      RKADK_LOGP("save %s done", filePath);
     }
 #endif
 
@@ -193,13 +193,13 @@ int main(int argc, char *argv[]) {
         return -1;
       }
     } else {
-      RKADK_LOGD("eJpgThumbType: %d", eJpgThumbType);
+      RKADK_LOGP("eJpgThumbType: %d", eJpgThumbType);
       if (RKADK_PHOTO_GetThmInJpgEx(u32CamId, pInuptPath, eJpgThumbType, &stThumbAttr)) {
         RKADK_LOGE("RKADK_PHOTO_GetThmInJpgEx failed");
         return -1;
       }
     }
-    RKADK_LOGD("%s[%d, %d, %d, %d]: size: %d, count: %d", postfix,
+    RKADK_LOGP("%s[%d, %d, %d, %d]: size: %d, count: %d", postfix,
                stThumbAttr.u32Width, stThumbAttr.u32Height,
                stThumbAttr.u32VirWidth, stThumbAttr.u32VirHeight,
                stThumbAttr.u32BufSize, count);
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
 
       fwrite(stThumbAttr.pu8Buf, 1, stThumbAttr.u32BufSize, file);
       fclose(file);
-      RKADK_LOGD("save %s done", filePath);
+      RKADK_LOGP("save %s done", filePath);
     }
 #endif
 

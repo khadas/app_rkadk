@@ -1229,7 +1229,7 @@ static int RKADK_PHOTO_CreateVideoChn(RKADK_PHOTO_HANDLE_S *pHandle, RKADK_PHOTO
 
   ret = ThumbnailInit(pstPhotoAttr->u32CamId, RKADK_THUMB_MODULE_PHOTO, ptsThumbCfg);
   if (ret) {
-    RKADK_LOGI("Thumbnail venc [%d] Init failed[%x]",
+    RKADK_LOGE("Thumbnail venc [%d] Init failed[%x]",
                 ptsThumbCfg->photo_venc_chn, ret);
     goto failed;
   }
@@ -1595,7 +1595,7 @@ RKADK_S32 RKADK_PHOTO_Init(RKADK_PHOTO_ATTR_S *pstPhotoAttr, RKADK_MW_PTR *ppHan
     return -1;
   }
 
-  RKADK_LOGI("Photo[%d] Init...", pstPhotoAttr->u32CamId);
+  RKADK_LOGI("Photo[%d] Init Start...", pstPhotoAttr->u32CamId);
   RKADK_BUFINFO("enter photo[%d]", pstPhotoAttr->u32CamId);
 
   pstPhotoCfg = RKADK_PARAM_GetPhotoCfg(pstPhotoAttr->u32CamId);
@@ -1687,7 +1687,7 @@ RKADK_S32 RKADK_PHOTO_DeInit(RKADK_MW_PTR pHandle) {
   pstHandle = (RKADK_PHOTO_HANDLE_S *)pHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
-  RKADK_LOGI("Photo[%d] DeInit...", pstHandle->u32CamId);
+  RKADK_LOGI("Photo[%d] DeInit Start...", pstHandle->u32CamId);
 
   RKADK_PARAM_PHOTO_CFG_S *pstPhotoCfg =
       RKADK_PARAM_GetPhotoCfg(pstHandle->u32CamId);
@@ -1763,12 +1763,12 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
   if (pstHandle->u32PhotoCnt > 0) {
-    RKADK_LOGI("The last photo shoot wasn't over, u32PhotoCnt: %d", pstHandle->u32PhotoCnt);
+    RKADK_LOGW("The last photo shoot wasn't over, u32PhotoCnt: %d", pstHandle->u32PhotoCnt);
     return 0;
   }
 
   if (pstHandle->bReseting) {
-    RKADK_LOGI("Now reset, no photos allowed");
+    RKADK_LOGW("Now reset, can't photos");
     return 0;
   }
 
@@ -1781,7 +1781,7 @@ RKADK_S32 RKADK_PHOTO_TakePhoto(RKADK_MW_PTR pHandle, RKADK_TAKE_PHOTO_ATTR_S *p
 
   if (pstAttr->enPhotoType == RKADK_PHOTO_TYPE_LAPSE) {
     // TODO
-    RKADK_LOGI("nonsupport photo type = %d", pstAttr->enPhotoType);
+    RKADK_LOGE("nonsupport photo type = %d", pstAttr->enPhotoType);
     return -1;
   }
 

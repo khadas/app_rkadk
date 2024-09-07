@@ -338,7 +338,7 @@ RKADK_S32 RKADK_DISP_Init(RKADK_U32 u32CamId) {
   return 0;
 
 failed:
-  RKADK_LOGI("Disp u32CamId[%d] Init failed...", u32CamId);
+  RKADK_LOGE("Disp u32CamId[%d] Init failed...", u32CamId);
   RKADK_MPI_SYS_UnBind(&stSrcVpssChn, &stVoChn);
 
   RKADK_MPI_SYS_UnBind(&stViChn, &stDstVpssChn);
@@ -358,7 +358,7 @@ RKADK_S32 RKADK_DISP_DeInit(RKADK_U32 u32CamId) {
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
 
   if (!stDispHandle.bInit || stDispHandle.u32CamId != u32CamId) {
-    RKADK_LOGI("Disp u32CamId[%d] not initialized", u32CamId);
+    RKADK_LOGE("Disp u32CamId[%d] not initialized", u32CamId);
     return -1;
   }
 
@@ -521,7 +521,7 @@ RKADK_S32 RKADK_DISP_SetAttr(RKADK_U32 u32CamId, RKADK_DISP_ATTR_S *pstAttr) {
     return ret;
   }
 
-  RKADK_LOGI("Set attr vpss rect: [%d, %d, %d, %d], vo rect: [%d, %d, %d, %d]",
+  RKADK_LOGD("Set attr vpss rect: [%d, %d, %d, %d], vo rect: [%d, %d, %d, %d]",
               pstAttr->stVpssCropRect.u32X, pstAttr->stVpssCropRect.u32Y,
               pstAttr->stVpssCropRect.u32Width, pstAttr->stVpssCropRect.u32Height,
               pstAttr->stVpssCropRect.u32X, pstAttr->stVpssCropRect.u32Y,

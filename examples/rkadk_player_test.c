@@ -185,7 +185,7 @@ static void SnapshotDataRecv(RKADK_PLAYER_SNAPSHOT_S *pstData) {
     return;
   }
 
-  RKADK_LOGD("save snapshot[%d, %d] jpeg to %s", pstData->u32Width, pstData->u32Height, jpegPath);
+  RKADK_LOGP("save snapshot[%d, %d] jpeg to %s", pstData->u32Width, pstData->u32Height, jpegPath);
 
   fwrite(pstData->pu8DataBuf, 1, pstData->u32DataLen, file);
   fclose(file);
@@ -434,7 +434,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'D':
       stPlayCfg.bEnableThirdDemuxer = true;
-      RKADK_LOGD("Enable third-party demuxer");
+      RKADK_LOGP("Enable third-party demuxer");
       break;
     case 'A':
       stPlayCfg.stAudioCfg.u32AdecBufCnt= atoi(optarg);
@@ -451,14 +451,14 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
-  RKADK_LOGD("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, fps: %d",
+  RKADK_LOGP("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
+  RKADK_LOGP("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, fps: %d",
               stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
               stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
               u32SpliceMode, u32VoFormat, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate);
-  RKADK_LOGD("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
+  RKADK_LOGP("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
               u32Waterline, stPlayCfg.stVdecCfg.u32FrameBufCnt, stPlayCfg.stVdecCfg.u32StreamBufCnt);
-  RKADK_LOGD("transport: %d, u32IoTimeout: %d(us), pSoundCard: %s",
+  RKADK_LOGP("transport: %d, u32IoTimeout: %d(us), pSoundCard: %s",
               transport, stPlayCfg.stRtspCfg.u32IoTimeout, stPlayCfg.stAudioCfg.pSoundCard);
 
   if (u32SpliceMode == 1)
@@ -531,14 +531,14 @@ int main(int argc, char *argv[]) {
   }
 
   RKADK_PLAYER_GetDuration(pPlayer, &duration);
-  RKADK_LOGD("file duration: %d ms", duration);
+  RKADK_LOGP("file duration: %d ms", duration);
 
   if (duration > 0) {
     if (loop_duration <= 0 || loop_duration > duration / 1000)
       loop_duration = duration / 1000 + 1; //ms to m
   }
 
-  RKADK_LOGD("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
+  RKADK_LOGP("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
 
   if (stPlayCfg.bEnableThirdDemuxer) {
     ret = RKADK_DEMUXER_ReadPacketStart(mDemuxerCfg, 0);
@@ -571,9 +571,9 @@ int main(int argc, char *argv[]) {
         continue;
       }
 
-      RKADK_LOGD("replay, loop_count: %d", loop_count);
+      RKADK_LOGP("replay, loop_count: %d", loop_count);
       if (loop_count == 0) {
-        RKADK_LOGD("loop play end!");
+        RKADK_LOGP("loop play end!");
         is_quit = true;
         goto __EXIT;
       }
@@ -601,9 +601,9 @@ int main(int argc, char *argv[]) {
       loop_count--;
     } else {
       fgets(cmd, sizeof(cmd), stdin);
-      RKADK_LOGD("#Input cmd: %s", cmd);
+      RKADK_LOGP("#Input cmd: %s", cmd);
       if (strstr(cmd, "quit") || is_quit) {
-        RKADK_LOGD("#Get 'quit' cmd!");
+        RKADK_LOGP("#Get 'quit' cmd!");
         if (!is_quit)
           is_quit = true;
 

@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       iniPath = optarg;
-      RKADK_LOGD("iniPath: %s", iniPath);
+      RKADK_LOGP("iniPath: %s", iniPath);
       break;
     case 'W':
       u32Width = atoi(optarg);
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
   }
   optind = 0;
 
-  RKADK_LOGD("#camera id: %d", u32CamId);
+  RKADK_LOGP("#camera id: %d", u32CamId);
 
   memset(&stUiAttr, 0, sizeof(RKADK_UI_ATTR_S));
 
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
   while (!is_quit) {
     fgets(cmd, sizeof(cmd), stdin);
     if (strstr(cmd, "quit") || is_quit) {
-      RKADK_LOGD("#Get 'quit' cmd!");
+      RKADK_LOGP("#Get 'quit' cmd!");
       break;
     } else if (strstr(cmd, "all")){
       memset(pData, 0xff, u32Size);

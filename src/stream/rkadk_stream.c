@@ -272,7 +272,7 @@ RKADK_S32 RKADK_STREAM_VideoInit(RKADK_STREAM_VIDEO_ATTR_S *pstVideoAttr,
     return -1;
   }
 
-  RKADK_LOGI("Preview[%d] Video Init...", pstVideoAttr->u32CamId);
+  RKADK_LOGI("Preview[%d] Video Init Start...", pstVideoAttr->u32CamId);
   RKADK_BUFINFO("enter preview[%d]", pstVideoAttr->u32CamId);
 
   if (!RKADK_MPI_SYS_CHECK()) {
@@ -489,7 +489,7 @@ RKADK_S32 RKADK_STREAM_VideoDeInit(RKADK_MW_PTR pHandle) {
   pstHandle = (STREAM_VIDEO_HANDLE_S *)pHandle;
   RKADK_CHECK_CAMERAID(pstHandle->u32CamId, RKADK_FAILURE);
 
-  RKADK_LOGI("Preview[%d] Video DeInit...", pstHandle->u32CamId);
+  RKADK_LOGI("Preview[%d] Video DeInit Start...", pstHandle->u32CamId);
 
   RKADK_PARAM_STREAM_CFG_S *pstStreamCfg =
       RKADK_PARAM_GetStreamCfg(pstHandle->u32CamId, RKADK_STREAM_TYPE_PREVIEW);
@@ -639,7 +639,7 @@ RKADK_S32 RKADK_STREAM_VideoReset(RKADK_MW_PTR pHandle) {
 
   ret = RKADK_MEDIA_VencResetCheck(pstHandle->u32CamId, pstStreamCfg->attribute);
   if (ret == 0) {
-    RKADK_LOGI("Preview param is not changed");
+    RKADK_LOGW("Preview param is not changed");
     return 0;
   } else if (ret < 0) {
     return -1;
@@ -884,7 +884,7 @@ RKADK_S32 RKADK_STREAM_AudioInit(RKADK_STREAM_AUDIO_ATTR_S *pstAudioAttr,
     return -1;
   }
 
-  RKADK_LOGI("Preview Audio Init...");
+  RKADK_LOGI("Preview Audio Init Start...");
 
   if (RKADK_STREAM_CheckCodecType(pstAudioAttr->enCodecType))
     return -1;
@@ -1000,7 +1000,7 @@ RKADK_S32 RKADK_STREAM_AudioDeInit(RKADK_MW_PTR pHandle) {
   RKADK_CHECK_POINTER(pHandle, RKADK_FAILURE);
   pstHandle = (STREAM_AUDIO_HANDLE_S *)pHandle;
 
-  RKADK_LOGI("Preview Audio DeInit...");
+  RKADK_LOGI("Preview Audio DeInit Start...");
 
   pstAudioParam = RKADK_PARAM_GetAudioCfg();
   if (!pstAudioParam) {

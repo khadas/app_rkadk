@@ -18,8 +18,8 @@
 #include "rkadk_log.h"
 
 void RKADK_VERSION_Dump() {
-    RKADK_LOGI("---------------------------------------------------------");
-    RKADK_LOGI("rkadk version: %s", stVersionInfo);
-    RKADK_LOGI("rkadk building: %s", stVersionBuild);
-    RKADK_LOGI("---------------------------------------------------------");
+    RKADK_LOGP("---------------------------------------------------------");
+    RKADK_LOGP("rkadk version: %s", stVersionInfo);
+    RKADK_LOGP("rkadk building: %s", stVersionBuild);
+    RKADK_LOGP("---------------------------------------------------------");
 }

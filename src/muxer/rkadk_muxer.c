@@ -226,7 +226,7 @@ static void *RKADK_MUXER_AovProc(void *arg) {
     }
 
     if (pstMuxerHandle->bReseting && stAovMsg.command == RKADK_CMD_SLEEP) {
-      RKADK_LOGD("reseting, don't sleep");
+      RKADK_LOGI("reseting, don't sleep");
       continue;
     }
 
@@ -784,7 +784,7 @@ int RKADK_MUXER_WriteVideoFrame(RKADK_MEDIA_VENC_DATA_S stData, void *handle) {
 
   if ((enFrameMode == MULTI_FRAME_MODE && pstMuxer->enRecType == RKADK_REC_TYPE_AOV_LAPSE)
       || ((enFrameMode == SINGLE_FRAME_MODE && pstMuxer->enRecType != RKADK_REC_TYPE_AOV_LAPSE))) {
-    RKADK_LOGD("CamId[%d] venc[%d] mode[%d, %d] no match, drop frame", pstMuxer->u32CamId,
+    RKADK_LOGI("CamId[%d] venc[%d] mode[%d, %d] no match, drop frame", pstMuxer->u32CamId,
                 pstMuxerHandle->u32VencChn, enFrameMode, pstMuxer->enRecType);
     return 0;
   }
@@ -917,7 +917,7 @@ int RKADK_MUXER_WriteAudioFrame(void *pMbBlk, RKADK_U32 size, int64_t pts,
 
     while ((pstCell = RKADK_MUXER_CellGet(pstMuxerHandle, &pstMuxerHandle->stAFree)) == NULL) {
       if (cnt % 100 == 0) {
-        RKADK_LOGI("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->u32VencChn, cnt);
+        RKADK_LOGW("Stream[%d] get audio cell fail, retry, cnt = %d",pstMuxerHandle->u32VencChn, cnt);
         if (!pstMuxer->enableFileCache && cnt != 0)
           RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_FILE_WRITING_SLOW, 0);
       }
@@ -1011,7 +1011,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
   stFrame.pstPack = &stPack;
 
   if (strcmp(pstMuxerHandle->cOutputFmt, "mp4")) {
-    RKADK_LOGI("Format[%s] don't support built-in thumbnails", pstMuxerHandle->cOutputFmt);
+    RKADK_LOGW("Format[%s] don't support built-in thumbnails", pstMuxerHandle->cOutputFmt);
     return false;
   }
 
@@ -1077,7 +1077,7 @@ static bool RKADK_MUXER_GetThumb(MUXER_HANDLE_S *pstMuxerHandle) {
       return true;
     }
   } else {
-    RKADK_LOGI("Stream [%d] position[%d] invalid value!",pstMuxerHandle->u32VencChn, position);
+    RKADK_LOGW("Stream [%d] position[%d] invalid value!",pstMuxerHandle->u32VencChn, position);
     return true;
   }
 }

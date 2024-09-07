@@ -81,7 +81,7 @@ static SHUTTER_ATTR_S g_stShutterAttr[SHUTTERSPEED_BUTT] = {
 static int SAMPLE_ISP_FindUsableIdx(RKADK_U32 u32CamId) {
   for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
     if (gstIspHandle[i].s32CamId == -1) {
-      RKADK_LOGD("find usable index[%d] u32CamId[%d]", i, u32CamId);
+      RKADK_LOGP("find usable index[%d] u32CamId[%d]", i, u32CamId);
       return i;
     }
   }
@@ -92,7 +92,7 @@ static int SAMPLE_ISP_FindUsableIdx(RKADK_U32 u32CamId) {
 static int SAMPLE_ISP_GetIdx(RKADK_U32 u32CamId) {
   for (int i = 0; i < RKADK_MAX_SENSOR_CNT; i++) {
     if (gstIspHandle[i].s32CamId == (RKADK_S32)u32CamId) {
-      RKADK_LOGD("find matched index[%d] u32CamId[%d]", i, u32CamId);
+      RKADK_LOGP("find matched index[%d] u32CamId[%d]", i, u32CamId);
       return i;
     }
   }
@@ -126,14 +126,14 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
   tb_info.rtt_share_addr = 0;
   tb_info.prd_type = RK_AIQ_PRD_TYPE_SINGLE_FRAME;
   if (stIspParam.iqFileDir != NULL) {
-    RKADK_LOGD("rkaiq use iqfiles from %s", stIspParam.iqFileDir);
+    RKADK_LOGP("rkaiq use iqfiles from %s", stIspParam.iqFileDir);
     tb_info.iq_bin_mode = RK_AIQ_META_NOT_FULL_IQ_BIN;
   }
   ret = rk_aiq_uapi2_sysctl_preInit_tb_info(atAiqStaticInfo.sensor_info.sensor_name, &tb_info);
   if (ret != 0)
     RKADK_LOGE("rk_aiq_uapi2_sysctl_preInit_tb_info failed %#X!", ret);
 
-  RKADK_LOGD("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
+  RKADK_LOGP("CamId: %d, sensor_name is %s, iqfiles is %s", u32CamId,
              atAiqStaticInfo.sensor_info.sensor_name, stIspParam.iqFileDir);
 
   if(stIspParam.bMultiCam) {
@@ -154,7 +154,7 @@ static int SAMPLE_ISP_Init(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
 
   gstIspHandle[u32CamId].pstAiqCtx = pstAiqCtx;
 
-  RKADK_LOGI("u32CamId[%d] aiq init done", u32CamId);
+  RKADK_LOGP("u32CamId[%d] aiq init done", u32CamId);
   return 0;
 }
 
@@ -179,7 +179,7 @@ static int SAMPLE_ISP_Run(RKADK_U32 u32CamId, rk_aiq_working_mode_t WDRMode) {
     return ret;
   }
 
-  RKADK_LOGI("u32CamId[%d] aiq prepare and start done", u32CamId);
+  RKADK_LOGP("u32CamId[%d] aiq prepare and start done", u32CamId);
   return 0;
 }
 
@@ -192,7 +192,7 @@ int SAMPLE_ISP_SET_FrameRate(RKADK_U32 u32CamId, RKADK_U32 uFps) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("u32CamId[%d] uFps %d", u32CamId, uFps);
+  RKADK_LOGP("u32CamId[%d] uFps %d", u32CamId, uFps);
   ret = rk_aiq_user_api2_ae_getExpSwAttr(gstIspHandle[u32CamId].pstAiqCtx, &expSwAttr);
   expSwAttr.stAuto.stFrmRate.isFpsFix = true;
   expSwAttr.stAuto.stFrmRate.FpsValue = uFps;
@@ -219,7 +219,7 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
 
   if (gstIspHandle[index].u32StartCnt != 0) {
     gstIspHandle[index].u32StartCnt++;
-    RKADK_LOGI("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
+    RKADK_LOGP("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
     return 0;
   }
 
@@ -243,7 +243,7 @@ int SAMPLE_ISP_Start(RKADK_U32 u32CamId, SAMPLE_ISP_PARAM stIspParam) {
 
   gstIspHandle[index].s32CamId = u32CamId;
   gstIspHandle[index].u32StartCnt++;
-  RKADK_LOGI("u32CamId[%d] done!", u32CamId);
+  RKADK_LOGP("u32CamId[%d] done!", u32CamId);
   return 0;
 }
 
@@ -261,7 +261,7 @@ int SAMPLE_ISP_Stop(RKADK_U32 u32CamId) {
 
   if (gstIspHandle[index].u32StartCnt > 1) {
     gstIspHandle[index].u32StartCnt--;
-    RKADK_LOGI("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
+    RKADK_LOGP("u32CamId[%d] u32StartCnt: %d", u32CamId, gstIspHandle[index].u32StartCnt);
     return 0;
   }
 
@@ -276,7 +276,7 @@ int SAMPLE_ISP_Stop(RKADK_U32 u32CamId) {
   gstIspHandle[u32CamId].pstAiqCtx = NULL;
   gstIspHandle[index].s32CamId = -1;
   gstIspHandle[index].u32StartCnt = 0;
-  RKADK_LOGI("u32CamId[%d] done!", u32CamId);
+  RKADK_LOGP("u32CamId[%d] done!", u32CamId);
   return 0;
 }
 
@@ -288,7 +288,7 @@ int SAMPLE_ISP_SET_MirrorFlip(RKADK_U32 u32CamId, bool mirror, bool flip) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("mirror=%d, flip=%d", mirror, flip);
+  RKADK_LOGP("mirror=%d, flip=%d", mirror, flip);
   ret = rk_aiq_uapi2_setMirrorFlip(gstIspHandle[u32CamId].pstAiqCtx, mirror, flip,
                                  4);
 
@@ -318,7 +318,7 @@ int SAMPLE_ISP_UpdateIq(RKADK_U32 u32CamId, char *iqfile) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("iqfile: %s", iqfile);
+  RKADK_LOGP("iqfile: %s", iqfile);
   ret = rk_aiq_uapi2_sysctl_updateIq(gstIspHandle[u32CamId].pstAiqCtx, iqfile);
 
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
@@ -333,7 +333,7 @@ int SAMPLE_ISP_SET_FecEn(RKADK_U32 u32CamId, bool bFECEnable) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("bFECEnable %d", bFECEnable);
+  RKADK_LOGP("bFECEnable %d", bFECEnable);
   ret = rk_aiq_uapi2_setFecEn(gstIspHandle[u32CamId].pstAiqCtx, bFECEnable);
 
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
@@ -348,7 +348,7 @@ int SAMPLE_ISP_SET_FecBypass(RKADK_U32 u32CamId, bool bypass) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("bypass=%d", bypass);
+  RKADK_LOGP("bypass=%d", bypass);
   ret = rk_aiq_uapi2_setFecBypass(gstIspHandle[u32CamId].pstAiqCtx, bypass);
 
   pthread_mutex_unlock(&gstIspHandle[u32CamId].aiqCtxMutex);
@@ -423,7 +423,7 @@ int SAMPLE_ISP_DumpExpInfo(RKADK_U32 u32CamId,
             stExpInfo.HdrMeanLuma[2], stCCT.CCT);
   }
 
-  RKADK_LOGD("isp exp dump: %s", aStr);
+  RKADK_LOGP("isp exp dump: %s", aStr);
   */
   return ret;
 }
@@ -436,7 +436,7 @@ int SAMPLE_ISP_EnableLdch(RKADK_U32 u32CamId, bool on, RKADK_U32 level) {
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("on = %d, ldc level = %d", on, level);
+  RKADK_LOGP("on = %d, ldc level = %d", on, level);
   if (level < 1)
     level = 1;
   else if (level > 255)
@@ -721,7 +721,7 @@ int SAMPLE_ISP_SET_DarkAreaBoostStrth(RKADK_U32 u32CamId, RKADK_U32 level) {
   else if (level > 10)
     level = 10;
 
-  RKADK_LOGD("level = %d", level);
+  RKADK_LOGP("level = %d", level);
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
   ret = rk_aiq_uapi2_setDarkAreaBoostStrth(gstIspHandle[u32CamId].pstAiqCtx,
                                           level);
@@ -841,9 +841,9 @@ int SAMPLE_ISP_SET_ManualWhiteBalance(RKADK_U32 u32CamId, RKADK_U32 u32RGain,
   //[0,255]->(0.0, 4.0]
   gain.bgain = (u32BGain / 128.0f) * stGsWbAutoGain.bgain;
 
-  RKADK_LOGD("convert gain r g g b %f, %f, %f, %f", gain.rgain, gain.grgain,
+  RKADK_LOGP("convert gain r g g b %f, %f, %f, %f", gain.rgain, gain.grgain,
              gain.gbgain, gain.bgain);
-  RKADK_LOGD("auto gain r g g b %f, %f, %f, %f", stGsWbAutoGain.rgain,
+  RKADK_LOGP("auto gain r g g b %f, %f, %f, %f", stGsWbAutoGain.rgain,
              stGsWbAutoGain.grgain, stGsWbAutoGain.gbgain,
              stGsWbAutoGain.bgain);
   ret = rk_aiq_uapi2_setMWBGain(gstIspHandle[u32CamId].pstAiqCtx, &gain);
@@ -859,7 +859,7 @@ int SAMPLE_ISP_GET_WhiteBalanceGain(RKADK_U32 u32CamId,
   RKADK_CHECK_CAMERAID(u32CamId, RKADK_FAILURE);
   RKADK_CHECK_INIT(gstIspHandle[u32CamId].pstAiqCtx, RKADK_FAILURE);
 
-  RKADK_LOGD("Rgain = %f, Grgain = %f, Gbgain = %f, Bgain = %f", gain->rgain,
+  RKADK_LOGP("Rgain = %f, Grgain = %f, Gbgain = %f, Bgain = %f", gain->rgain,
              gain->grgain, gain->gbgain, gain->bgain);
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
@@ -881,10 +881,10 @@ int SAMPLE_ISP_SET_DNRStrength(RKADK_U32 u32CamId, RKADK_U32 u32Mode,
 
   RKADK_U32 u32_2d_value = (u322DValue / 128.0f) * u322DnrDefaultLevel;
   RKADK_U32 u32_3d_value = (u323Dvalue / 128.0f) * u323DnrDefaultLevel;
-  RKADK_LOGD("mode = %d n_2d_value = %d n_3d_value = %d", u32Mode, u322DValue,
+  RKADK_LOGP("mode = %d n_2d_value = %d n_3d_value = %d", u32Mode, u322DValue,
              u323Dvalue);
-  RKADK_LOGD("u_2d_value = %d n_3d_value = %d", u32_2d_value, u32_3d_value);
-  RKADK_LOGD("u322DnrDefaultLevel = %d u323DnrDefaultLevel = %d",
+  RKADK_LOGP("u_2d_value = %d n_3d_value = %d", u32_2d_value, u32_3d_value);
+  RKADK_LOGP("u322DnrDefaultLevel = %d u323DnrDefaultLevel = %d",
              u322DnrDefaultLevel, u323DnrDefaultLevel);
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
@@ -992,7 +992,7 @@ int SAMPLE_ISP_EnableDefog(RKADK_U32 u32CamId, bool on, opMode_t mode,
 
   pthread_mutex_lock(&gstIspHandle[u32CamId].aiqCtxMutex);
 
-  RKADK_LOGD("defog on = %d, mode = %d, level = %d", on, mode, level);
+  RKADK_LOGP("defog on = %d, mode = %d, level = %d", on, mode, level);
 
   if (on && mode == 1) {
     attr.mode = DEHAZE_API_MANUAL;
@@ -1114,7 +1114,7 @@ int SAMPLE_ISP_SingleFrame(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_pause");
+  RKADK_LOGP("enter rk_aiq_uapi2_sysctl_pause");
   rk_aiq_uapi2_sysctl_pause(gstIspHandle[u32CamId].pstAiqCtx, true);
   return 0;
 }
@@ -1130,7 +1130,7 @@ int SAMPLE_ISP_MultiFrame(RKADK_U32 u32CamId) {
     return -1;
   }
 
-  RKADK_LOGD("enter rk_aiq_uapi2_sysctl_resume");
+  RKADK_LOGP("enter rk_aiq_uapi2_sysctl_resume");
   rk_aiq_uapi2_sysctl_resume(gstIspHandle[u32CamId].pstAiqCtx);
   return 0;
 }
