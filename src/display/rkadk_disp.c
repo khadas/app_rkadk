@@ -113,7 +113,7 @@ static void RKADK_DISP_SetChn(RKADK_U32 u32CamId,
   pstDstVpssChn->s32ChnId = 0; //When vpss is dst, chn is equal to 0
 
   pstVoChn->enModId = RK_ID_VO;
-  pstVoChn->s32DevId = pstDispCfg->vo_device;
+  pstVoChn->s32DevId = pstDispCfg->vo_layer;
   pstVoChn->s32ChnId = pstDispCfg->vo_chn;
 }
 
