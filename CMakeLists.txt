@@ -43,6 +43,10 @@ if(ENABLE_EIS)
 	add_definitions(-DENABLE_EIS)
 endif()
 
+if(OS_LINUX)
+	add_definitions(-DOS_LINUX)
+endif()
+
 add_definitions(-Wall -Wshadow -ffast-math -Wignored-qualifiers -Werror-implicit-function-declaration -D_GNU_SOURCE)
 
 add_subdirectory(src)

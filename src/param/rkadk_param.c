@@ -16,6 +16,7 @@
 
 #include "rkadk_param.h"
 #include "rkadk_param_map.h"
+#include "rkadk_hal.h"
 #include "rk_mpi_ai.h"
 #include "rk_mpi_ao.h"
 #include <string.h>
@@ -2508,7 +2509,9 @@ static void RKADK_PARAM_SetMicVolume(RKADK_U32 volume) {
   }
 
   RKADK_LOGI("volume = %d", volume);
+#ifndef OS_RTT
   RK_MPI_AI_SetVolume(0, volume);
+#endif
 }
 
 static void RKADK_PARAM_SetSpeakerVolume(RKADK_U32 volume) {
@@ -2529,6 +2532,7 @@ static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
 
   RKADK_LOGI("RKADK_PARAM_RecMute mute = %d", mute);
 
+#ifndef OS_RTT
   if (mute) {
     RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
   } else {
@@ -2538,6 +2542,7 @@ static void RKADK_PARAM_RecMute(bool mute, RKADK_U32 volume) {
 #endif
     RK_MPI_AENC_SetMute(RECORD_AENC_CHN, (RK_BOOL)mute);
   }
+#endif
 }
 
 static void RKADK_PARAM_SetVolume() {

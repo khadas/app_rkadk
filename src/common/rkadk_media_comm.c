@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/sysinfo.h>
+#include "rkadk_hal.h"
 #include <unistd.h>
 
 typedef struct {
@@ -337,6 +337,7 @@ static RKADK_U32 RKADK_MPI_VO_DestroyLayDev(RKADK_S32 s32VoLay, RKADK_S32 s32VoD
 }
 
 static RKADK_U32 RKADK_MPI_VPSS_CreateGrp(RKADK_S32 s32VpssGrp, VPSS_GRP_ATTR_S *pstVpssGrpAttr) {
+#ifndef OS_RTT
   int ret;
   RKADK_PARAM_COMM_CFG_S *pstCommCfg = NULL;
 
@@ -400,6 +401,7 @@ static RKADK_U32 RKADK_MPI_VPSS_DestroyGrp(RKADK_S32 s32VpssGrp) {
   g_bVpssGrpInitCnt[s32VpssGrp]--;
   RKADK_LOGD("VpssGrp[%d] InitCnt[%d]", s32VpssGrp, g_bVpssGrpInitCnt[s32VpssGrp]);
   return 0;
+#endif
 }
 
 static RKADK_U32 RKADK_MEDIA_FindUsableIdx(RKADK_MEDIA_INFO_S *pstInfo,
@@ -484,6 +486,7 @@ bool RKADK_MPI_SYS_CHECK() {
   return g_bSysInit;
 }
 
+#ifndef OS_RTT
 static RKADK_S32 RKADK_MPI_AI_EnableVqe(AUDIO_DEV s32DevId, RKADK_S32 s32AiChnId,
                                         RK_U32 u32SampleRate, RKADK_VQE_MODE_E enMode,
                                         const char *pVqeCfgPath) {
@@ -1125,6 +1128,7 @@ exit:
 RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
                               VPSS_GRP_ATTR_S *pstVpssGrpAttr,
                               VPSS_CHN_ATTR_S *pstVpssChnAttr) {
+#ifndef OS_RTT
   int ret = -1;
   RKADK_S32 i;
 
@@ -1176,9 +1180,11 @@ RKADK_S32 RKADK_MPI_VPSS_Init(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn,
 exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vpssMutex);
   return ret;
+#endif
 }
 
 RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
+#ifndef OS_RTT
   int ret = -1;
   RKADK_S32 i;
   RKADK_S32 s32InitCnt;
@@ -1223,7 +1229,9 @@ RKADK_S32 RKADK_MPI_VPSS_DeInit(RKADK_S32 s32VpssGrp, RKADK_S32 s32VpssChn) {
 exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vpssMutex);
   return ret;
+#endif
 }
+#endif
 
 static void RKADK_MEDIA_CheckVoParam(VO_VIDEO_LAYER_ATTR_S *pstLayerAttr, VO_CHN_ATTR_S *pstChnAttr) {
   RKADK_U32 sum = 0;
@@ -1376,6 +1384,7 @@ exit:
   return ret;
 }
 
+#ifndef OS_RTT
 static void *RKADK_MEDIA_GetAencMb(void *params) {
   int ret;
   AUDIO_STREAM_S stFrame;
@@ -1698,6 +1707,7 @@ exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
   return ret;
 }
+#endif
 
 static RKADK_U32 RKADK_BIND_FindUsableIdx(RKADK_BIND_INFO_S *pstInfo,
                                           int count) {
@@ -2404,6 +2414,7 @@ RKADK_S32 RKADK_MEDIA_SetVencRotation(RKADK_U32 u32CamId,
   return ret;
 }
 
+#ifndef OS_RTT
 RKADK_S32 RKADK_MEDIA_QueryVencStatus(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStreamType) {
   RKADK_S32 s32ChnId;
   int i, ret = 0;
@@ -2455,7 +2466,7 @@ exit:
   RKADK_MUTEX_UNLOCK(g_stMediaCtx.vencMutex);
   return ret;
 }
-
+#endif
 //flip: mirror + 180, both: 180
 static MIRROR_E RKADK_MEDIA_GetVencMirror(RKADK_S32 s32VencChn, VENC_CHN_ATTR_S *pstVencChnAttr) {
   int ret;
@@ -2586,6 +2597,7 @@ RKADK_S32 RKADK_MEDIA_ToggleVencFlip(RKADK_U32 u32CamId,
 
 RKADK_S32 RKADK_MEDIA_EnablePostIsp(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enStrmType,
                                   RKADK_POST_ISP_ATTR_S *pstPostIspAttr) {
+#ifndef OS_RTT
   int ret;
   RKADK_S32 s32VpssGrp = -1, s32VpssChn = -1;
   AIISP_ATTR_S stPostIspAttr;
@@ -2610,11 +2622,13 @@ RKADK_S32 RKADK_MEDIA_EnablePostIsp(RKADK_U32 u32CamId, RKADK_STREAM_TYPE_E enSt
     RKADK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
 
   return ret;
+#endif
 }
 
 RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
                                   RKADK_STREAM_TYPE_E enStrmType, bool bEnable,
                                   RKADK_POST_ISP_ATTR_S *pstPostIspAttr) {
+#ifndef OS_RTT
   int ret;
   RKADK_S32 s32VpssGrp = -1, s32VpssChn = -1;
   AIISP_ATTR_S stPostIspAttr;
@@ -2651,6 +2665,7 @@ RKADK_S32 RKADK_MEDIA_SetPostIspAttr(RKADK_U32 u32CamId,
     RKADK_LOGE("RK_MPI_VPSS_SetGrpAIISPAttr[%d] failed[%x]", s32VpssGrp, ret);
 
   return ret;
+#endif
 }
 
 RKADK_S32 RKADK_MEDIA_SetVencState(RKADK_U32 u32CamId, RKADK_S32 s32ChnId, bool state) {
@@ -2798,6 +2813,7 @@ static int RKADK_MEDIA_ResetVideoAttr(RKADK_U32 u32CamId,
 }
 
 int RKADK_MEDIA_VideoReset(RKADK_U32 u32CamId, RKADK_PRAAM_VI_ATTR_S vi_attr, RKADK_PARAM_VENC_ATTR_S attribute) {
+#ifndef OS_RTT
   int ret = 0;
   bool bChangeResolution = false;
   bool bUseVpss = false;
@@ -2883,4 +2899,5 @@ int RKADK_MEDIA_VideoReset(RKADK_U32 u32CamId, RKADK_PRAAM_VI_ATTR_S vi_attr, RK
   }
 
   return 0;
+#endif
 }

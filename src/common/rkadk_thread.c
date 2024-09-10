@@ -34,7 +34,9 @@ static void *RKADK_THREAD_Proc(void *params) {
   }
 
   memset(name, 0, sizeof(name));
+#ifndef OS_RTT
   pthread_getname_np(pthread_self(), name, sizeof(name));
+#endif
 
   RKADK_LOGD("Exit %s thread", name);
   pthread_exit(&(pstThread->tid));
@@ -63,7 +65,9 @@ void *RKADK_THREAD_Create(RKADK_THREAD_PROC_FN func, void *param, char *name) {
   }
 
   if (name) {
+#ifndef OS_RTT
     pthread_setname_np(pstThread->tid, name);
+#endif
     RKADK_LOGI("Create %s thread success!", name);
   } else {
     RKADK_LOGI("Create thread success!");

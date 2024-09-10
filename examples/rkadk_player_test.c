@@ -37,7 +37,7 @@
 extern int optind;
 extern char *optarg;
 static bool is_quit = false;
-static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:w:C:A:M:mfvbDh";
+static RKADK_CHAR optstr[] = "i:x:y:W:H:r:a:s:P:I:t:F:T:l:c:d:O:S:V:R:w:C:A:M:mfvbDh";
 
 static RKADK_VOID *mDemuxerCfg = NULL;
 static void print_usage(const RKADK_CHAR *name) {
@@ -72,6 +72,8 @@ static void print_usage(const RKADK_CHAR *name) {
   printf("\t-A: adec buffer len, Default: 4\n");
   printf("\t-M: vdec decode mode, option: 0(frame mode), 1(stream mode), 2(send frame decode slice), 3(send slice decode slice), Default: 0\n");
   printf("\t-C: Ao sound card name, Default: RV1106/RV1103/RK3506 = hw:0,0, other chip = default\n");
+  printf("\t-V: ao volume, Default: 70\n");
+  printf("\t-A: ao sound card samplerate, Default: 16000\n");
   printf("\t-h: help\n");
 }
 
@@ -89,6 +91,9 @@ static RKADK_VOID PlayerEventFnTest(RKADK_MW_PTR pPlayer,
     break;
   case RKADK_PLAYER_EVENT_EOF:
     printf("+++++ RKADK_PLAYER_EVENT_EOF +++++\n");
+#ifdef OS_RTT
+    is_quit = true;
+#endif
     break;
   case RKADK_PLAYER_EVENT_SOF:
     printf("+++++ RKADK_PLAYER_EVENT_SOF +++++\n");
@@ -121,6 +126,7 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   RKADK_CHECK_POINTER_N(pstFrmInfo);
 
   memset(pstFrmInfo, 0, sizeof(RKADK_PLAYER_FRAME_INFO_S));
+#ifndef OS_RTT
   pstFrmInfo->u32DispWidth = 720;
   pstFrmInfo->u32DispHeight = 1280;
   pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
@@ -153,6 +159,40 @@ void param_init(RKADK_PLAYER_FRAME_INFO_S *pstFrmInfo) {
   pstFrmInfo->stSyncInfo.u16Vfb = 194;
   pstFrmInfo->stSyncInfo.u16Vpw = 6;
   pstFrmInfo->enVoSpliceMode = SPLICE_MODE_RGA;
+#else
+  pstFrmInfo->u32DispWidth = 320;
+  pstFrmInfo->u32DispHeight = 240;
+  pstFrmInfo->u32ImgWidth = pstFrmInfo->u32DispWidth;
+  pstFrmInfo->u32ImgHeight = pstFrmInfo->u32DispHeight;
+  pstFrmInfo->u32VoFormat = VO_FORMAT_NV12;
+#if defined(RV1106_1103) || defined(RV1103B)
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_DEFAULT;
+#else
+  pstFrmInfo->u32EnIntfType = DISPLAY_TYPE_HDMI;
+#endif
+  pstFrmInfo->enIntfSync = RKADK_VO_OUTPUT_480P60;
+  pstFrmInfo->u32BorderColor = 0x0000FA;
+  pstFrmInfo->bMirror = RKADK_FALSE;
+  pstFrmInfo->bFlip = RKADK_FALSE;
+  pstFrmInfo->u32Rotation = 0;
+  pstFrmInfo->stSyncInfo.bIdv = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIhs = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIvs = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bSynm = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.bIop = RKADK_TRUE;
+  pstFrmInfo->stSyncInfo.u16FrameRate = 25;
+  pstFrmInfo->stSyncInfo.u16PixClock = 65000;
+  pstFrmInfo->stSyncInfo.u16Hact = 1200;
+  pstFrmInfo->stSyncInfo.u16Hbb = 24;
+  pstFrmInfo->stSyncInfo.u16Hfb = 240;
+  pstFrmInfo->stSyncInfo.u16Hpw = 136;
+  pstFrmInfo->stSyncInfo.u16Hmid = 0;
+  pstFrmInfo->stSyncInfo.u16Vact = 1200;
+  pstFrmInfo->stSyncInfo.u16Vbb = 200;
+  pstFrmInfo->stSyncInfo.u16Vfb = 194;
+  pstFrmInfo->stSyncInfo.u16Vpw = 6;
+  pstFrmInfo->enVoSpliceMode = SPLICE_MODE_BYPASS;
+#endif
 
   return;
 }
@@ -162,7 +202,11 @@ RKADK_VOID *GetPosition(RKADK_VOID *arg) {
     while (!is_quit) {
       position = RKADK_PLAYER_GetCurrentPosition(arg);
       printf("position = %lld\n", position);
+#ifndef OS_RTT
       usleep(1000000);
+#else
+      rkos_msleep(1000);
+#endif
     }
 
   return NULL;
@@ -337,6 +381,7 @@ static int DemuxerSetDataParam(RKADK_MW_PTR pPlayer, char *file,
   return 0;
 }
 
+#ifdef OS_LINUX
 int main(int argc, char *argv[]) {
   int c, ret, transport = 0;
   char *file = "/userdata/16000_2.mp3";
@@ -446,6 +491,12 @@ int main(int argc, char *argv[]) {
       break;
     case 'C':
       stPlayCfg.stAudioCfg.pSoundCard = optarg;
+      break;
+    case 'V':
+      stPlayCfg.stAudioCfg.u32SpeakerVolume = atoi(optarg);
+      break;
+    case 'R':
+      stPlayCfg.stAudioCfg.u32AoSampleRate = atoi(optarg);
       break;
     case 'h':
     default:
@@ -723,3 +774,355 @@ __EXIT:
   RKADK_MPI_SYS_Exit();
   return 0;
 }
+#elif defined(OS_RTT)
+#include <finsh.h>
+
+typedef struct {
+  int argc;
+  const char **argv;
+} RKADK_ARG;
+
+static void playerMain(void *arg) {
+  int c, ret, transport = 0;
+  char *file = "16000_2.mp3";
+  RKADK_BOOL bVideoEnable = false;
+  RKADK_BOOL bAudioEnable = true;
+  RKADK_BOOL bBlackBackgroundEnable = false;
+  RKADK_ARG *argCfg = (RKADK_ARG *)arg;
+  RKADK_MW_PTR pPlayer = NULL;
+  RKADK_S64 seekTimeInMs = 0, maxSeekTimeInMs = (RKADK_S64)pow(2, 63) / 1000;
+  pthread_t getPosition = 0;
+  RKADK_U32 duration = 0;
+  int u32VoFormat = -1, u32SpliceMode = -1, u32IntfType = -1;
+  RKADK_PLAYER_CFG_S stPlayCfg;
+  int loop_count = 1, loop_duration = 0;
+  RKADK_PLAYER_STATE_E enState = RKADK_PLAYER_STATE_BUTT;
+  RKADK_U32 u32Waterline = 0;
+  rt_thread_t tid = RT_NULL;
+
+  memset(&stPlayCfg, 0, sizeof(RKADK_PLAYER_CFG_S));
+  param_init(&stPlayCfg.stFrmInfo);
+  if (RKADK_PARAM_GetCommParam(RKADK_PARAM_TYPE_VOLUME, &stPlayCfg.stAudioCfg.u32SpeakerVolume))
+    stPlayCfg.stAudioCfg.u32SpeakerVolume = 70;
+
+  stPlayCfg.stAudioCfg.u32SpeakerVolume = 10;
+#if defined(RK3506)
+  stPlayCfg.stAudioCfg.pSoundCard = "es8388p";
+#else
+  stPlayCfg.stAudioCfg.pSoundCard = "acodecp";
+#endif
+
+  while ((c = getopt(argCfg->argc, argCfg->argv, optstr)) != -1) {
+    switch (c) {
+    case 'i':
+      file = optarg;
+      break;
+    case 'x':
+      stPlayCfg.stFrmInfo.u32FrmInfoX = atoi(optarg);
+      break;
+    case 'y':
+      stPlayCfg.stFrmInfo.u32FrmInfoY = atoi(optarg);
+      break;
+    case 'W':
+      stPlayCfg.stFrmInfo.u32DispWidth = atoi(optarg);
+      break;
+    case 'H':
+      stPlayCfg.stFrmInfo.u32DispHeight = atoi(optarg);
+      break;
+    case 'r':
+      stPlayCfg.stFrmInfo.u32Rotation = atoi(optarg);
+      break;
+    case 'F':
+      stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate = atoi(optarg);
+      break;
+    case 'm':
+      stPlayCfg.stFrmInfo.bMirror = true;
+      break;
+    case 'f':
+      stPlayCfg.stFrmInfo.bFlip = true;
+      break;
+    case 'T':
+      stPlayCfg.stRtspCfg.u32IoTimeout = atoi(optarg) * 1000;
+      break;
+    case 'l':
+      stPlayCfg.stFrmInfo.u32VoLay = atoi(optarg);
+      break;
+    case 'O':
+      stPlayCfg.stVdecCfg.u32FrameBufCnt = atoi(optarg);
+      break;
+    case 'S':
+      stPlayCfg.stVdecCfg.u32StreamBufCnt = atoi(optarg);
+      break;
+    case 'w':
+      u32Waterline = atoi(optarg);
+      break;
+    case 'v':
+      bVideoEnable = true;
+      break;
+    case 'b':
+      bBlackBackgroundEnable = true;
+      break;
+    case 'a':
+      bAudioEnable = atoi(optarg);
+      break;
+    case 's':
+      u32SpliceMode = atoi(optarg);
+      break;
+    case 'P':
+      u32VoFormat = atoi(optarg);
+      break;
+    case 'I':
+      u32IntfType = atoi(optarg);
+      break;
+    case 't':
+      transport = atoi(optarg);
+      break;
+    case 'c':
+      loop_count = atoi(optarg);
+      break;
+    case 'd':
+      loop_duration = atoi(optarg);
+      break;
+    case 'D':
+      stPlayCfg.bEnableThirdDemuxer = true;
+      RKADK_LOGD("Enable third-party demuxer");
+      break;
+    case 'A':
+      stPlayCfg.stAudioCfg.u32AdecBufCnt= atoi(optarg);
+      break;
+    case 'C':
+      stPlayCfg.stAudioCfg.pSoundCard = optarg;
+      break;
+    case 'V':
+      stPlayCfg.stAudioCfg.u32SpeakerVolume = atoi(optarg);
+      break;
+    case 'R':
+      stPlayCfg.stAudioCfg.u32AoSampleRate = atoi(optarg);
+      break;
+    case 'h':
+    default:
+      print_usage(argCfg->argv[0]);
+      optind = 0;
+      return 0;
+    }
+  }
+  optind = 0;
+
+  RKADK_LOGI("#play file: %s, bVideoEnable: %d, bAudioEnable: %d",file, bVideoEnable, bAudioEnable);
+  RKADK_LOGI("#video display rect[%d, %d, %d, %d], u32SpliceMode: %d, u32VoFormat: %d, fps: %d",
+              stPlayCfg.stFrmInfo.u32FrmInfoX, stPlayCfg.stFrmInfo.u32FrmInfoY,
+              stPlayCfg.stFrmInfo.u32DispWidth, stPlayCfg.stFrmInfo.u32DispHeight,
+              u32SpliceMode, u32VoFormat, stPlayCfg.stFrmInfo.stSyncInfo.u16FrameRate);
+  RKADK_LOGI("u32Waterline: %d, u32FrameBufCnt: %d, u32StreamBufCnt: %d",
+              u32Waterline, stPlayCfg.stVdecCfg.u32FrameBufCnt, stPlayCfg.stVdecCfg.u32StreamBufCnt);
+  RKADK_LOGI("transport: %d, u32IoTimeout: %d(us), pSoundCard: %s",
+              transport, stPlayCfg.stRtspCfg.u32IoTimeout, stPlayCfg.stAudioCfg.pSoundCard);
+  RKADK_LOGI("hact: %d, vact: %d, speakerVolume: %d",
+              stPlayCfg.stFrmInfo.stSyncInfo.u16Hact, stPlayCfg.stFrmInfo.stSyncInfo.u16Vact, stPlayCfg.stAudioCfg.u32SpeakerVolume);
+
+  if (u32SpliceMode == 1)
+    stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_GPU;
+  else if (u32SpliceMode == 2)
+    stPlayCfg.stFrmInfo.enVoSpliceMode = SPLICE_MODE_BYPASS;
+
+  if (u32VoFormat == 1)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_NV12;
+  else if (u32VoFormat == 2)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_RGB565;
+  else if (u32VoFormat == 3)
+    stPlayCfg.stFrmInfo.u32VoFormat = VO_FORMAT_RGB444;
+
+  if (u32IntfType == 1)
+    stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_MIPI;
+  else if (u32IntfType == 2)
+    stPlayCfg.stFrmInfo.u32EnIntfType = DISPLAY_TYPE_LCD;
+
+  signal(SIGINT, sigterm_handler);
+
+  RKADK_MPI_SYS_Init();
+
+  if (bAudioEnable)
+    stPlayCfg.bEnableAudio = true;
+  if (bVideoEnable)
+    stPlayCfg.bEnableVideo = true;
+  if (bBlackBackgroundEnable)
+    stPlayCfg.bEnableBlackBackground = true;
+
+  stPlayCfg.pfnPlayerCallback = PlayerEventFnTest;
+
+  //for rtsp
+  if (transport == 1)
+    stPlayCfg.stRtspCfg.transport = "tcp";
+  else
+    stPlayCfg.stRtspCfg.transport = "udp";
+
+  stPlayCfg.stSnapshotCfg.u32VencChn = 15;
+  stPlayCfg.stSnapshotCfg.pfnDataCallback = SnapshotDataRecv;
+
+  while (loop_count) {
+    if (RKADK_PLAYER_Create(&pPlayer, &stPlayCfg)) {
+      RKADK_LOGE("RKADK_PLAYER_Create failed");
+      return -1;
+    }
+
+    if (u32Waterline > 0)
+      RKADK_PLAYER_SetVdecWaterline(pPlayer, u32Waterline);
+
+    if (stPlayCfg.bEnableThirdDemuxer) {
+      ret = DemuxerSetDataParam(pPlayer, file, stPlayCfg);
+      if (ret) {
+        RKADK_LOGE("DemuxerSetDataParam failed");
+        goto __EXIT;
+      }
+    } else {
+      ret = RKADK_PLAYER_SetDataSource(pPlayer, file);
+      if (ret) {
+        RKADK_LOGE("SetDataSource failed, ret = %d", ret);
+        goto __EXIT;
+      }
+    }
+
+    RKADK_PLAYER_GetDuration(pPlayer, &duration);
+    RKADK_LOGD("file duration: %d ms", duration);
+
+    if (duration > 0) {
+      if (loop_duration <= 0 || loop_duration > duration / 1000)
+        loop_duration = duration / 1000 + 1; //ms to m
+    }
+
+    RKADK_LOGE("loop_count: %d, duration:%d(ms), loop_duration: %d(s)", loop_count, duration, loop_duration);
+
+    ret = RKADK_PLAYER_Prepare(pPlayer);
+    if (ret) {
+      RKADK_LOGE("Prepare failed, ret = %d", ret);
+      goto __EXIT;
+    }
+
+    if (stPlayCfg.bEnableThirdDemuxer) {
+      ret = RKADK_DEMUXER_ReadPacketStart(mDemuxerCfg, 0);
+      if (ret != 0) {
+        RKADK_LOGE("RKADK_DEMUXER_ReadPacketStart failed");
+        goto __EXIT;
+      }
+    }
+
+    ret = RKADK_PLAYER_Play(pPlayer);
+    if (ret) {
+      RKADK_LOGE("Play failed, ret = %d", ret);
+      return -1;
+    }
+    loop_count--;
+
+    is_quit = false;
+    RKADK_ARG argCfg;
+    tid = rt_thread_create("GetPosition", GetPosition, pPlayer, 2048, 16, 10);
+    if (tid)
+        rt_thread_startup(tid);
+
+    char cmd[64];
+    printf("\n#Usage: input 'quit' to exit programe!\n"
+          "peress any other key to capture one picture to file\n");
+
+    while (!is_quit) {
+      rkos_msleep(1000);
+    }
+
+    RKADK_PLAYER_Destroy(pPlayer);
+    pPlayer = NULL;
+  }
+
+__EXIT:
+  if (stPlayCfg.bEnableThirdDemuxer) {
+    //for exit ao pause
+    RKADK_PLAYER_GetPlayStatus(pPlayer, &enState);
+    if (enState == RKADK_PLAYER_STATE_PAUSE)
+      RKADK_PLAYER_Play(pPlayer);
+
+    RKADK_DEMUXER_ReadPacketStop(mDemuxerCfg);
+
+    if (mDemuxerCfg)
+      RKADK_DEMUXER_Destroy(&mDemuxerCfg);
+  }
+
+  is_quit = true;
+  if (pPlayer) {
+    RKADK_PLAYER_Destroy(pPlayer);
+    pPlayer = NULL;
+  }
+
+  RKADK_MPI_SYS_Exit();
+  return;
+}
+
+int rkadk_player_test_enter(int argc, char *argv[]) {
+  rt_thread_t tid = RT_NULL;
+  RKADK_ARG argCfg;
+  argCfg.argc = argc;
+  argCfg.argv = argv;
+  tid = rt_thread_create("playerMain", playerMain, &argCfg, 90112, 16, 10);
+
+  if (tid)
+      rt_thread_startup(tid);
+
+  while (tid->stat != RT_THREAD_CLOSE) {
+    rkos_msleep(1000);
+  }
+
+  rkos_msleep(10);
+  is_quit = false;
+  return 0;
+}
+
+struct _main_param
+{
+  int argc;
+  char **argv;
+  int (* pmain)(int argc, char **argv);
+};
+
+static int thread_excute_main(void *arg)
+{
+    struct _main_param *p;
+    p = (struct _main_param *)arg;
+    rkos_kthread_set_name(p->argv[0]);
+    p->pmain(p->argc, p->argv);
+    for (int i = 1; i < p->argc; i++)
+        rkos_vfree(p->argv[i]);
+    rkos_vfree(p->argv);
+    rkos_vfree(p);
+    return 0;
+}
+
+static int argparse_excute_main(int argc, char **argv, int (* pMain)(int argc, char **argv))
+{
+  if (argv[argc - 1][0] != '&')
+  {
+    if (pMain)
+      return pMain(argc, argv);
+  }
+  else
+  {
+    char **argv_tmp = rkos_vcalloc(1, sizeof(char *) * argc);
+    for (int i = 0; i < (argc - 1); i++) {
+      argv_tmp[i] = rkos_vcalloc(1, strlen(argv[i]));
+      memcpy(argv_tmp[i], argv[i], strlen(argv[i]));
+      argv_tmp[i][strlen(argv[i])] = 0;
+    }
+
+    struct _main_param *p = rkos_vcalloc(1, sizeof(struct _main_param));
+    p->argc = argc;
+    p->argv = argv_tmp;
+    p->pmain = pMain;
+    rkos_kthread_create(thread_excute_main, p, argv_tmp[0], 4096, 0);
+  }
+  return 0;
+}
+
+int rkadk_player_test(int argc, char **argv)
+{
+  argparse_excute_main(argc, argv, rkadk_player_test_enter);
+  return 0;
+}
+
+MSH_CMD_EXPORT(rkadk_player_test, rkadk player module test);
+#endif

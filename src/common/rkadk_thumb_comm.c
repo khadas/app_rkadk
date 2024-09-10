@@ -3,13 +3,12 @@
 #include "rkadk_log.h"
 #include <unistd.h>
 #include "rkadk_photo.h"
-#include <byteswap.h>
 #include <errno.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
+#include "rkadk_hal.h"
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -928,7 +927,7 @@ static RKADK_S32 BuildInThmToMp4(FILE *fd, RKADK_S64 s64FileSize, RKADK_CHAR *ps
 
   u32Width = bswap_32(pstThumbAttr->u32Width);
   u32Height = bswap_32(pstThumbAttr->u32Height);
-  u32VirWidth = bswap_32(pstThumbAttr->u32VirWidth); 
+  u32VirWidth = bswap_32(pstThumbAttr->u32VirWidth);
   u32VirHeight = bswap_32(pstThumbAttr->u32VirHeight);
 
   if (fwrite(boxHeader, THM_BOX_HEADER_LEN, 1, fd) != 1) {

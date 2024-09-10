@@ -18,8 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
+#include "rkadk_hal.h"
 #include "rkadk_log.h"
 #include "rkadk_msg.h"
 

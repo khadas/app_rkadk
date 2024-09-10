@@ -16,6 +16,7 @@
 
 #include "rkadk_struct2ini.h"
 #include "rkadk_common.h"
+#include "rkadk_hal.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
