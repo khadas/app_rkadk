@@ -3013,9 +3013,6 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     }
   }
 
-  if (enSeekStatus != RKADK_PLAYER_SEEK_WAIT)
-    pstPlayer->positionTimeStamp = 0;
-
   if (pstPlayer->pDemuxerCfg)
     RKADK_DEMUXER_ReadPacketStop(pstPlayer->pDemuxerCfg);
   pstPlayer->bStopSendStream = true;
@@ -3025,6 +3022,8 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
     pstPlayer->tidDataSend = 0;
   }
 
+  if (enSeekStatus != RKADK_PLAYER_SEEK_WAIT)
+    pstPlayer->positionTimeStamp = 0;
   pstPlayer->frameCount = 0;
   pstPlayer->stSnapshotParam.bSnapshot = false;
   pstPlayer->stSnapshotParam.stFrame.pMbBlk = NULL;
