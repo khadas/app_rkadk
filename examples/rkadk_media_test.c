@@ -222,12 +222,10 @@ static RKADK_S32 AencDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_aenc_file);
-
   return 0;
 }
 
 static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
-
   if (!g_pcm_file) {
     g_pcm_file = fopen(g_pcm_path, "w");
     if (!g_pcm_file) {
@@ -237,7 +235,6 @@ static RKADK_S32 PcmDataCb(RKADK_AUDIO_STREAM_S *pAStreamData) {
   }
 
   fwrite(pAStreamData->pStream, 1, pAStreamData->u32Len, g_pcm_file);
-
   return 0;
 }
 #endif
@@ -394,6 +391,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
   if (bMultiSensor)
     u32CamId = 0;
 
+  memset(&stRecAttr, 0, sizeof(RKADK_RECORD_ATTR_S));
   stRecAttr.s32CamID = u32CamId;
   stRecAttr.pfnRequestFileNames = GetRecordFileName;
   stRecAttr.pfnEventCallback = RecordEventCallback;
@@ -415,7 +413,7 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
 #ifdef ENABLE_STREAM_AUDIO
   memset(&stAudioAttr, 0, sizeof(RKADK_STREAM_AUDIO_ATTR_S));
   stAudioAttr.u32CamId = u32CamId;
-  stAudioAttr.enCodecType = RKADK_CODEC_TYPE_PCM;
+  stAudioAttr.enCodecType = RKADK_CODEC_TYPE_MP3;
   stAudioAttr.pfnPcmDataCB = PcmDataCb;
   stAudioAttr.pfnAencDataCB = AencDataCb;
 #endif
@@ -652,11 +650,13 @@ RKADK_STREAM_VIDEO_ATTR_S stVideoAttr;
       RKADK_LOGP("===================Manual record stream = %d", stRecTime.enStreamType);
     }
 #else
+#ifdef ENABLE_PHOTO
     RKADK_PHOTO_TakePhoto(pPhotoHandle, &stTakePhotoAttr);
     if (bMultiSensor) {
       if (RKADK_PHOTO_TakePhoto(pPhotoHandle1, &stTakePhotoAttr))
         RKADK_LOGE("RKADK_PHOTO_TakePhoto u32CamId[1] failed");
     }
+#endif
 #endif
     usleep(5000000);
   }
