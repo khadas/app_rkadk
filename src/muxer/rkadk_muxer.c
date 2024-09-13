@@ -1306,6 +1306,7 @@ static bool RKADK_MUXER_Proc(void *params) {
                                                   pstMuxerHandle->muxerId);
         if (ret) {
           RKADK_LOGE("request file name failed");
+          RKADK_MUXER_ProcessEvent(pstMuxerHandle, RKADK_MUXER_EVENT_ERR_GET_FILENAME, 0);
         } else {
           RKADK_LOGI("Ready to recod new video file path:[%s]", pstMuxerHandle->cFileName);
 
