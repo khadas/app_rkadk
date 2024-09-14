@@ -250,7 +250,7 @@ typedef struct {
 
 typedef struct {
   RKADK_U32 u32FrameBufCnt; //frame buffer cnt(output), default: 3
-  RKADK_U32 u32StreamBufCnt; //stream buffer cnt(input), default: 3
+  RKADK_U32 u32StreamBufCnt; //stream buffer cnt(input), default: 8
   RKADK_VDEC_DECODE_MODE_E u32DecodeMode;   //decode mode, default: video
 } RKADK_PLAYER_VDEC_CFG_S;
 

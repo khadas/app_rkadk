@@ -318,7 +318,7 @@ static RKADK_S32 VdecCtxInit(RKADK_PLAYER_VDEC_CTX_S *pstVdecCtx, RKADK_PLAYER_V
     pstVdecCtx->frameBufferCnt = 3;
 
   if (pstVdecCtx->streamBufferCnt <= 0)
-    pstVdecCtx->streamBufferCnt = 3;
+    pstVdecCtx->streamBufferCnt = 8;
 
   return RKADK_SUCCESS;
 }
