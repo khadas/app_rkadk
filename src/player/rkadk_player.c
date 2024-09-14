@@ -1381,7 +1381,7 @@ static void SendData(RKADK_VOID *ptr) {
   struct timespec t_begin_1, t_end_1;
   RKADK_S32 flagGetFirstframe = 0, flagVideoEnd = 0, flagAudioEnd = 0, flagsSendNullFrame = 0;
   RKADK_S32 frameTime = 0, costtime = 0, maxNullFrameCount = 0;
-  RKADK_S32 audioBytes = 0, sampleNum = 0, tmpNUm = 0;
+  RKADK_S32 audioBytes = 0, sampleNum = 0;
   RKADK_S32 enableSendDataDebug = 0;
   RKADK_S32 voSendTime = 0;
   RK_U64 debugCount = 0;
@@ -1427,36 +1427,6 @@ static void SendData(RKADK_VOID *ptr) {
   // Divisor correction
   sampleNum = cacheBufferLen / (audioBytes * pstPlayer->stDemuxerParam.audioChannels);
   cacheBufferLen = sampleNum * audioBytes * pstPlayer->stDemuxerParam.audioChannels;
-  pstPlayer->stAoCtx.periodSize = cacheBufferLen;
-
-  if (pstPlayer->stAoCtx.sampleRate != pstPlayer->stAoCtx.reSmpSampleRate) {
-      if (((pstPlayer->stAoCtx.sampleRate > pstPlayer->stAoCtx.reSmpSampleRate) &&
-          ((pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate) ||
-          ((pstPlayer->stAoCtx.sampleRate / pstPlayer->stAoCtx.reSmpSampleRate) % 2))) ||
-          ((pstPlayer->stAoCtx.sampleRate < pstPlayer->stAoCtx.reSmpSampleRate) &&
-          (pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate ||
-          ((pstPlayer->stAoCtx.reSmpSampleRate / pstPlayer->stAoCtx.sampleRate) % 2)))) {
-          tmpNUm = (RK_S32)(sampleNum *
-                              ((float)(pstPlayer->stAoCtx.sampleRate) / (float)(pstPlayer->stAoCtx.reSmpSampleRate)) + 1);
-      }
-  }
-
-  if (tmpNUm)
-    pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
-
-  if (sampleNum != 1024) {
-    pthread_mutex_lock(&pstPlayer->mutex);
-    DestoryDeviceAo(&pstPlayer->stAoCtx);
-    ret = CreateDeviceAo(&pstPlayer->stAoCtx);
-    pthread_mutex_unlock(&pstPlayer->mutex);
-    if (ret) {
-      RKADK_LOGE("Create AO failed");
-      return;
-    }
-
-    AoVolumeControl(pstPlayer);
-  }
-
   maxNullFrameCount = 2 * (1 + pstPlayer->stAoCtx.periodCount) * pstPlayer->stAoCtx.periodCount * pstPlayer->stAoCtx.periodSize / cacheBufferLen;
 
   if (getenv("send_data_debug_level")) {
@@ -2926,6 +2896,7 @@ __FAILED:
 
 RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
   int ret;
+  RKADK_S32 audioBytes = 0, sampleNum = 0, tmpNUm = 0, cacheBufferLen = 0;
   RKADK_PLAYER_HANDLE_S *pstPlayer;
 
   RKADK_CHECK_POINTER(pPlayer, RKADK_FAILURE);
@@ -2954,6 +2925,32 @@ RKADK_S32 RKADK_PLAYER_Prepare(RKADK_MW_PTR pPlayer) {
         RKADK_LOGE("Create ADEC failed");
         goto __FAILED;
       }
+    }
+
+    if (pstPlayer->bVideoExist) {
+      audioBytes = pstPlayer->stAoCtx.bitWidth / 8;
+      cacheBufferLen = audioBytes * pstPlayer->stDemuxerParam.audioChannels *
+        pstPlayer->stDemuxerParam.audioSampleRate / pstPlayer->stDemuxerParam.videoAvgFrameRate;
+
+      // Divisor correction
+      sampleNum = cacheBufferLen / (audioBytes * pstPlayer->stDemuxerParam.audioChannels);
+      cacheBufferLen = sampleNum * audioBytes * pstPlayer->stDemuxerParam.audioChannels;
+      pstPlayer->stAoCtx.periodSize = cacheBufferLen;
+
+      if (pstPlayer->stAoCtx.sampleRate != pstPlayer->stAoCtx.reSmpSampleRate) {
+          if (((pstPlayer->stAoCtx.sampleRate > pstPlayer->stAoCtx.reSmpSampleRate) &&
+              ((pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate) ||
+              ((pstPlayer->stAoCtx.sampleRate / pstPlayer->stAoCtx.reSmpSampleRate) % 2))) ||
+              ((pstPlayer->stAoCtx.sampleRate < pstPlayer->stAoCtx.reSmpSampleRate) &&
+              (pstPlayer->stAoCtx.sampleRate % pstPlayer->stAoCtx.reSmpSampleRate ||
+              ((pstPlayer->stAoCtx.reSmpSampleRate / pstPlayer->stAoCtx.sampleRate) % 2)))) {
+              tmpNUm = (RK_S32)(sampleNum *
+                                  ((float)(pstPlayer->stAoCtx.sampleRate) / (float)(pstPlayer->stAoCtx.reSmpSampleRate)) + 1);
+          }
+      }
+
+      if (tmpNUm)
+        pstPlayer->stAoCtx.periodCount = MAX_BUFFER_SZIE / tmpNUm;
     }
 
     ret = CreateDeviceAo(&pstPlayer->stAoCtx);
