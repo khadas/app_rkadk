@@ -1143,7 +1143,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
       if (ret == 0) {
         pstPlayer->frameCount++;
         if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE)
-        pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_DONE;
+          pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_DONE;
 
         if (pstPlayer->bEnableBlackBackground) {
           if (!flagGetTframe) {
@@ -1203,6 +1203,7 @@ static void SendVideoData(RKADK_VOID *ptr) {
         ret = RKADK_PLAYER_SendVoFrame(pstPlayer, &sFrame, -1);
         if (ret != RK_SUCCESS)
           RKADK_LOGE("send vo failed[%x]", ret);
+
 #ifndef OS_RTT
         clock_gettime(CLOCK_MONOTONIC, &t_begin);
 #else
@@ -1755,7 +1756,7 @@ __GETVDEC:
         } else {
 #ifndef OS_RTT
           usleep(1000);
-    #else
+#else
           rkos_msleep(1);
 #endif
         }
@@ -1933,7 +1934,9 @@ static RKADK_VOID DoPullDemuxerVideoPacket(RKADK_VOID* pHandle) {
 
     if (!pstPlayer->bAudioExist && pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE) {
       pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
+      RKADK_PLAYER_ProcessEvent(pstPlayer, RKADK_PLAYER_EVENT_SEEK_END, NULL);
     }
+
     memset(&stMbExtConfig, 0, sizeof(MB_EXT_CONFIG_S));
     stMbExtConfig.pFreeCB = BufferFree;
     stMbExtConfig.pOpaque = (RKADK_VOID *)pstDemuxerPacket->s8PacketData;
@@ -2021,18 +2024,26 @@ static RKADK_VOID DoPullDemuxerAudioPacket(RKADK_VOID* pHandle) {
     return;
   }
 
-  if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DOING || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE) {
+  if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DOING || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_VIDEO_DONE
+       || pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE) {
     pstPlayer->positionTimeStamp = pstDemuxerPacket->s64Pts;
-    while(pstPlayer->enSeekStatus != RKADK_PLAYER_SEEK_DONE)
+    while(pstPlayer->enSeekStatus != RKADK_PLAYER_SEEK_DONE) {
 #ifndef OS_RTT
       usleep(1000);
 #else
       rkos_msleep(1);
 #endif
+
+      if (pstPlayer->bStopSendStream) {
+        break;
+      }
+    }
   }
 
-  if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE)
-     pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
+  if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE) {
+    pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
+    RKADK_PLAYER_ProcessEvent(pstPlayer, RKADK_PLAYER_EVENT_SEEK_END, NULL);
+  }
 
   if (pstDemuxerPacket->s8EofFlag) {
     if (pstPlayer->enStatus != RKADK_PLAYER_STATE_STOP)
@@ -2087,8 +2098,10 @@ static RKADK_VOID DoPullDemuxerWavPacket(RKADK_VOID* pHandle) {
 
       return;
     } else {
-      if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE)
+      if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_DONE) {
         pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
+        RKADK_PLAYER_ProcessEvent(pstPlayer, RKADK_PLAYER_EVENT_SEEK_END, NULL);
+      }
 
       if (!pstDemuxerPacket->s8EofFlag)
         pstPlayer->positionTimeStamp = pstDemuxerPacket->s64Pts;
@@ -3079,7 +3092,9 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
   enStatus = pstPlayer->enStatus;
   pstPlayer->enStatus = RKADK_PLAYER_STATE_STOP;
 
-  enSeekStatus = pstPlayer->enSeekStatus;
+  if (pstPlayer->enSeekStatus == RKADK_PLAYER_SEEK_WAIT)
+    enSeekStatus = pstPlayer->enSeekStatus;
+
   pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_NO;
   pstPlayer->seekTimeStamp = 0;
 
@@ -3119,6 +3134,7 @@ RKADK_S32 RKADK_PLAYER_Stop(RKADK_MW_PTR pPlayer) {
 
   if (enSeekStatus != RKADK_PLAYER_SEEK_WAIT)
     pstPlayer->positionTimeStamp = 0;
+
   pstPlayer->frameCount = 0;
   pstPlayer->stSnapshotParam.bSnapshot = false;
   pstPlayer->stSnapshotParam.stFrame.pMbBlk = NULL;
@@ -3291,8 +3307,6 @@ RKADK_S32 RKADK_PLAYER_Seek(RKADK_MW_PTR pPlayer, RKADK_S64 s64TimeInMs) {
   if (pstPlayer->bAudioExist && !pstPlayer->bVideoExist)
       pstPlayer->enSeekStatus = RKADK_PLAYER_SEEK_DONE;
 
-  if (pstPlayer->pfnPlayerCallback != NULL)
-    pstPlayer->pfnPlayerCallback(pPlayer, RKADK_PLAYER_EVENT_SEEK_END, NULL);
   return RKADK_SUCCESS;
 
 __FAILED:
