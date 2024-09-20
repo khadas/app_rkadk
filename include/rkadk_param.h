@@ -193,6 +193,7 @@ typedef enum {
   RKADK_PARAM_TYPE_JPEG_SLICE,      /* enable/disable jpeg slice */
   RKADK_PARAM_TYPE_SLICE_HEIGHT,    /* set jpeg slice height */
   RKADK_PARAM_TYPE_INPUT_FMT,       /* set vi input format */
+  RKADK_PARAM_TYPE_ENABLE_AUDIO,    /* enable record audio */
 
   // COMM Dependent Param
   RKADK_PARAM_TYPE_REC_MUTE,        /* record audio mute, bool */

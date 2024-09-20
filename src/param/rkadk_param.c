@@ -3866,6 +3866,9 @@ RKADK_S32 RKADK_PARAM_GetCamParam(RKADK_S32 s32CamId,
   case RKADK_PARAM_TYPE_PRE_RECORD_MODE:
     *(RKADK_MUXER_PRE_RECORD_MODE_E *)pvParam = pstRecCfg->pre_record_mode;
     break;
+  case RKADK_PARAM_TYPE_ENABLE_AUDIO:
+    *(bool *)pvParam = pstRecCfg->enable_audio;
+    break;
   case RKADK_PARAM_TYPE_PHOTO_RES:
     *(RKADK_PARAM_RES_E *)pvParam = RKADK_PARAM_GetResType(
         pstPhotoCfg->image_width, pstPhotoCfg->image_height);
@@ -4010,6 +4013,12 @@ RKADK_S32 RKADK_PARAM_SetCamParam(RKADK_S32 s32CamId,
                       *(RKADK_MUXER_PRE_RECORD_MODE_E *)pvParam,
                       g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
     pstRecCfg->pre_record_mode = *(RKADK_MUXER_PRE_RECORD_MODE_E *)pvParam;
+    bSaveRecCfg = true;
+    break;
+  case RKADK_PARAM_TYPE_ENABLE_AUDIO:
+    RKADK_CHECK_EQUAL(pstRecCfg->enable_audio, *(bool *)pvParam,
+                      g_stPARAMCtx.mutexLock, RKADK_SUCCESS);
+    pstRecCfg->enable_audio = *(bool *)pvParam;
     bSaveRecCfg = true;
     break;
   case RKADK_PARAM_TYPE_PHOTO_RES:

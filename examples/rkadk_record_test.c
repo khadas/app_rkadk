@@ -61,11 +61,11 @@ GetRecordFileName(RKADK_MW_PTR pRecorder, RKADK_U32 u32FileCnt,
 
   RKADK_LOGP("u32FileCnt:%d, pRecorder:%p", u32FileCnt, pRecorder);
 
-  if (u32FileIdx >= 10)
+  if (u32FileIdx >= 4)
     u32FileIdx = 0;
 
   for (RKADK_U32 i = 0; i < u32FileCnt; i++) {
-    sprintf(paszFilename[i], "/mnt/sdcard/RecordTest_%u.mp4", u32FileIdx);
+    sprintf(paszFilename[i], "/tmp/RecordTest_%u.mp4", u32FileIdx);
     u32FileIdx++;
   }
 
@@ -217,6 +217,7 @@ int main(int argc, char *argv[]) {
   RKADK_PARAM_RES_CFG_S stRecCfg;
   bool bEnablePip = false;
   RKADK_U32 u32AvsBufCnt = 2;
+  bool bEnableAudio = true;
 
 #ifdef ENABLE_EIS
   bool bEnableEis = false;
@@ -664,6 +665,32 @@ record:
       ret = RKADK_MEDIA_SetPostIspAttr(s32CamId, RKADK_STREAM_TYPE_VIDEO_SUB, bAiispEnable, &stPostIspAttr);
       if (ret)
         RKADK_LOGE("RKADK_MEDIA_SetPostIspAttr failed");
+    } else if (strstr(cmd, "enable_audio")) {
+      RKADK_RECORD_Stop(pRecorder);
+      RKADK_RECORD_Destroy(pRecorder);
+      pRecorder = NULL;
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+
+      //must to be after RKADK_RECORD_Destroy
+      bEnableAudio = true;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_ENABLE_AUDIO, &bEnableAudio);
+
+      goto record;
+    } else if (strstr(cmd, "disable_audio")) {
+      RKADK_RECORD_Stop(pRecorder);
+      RKADK_RECORD_Destroy(pRecorder);
+      pRecorder = NULL;
+#ifdef RKAIQ
+      SAMPLE_ISP_Stop(stRecAttr.s32CamID);
+#endif
+
+      //must to be after RKADK_RECORD_Destroy
+      bEnableAudio = false;
+      RKADK_PARAM_SetCamParam(s32CamId, RKADK_PARAM_TYPE_ENABLE_AUDIO, &bEnableAudio);
+
+      goto record;
     }
 
     usleep(500000);
