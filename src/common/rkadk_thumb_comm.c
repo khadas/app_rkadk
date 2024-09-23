@@ -230,6 +230,10 @@ static int RKADK_Thumbnail_Venc(RKADK_U32 u32CamId, RKADK_S32 ChnId,
   // must, for no streams callback running failed
   RK_MPI_VENC_StartRecvFrame(ChnId, &stRecvParam);
 
+  // must be before bind, interrupt data flow
+  RK_MPI_VENC_StopRecvFrame(ChnId);
+  RK_MPI_VENC_ResetChn(ChnId);
+
   return 0;
 }
 

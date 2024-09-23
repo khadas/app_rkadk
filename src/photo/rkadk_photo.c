@@ -658,32 +658,6 @@ static void *RKADK_PHOTO_GetJpeg(void *params) {
   if (!pu8Photo)
     return NULL;
 
-  // drop first frame
-  ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
-  if (ret == RK_SUCCESS) {
-    RK_MPI_VENC_ReleaseStream(pstPhotoCfg->venc_chn, &stFrame);
-  } else {
-    RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", pstPhotoCfg->venc_chn, ret);
-  }
-
-  // drop first thumb frame
-  ret = RK_MPI_VENC_GetStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame, 1000);
-  if (ret == RK_SUCCESS) {
-    RK_MPI_VENC_ReleaseStream(ptsThumbCfg->photo_venc_chn, &stThumbFrame);
-  } else {
-    RKADK_LOGE("RK_MPI_VENC_GetStream[%d] timeout[%x]", ptsThumbCfg->photo_venc_chn, ret);
-  }
-
-  RK_MPI_VENC_StopRecvFrame(pstPhotoCfg->venc_chn);
-  RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
-  RK_MPI_VENC_StopRecvFrame(ptsThumbCfg->photo_venc_chn);
-  RK_MPI_VENC_ResetChn(ptsThumbCfg->photo_venc_chn);
-
-  if (pHandle->bFmtChange) {
-    RK_MPI_VENC_StopRecvFrame(pHandle->stFmtChange.u32VencChn);
-    RK_MPI_VENC_ResetChn(pHandle->stFmtChange.u32VencChn);
-  }
-
   while (pHandle->bGetJpeg) {
     ret = RK_MPI_VENC_GetStream(pstPhotoCfg->venc_chn, &stFrame, 1000);
     if (ret == RK_SUCCESS) {
@@ -1227,6 +1201,14 @@ static int RKADK_PHOTO_CreateVideoChn(RKADK_PHOTO_HANDLE_S *pHandle, RKADK_PHOTO
     }
   }
 
+  // must be before bind, interrupt data flow
+  RK_MPI_VENC_StopRecvFrame(pstPhotoCfg->venc_chn);
+  RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
+  if (pHandle->bFmtChange) {
+    RK_MPI_VENC_StopRecvFrame(pHandle->stFmtChange.u32VencChn);
+    RK_MPI_VENC_ResetChn(pHandle->stFmtChange.u32VencChn);
+  }
+
   ret = ThumbnailInit(pstPhotoAttr->u32CamId, RKADK_THUMB_MODULE_PHOTO, ptsThumbCfg);
   if (ret) {
     RKADK_LOGE("Thumbnail venc [%d] Init failed[%x]",
@@ -1453,6 +1435,14 @@ static int RKADK_PHOTO_BindChn(RKADK_PHOTO_HANDLE_S *pHandle) {
         }
       }
     }
+  }
+
+  // venc bind vdec modifies the venc stop state, which is restored here
+  RK_MPI_VENC_StopRecvFrame(pstPhotoCfg->venc_chn);
+  RK_MPI_VENC_ResetChn(pstPhotoCfg->venc_chn);
+  if (pHandle->bFmtChange) {
+    RK_MPI_VENC_StopRecvFrame(pHandle->stFmtChange.u32VencChn);
+    RK_MPI_VENC_ResetChn(pHandle->stFmtChange.u32VencChn);
   }
 
   RKADK_BUFINFO("photo bind[%d, %d, %d]", stViChn.s32ChnId, stSrcVpssChn.s32ChnId, stVencChn.s32ChnId);
