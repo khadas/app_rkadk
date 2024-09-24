@@ -272,7 +272,7 @@ VIDEO_MODE_E RKADK_PLAYER_GetRkDecodeMode(RKADK_VDEC_DECODE_MODE_E enMode) {
   case RKADK_DECODE_MODE_STREAM:
     enDecodeMode = VIDEO_MODE_STREAM;
     break;
-
+#if 0
   case RKADK_DECODE_MODE_FRAME_SLICE:
     enDecodeMode = VIDEO_MODE_FRAME_SLICE;
     break;
@@ -280,7 +280,7 @@ VIDEO_MODE_E RKADK_PLAYER_GetRkDecodeMode(RKADK_VDEC_DECODE_MODE_E enMode) {
   case RKADK_DECODE_MODE_SLICE:
     enDecodeMode = VIDEO_MODE_SLICE;
     break;
-
+#endif
   case RKADK_DECODE_MODE_COMPAT:
     enDecodeMode = VIDEO_MODE_COMPAT;
     break;
